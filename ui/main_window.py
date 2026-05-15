@@ -1,22 +1,38 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, QPushButton
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, QPushButton, QMenuBar, QMenu, QApplication
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
+from pathlib import Path
 from datetime import datetime
 from ui.views.month_view import MonthView
 from ui.views.solvency_panel import SolvencyPanel
 from ui.views.credit_card_view import CreditCardView
 from ui.views.archive_view import ArchiveView
+from ui.views.about_dialog import AboutDialog
+from clear_budget.version import APP_NAME, __version__
+from clear_budget.ui.dark_theme import DARK_QSS
 
 class MainWindow(QMainWindow):
     def __init__(self, db):
         super().__init__()
         self.db = db
-        self.setWindowTitle("ClearBudget")
+        self.setWindowTitle(f"{APP_NAME} v{__version__}")
         self.setGeometry(100, 100, 1200, 800)
+
+        # Set window icon
+        icon_path = Path(__file__).resolve().parents[2] / "ClearBudget_128.png"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
+
+        # Apply dark theme
+        QApplication.instance().setStyleSheet(DARK_QSS)
 
         # Current month (default to June 2026)
         self.current_month = "2026-06"
+
+        # Menu bar
+        self._create_menu_bar()
 
         # Main widget
         main_widget = QWidget()
@@ -47,3 +63,22 @@ class MainWindow(QMainWindow):
         self.current_month = year_month
         self.solvency_panel.update_month(year_month)
         self.credit_card_view.update_month(year_month)
+
+    def _create_menu_bar(self):
+        """Create menu bar with File and Help menus."""
+        menubar = self.menuBar()
+
+        # File menu
+        file_menu = menubar.addMenu("&File")
+        exit_action = file_menu.addAction("E&xit")
+        exit_action.triggered.connect(self.close)
+
+        # Help menu
+        help_menu = menubar.addMenu("&Help")
+        about_action = help_menu.addAction("&About")
+        about_action.triggered.connect(self._show_about)
+
+    def _show_about(self):
+        """Show About dialog."""
+        dialog = AboutDialog(self)
+        dialog.exec()
