@@ -45,7 +45,7 @@ For each card, track:
 - Minimum payment amount
 - Active/inactive status
 
-Utilization status:
+Utilisation status:
 - OK (green): less than 50% used
 - WARNING (yellow): 50-80% used
 - DANGER (red): 80%+ used
