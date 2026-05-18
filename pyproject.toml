@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clearbudget"
+version = "1.0.0"
+description = "Personal monthly budget planner with credit card tracking"
+authors = [{name = "Oliver Ernster", email = "oernster@codecrafter.uk"}]
+license = {text = "LGPL-3.0-only"}
+requires-python = ">=3.11"
+dependencies = ["PySide6>=6.7.0"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --cov=clear_budget --cov=main --cov-report=term-missing --cov-fail-under=100 --cov-config=.coveragerc"
+pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["clear_budget", "main"]

@@ -1,0 +1,38 @@
+"""MonthSummary DTO — cross-boundary data transfer for a month's financials."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from clear_budget.domain.entities.bill import Bill
+from clear_budget.domain.entities.income_source import IncomeSource
+from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.year_month import YearMonth
+
+
+@dataclass(frozen=True, slots=True)
+class MonthSummary:
+    """Summary of a month's income and expenses (application layer DTO).
+
+    Attributes:
+        year_month: The month (YYYY-MM)
+        total_income: Total reliable income for the month
+        total_bills: Total bills/expenses for the month
+        balance: total_income - total_bills (can be negative)
+        bills: List of active bills for this month
+        income_sources: List of active income sources
+    """
+
+    year_month: YearMonth
+    total_income: Amount
+    total_bills: Amount
+    balance: Amount
+    bills: tuple[Bill, ...] = ()
+    income_sources: tuple[IncomeSource, ...] = ()
+
+    def __str__(self) -> str:
+        return (
+            f"{self.year_month}: "
+            f"IN={self.total_income} OUT={self.total_bills} "
+            f"BALANCE={self.balance}"
+        )

@@ -1,0 +1,17 @@
+[run]
+source = clear_budget
+
+[report]
+show_missing = True
+skip_covered = False
+fail_under = 100
+
+omit =
+    main.py
+    clear_budget/ui/*
+    clear_budget/domain/interfaces/*
+    */__pycache__/*
+    */venv/*
+    buildexe.py
+    buildinstaller.py
+    installer/*
