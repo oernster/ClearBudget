@@ -1,4 +1,4 @@
-"""Bill entity — a recurring or one-time expense."""
+"""Bill entity  -  a recurring or one-time expense."""
 
 from dataclasses import dataclass
 

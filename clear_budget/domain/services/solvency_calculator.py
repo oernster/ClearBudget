@@ -1,4 +1,4 @@
-"""SolvencyCalculator — pure domain service for solvency calculations."""
+"""SolvencyCalculator  -  pure domain service for solvency calculations."""
 
 from dataclasses import dataclass
 
@@ -39,19 +39,19 @@ class SolvencyCalculatorService:
         if buffer is None:
             buffer = Amount.from_pounds(600)
 
-        # Calculate current month balance
+        # Calculate current month balance (bank account only)
         total_in = sum((inc.amount.pence for inc in month_income), 0)
-        total_out = sum((bill.amount.pence for bill in month_bills), 0)
+        total_out = sum((bill.amount.pence for bill in month_bills if bill.payment_method_id == 1), 0)
         balance = total_in - total_out
 
         # Calculate deficit if negative
         deficit = Amount(pence=abs(balance)) if balance < 0 else Amount.zero()
 
-        # Calculate forward shortfall (next 2 months reliable income vs bills)
+        # Calculate forward shortfall (next 2 months reliable income vs bank bills)
         forward_shortfall_pence = 0
         for month_idx in range(len(next_two_months_bills)):
             future_out = sum(
-                (bill.amount.pence for bill in next_two_months_bills[month_idx]),
+                (bill.amount.pence for bill in next_two_months_bills[month_idx] if bill.payment_method_id == 1),
                 0,
             )
             future_in_reliable = sum(

@@ -198,6 +198,50 @@ class TestSolvencyCalculatorBasic:
         assert result.balance == 45000
         assert not result.has_deficit
 
+    def test_calculate_excludes_credit_card_bills(self) -> None:
+        """Test that credit card bills don't reduce balance."""
+        bills = [
+            MonthBill(
+                id=1,
+                month_id=1,
+                bill_template_id=1,
+                name="Rent",
+                amount=Amount(pence=100000),
+                payment_method_id=1,
+                category="housing",
+                day_of_month=1,
+            ),
+            MonthBill(
+                id=2,
+                month_id=1,
+                bill_template_id=2,
+                name="CapitalOne",
+                amount=Amount(pence=50000),
+                payment_method_id=2,
+                category="credit_payment",
+                day_of_month=22,
+            ),
+        ]
+        income = [
+            MonthIncome(
+                id=1,
+                month_id=1,
+                income_source_id=1,
+                name="UC",
+                amount=Amount(pence=200000),
+                is_reliable=True,
+                day_of_month=1,
+            ),
+        ]
+        result = SolvencyCalculatorService.calculate(
+            month_bills=bills,
+            month_income=income,
+            next_two_months_bills=[[], []],
+            next_two_months_income=[[], []],
+        )
+        # Balance only deducts the bank bill (payment_method_id=1)
+        assert result.balance == 100000  # 200000 - 100000 (credit card ignored)
+
     def test_calculate_custom_buffer(self) -> None:
         """Test with custom buffer amount."""
         result = SolvencyCalculatorService.calculate(

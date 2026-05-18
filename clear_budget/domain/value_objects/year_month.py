@@ -1,4 +1,4 @@
-"""YearMonth value object — YYYY-MM string with validation and arithmetic."""
+"""YearMonth value object  -  YYYY-MM string with validation and arithmetic."""
 
 from dataclasses import dataclass
 from datetime import datetime

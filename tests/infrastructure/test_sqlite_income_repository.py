@@ -177,3 +177,49 @@ class TestSQLiteIncomeSourceUpdate:
         assert retrieved.name == "Updated"
         assert retrieved.amount.pence == 150000
         assert not retrieved.is_reliable
+
+
+class TestSQLiteIncomeSourceDeactivate:
+    """Test deactivating income sources."""
+
+    def test_deactivate_income_source(self, db) -> None:
+        """Test deactivating an income source."""
+        repo = SQLiteIncomeSourceRepository(db.conn)
+
+        income = repo.add(
+            income=IncomeSource(
+                id=0,
+                name="To Deactivate",
+                amount=Amount(pence=100000),
+                is_reliable=True,
+                day_of_month=1,
+            )
+        )
+
+        assert income.active
+
+        repo.deactivate(income_id=income.id)
+
+        retrieved = repo.get_by_id(income_id=income.id)
+        assert retrieved is not None
+        assert not retrieved.active
+
+    def test_deactivate_affects_list_active(self, db) -> None:
+        """Test that deactivated sources don't appear in list_active."""
+        repo = SQLiteIncomeSourceRepository(db.conn)
+
+        income = repo.add(
+            income=IncomeSource(
+                id=0,
+                name="To Deactivate",
+                amount=Amount(pence=100000),
+                is_reliable=True,
+                day_of_month=1,
+            )
+        )
+
+        repo.deactivate(income_id=income.id)
+
+        active_sources = repo.list_active()
+        assert len(active_sources) == 0
+        assert not any(s.id == income.id for s in active_sources)

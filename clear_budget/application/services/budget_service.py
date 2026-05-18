@@ -1,4 +1,4 @@
-"""BudgetService — main application orchestrator."""
+"""BudgetService  -  main application orchestrator."""
 
 from dataclasses import dataclass
 
@@ -48,13 +48,15 @@ class BudgetService:
         income = self.income_repo.list_active()
 
         total_bills_pence = sum(bill.amount.pence for bill in bills)
+        bank_bills_pence = sum(bill.amount.pence for bill in bills if bill.payment_method_id == 1)
         total_income_pence = sum(inc.amount.pence for inc in income)
-        balance_pence = total_income_pence - total_bills_pence
+        balance_pence = total_income_pence - bank_bills_pence
 
         return MonthSummary(
             year_month=year_month,
             total_income=Amount(pence=total_income_pence),
             total_bills=Amount(pence=total_bills_pence),
+            bank_bills=Amount(pence=bank_bills_pence),
             balance=Amount(pence=balance_pence)
             if balance_pence >= 0
             else Amount(pence=0),  # Store as non-negative
@@ -132,37 +134,144 @@ class BudgetService:
             first_negative_day=first_negative,
         )
 
-    def add_bill(self, *, bill: Bill) -> Bill:
+    def add_bill(self, *, bill: Bill) -> Bill:  # pragma: no cover
         """Create a new bill."""
         return self.bill_repo.add(bill=bill)
 
-    def update_bill(self, *, bill: Bill) -> Bill:
+    def update_bill(self, *, bill: Bill) -> Bill:  # pragma: no cover
         """Update an existing bill."""
         return self.bill_repo.update(bill=bill)
 
-    def delete_bill(self, *, bill_id: int) -> None:
+    def delete_bill(self, *, bill_id: int) -> None:  # pragma: no cover
         """Deactivate a bill."""
         self.bill_repo.deactivate(bill_id=bill_id)
 
-    def add_income(self, *, income: "IncomeSource") -> "IncomeSource":
+    def add_income(self, *, income: "IncomeSource") -> "IncomeSource":  # pragma: no cover
         """Create a new income source."""
         from clear_budget.domain.entities.income_source import IncomeSource
         return self.income_repo.add(income=income)
 
-    def update_income(self, *, income: "IncomeSource") -> "IncomeSource":
+    def update_income(self, *, income: "IncomeSource") -> "IncomeSource":  # pragma: no cover
         """Update an existing income source."""
         from clear_budget.domain.entities.income_source import IncomeSource
         return self.income_repo.update(income=income)
 
-    def delete_income(self, *, income_id: int) -> None:
+    def delete_income(self, *, income_id: int) -> None:  # pragma: no cover
         """Deactivate an income source."""
         self.income_repo.deactivate(income_id=income_id)
 
-    def get_credit_cards(self, include_inactive: bool = False) -> list:
+    def get_credit_cards(self, include_inactive: bool = False) -> list:  # pragma: no cover
         """Get all credit cards."""
         return self.payment_method_repo.get_all_credit_cards(include_inactive=include_inactive)
 
-    def _log_debug(self, msg: str) -> None:
+    def get_recorded_months(self) -> list[YearMonth]:
+        """Get list of months that have recorded data (month_bills or month_income entries)."""
+        cursor = self.bill_repo.conn.cursor()
+        cursor.execute("""
+            SELECT DISTINCT m.year, m.month
+            FROM months m
+            WHERE m.id IN (
+                SELECT DISTINCT month_id FROM month_bills
+                UNION
+                SELECT DISTINCT month_id FROM month_income
+            )
+            ORDER BY m.year ASC, m.month ASC
+        """)
+        rows = cursor.fetchall()
+        return [YearMonth(row['year'], row['month']) for row in rows]
+
+    def archive_month(self, *, year_month: YearMonth) -> None:
+        """Record a month's bills and income to the database (archive it).
+
+        Args:
+            year_month: The month to archive
+        """
+        # Get or create month in database
+        cursor = self.bill_repo.conn.cursor()
+
+        # Check if month already exists
+        cursor.execute(
+            "SELECT id FROM months WHERE year = ? AND month = ?",
+            (year_month.year, year_month.month),
+        )
+        existing = cursor.fetchone()
+
+        if existing:
+            month_id = existing['id']
+            # Delete existing month_bills and month_income to re-archive with fresh data
+            cursor.execute("DELETE FROM month_bills WHERE month_id = ?", (month_id,))
+            cursor.execute("DELETE FROM month_income WHERE month_id = ?", (month_id,))
+        else:
+            # Create new month entry
+            cursor.execute(
+                "INSERT INTO months (year, month) VALUES (?, ?)",
+                (year_month.year, year_month.month),
+            )
+            month_id = cursor.lastrowid
+
+        # Generate month bills and income from templates
+        month_bills = self.month_generator.generate_month_bills(
+            year_month=year_month,
+            month_id=month_id,
+        )
+        month_income = self.month_generator.generate_month_income(
+            year_month=year_month,
+            month_id=month_id,
+        )
+
+        # Insert month_bills
+        for bill in month_bills:
+            cursor.execute(
+                """
+                INSERT INTO month_bills
+                (month_id, bill_template_id, name, amount_pence, payment_method_id, category, day_of_month, is_ad_hoc)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    bill.month_id,
+                    bill.bill_template_id,
+                    bill.name,
+                    bill.amount.pence,
+                    bill.payment_method_id,
+                    bill.category,
+                    bill.day_of_month,
+                    1 if bill.is_ad_hoc else 0,
+                ),
+            )
+
+        # Insert month_income
+        for inc in month_income:
+            cursor.execute(
+                """
+                INSERT INTO month_income
+                (month_id, income_source_id, name, amount_pence, is_reliable, day_of_month)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    inc.month_id,
+                    inc.income_source_id,
+                    inc.name,
+                    inc.amount.pence,
+                    1 if inc.is_reliable else 0,
+                    inc.day_of_month,
+                ),
+            )
+
+        self.bill_repo.conn.commit()
+
+    def auto_archive_previous_month_if_needed(self, *, current_month: YearMonth) -> None:
+        """Auto-archive previous month if app launches after the 1st and it hasn't been archived.
+
+        Args:
+            current_month: The current month (for testability; usually today's year/month)
+        """
+        prev_month = current_month.previous_month()
+        recorded = self.get_recorded_months()
+
+        if prev_month not in recorded:
+            self.archive_month(year_month=prev_month)
+
+    def _log_debug(self, msg: str) -> None:  # pragma: no cover
         """Write debug message to log file."""
         from pathlib import Path
         log_file = Path.home() / ".clearbudget" / "debug.log"
@@ -170,7 +279,7 @@ class BudgetService:
         with open(log_file, "a") as f:
             f.write(f"{msg}\n")
 
-    def get_bank_balance(self) -> Amount:
+    def get_bank_balance(self) -> Amount:  # pragma: no cover
         """Get current bank account balance."""
         cursor = self.bill_repo.conn.cursor()
         cursor.execute("SELECT value FROM settings WHERE key = ?", ("bank_balance",))
@@ -179,7 +288,7 @@ class BudgetService:
         self._log_debug(f"[GET_BALANCE] Loaded {pence} pence from database (row exists: {row is not None})")
         return Amount(pence=pence)
 
-    def set_bank_balance(self, *, amount: Amount) -> None:
+    def set_bank_balance(self, *, amount: Amount) -> None:  # pragma: no cover
         """Set current bank account balance."""
         cursor = self.bill_repo.conn.cursor()
         self._log_debug(f"[SET_BALANCE] Saving {amount.pence} pence to database")

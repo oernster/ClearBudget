@@ -91,6 +91,61 @@ class TestBudgetServiceMonthSummary:
         assert summary.total_income.pence == 150000
         assert summary.total_bills.pence == 200000
 
+    def test_get_month_summary_credit_card_bills_excluded_from_balance(self) -> None:
+        """Test that credit card bills don't reduce bank balance."""
+        bill_repo = FakeBillRepository()
+        income_repo = FakeIncomeSourceRepository()
+        payment_method_repo = FakePaymentMethodRepository()
+        generator = MonthGenerator(bill_repo, income_repo)
+        service = BudgetService(bill_repo, income_repo, payment_method_repo, generator)
+
+        # Bank bill
+        bill_repo.add(
+            bill=Bill(
+                id=1,
+                name="Rent",
+                amount=Amount(pence=100000),
+                payment_method_id=1,
+                category="housing",
+                bill_type="fixed",
+                day_of_month=1,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
+        # Credit card bill
+        bill_repo.add(
+            bill=Bill(
+                id=2,
+                name="CapitalOne Payment",
+                amount=Amount(pence=50000),
+                payment_method_id=2,
+                category="credit_payment",
+                bill_type="fixed",
+                day_of_month=22,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
+        income_repo.add(
+            income=IncomeSource(
+                id=1,
+                name="UC",
+                amount=Amount(pence=200000),
+                is_reliable=True,
+                day_of_month=1,
+            )
+        )
+
+        summary = service.get_month_summary(year_month=YearMonth(2026, 6))
+
+        # Total bills includes both
+        assert summary.total_bills.pence == 150000
+        # Bank bills only includes the bank account bill
+        assert summary.bank_bills.pence == 100000
+        # Balance only deducts bank bills
+        assert summary.balance.pence == 100000
+
 
 class TestBudgetServiceSolvency:
     """Test BudgetService.calculate_solvency."""

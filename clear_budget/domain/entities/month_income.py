@@ -1,4 +1,4 @@
-"""MonthIncome entity — an income entry for a specific month."""
+"""MonthIncome entity  -  an income entry for a specific month."""
 
 from dataclasses import dataclass
 

@@ -1,4 +1,4 @@
-"""Amount value object — non-negative currency in pence."""
+"""Amount value object  -  non-negative currency in pence."""
 
 from dataclasses import dataclass
 

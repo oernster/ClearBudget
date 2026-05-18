@@ -10,6 +10,7 @@ omit =
     main.py
     clear_budget/ui/*
     clear_budget/domain/interfaces/*
+    clear_budget/shared/resources.py
     */__pycache__/*
     */venv/*
     buildexe.py

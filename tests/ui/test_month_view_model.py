@@ -18,6 +18,7 @@ def mock_budget_service():
         year_month=YearMonth(2026, 5),
         total_income=Amount.from_pounds(5000),
         total_bills=Amount.from_pounds(3000),
+        bank_bills=Amount.from_pounds(3000),
         balance=Amount.from_pounds(2000),
     )
     service.get_month_summary.return_value = summary

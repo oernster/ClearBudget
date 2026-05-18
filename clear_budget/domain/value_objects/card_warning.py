@@ -1,4 +1,4 @@
-"""CardExhaustionWarning value object — when a credit card will max out."""
+"""CardExhaustionWarning value object  -  when a credit card will max out."""
 
 from dataclasses import dataclass
 

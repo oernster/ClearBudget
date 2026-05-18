@@ -1,4 +1,4 @@
-"""CreditCard entity — a credit card account."""
+"""CreditCard entity  -  a credit card account."""
 
 from dataclasses import dataclass
 

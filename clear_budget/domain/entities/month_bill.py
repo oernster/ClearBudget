@@ -1,4 +1,4 @@
-"""MonthBill entity — a bill entry for a specific month."""
+"""MonthBill entity  -  a bill entry for a specific month."""
 
 from dataclasses import dataclass
 

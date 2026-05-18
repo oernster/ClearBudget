@@ -14,6 +14,7 @@ class TestMonthSummaryCreation:
             year_month=YearMonth(2026, 6),
             total_income=Amount(pence=200000),
             total_bills=Amount(pence=150000),
+            bank_bills=Amount(pence=150000),
             balance=Amount(pence=50000),
         )
         assert summary.year_month.year == 2026
@@ -26,6 +27,7 @@ class TestMonthSummaryCreation:
             year_month=YearMonth(2026, 7),
             total_income=Amount(pence=100000),
             total_bills=Amount(pence=150000),
+            bank_bills=Amount(pence=150000),
             balance=Amount(pence=0),  # Can't store negative
         )
         assert summary.total_bills.pence == 150000
@@ -37,6 +39,7 @@ class TestMonthSummaryCreation:
             year_month=YearMonth(2026, 6),
             total_income=Amount(pence=200000),
             total_bills=Amount(pence=150000),
+            bank_bills=Amount(pence=150000),
             balance=Amount(pence=50000),
         )
         summary_str = str(summary)

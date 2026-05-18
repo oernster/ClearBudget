@@ -1,4 +1,4 @@
-"""CardExhaustion — pure domain service for credit card exhaustion calculations."""
+"""CardExhaustion  -  pure domain service for credit card exhaustion calculations."""
 
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.value_objects.amount import Amount

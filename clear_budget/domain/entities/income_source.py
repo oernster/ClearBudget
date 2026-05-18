@@ -1,4 +1,4 @@
-"""IncomeSource entity — a recurring income stream."""
+"""IncomeSource entity  -  a recurring income stream."""
 
 from dataclasses import dataclass
 

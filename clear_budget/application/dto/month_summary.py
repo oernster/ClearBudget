@@ -1,4 +1,4 @@
-"""MonthSummary DTO — cross-boundary data transfer for a month's financials."""
+"""MonthSummary DTO  -  cross-boundary data transfer for a month's financials."""
 
 from __future__ import annotations
 
@@ -17,8 +17,9 @@ class MonthSummary:
     Attributes:
         year_month: The month (YYYY-MM)
         total_income: Total reliable income for the month
-        total_bills: Total bills/expenses for the month
-        balance: total_income - total_bills (can be negative)
+        total_bills: Total bills/expenses for the month (all payment methods)
+        bank_bills: Total bills for bank account only (payment_method_id == 1)
+        balance: total_income - bank_bills (affects bank account)
         bills: List of active bills for this month
         income_sources: List of active income sources
     """
@@ -26,6 +27,7 @@ class MonthSummary:
     year_month: YearMonth
     total_income: Amount
     total_bills: Amount
+    bank_bills: Amount
     balance: Amount
     bills: tuple[Bill, ...] = ()
     income_sources: tuple[IncomeSource, ...] = ()

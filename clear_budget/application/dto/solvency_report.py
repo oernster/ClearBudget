@@ -1,4 +1,4 @@
-"""SolvencyReport DTO — complete solvency analysis for a month."""
+"""SolvencyReport DTO  -  complete solvency analysis for a month."""
 
 from dataclasses import dataclass
 

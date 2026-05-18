@@ -1,6 +1,6 @@
 """Hand-written fake repositories for testing (no mocking)."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.credit_card import CreditCard
@@ -53,18 +53,7 @@ class FakeBillRepository:
         """Deactivate a bill."""
         for i, b in enumerate(self._bills):
             if b.id == bill_id:
-                self._bills[i] = Bill(
-                    id=b.id,
-                    name=b.name,
-                    amount=b.amount,
-                    payment_method_id=b.payment_method_id,
-                    category=b.category,
-                    bill_type=b.bill_type,
-                    day_of_month=b.day_of_month,
-                    start_ym=b.start_ym,
-                    end_ym=b.end_ym,
-                    active=False,
-                )
+                self._bills[i] = replace(b, active=False)
 
 
 @dataclass
@@ -100,6 +89,12 @@ class FakeIncomeSourceRepository:
                 self._sources[i] = income
                 return income
         return income
+
+    def deactivate(self, *, income_id: int) -> None:
+        """Deactivate an income source."""
+        for i, s in enumerate(self._sources):
+            if s.id == income_id:
+                self._sources[i] = replace(s, active=False)
 
 
 @dataclass
@@ -138,33 +133,11 @@ class FakePaymentMethodRepository:
         """Deactivate a credit card."""
         for i, c in enumerate(self._cards):
             if c.id == card_id:
-                self._cards[i] = CreditCard(
-                    id=c.id,
-                    name=c.name,
-                    credit_limit=c.credit_limit,
-                    current_balance_used=c.current_balance_used,
-                    interest_rate_apr=c.interest_rate_apr,
-                    payment_due_day=c.payment_due_day,
-                    card_expiry_month=c.card_expiry_month,
-                    card_expiry_year=c.card_expiry_year,
-                    minimum_payment_pence=c.minimum_payment_pence,
-                    active=0,
-                )
+                self._cards[i] = replace(c, active=0)
 
     def update_credit_card_balance(self, *, card_id: int, balance_used: int) -> None:
         """Update credit card balance."""
         from clear_budget.domain.value_objects.amount import Amount
         for i, c in enumerate(self._cards):
             if c.id == card_id:
-                self._cards[i] = CreditCard(
-                    id=c.id,
-                    name=c.name,
-                    credit_limit=c.credit_limit,
-                    current_balance_used=Amount(pence=balance_used),
-                    interest_rate_apr=c.interest_rate_apr,
-                    payment_due_day=c.payment_due_day,
-                    card_expiry_month=c.card_expiry_month,
-                    card_expiry_year=c.card_expiry_year,
-                    minimum_payment_pence=c.minimum_payment_pence,
-                    active=c.active,
-                )
+                self._cards[i] = replace(c, current_balance_used=Amount(pence=balance_used))

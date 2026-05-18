@@ -1,4 +1,4 @@
-"""SolvencyResult value object — outcome of solvency calculations."""
+"""SolvencyResult value object  -  outcome of solvency calculations."""
 
 from dataclasses import dataclass
 

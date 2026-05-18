@@ -1,4 +1,4 @@
-"""MonthGenerator — generates month bills and income from templates."""
+"""MonthGenerator  -  generates month bills and income from templates."""
 
 from dataclasses import dataclass
 

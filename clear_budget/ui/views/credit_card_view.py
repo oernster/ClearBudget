@@ -59,6 +59,8 @@ class CreditCardView(QWidget):
         )
         self.cards_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.cards_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.cards_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
+        self.cards_table.verticalHeader().sectionClicked.connect(self._on_card_row_header_click)
         cards_layout.addWidget(self.cards_table)
 
         # Buttons below table
@@ -96,6 +98,7 @@ class CreditCardView(QWidget):
         for card in cards:
             row = self.cards_table.rowCount()
             self.cards_table.insertRow(row)
+            self.cards_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
 
             self.cards_table.setItem(row, 0, QTableWidgetItem(card.name))
             self.cards_table.setItem(row, 1, QTableWidgetItem(str(card.credit_limit)))
@@ -111,7 +114,7 @@ class CreditCardView(QWidget):
             self.cards_table.setItem(row, 5, QTableWidgetItem(str(card.payment_due_day)))
 
             # Interest rate
-            interest_str = f"{card.interest_rate_apr:.1f}%" if card.interest_rate_apr else "—"
+            interest_str = f"{card.interest_rate_apr:.1f}%" if card.interest_rate_apr else " - "
             self.cards_table.setItem(row, 6, QTableWidgetItem(interest_str))
 
             # Minimum payment
@@ -120,14 +123,14 @@ class CreditCardView(QWidget):
                 min_pmt = Amount(pence=card.minimum_payment_pence)
                 min_pmt_str = str(min_pmt)
             else:
-                min_pmt_str = "—"
+                min_pmt_str = " - "
             self.cards_table.setItem(row, 7, QTableWidgetItem(min_pmt_str))
 
             # Expiry
             if card.card_expiry_month and card.card_expiry_year:
                 expiry_str = f"{card.card_expiry_month:02d}/{card.card_expiry_year % 100:02d}"
             else:
-                expiry_str = "—"
+                expiry_str = " - "
             self.cards_table.setItem(row, 8, QTableWidgetItem(expiry_str))
 
             status = self._get_status_text(card.utilization_percent)
@@ -161,6 +164,11 @@ class CreditCardView(QWidget):
         if status == "WARNING":
             return QColor("#fbbf24")  # Yellow
         return QColor("#34d399")  # Green
+
+    def _on_card_row_header_click(self, row: int) -> None:
+        """Handle pencil icon click on card row header."""
+        self.cards_table.selectRow(row)
+        self.on_edit_card()
 
     def on_add_card(self) -> None:
         """Handle add card button click."""

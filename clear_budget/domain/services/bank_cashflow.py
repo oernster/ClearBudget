@@ -1,4 +1,4 @@
-"""BankCashflow — pure domain service for bank account no-overdraft checking."""
+"""BankCashflow  -  pure domain service for bank account no-overdraft checking."""
 
 from dataclasses import dataclass
 

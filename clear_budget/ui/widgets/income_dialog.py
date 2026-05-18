@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSpinBox,
 )
 
 from clear_budget.domain.entities.income_source import IncomeSource
@@ -22,7 +23,7 @@ class IncomeDialog(QDialog):
         self.income = income
         self.setWindowTitle("Add Income" if income is None else "Edit Income")
         self.setModal(True)
-        self.setGeometry(100, 100, 400, 150)
+        self.setGeometry(100, 100, 400, 220)
         self.init_ui()
         if income is not None:
             self.load_income(income)
@@ -38,6 +39,13 @@ class IncomeDialog(QDialog):
         layout.addWidget(QLabel("Amount (£):"))
         self.amount_edit = QLineEdit()
         layout.addWidget(self.amount_edit)
+
+        layout.addWidget(QLabel("Due Day (1-31, or 0 for no fixed day):"))
+        self.due_day_spinbox = QSpinBox()
+        self.due_day_spinbox.setMinimum(0)
+        self.due_day_spinbox.setMaximum(31)
+        self.due_day_spinbox.setValue(0)
+        layout.addWidget(self.due_day_spinbox)
 
         btn_layout = QHBoxLayout()
         ok_btn = QPushButton("OK")
@@ -55,6 +63,7 @@ class IncomeDialog(QDialog):
         """Load income data into form."""
         self.name_edit.setText(income.name)
         self.amount_edit.setText(f"{income.amount.pounds:.2f}")
+        self.due_day_spinbox.setValue(income.day_of_month or 0)
 
     def get_income(self) -> IncomeSource | None:
         """Get income from form (returns None if invalid)."""
@@ -66,12 +75,15 @@ class IncomeDialog(QDialog):
             amount_str = self.amount_edit.text().strip()
             amount = Amount.from_pounds(float(amount_str))
 
+            due_day = self.due_day_spinbox.value()
+            due_day_value = due_day if due_day > 0 else None
+
             return IncomeSource(
                 id=self.income.id if self.income else 0,
                 name=name,
                 amount=amount,
                 is_reliable=True,
-                day_of_month=None,
+                day_of_month=due_day_value,
                 active=True,
             )
         except (ValueError, AttributeError):
