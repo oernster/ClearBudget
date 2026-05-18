@@ -49,7 +49,7 @@ A clean architecture implementation with 4 isolated layers: Domain, Application,
   - `interest_rate_apr` (nullable), `payment_due_day` (1-31, auto-adjusted to working day)
   - `card_expiry_month` (1-12, nullable), `card_expiry_year` (nullable)
   - `minimum_payment_pence` (nullable), `active` (soft-delete flag, 1 or 0)
-  - Properties: `available`, `utilization_percent`
+  - Properties: `available`, `utilisation_percent`
   
 - `MonthBill` - Bill instantiated for a specific month
   - References bill template, can override amount
@@ -112,7 +112,7 @@ class PaymentMethodRepository(Protocol):
   - Inputs: month bills/income, next 2 months bills/income (from repositories)
   - Output: `SolvencyResult`
   
-- `CardExhaustionService.analyze()` - Calculates months until card maxes out
+- `CardExhaustionService.analyse()` - Calculates months until card maxes out
   - Inputs: card limit, balance, monthly charge/payment
   - Output: `CardExhaustionWarning`
   

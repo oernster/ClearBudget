@@ -6,7 +6,7 @@ A personal budget planning application for managing income, bills, and credit ca
 
 - Month-by-month budget tracking with income and bill templates
 - Solvency analysis and forward projections (next 2 months)
-- Credit card management: limits, interest rates, payment due dates, utilization tracking
+- Credit card management: limits, interest rates, payment due dates, utilisation tracking
 - Dynamic payment methods: assign bills to bank account or specific credit cards
 - Payment due dates auto-adjust to preceding working day (weekends/UK holidays)
 - Dark theme UI with tabular data display
@@ -16,7 +16,7 @@ A personal budget planning application for managing income, bills, and credit ca
 
 - **Month Budget** - View and manage bills for the selected month, assign payment methods
 - **Solvency** - Financial health analysis, deficit warnings, forward shortfall projections
-- **Credit Cards** - Add, edit, delete cards; track utilization (OK/WARNING/DANGER status)
+- **Credit Cards** - Add, edit, delete cards; track utilisation (OK/WARNING/DANGER status)
 - **Archive** - Browse historical month data
 
 ## Bill Categories
@@ -33,7 +33,7 @@ A personal budget planning application for managing income, bills, and credit ca
 
 Each bill is assigned to either:
 - Bank Account (default) - deducted from bank balance
-- Credit Card - tracked separately, affects card utilization
+- Credit Card - tracked separately, affects card utilisation
 
 ## Credit Card Tracking
 
