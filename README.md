@@ -1,6 +1,6 @@
 # ClearBudget
 
-A professional Python/PySide6 personal budget planning application built with clean architecture, SOLID principles, and 100% test coverage.
+A professional Python/PySide6 personal budget planning application built with clean architecture, SOLID principles, and good test coverage (within the limits of PyQt).
 
 ## Features
 
