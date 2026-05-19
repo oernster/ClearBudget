@@ -25,6 +25,7 @@ def mock_budget_service():
         first_negative_day=None,
     )
     service.calculate_solvency.return_value = report
+    service.calculate_solvency_from_summary.return_value = report
     return service
 
 
@@ -50,7 +51,7 @@ def test_refresh_solvency_fetches_report(mock_budget_service, qapplication):
     vm = SolvencyViewModel(budget_service=mock_budget_service)
     vm.refresh_solvency()
 
-    mock_budget_service.calculate_solvency.assert_called()
+    mock_budget_service.calculate_solvency_from_summary.assert_called()
     assert vm.solvency_report is not None
 
 
@@ -76,6 +77,7 @@ def test_get_status_color_returns_red_when_deficit(mock_budget_service, qapplica
         first_negative_day=None,
     )
     mock_budget_service.calculate_solvency.return_value = report
+    mock_budget_service.calculate_solvency_from_summary.return_value = report
     vm = SolvencyViewModel(budget_service=mock_budget_service)
     vm.refresh_solvency()
 
@@ -96,6 +98,7 @@ def test_danger_warning_emitted_on_deficit(mock_budget_service, qapplication):
         first_negative_day=None,
     )
     mock_budget_service.calculate_solvency.return_value = report
+    mock_budget_service.calculate_solvency_from_summary.return_value = report
     vm = SolvencyViewModel(budget_service=mock_budget_service)
     vm.refresh_solvency()
 

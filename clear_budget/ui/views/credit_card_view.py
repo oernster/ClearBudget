@@ -1,5 +1,8 @@
 """Credit card view widget - displays credit card status and exhaustion warnings."""
 
+import dataclasses
+from datetime import date as _date
+
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -8,10 +11,12 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QLabel,
     QPushButton,
+    QHeaderView,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor
 
+from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
@@ -36,12 +41,26 @@ class CreditCardView(QWidget):
         """Build credit card view layout."""
         layout = QVBoxLayout()
 
+        nav_layout = QHBoxLayout()
+        self.prev_btn = QPushButton("← Previous")
+        self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.month_label = QLabel()
+        self.month_label.setStyleSheet("font-size: 14px; font-weight: bold; padding: 10px; color: #9ca3af;")
+        self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._refresh_month_label()
+        self.next_btn = QPushButton("Next →")
+        self.next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        nav_layout.addWidget(self.prev_btn)
+        nav_layout.addWidget(self.month_label, stretch=1)
+        nav_layout.addWidget(self.next_btn)
+        layout.addLayout(nav_layout)
+
         from PySide6.QtWidgets import QGroupBox
         cards_group = QGroupBox("Credit Cards")
         cards_layout = QVBoxLayout()
 
         self.cards_table = QTableWidget()
-        self.cards_table.setColumnCount(11)
+        self.cards_table.setColumnCount(15)
         self.cards_table.setHorizontalHeaderLabels(
             [
                 "Card Name",
@@ -51,16 +70,31 @@ class CreditCardView(QWidget):
                 "Util %",
                 "Due Day",
                 "Interest %",
-                "Min Pmt",
+                "Fixed Min (£)",
                 "Expiry",
                 "Status",
                 "Active",
+                "Month Charges",
+                "Payment Received",
+                "Month Interest",
+                "Min Payment Due",
             ]
         )
         self.cards_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.cards_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.cards_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+        self.cards_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
+        self.cards_table.itemChanged.connect(self._on_card_item_changed)
+        self.cards_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.cards_table.horizontalHeader().setStretchLastSection(True)
+        self.cards_table.setStyleSheet(
+            "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
+            "border-radius:3px;background:transparent;}"
+            "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
+            "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
+        )
         self.cards_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
         self.cards_table.verticalHeader().sectionClicked.connect(self._on_card_row_header_click)
+        self.cards_table.cellClicked.connect(self._on_card_cell_clicked)
         cards_layout.addWidget(self.cards_table)
 
         # Buttons below table
@@ -68,6 +102,7 @@ class CreditCardView(QWidget):
         self.add_btn = QPushButton("Add Card")
         self.edit_btn = QPushButton("Edit Card")
         self.delete_btn = QPushButton("Delete Card")
+        self.delete_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         btn_layout.addWidget(self.add_btn)
         btn_layout.addWidget(self.edit_btn)
         btn_layout.addWidget(self.delete_btn)
@@ -85,9 +120,11 @@ class CreditCardView(QWidget):
 
     def load_cards(self) -> None:
         """Load and display credit cards."""
+        self.cards_table.blockSignals(True)
         self.cards_table.setRowCount(0)
+        self.cards_table.blockSignals(False)
 
-        cards = self.budget_service.get_credit_cards(include_inactive=False)
+        cards = self.budget_service.get_credit_cards(include_inactive=True)
         if not cards:
             empty_item = QTableWidgetItem("No credit cards configured")
             empty_item.setForeground(Qt.GlobalColor.gray)
@@ -95,43 +132,70 @@ class CreditCardView(QWidget):
             self.cards_table.setItem(0, 0, empty_item)
             return
 
+        monthly_states = {
+            s.card.id: s
+            for s in self.budget_service.get_card_monthly_states(year_month=self.current_month)
+        }
+
+        self.cards_table.blockSignals(True)
         for card in cards:
             row = self.cards_table.rowCount()
             self.cards_table.insertRow(row)
             self.cards_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
 
-            self.cards_table.setItem(row, 0, QTableWidgetItem(card.name))
-            self.cards_table.setItem(row, 1, QTableWidgetItem(str(card.credit_limit)))
-            self.cards_table.setItem(
-                row, 2, QTableWidgetItem(str(card.current_balance_used))
-            )
+            _editable = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
+            name_item = QTableWidgetItem(card.name)
+            name_item.setData(Qt.ItemDataRole.UserRole, card.id)
+            name_item.setFlags(_editable)
+            self.cards_table.setItem(row, 0, name_item)
+            limit_item = QTableWidgetItem(str(card.credit_limit))
+            limit_item.setFlags(_editable)
+            self.cards_table.setItem(row, 1, limit_item)
+            used_item = QTableWidgetItem(str(card.current_balance_used))
+            used_item.setFlags(_editable)
+            self.cards_table.setItem(row, 2, used_item)
             self.cards_table.setItem(row, 3, QTableWidgetItem(str(card.available)))
 
             util_item = QTableWidgetItem(f"{card.utilization_percent:.1f}%")
             self.cards_table.setItem(row, 4, util_item)
 
             # Due day
-            self.cards_table.setItem(row, 5, QTableWidgetItem(str(card.payment_due_day)))
+            due_item = QTableWidgetItem(str(card.payment_due_day))
+            due_item.setFlags(_editable)
+            _today = _date.today()
+            if self.current_month == YearMonth(_today.year, _today.month):
+                d, t = card.payment_due_day, _today.day
+                if d < t:
+                    due_item.setForeground(QColor("#9ca3af"))   # past - gray
+                elif d == t:
+                    due_item.setForeground(QColor("#f87171"))   # today - red
+                else:
+                    due_item.setForeground(QColor("#34d399"))   # upcoming - green
+            self.cards_table.setItem(row, 5, due_item)
 
             # Interest rate
-            interest_str = f"{card.interest_rate_apr:.1f}%" if card.interest_rate_apr else " - "
-            self.cards_table.setItem(row, 6, QTableWidgetItem(interest_str))
+            interest_str = f"{card.interest_rate_apr:.2f}%" if card.interest_rate_apr else " - "
+            interest_item = QTableWidgetItem(interest_str)
+            interest_item.setFlags(_editable)
+            self.cards_table.setItem(row, 6, interest_item)
 
             # Minimum payment
             if card.minimum_payment_pence is not None:
-                from clear_budget.domain.value_objects.amount import Amount
-                min_pmt = Amount(pence=card.minimum_payment_pence)
-                min_pmt_str = str(min_pmt)
+                min_pmt_str = str(Amount(pence=card.minimum_payment_pence))
             else:
                 min_pmt_str = " - "
-            self.cards_table.setItem(row, 7, QTableWidgetItem(min_pmt_str))
+            min_item = QTableWidgetItem(min_pmt_str)
+            min_item.setFlags(_editable)
+            self.cards_table.setItem(row, 7, min_item)
 
             # Expiry
             if card.card_expiry_month and card.card_expiry_year:
                 expiry_str = f"{card.card_expiry_month:02d}/{card.card_expiry_year % 100:02d}"
             else:
                 expiry_str = " - "
-            self.cards_table.setItem(row, 8, QTableWidgetItem(expiry_str))
+            expiry_item = QTableWidgetItem(expiry_str)
+            expiry_item.setFlags(_editable)
+            self.cards_table.setItem(row, 8, expiry_item)
 
             status = self._get_status_text(card.utilization_percent)
             status_item = QTableWidgetItem(status)
@@ -140,14 +204,60 @@ class CreditCardView(QWidget):
             status_item.setBackground(status_color)
             self.cards_table.setItem(row, 9, status_item)
 
-            # Active status
-            active_str = "✓" if card.active == 1 else "✗"
-            self.cards_table.setItem(row, 10, QTableWidgetItem(active_str))
+            # Active checkbox
+            active_item = QTableWidgetItem()
+            active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
+            active_item.setCheckState(Qt.CheckState.Checked if card.active == 1 else Qt.CheckState.Unchecked)
+            active_item.setData(Qt.ItemDataRole.UserRole, card.id)
+            self.cards_table.setItem(row, 10, active_item)
+
+            # Monthly summary columns
+            state = monthly_states.get(card.id)
+            if state:
+                pdate = f" (paid day {state.payment_date})" if state.payment_date else ""
+                self.cards_table.setItem(row, 11, QTableWidgetItem(str(state.charges)))
+                self.cards_table.setItem(row, 12, QTableWidgetItem(f"{state.payment_received}{pdate}"))
+                self.cards_table.setItem(row, 13, QTableWidgetItem(str(state.monthly_interest)))
+                min_due_item = QTableWidgetItem(str(state.minimum_payment))
+                min_due_item.setFlags(_editable)
+                self.cards_table.setItem(row, 14, min_due_item)
+            else:
+                for col in (11, 12, 13, 14):
+                    self.cards_table.setItem(row, col, QTableWidgetItem("-"))
+
+        self.cards_table.blockSignals(False)
+
+    def _on_card_cell_clicked(self, row: int, col: int) -> None:
+        if col != 10:
+            return
+        from PySide6.QtWidgets import QApplication
+        mods = QApplication.keyboardModifiers()
+        item = self.cards_table.item(row, 10)
+        if not item:
+            return
+        card_id = item.data(Qt.ItemDataRole.UserRole)
+        if mods & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
+            self.cards_table.blockSignals(True)
+            cursor = self.budget_service.payment_method_repo.conn.cursor()
+            cursor.execute("SELECT active FROM credit_cards WHERE id=?", (card_id,))
+            r = cursor.fetchone()
+            if r:
+                item.setCheckState(Qt.CheckState.Checked if r["active"] == 1 else Qt.CheckState.Unchecked)
+            self.cards_table.blockSignals(False)
+            return
+        active = item.checkState() == Qt.CheckState.Checked
+        self.budget_service.payment_method_repo.set_card_active(card_id=card_id, active=active)
+        self.load_cards()
 
     def set_month(self, year_month: YearMonth) -> None:
         """Update displayed month and refresh."""
         object.__setattr__(self, "current_month", year_month)
+        self._refresh_month_label()
         self.load_cards()
+
+    def _refresh_month_label(self) -> None:
+        from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+        self.month_label.setText(f"{MONTH_NAMES[self.current_month.month]} {self.current_month.year}")
 
     def _get_status_text(self, utilization: float) -> str:
         """Get status text based on card utilization."""
@@ -170,36 +280,33 @@ class CreditCardView(QWidget):
         self.cards_table.selectRow(row)
         self.on_edit_card()
 
+    def _card_id_from_row(self, row: int) -> int | None:
+        item = self.cards_table.item(row, 0)
+        return item.data(Qt.ItemDataRole.UserRole) if item else None
+
     def on_add_card(self) -> None:
-        """Handle add card button click."""
-        print(f"[ADD_CARD] on_add_card() called")
         dialog = CreditCardDialog(self)
         if dialog.exec():
             card = dialog.get_card()
-            print(f"[ADD_CARD] dialog.get_card() returned: {card}")
             if card:
-                print(f"[ADD_CARD] Calling add_credit_card with: {card.name}")
-                result = self.budget_service.payment_method_repo.add_credit_card(card=card)
-                print(f"[ADD_CARD] add_credit_card returned: {result}")
+                existing = self.budget_service.get_credit_cards(include_inactive=True)
+                if any(c.name.lower() == card.name.lower() for c in existing):
+                    from PySide6.QtWidgets import QMessageBox
+                    QMessageBox.warning(self, "Duplicate Card", f"A card named '{card.name}' already exists.")
+                    return
+                self.budget_service.payment_method_repo.add_credit_card(card=card)
                 self.load_cards()
-            else:
-                print(f"[ADD_CARD] get_card() returned None")
-        else:
-            print(f"[ADD_CARD] Dialog was rejected")
 
     def on_edit_card(self) -> None:
-        """Handle edit card button click."""
         row = self.cards_table.currentRow()
         if row < 0:
             return
-
-        card_name = self.cards_table.item(row, 0).text()
-        cards = self.budget_service.get_credit_cards(include_inactive=True)
-        card = next((c for c in cards if c.name == card_name), None)
-
+        card_id = self._card_id_from_row(row)
+        if card_id is None:
+            return
+        card = self.budget_service.payment_method_repo.get_credit_card_by_id(card_id=card_id)
         if not card:
             return
-
         dialog = CreditCardDialog(self, card)
         if dialog.exec():
             updated_card = dialog.get_card()
@@ -207,25 +314,47 @@ class CreditCardView(QWidget):
                 self.budget_service.payment_method_repo.update_credit_card(card=updated_card)
                 self.load_cards()
 
-    def on_delete_card(self) -> None:
-        """Handle delete card button click."""
-        row = self.cards_table.currentRow()
-        print(f"[DELETE_CARD] on_delete_card() called, row={row}")
-        if row < 0:
-            print(f"[DELETE_CARD] No row selected, returning")
+    _EDITABLE_COLS = {0, 1, 2, 5, 6, 7, 8}
+
+    def _on_card_item_changed(self, item) -> None:
+        if item.column() not in self._EDITABLE_COLS:
+            QTimer.singleShot(0, self.load_cards)
             return
+        card_id = self._card_id_from_row(item.row())
+        if card_id is None: return
+        card = self.budget_service.payment_method_repo.get_credit_card_by_id(card_id=card_id)
+        if card is None: return
+        col, v = item.column(), item.text().strip()
+        try:
+            if col == 0: u, d = dataclasses.replace(card, name=v or card.name), v or card.name
+            elif col == 1: a = Amount.from_pounds(float(v.lstrip('£'))); u, d = dataclasses.replace(card, credit_limit=a), str(a)
+            elif col == 2: a = Amount.from_pounds(float(v.lstrip('£'))); u, d = dataclasses.replace(card, current_balance_used=a), str(a)
+            elif col == 5: u, d = dataclasses.replace(card, payment_due_day=int(v)), str(int(v))
+            elif col == 6:
+                apr = float(v.rstrip('%').strip()) if v != '-' else None
+                u, d = dataclasses.replace(card, interest_rate_apr=apr), (f"{apr:.2f}%" if apr else " - ")
+            elif col == 7:
+                pence = Amount.from_pounds(float(v.lstrip('£'))).pence if v != '-' else None
+                u, d = dataclasses.replace(card, minimum_payment_pence=pence), (str(Amount(pence=pence)) if pence is not None else " - ")
+            elif col == 8:
+                if v == '-': u, d = dataclasses.replace(card, card_expiry_month=None, card_expiry_year=None), " - "
+                else:
+                    m, y2 = int(v.split('/')[0]), int(v.split('/')[1])
+                    u, d = dataclasses.replace(card, card_expiry_month=m, card_expiry_year=2000 + y2 if y2 < 100 else y2), f"{m:02d}/{y2:02d}"
+            elif col == 14:
+                pence = Amount.from_pounds(float(v.lstrip('£'))).pence if v not in ('-', '') else None
+                u, d = dataclasses.replace(card, minimum_payment_pence=pence), (str(Amount(pence=pence)) if pence is not None else " - ")
+            else: return
+            if u == card: return  # nothing changed — editor just opened, don't rebuild
+            self.budget_service.payment_method_repo.update_credit_card(card=u)
+            self.cards_table.blockSignals(True); item.setText(d); self.cards_table.blockSignals(False)
+            QTimer.singleShot(0, self.load_cards)
+        except Exception: QTimer.singleShot(0, self.load_cards)
 
-        card_name = self.cards_table.item(row, 0).text()
-        print(f"[DELETE_CARD] Card name from row: '{card_name}'")
-        cards = self.budget_service.get_credit_cards(include_inactive=True)
-        print(f"[DELETE_CARD] Found {len(cards)} cards (active + inactive)")
-        card = next((c for c in cards if c.name == card_name), None)
-        print(f"[DELETE_CARD] Matched card: {card}")
-
-        if card:
-            print(f"[DELETE_CARD] Deactivating card id={card.id}")
-            self.budget_service.payment_method_repo.deactivate_credit_card(card_id=card.id)
-            print(f"[DELETE_CARD] Calling load_cards()")
+    def on_delete_card(self) -> None:
+        selected_rows = sorted({idx.row() for idx in self.cards_table.selectedIndexes()})
+        card_ids = [cid for row in selected_rows if (cid := self._card_id_from_row(row))]
+        for card_id in card_ids:
+            self.budget_service.payment_method_repo.hard_delete_credit_card(card_id=card_id)
+        if card_ids:
             self.load_cards()
-        else:
-            print(f"[DELETE_CARD] Card not found!")

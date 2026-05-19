@@ -105,3 +105,12 @@ class TestDatabaseGetOrCreateMonth:
         month_id_2 = db.get_or_create_month(year_month=YearMonth(2026, 7))
 
         assert month_id_1 != month_id_2
+
+    def test_create_schema_idempotent(self, tmp_path) -> None:
+        """Calling create_schema twice hits the except branches for existing columns."""
+        db_path = tmp_path / "idempotent.db"
+        database = Database(db_path)
+        database.connect()
+        database.create_schema()  # first call adds columns
+        database.create_schema()  # second call hits except: pass for each ALTER TABLE
+        database.close()

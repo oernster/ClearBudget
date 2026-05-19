@@ -21,12 +21,11 @@ class FakeBillRepository:
 
     _bills: list[Bill] = field(default_factory=list)
 
-    def list_active_for_month(self, *, year_month: YearMonth) -> list[Bill]:
+    def list_active_for_month(self, *, year_month: YearMonth, include_inactive: bool = False) -> list[Bill]:
         """List bills active in a given month."""
         return [
-            b
-            for b in self._bills
-            if b.is_active_in_month(year_month)
+            b for b in self._bills
+            if b.is_active_in_month(year_month) and (include_inactive or b.active)
         ]
 
     def get_by_id(self, *, bill_id: int) -> Bill | None:
@@ -54,6 +53,16 @@ class FakeBillRepository:
         for i, b in enumerate(self._bills):
             if b.id == bill_id:
                 self._bills[i] = replace(b, active=False)
+
+    def set_active(self, *, bill_id: int, active: bool) -> None:
+        """Set active state of a bill."""
+        for i, b in enumerate(self._bills):
+            if b.id == bill_id:
+                self._bills[i] = replace(b, active=active)
+
+    def hard_delete(self, *, bill_id: int) -> None:
+        """Permanently remove a bill."""
+        self._bills = [b for b in self._bills if b.id != bill_id]
 
 
 @dataclass

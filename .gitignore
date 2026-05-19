@@ -229,6 +229,9 @@ build/
 *.exe
 *.msi
 
+# Claude Code local settings (project-scoped permissions, not for version control)
+.claude/
+
 # IDE configuration
 .vscode/
 .idea/

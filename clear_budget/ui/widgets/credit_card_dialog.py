@@ -65,25 +65,46 @@ class CreditCardDialog(QDialog):
         layout.addWidget(self.due_day_spin)
 
         # Expiry date layout
+        self.has_expiry_checkbox = QCheckBox("Card has expiry date")
+        self.has_expiry_checkbox.setChecked(False)
+        layout.addWidget(self.has_expiry_checkbox)
+
         expiry_layout = QHBoxLayout()
-        expiry_layout.addWidget(QLabel("Card Expiry:"))
-        expiry_layout.addWidget(QLabel("Month (1-12):"))
+        expiry_layout.addWidget(QLabel("  Month (1-12):"))
         self.expiry_month_spin = QSpinBox()
         self.expiry_month_spin.setMinimum(1)
         self.expiry_month_spin.setMaximum(12)
         self.expiry_month_spin.setValue(1)
+        self.expiry_month_spin.setEnabled(False)
         expiry_layout.addWidget(self.expiry_month_spin)
         expiry_layout.addWidget(QLabel("Year:"))
         self.expiry_year_spin = QSpinBox()
         self.expiry_year_spin.setMinimum(2026)
         self.expiry_year_spin.setMaximum(2050)
         self.expiry_year_spin.setValue(2030)
+        self.expiry_year_spin.setEnabled(False)
         expiry_layout.addWidget(self.expiry_year_spin)
         layout.addLayout(expiry_layout)
 
-        layout.addWidget(QLabel("Minimum Payment (£) [optional]:"))
+        self.has_expiry_checkbox.toggled.connect(self.expiry_month_spin.setEnabled)
+        self.has_expiry_checkbox.toggled.connect(self.expiry_year_spin.setEnabled)
+
+        layout.addWidget(QLabel("Minimum Payment [optional, overridden by % below]:"))
+        min_pmt_row = QHBoxLayout()
+        min_pmt_row.addWidget(QLabel("£"))
         self.min_payment_edit = QLineEdit()
-        layout.addWidget(self.min_payment_edit)
+        min_pmt_row.addWidget(self.min_payment_edit)
+        layout.addLayout(min_pmt_row)
+
+        layout.addWidget(QLabel("Min Payment % of balance [optional, e.g. 4.43 — overrides fixed £]:"))
+        self.min_pct_spin = QDoubleSpinBox()
+        self.min_pct_spin.setMinimum(0.0)
+        self.min_pct_spin.setMaximum(100.0)
+        self.min_pct_spin.setSingleStep(0.01)
+        self.min_pct_spin.setDecimals(2)
+        self.min_pct_spin.setValue(0.0)
+        self.min_pct_spin.setSuffix(" %")
+        layout.addWidget(self.min_pct_spin)
 
         self.active_checkbox = QCheckBox("Active")
         self.active_checkbox.setChecked(True)
@@ -109,13 +130,15 @@ class CreditCardDialog(QDialog):
         if card.interest_rate_apr is not None:
             self.interest_spin.setValue(card.interest_rate_apr)
         self.due_day_spin.setValue(card.payment_due_day)
-        if card.card_expiry_month is not None:
+        has_expiry = card.card_expiry_month is not None and card.card_expiry_year is not None
+        self.has_expiry_checkbox.setChecked(has_expiry)
+        if has_expiry:
             self.expiry_month_spin.setValue(card.card_expiry_month)
-        if card.card_expiry_year is not None:
             self.expiry_year_spin.setValue(card.card_expiry_year)
         if card.minimum_payment_pence is not None:
-            min_pmt_pounds = card.minimum_payment_pence / 100
-            self.min_payment_edit.setText(f"{min_pmt_pounds:.2f}")
+            self.min_payment_edit.setText(f"{card.minimum_payment_pence / 100:.2f}")
+        if card.minimum_payment_percent is not None:
+            self.min_pct_spin.setValue(card.minimum_payment_percent)
         self.active_checkbox.setChecked(card.active == 1)
 
     def get_card(self) -> CreditCard | None:
@@ -139,15 +162,21 @@ class CreditCardDialog(QDialog):
 
             due_day = self.due_day_spin.value()
 
-            expiry_month = self.expiry_month_spin.value() if self.expiry_month_spin.value() > 0 else None
-            expiry_year = self.expiry_year_spin.value() if self.expiry_month_spin.value() > 0 else None
+            if self.has_expiry_checkbox.isChecked():
+                expiry_month = self.expiry_month_spin.value()
+                expiry_year = self.expiry_year_spin.value()
+            else:
+                expiry_month = None
+                expiry_year = None
 
             min_pmt_str = self.min_payment_edit.text().strip()
             min_pmt_pence = None
             if min_pmt_str:
-                min_pmt_pence = int(float(min_pmt_str) * 100)
+                min_pmt_pence = Amount.from_pounds(float(min_pmt_str)).pence
 
             active = 1 if self.active_checkbox.isChecked() else 0
+
+            min_pct = self.min_pct_spin.value() if self.min_pct_spin.value() > 0 else None
 
             return CreditCard(
                 id=self.card.id if self.card else 0,
@@ -159,6 +188,7 @@ class CreditCardDialog(QDialog):
                 card_expiry_month=expiry_month,
                 card_expiry_year=expiry_year,
                 minimum_payment_pence=min_pmt_pence,
+                minimum_payment_percent=min_pct,
                 active=active,
             )
         except (ValueError, AttributeError, TypeError):

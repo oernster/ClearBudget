@@ -26,7 +26,8 @@ class MainWindow(QMainWindow):
         self.month_view_model = month_view_model
         self.solvency_view_model = solvency_view_model
         self.setWindowTitle("ClearBudget - Personal Budget Planner")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 1600, 900)
+        self.setMinimumWidth(1400)
         self.init_ui()
         self.apply_theme()
 
@@ -37,6 +38,8 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.tabs = QTabWidget()
+        self.tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
+        self.tabs.tabBar().setExpanding(False)
 
         month_view = MonthView(self.month_view_model)
         self.tabs.addTab(month_view, "Monthly Budget")
@@ -57,10 +60,36 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
-        self.month_view_model.month_changed.connect(
-            self.solvency_view_model.set_month
-        )
+        self.month_view_model.month_changed.connect(self.solvency_view_model.set_month)
         self.month_view_model.month_changed.connect(credit_card_view.set_month)
+        self.month_view_model.month_summary_updated.connect(
+            self.solvency_view_model.update_month_summary
+        )
+
+        # Nav buttons on Solvency and Credit Cards tabs
+        solvency_panel.prev_btn.clicked.connect(self.month_view_model.previous_month)
+        solvency_panel.next_btn.clicked.connect(self.month_view_model.next_month)
+        credit_card_view.prev_btn.clicked.connect(self.month_view_model.previous_month)
+        credit_card_view.next_btn.clicked.connect(self.month_view_model.next_month)
+
+        # Keep prev buttons in sync with base_month constraint
+        self.month_view_model.month_changed.connect(
+            lambda ym: solvency_panel.prev_btn.setEnabled(ym > self.month_view_model.base_month)
+        )
+        self.month_view_model.month_changed.connect(
+            lambda ym: credit_card_view.prev_btn.setEnabled(ym > self.month_view_model.base_month)
+        )
+
+        # Initialise disabled state
+        at_base = self.month_view_model.current_month <= self.month_view_model.base_month
+        solvency_panel.prev_btn.setEnabled(not at_base)
+        credit_card_view.prev_btn.setEnabled(not at_base)
+
+        # Ensure solvency has current summary data
+        if self.month_view_model.month_summary:
+            self.solvency_view_model.update_month_summary(
+                self.month_view_model.month_summary
+            )
 
     def apply_theme(self) -> None:
         """Apply dark theme stylesheet."""

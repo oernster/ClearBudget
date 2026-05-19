@@ -20,10 +20,14 @@ class MonthViewModel(QObject):
         current_month: YearMonth = YearMonth(2026, 5),
     ) -> None:
         """Initialize month view model."""
+        from datetime import datetime
         super().__init__()
         self.budget_service = budget_service
         self.current_month = current_month
+        self.base_month = YearMonth(datetime.now().year, datetime.now().month)
+        self.today = datetime.now().date()
         self.month_summary: MonthSummary | None = None
+        self.refresh_month_summary()
 
     def set_month(self, year_month: YearMonth) -> None:
         """Change current month and refresh summary."""
@@ -57,9 +61,25 @@ class MonthViewModel(QObject):
         self.budget_service.update_bill(bill=bill)
         self.refresh_month_summary()
 
+    def update_bill_for_month(self, *, bill: Bill) -> None:
+        """Store per-month override for a bill and refresh summary."""
+        self.budget_service.update_bill_for_month(bill=bill, year_month=self.current_month)
+        self.refresh_month_summary()
+
     def delete_bill(self, *, bill_id: int) -> None:
         """Delete a bill and refresh summary."""
         self.budget_service.delete_bill(bill_id=bill_id)
+        self.refresh_month_summary()
+
+    def delete_bills(self, *, bill_ids: list[int]) -> None:
+        """Delete multiple bills in one batch then refresh once."""
+        for bill_id in bill_ids:
+            self.budget_service.delete_bill(bill_id=bill_id)
+        self.refresh_month_summary()
+
+    def set_bill_active(self, *, bill_id: int, active: bool) -> None:
+        """Toggle bill active state and refresh summary."""
+        self.budget_service.set_bill_active(bill_id=bill_id, active=active)
         self.refresh_month_summary()
 
     def add_income(self, *, income) -> None:

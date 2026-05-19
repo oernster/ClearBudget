@@ -31,6 +31,7 @@ class CreditCard:
     card_expiry_month: int | None = None
     card_expiry_year: int | None = None
     minimum_payment_pence: int | None = None
+    minimum_payment_percent: float | None = None
     active: int = 1
 
     @property

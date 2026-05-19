@@ -29,7 +29,8 @@ class MonthSummary:
     total_bills: Amount
     bank_bills: Amount
     balance: Amount
-    bills: tuple[Bill, ...] = ()
+    bills: tuple[Bill, ...] = ()          # active only — used for calculations
+    all_bills: tuple[Bill, ...] = ()      # active + inactive — used for display
     income_sources: tuple[IncomeSource, ...] = ()
 
     def __str__(self) -> str:

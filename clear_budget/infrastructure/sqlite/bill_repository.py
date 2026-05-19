@@ -15,21 +15,42 @@ class SQLiteBillRepository:
 
     conn: sqlite3.Connection
 
-    def list_active_for_month(self, *, year_month: YearMonth) -> list[Bill]:
-        """List active bills for a given month."""
+    def list_active_for_month(self, *, year_month: YearMonth, include_inactive: bool = False) -> list[Bill]:
+        """List bills for a given month, applying per-month overrides.
+
+        Args:
+            year_month: Month to query
+            include_inactive: When True, include deactivated bills (for display)
+        """
         cursor = self.conn.cursor()
+        active_filter = "" if include_inactive else "AND b.active = 1"
         cursor.execute(
-            """
-            SELECT id, name, amount_pence, payment_method_id, category,
-                   bill_type, day_of_month, start_year, start_month,
-                   end_year, end_month
-            FROM bills
-            WHERE active = 1
-              AND (start_year < ? OR (start_year = ? AND start_month <= ?))
-              AND (end_year IS NULL OR end_year > ? OR
-                   (end_year = ? AND end_month >= ?))
+            f"""
+            SELECT
+                b.id,
+                b.name,
+                COALESCE(o.amount_pence, b.amount_pence) AS amount_pence,
+                COALESCE(o.payment_method_id, b.payment_method_id) AS payment_method_id,
+                b.category,
+                b.bill_type,
+                COALESCE(o.day_of_month, b.day_of_month) AS day_of_month,
+                b.target_card_id,
+                b.start_year,
+                b.start_month,
+                b.end_year,
+                b.end_month,
+                b.active
+            FROM bills b
+            LEFT JOIN bill_month_overrides o
+                ON o.bill_id = b.id AND o.year = ? AND o.month = ?
+            WHERE (b.start_year < ? OR (b.start_year = ? AND b.start_month <= ?))
+              AND (b.end_year IS NULL OR b.end_year > ? OR
+                   (b.end_year = ? AND b.end_month >= ?))
+              {active_filter}
             """,
             (
+                year_month.year,
+                year_month.month,
                 year_month.year,
                 year_month.year,
                 year_month.month,
@@ -55,10 +76,21 @@ class SQLiteBillRepository:
                     if row["end_year"]
                     else None
                 ),
+                active=bool(row["active"]),
+                target_card_id=row["target_card_id"],
             )
             bills.append(bill)
 
         return bills
+
+    def set_active(self, *, bill_id: int, active: bool) -> None:
+        """Set the active state of a bill."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "UPDATE bills SET active = ? WHERE id = ?",
+            (1 if active else 0, bill_id),
+        )
+        self.conn.commit()
 
     def get_by_id(self, *, bill_id: int) -> Bill | None:
         """Get bill by ID."""
@@ -67,7 +99,7 @@ class SQLiteBillRepository:
             """
             SELECT id, name, amount_pence, payment_method_id, category,
                    bill_type, day_of_month, start_year, start_month,
-                   end_year, end_month, active
+                   end_year, end_month, active, target_card_id
             FROM bills WHERE id = ?
             """,
             (bill_id,),
@@ -92,50 +124,35 @@ class SQLiteBillRepository:
                 else None
             ),
             active=bool(row["active"]),
+            target_card_id=row["target_card_id"],
         )
 
     def add(self, *, bill: Bill) -> Bill:
         """Add a bill."""
-        print(f"\n[BILL_REPO] add() called with bill: name='{bill.name}', payment_method_id={bill.payment_method_id}")
         cursor = self.conn.cursor()
         cursor.execute(
             """
             INSERT INTO bills
             (name, amount_pence, payment_method_id, category, bill_type,
-             day_of_month, start_year, start_month, end_year, end_month, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             day_of_month, start_year, start_month, end_year, end_month, active, target_card_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                bill.name,
-                bill.amount.pence,
-                bill.payment_method_id,
-                bill.category,
-                bill.bill_type,
-                bill.day_of_month,
-                bill.start_ym.year,
-                bill.start_ym.month,
+                bill.name, bill.amount.pence, bill.payment_method_id, bill.category,
+                bill.bill_type, bill.day_of_month, bill.start_ym.year, bill.start_ym.month,
                 bill.end_ym.year if bill.end_ym else None,
                 bill.end_ym.month if bill.end_ym else None,
-                1 if bill.active else 0,
+                1 if bill.active else 0, bill.target_card_id,
             ),
         )
         self.conn.commit()
-        print(f"[BILL_REPO] INSERT successful, lastrowid={cursor.lastrowid}")
-
-        result = Bill(
-            id=cursor.lastrowid,
-            name=bill.name,
-            amount=bill.amount,
-            payment_method_id=bill.payment_method_id,
-            category=bill.category,
-            bill_type=bill.bill_type,
-            day_of_month=bill.day_of_month,
-            start_ym=bill.start_ym,
-            end_ym=bill.end_ym,
-            active=bill.active,
+        return Bill(
+            id=cursor.lastrowid, name=bill.name, amount=bill.amount,
+            payment_method_id=bill.payment_method_id, category=bill.category,
+            bill_type=bill.bill_type, day_of_month=bill.day_of_month,
+            start_ym=bill.start_ym, end_ym=bill.end_ym, active=bill.active,
+            target_card_id=bill.target_card_id,
         )
-        print(f"[BILL_REPO] Returning bill with payment_method_id={result.payment_method_id}")
-        return result
 
     def update(self, *, bill: Bill) -> Bill:
         """Update a bill."""
@@ -146,29 +163,29 @@ class SQLiteBillRepository:
             SET name = ?, amount_pence = ?, payment_method_id = ?,
                 category = ?, bill_type = ?, day_of_month = ?,
                 start_year = ?, start_month = ?, end_year = ?,
-                end_month = ?, active = ?
+                end_month = ?, active = ?, target_card_id = ?
             WHERE id = ?
             """,
             (
-                bill.name,
-                bill.amount.pence,
-                bill.payment_method_id,
-                bill.category,
-                bill.bill_type,
-                bill.day_of_month,
-                bill.start_ym.year,
-                bill.start_ym.month,
+                bill.name, bill.amount.pence, bill.payment_method_id, bill.category,
+                bill.bill_type, bill.day_of_month, bill.start_ym.year, bill.start_ym.month,
                 bill.end_ym.year if bill.end_ym else None,
                 bill.end_ym.month if bill.end_ym else None,
-                1 if bill.active else 0,
-                bill.id,
+                1 if bill.active else 0, bill.target_card_id, bill.id,
             ),
         )
         self.conn.commit()
         return bill
 
     def deactivate(self, *, bill_id: int) -> None:
-        """Deactivate a bill."""
+        """Deactivate a bill (soft delete — sets active=0)."""
         cursor = self.conn.cursor()
         cursor.execute("UPDATE bills SET active = 0 WHERE id = ?", (bill_id,))
+        self.conn.commit()
+
+    def hard_delete(self, *, bill_id: int) -> None:
+        """Permanently remove a bill and its overrides from the database."""
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM bill_month_overrides WHERE bill_id = ?", (bill_id,))
+        cursor.execute("DELETE FROM bills WHERE id = ?", (bill_id,))
         self.conn.commit()

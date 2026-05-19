@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QSpinBox,
     QComboBox,
+    QCheckBox,
     QPushButton,
 )
 from PySide6.QtCore import Qt
@@ -53,6 +54,8 @@ class BillDialog(QDialog):
         self.init_ui()
         if bill is not None:
             self.load_bill(bill)
+        else:
+            self.month_only_check.setEnabled(False)
 
     def init_ui(self) -> None:
         """Build dialog layout."""
@@ -82,12 +85,25 @@ class BillDialog(QDialog):
         self.type_combo.addItems(self.BILL_TYPES)
         layout.addWidget(self.type_combo)
 
-        layout.addWidget(QLabel("Day of Month (leave blank for N/A):"))
+        layout.addWidget(QLabel("Day of Month (0 = N/A):"))
         self.day_spin = QSpinBox()
         self.day_spin.setMinimum(0)
         self.day_spin.setMaximum(31)
         self.day_spin.setValue(0)
         layout.addWidget(self.day_spin)
+
+        self.pays_card_label = QLabel("Pays Card:")
+        layout.addWidget(self.pays_card_label)
+        self.pays_card_combo = QComboBox()
+        self.pays_card_combo.addItem("(none)", None)
+        if self.payment_method_repo:
+            for card in self.payment_method_repo.get_all_credit_cards(include_inactive=False):
+                self.pays_card_combo.addItem(card.name, card.id)
+        layout.addWidget(self.pays_card_combo)
+
+        self.month_only_check = QCheckBox("This month only")
+        self.month_only_check.setToolTip("Override amount/date for this month; other months unchanged")
+        layout.addWidget(self.month_only_check)
 
         btn_layout = QHBoxLayout()
         ok_btn = QPushButton("OK")
@@ -100,31 +116,22 @@ class BillDialog(QDialog):
 
         ok_btn.clicked.connect(self.accept)
         cancel_btn.clicked.connect(self.reject)
+        self.category_combo.currentTextChanged.connect(lambda _: self._update_pays_card_visibility())
+        self._update_pays_card_visibility()
+
+    def _update_pays_card_visibility(self) -> None:
+        visible = self._internal_category(self.category_combo.currentText()) == "credit_payment"
+        self.pays_card_label.setVisible(visible)
+        self.pays_card_combo.setVisible(visible)
 
     def _populate_payment_methods(self) -> None:
-        """Populate payment method dropdown from database."""
-        print("[DIALOG] _populate_payment_methods() called")
         self.payment_method_combo.clear()
         self.payment_method_combo.addItem("Bank Account")
         self.payment_method_combo.setItemData(0, 1)
-        print(f"[DIALOG] Added 'Bank Account' at index 0 with data=1")
-
         if self.payment_method_repo:
-            print(f"[DIALOG] payment_method_repo exists, fetching cards...")
-            cards = self.payment_method_repo.get_all_credit_cards()
-            print(f"[DIALOG] Found {len(cards)} credit cards")
-            for i, card in enumerate(cards, start=1):
+            for i, card in enumerate(self.payment_method_repo.get_all_credit_cards(), start=1):
                 self.payment_method_combo.addItem(card.name)
                 self.payment_method_combo.setItemData(i, card.id)
-                print(f"[DIALOG] Added '{card.name}' at index {i} with data={card.id}")
-        else:
-            print(f"[DIALOG] payment_method_repo is None!")
-
-        print(f"[DIALOG] Final combo count: {self.payment_method_combo.count()}")
-        for idx in range(self.payment_method_combo.count()):
-            text = self.payment_method_combo.itemText(idx)
-            data = self.payment_method_combo.itemData(idx)
-            print(f"[DIALOG]   Index {idx}: text='{text}', data={data}")
 
     def load_bill(self, bill: Bill) -> None:
         """Load bill data into form."""
@@ -141,6 +148,12 @@ class BillDialog(QDialog):
         self.type_combo.setCurrentText(bill.bill_type)
         if bill.day_of_month:
             self.day_spin.setValue(bill.day_of_month)
+        if bill.target_card_id is not None:
+            for i in range(self.pays_card_combo.count()):
+                if self.pays_card_combo.itemData(i) == bill.target_card_id:
+                    self.pays_card_combo.setCurrentIndex(i)
+                    break
+        self._update_pays_card_visibility()
 
     def get_bill(self) -> Bill | None:
         """Get bill from form (returns None if invalid)."""
@@ -158,46 +171,18 @@ class BillDialog(QDialog):
             bill_type = self.type_combo.currentText()
             day = self.day_spin.value() if self.day_spin.value() > 0 else None
 
-            # Get payment method ID from combo box
+            # Payment method ID
             selected_text = self.payment_method_combo.currentText()
-            print(f"\n[GET_BILL] ===== PAYMENT METHOD LOGIC =====")
-            print(f"[GET_BILL] Selected text from combo: '{selected_text}'")
-            print(f"[GET_BILL] Current index: {self.payment_method_combo.currentIndex()}")
-
-            # Direct match: check if it's the bank account
             if selected_text == "Bank Account":
                 payment_method_id = 1
-                print(f"[GET_BILL] Matched 'Bank Account' -> payment_method_id=1")
             else:
-                # Search for matching card by name
-                payment_method_id = None
-                print(f"[GET_BILL] Not Bank Account, searching for card '{selected_text}'")
-                if self.payment_method_repo:
+                payment_method_id = self.payment_method_combo.currentData()
+                if payment_method_id is None and self.payment_method_repo:
                     cards = self.payment_method_repo.get_all_credit_cards()
-                    print(f"[GET_BILL] Fetched {len(cards)} cards from repo")
-                    for card in cards:
-                        print(f"[GET_BILL]   Checking card: name='{card.name}', id={card.id}")
-                        if card.name == selected_text:
-                            payment_method_id = card.id
-                            print(f"[GET_BILL] MATCH FOUND: '{card.name}' -> payment_method_id={card.id}")
-                            break
-                else:
-                    print(f"[GET_BILL] payment_method_repo is None!")
+                    match = next((c for c in cards if c.name == selected_text), None)
+                    payment_method_id = match.id if match else 1
 
-                # Fallback: try userData
-                if payment_method_id is None:
-                    data = self.payment_method_combo.currentData()
-                    print(f"[GET_BILL] No card name match, trying userData: {data}")
-                    payment_method_id = data
-
-                # Final fallback: default to bank if still None
-                if payment_method_id is None:
-                    print(f"[GET_BILL] No match and no userData, defaulting to Bank (1)")
-                    payment_method_id = 1
-                else:
-                    print(f"[GET_BILL] Final payment_method_id={payment_method_id}")
-
-            print(f"[GET_BILL] ===== END PAYMENT METHOD =====\n")
+            target_card_id = self.pays_card_combo.currentData()
 
             return Bill(
                 id=self.bill.id if self.bill else 0,
@@ -207,9 +192,10 @@ class BillDialog(QDialog):
                 category=category,
                 bill_type=bill_type,
                 day_of_month=day,
-                start_ym=self.bill.start_ym if self.bill else self.current_month,
+                start_ym=self.bill.start_ym if self.bill else YearMonth(2000, 1),
                 end_ym=self.bill.end_ym if self.bill else None,
                 active=True,
+                target_card_id=target_card_id,
             )
         except (ValueError, AttributeError):
             return None

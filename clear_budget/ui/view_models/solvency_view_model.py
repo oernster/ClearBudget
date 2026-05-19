@@ -2,6 +2,7 @@
 
 from PySide6.QtCore import QObject, Signal
 
+from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.application.dto.solvency_report import SolvencyReport
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -22,6 +23,7 @@ class SolvencyViewModel(QObject):
         super().__init__()
         self.budget_service = budget_service
         self.current_month = current_month
+        self.current_summary: MonthSummary | None = None
         self.solvency_report: SolvencyReport | None = None
         self.refresh_solvency()
 
@@ -30,9 +32,17 @@ class SolvencyViewModel(QObject):
         self.current_month = year_month
         self.refresh_solvency()
 
+    def update_month_summary(self, summary: MonthSummary) -> None:
+        """Update solvency when month summary changes (from MonthViewModel)."""
+        self.current_summary = summary
+        self.refresh_solvency()
+
     def refresh_solvency(self) -> None:
         """Fetch and emit updated solvency report."""
-        report = self.budget_service.calculate_solvency(year_month=self.current_month)
+        report = self.budget_service.calculate_solvency_from_summary(
+            year_month=self.current_month,
+            month_summary=self.current_summary,
+        )
         self.solvency_report = report
         self.solvency_updated.emit(report)
 

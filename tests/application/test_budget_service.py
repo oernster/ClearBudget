@@ -12,7 +12,6 @@ from tests.application.fakes import (
     FakePaymentMethodRepository,
 )
 
-
 class TestBudgetServiceMonthSummary:
     """Test BudgetService.get_month_summary."""
 
@@ -265,3 +264,111 @@ class TestBudgetServiceSolvency:
 
         assert not report.is_solvent
         assert report.desired_acquire.pence > 100000  # At least bills + buffer
+
+    def test_calculate_solvency_from_summary(self) -> None:
+        """Test calculating solvency from provided month summary."""
+        bill_repo = FakeBillRepository()
+        income_repo = FakeIncomeSourceRepository()
+        payment_method_repo = FakePaymentMethodRepository()
+        generator = MonthGenerator(bill_repo, income_repo)
+        service = BudgetService(bill_repo, income_repo, payment_method_repo, generator)
+
+        # day_of_month=25: future date (today is 19th), so not yet paid —
+        # bank_balance=0 correctly represents current balance before these transactions
+        bill_repo.add(
+            bill=Bill(
+                id=1,
+                name="Rent",
+                amount=Amount(pence=100000),
+                payment_method_id=1,
+                category="housing",
+                bill_type="fixed",
+                day_of_month=25,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
+        income_repo.add(
+            income=IncomeSource(
+                id=1,
+                name="UC",
+                amount=Amount(pence=200000),
+                is_reliable=True,
+                day_of_month=25,
+            )
+        )
+
+        summary = service.get_month_summary(year_month=YearMonth(2026, 6))
+        report = service.calculate_solvency_from_summary(
+            year_month=YearMonth(2026, 6),
+            month_summary=summary,
+        )
+
+        assert report.is_solvent
+        # bank_balance(0) + may_remaining_surplus(100000, day=25 not yet paid) + june_surplus(100000) = 200000
+        assert report.balance_pence == 200000
+
+    def test_calculate_solvency_from_summary_fallback_to_calculate_solvency(self) -> None:
+        """Test that None summary falls back to calculate_solvency."""
+        bill_repo = FakeBillRepository()
+        income_repo = FakeIncomeSourceRepository()
+        payment_method_repo = FakePaymentMethodRepository()
+        generator = MonthGenerator(bill_repo, income_repo)
+        service = BudgetService(bill_repo, income_repo, payment_method_repo, generator)
+
+        bill_repo.add(
+            bill=Bill(
+                id=1,
+                name="Rent",
+                amount=Amount(pence=100000),
+                payment_method_id=1,
+                category="housing",
+                bill_type="fixed",
+                day_of_month=1,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
+        income_repo.add(
+            income=IncomeSource(
+                id=1,
+                name="UC",
+                amount=Amount(pence=200000),
+                is_reliable=True,
+                day_of_month=1,
+            )
+        )
+
+        # Call with None summary
+        report = service.calculate_solvency_from_summary(
+            year_month=YearMonth(2026, 6),
+            month_summary=None,
+        )
+
+        assert report.is_solvent
+
+    def test_calculate_solvency_current_month_filters_past_bills(self) -> None:
+        """Bills/income with day=1 (before today=19) excluded — bank_balance already reflects them."""
+        bill_repo, income_repo, pm_repo = FakeBillRepository(), FakeIncomeSourceRepository(), FakePaymentMethodRepository()
+        service = BudgetService(bill_repo, income_repo, pm_repo, MonthGenerator(bill_repo, income_repo))
+        bill_repo.add(bill=Bill(id=1, name="Rent", amount=Amount(pence=100000), payment_method_id=1,
+                                category="housing", bill_type="fixed", day_of_month=1,
+                                start_ym=YearMonth(2026, 1), end_ym=None))
+        income_repo.add(income=IncomeSource(id=1, name="UC", amount=Amount(pence=200000),
+                                            is_reliable=True, day_of_month=1))
+        may = YearMonth(2026, 5)
+        summary = service.get_month_summary(year_month=may)
+        assert service.calculate_solvency_from_summary(year_month=may, month_summary=summary).balance_pence == 0
+        assert service.calculate_solvency(year_month=may).balance_pence == 0
+
+    def test_projected_balance_two_months_ahead_uses_full_future_month(self) -> None:
+        """else branch in _projected_starting_balance_pence fires for non-current months."""
+        bill_repo, income_repo, pm_repo = FakeBillRepository(), FakeIncomeSourceRepository(), FakePaymentMethodRepository()
+        service = BudgetService(bill_repo, income_repo, pm_repo, MonthGenerator(bill_repo, income_repo))
+        bill_repo.add(bill=Bill(id=1, name="Rent", amount=Amount(pence=100000), payment_method_id=1,
+                                category="housing", bill_type="fixed", day_of_month=25,
+                                start_ym=YearMonth(2026, 1), end_ym=None))
+        income_repo.add(income=IncomeSource(id=1, name="UC", amount=Amount(pence=200000),
+                                            is_reliable=True, day_of_month=25))
+        # May remaining(day=25>=19): +100k, June full(else): +100k, July solvency: +100k = 300k
+        assert service.calculate_solvency(year_month=YearMonth(2026, 7)).balance_pence == 300000

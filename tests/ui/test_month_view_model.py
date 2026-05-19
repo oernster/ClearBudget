@@ -29,7 +29,9 @@ def test_month_view_model_initialization(mock_budget_service, qapplication):
     """Test ViewModel initializes with correct defaults."""
     vm = MonthViewModel(budget_service=mock_budget_service)
     assert vm.current_month == YearMonth(2026, 5)
-    assert vm.month_summary is None
+    # refresh_month_summary() is called in __init__, so summary is populated
+    assert vm.month_summary is not None
+    assert vm.month_summary.total_income.pence == 500000
 
 
 def test_set_month_updates_current_month(mock_budget_service, qapplication):

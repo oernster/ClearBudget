@@ -186,6 +186,45 @@ class Database:
             """
         )
 
+        # Per-month bill overrides (independent of archive)
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS bill_month_overrides (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                bill_id INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                amount_pence INTEGER NOT NULL,
+                payment_method_id INTEGER NOT NULL,
+                UNIQUE(bill_id, year, month),
+                FOREIGN KEY (bill_id) REFERENCES bills(id)
+            )
+            """
+        )
+
+        # Migrate bills added with current-month start_ym to always-visible 2000-01
+        cursor.execute(
+            "UPDATE bills SET start_year = 2000, start_month = 1 WHERE start_year > 2000"
+        )
+
+        # Add target_card_id to bills (links credit_payment bills to the card being paid)
+        try:
+            cursor.execute("ALTER TABLE bills ADD COLUMN target_card_id INTEGER DEFAULT NULL")
+        except Exception:
+            pass
+
+        # Add day_of_month override to bill_month_overrides
+        try:
+            cursor.execute("ALTER TABLE bill_month_overrides ADD COLUMN day_of_month INTEGER DEFAULT NULL")
+        except Exception:
+            pass
+
+        # Add per-card minimum payment percentage
+        try:
+            cursor.execute("ALTER TABLE credit_cards ADD COLUMN minimum_payment_percent REAL DEFAULT NULL")
+        except Exception:
+            pass
+
         self.conn.commit()
 
     def get_or_create_month(self, year_month: YearMonth) -> int:
