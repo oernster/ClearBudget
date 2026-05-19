@@ -417,6 +417,7 @@ class MonthView(QWidget):
             self.view_model.budget_service.set_bank_balance(amount=balance)
             self.view_model.month_summary = self.view_model.budget_service.get_month_summary(year_month=self.view_model.current_month)
             self._update_balance_display()
+            self.view_model.month_summary_updated.emit(self.view_model.month_summary)
 
     def on_archive_month(self) -> None:
         self.view_model.budget_service.archive_month(year_month=self.view_model.current_month)

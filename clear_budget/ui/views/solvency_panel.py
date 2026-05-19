@@ -84,18 +84,15 @@ class SolvencyPanel(QWidget):
         self.remaining_card_label.setStyleSheet(ui_scale.style("font-size: 18px; padding: 5px; color: #f59e0b;"))
         layout.addWidget(self.remaining_card_label)
 
-        self.card_util_label = QLabel("Credit Card Utilization: 0%")
-        self.card_util_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
-        layout.addWidget(self.card_util_label)
+        cards_header = QLabel("Credit Card Status")
+        cards_header.setStyleSheet(ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 10px;"))
+        layout.addWidget(cards_header)
 
-        self.health_score_label = QLabel("Health Score: 0/100")
-        self.health_score_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px; font-weight: bold;"))
-        layout.addWidget(self.health_score_label)
-
-        self.health_bar = QProgressBar()
-        self.health_bar.setMaximum(100)
-        self.health_bar.setStyleSheet("QProgressBar { border-radius: 5px; }")
-        layout.addWidget(self.health_bar)
+        self.card_bars_container = QWidget()
+        self.card_bars_layout = QVBoxLayout(self.card_bars_container)
+        self.card_bars_layout.setSpacing(ui_scale.px(3))
+        self.card_bars_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.card_bars_container)
 
         # SECTION 3: FORWARD PROJECTION (Bottom)
         forward_label = QLabel("Forward Projection")
@@ -250,24 +247,74 @@ class SolvencyPanel(QWidget):
             month = month.next_month()
         return None, 24
 
-    def _calculate_card_utilization(self) -> float:
-        """Calculate combined credit card utilization percentage."""
+    def _rebuild_card_bars(self, report) -> None:
+        """Clear and rebuild per-card utilisation bars for the viewed month."""
+        while self.card_bars_layout.count():
+            item = self.card_bars_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
         cards = self.view_model.budget_service.get_credit_cards(include_inactive=False)
         if not cards:
-            return 0.0
-        total_limit = sum(c.credit_limit.pence for c in cards)
-        total_used = sum(c.current_balance_used.pence for c in cards)
-        return (total_used / total_limit * 100) if total_limit > 0 else 0.0
+            return
 
-    def _calculate_health_score(self, balance_pence: int, card_util: float) -> int:
-        """Calculate health score (0-100) combining bank balance and card utilization."""
-        # Bank balance component (60% weight): safe if > £1000
-        bank_score = min(100, max(0, (balance_pence / 100) / 10))
+        monthly_states = {
+            s.card.id: s
+            for s in self.view_model.budget_service.get_card_monthly_states(year_month=report.year_month)
+        }
 
-        # Card utilization component (40% weight): good if < 50%
-        card_score = max(0, 100 - (card_util * 2))
+        _red_threshold_pence = 10_000    # <= £100 available
+        _amber_threshold_pence = 25_000  # <= £250 available
 
-        return int(bank_score * 0.6 + card_score * 0.4)
+        for card in cards:
+            state = monthly_states.get(card.id)
+            used_pence = card.current_balance_used.pence
+            limit_pence = card.credit_limit.pence
+            closing_pence = state.closing_balance.pence if state else used_pence
+            available_pence = limit_pence - closing_pence
+            util_pct = (used_pence / limit_pence * 100) if limit_pence else 0.0
+
+            name_lbl = QLabel(card.name)
+            name_lbl.setStyleSheet(ui_scale.style("font-size: 16px; font-weight: bold; padding-top: 5px;"))
+            self.card_bars_layout.addWidget(name_lbl)
+
+            bar = QProgressBar()
+            bar.setMaximum(max(1, limit_pence))
+            bar.setValue(min(used_pence, limit_pence))
+            bar.setMinimumHeight(ui_scale.px(26))
+            bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            bar.setFormat(
+                f"£{used_pence / 100:.2f} of £{limit_pence / 100:.2f} ({util_pct:.1f}%)"
+                f"   ·   month-end: £{closing_pence / 100:.2f}"
+            )
+
+            if available_pence <= _red_threshold_pence:
+                chunk_color = "#f87171"
+            elif available_pence <= _amber_threshold_pence:
+                chunk_color = "#f59e0b"
+            else:
+                chunk_color = "#34d399"
+
+            bar.setStyleSheet(
+                "QProgressBar { border-radius: 4px; background-color: #1f2937; color: white; font-weight: bold; }"
+                f"QProgressBar::chunk {{ background-color: {chunk_color}; border-radius: 4px; }}"
+            )
+            self.card_bars_layout.addWidget(bar)
+
+            if state:
+                delta = closing_pence - used_pence
+                arrow = "↑" if delta > 0 else "↓" if delta < 0 else "→"
+                detail = (
+                    f"Charges +£{state.charges.pence / 100:.2f}  ·  "
+                    f"Payment −£{state.payment_received.pence / 100:.2f}  ·  "
+                    f"Interest +£{state.monthly_interest.pence / 100:.2f}  ·  "
+                    f"Min due £{state.minimum_payment.pence / 100:.2f}  "
+                    f"{arrow} £{abs(delta) / 100:.2f} {'increase' if delta > 0 else 'decrease'}"
+                )
+                detail_color = "#f87171" if delta > 0 else "#34d399" if delta < 0 else "#9ca3af"
+                detail_lbl = QLabel(detail)
+                detail_lbl.setStyleSheet(ui_scale.style(f"font-size: 15px; padding: 2px 0px; color: {detail_color};"))
+                self.card_bars_layout.addWidget(detail_lbl)
 
     def update_display(self, report) -> None:
         """Update display from solvency report."""
@@ -388,22 +435,7 @@ class SolvencyPanel(QWidget):
         else:
             self.freedom_label.setText("")
 
-        card_util = self._calculate_card_utilization()
-        self.card_util_label.setText(f"Credit Card Utilization: {card_util:.1f}%")
-
-        health_score = self._calculate_health_score(report.balance_pence, card_util)
-        self.health_score_label.setText(f"Health Score: {health_score}/100")
-        self.health_bar.setValue(health_score)
-        if health_score < 34:
-            bar_color = "#f87171"
-        elif health_score < 67:
-            bar_color = "#f59e0b"
-        else:
-            bar_color = "#34d399"
-        self.health_bar.setStyleSheet(
-            f"QProgressBar {{ border-radius: 5px; }} "
-            f"QProgressBar::chunk {{ background-color: {bar_color}; }}"
-        )
+        self._rebuild_card_bars(report)
 
         m1 = report.year_month.next_month()
         m2 = m1.next_month()
