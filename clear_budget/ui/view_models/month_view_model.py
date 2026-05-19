@@ -82,6 +82,11 @@ class MonthViewModel(QObject):
         self.budget_service.set_bill_active(bill_id=bill_id, active=active)
         self.refresh_month_summary()
 
+    def delete_bill_month_override(self, *, bill_id: int) -> None:
+        """Remove the month-only override for a bill, reverting to template."""
+        self.budget_service.delete_bill_month_override(bill_id=bill_id, year_month=self.current_month)
+        self.refresh_month_summary()
+
     def skip_bill_for_month(self, *, bill_id: int) -> None:
         """Exclude a bill from the current month's calculations only."""
         self.budget_service.skip_bill_for_month(bill_id=bill_id, year_month=self.current_month)

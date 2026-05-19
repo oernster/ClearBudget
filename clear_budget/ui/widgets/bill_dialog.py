@@ -105,6 +105,11 @@ class BillDialog(QDialog):
         self.month_only_check.setToolTip("Override amount/date for this month; other months unchanged")
         layout.addWidget(self.month_only_check)
 
+        self.month_only_status = QLabel("")
+        self.month_only_status.setStyleSheet("color: #60a5fa; font-size: 11px; padding: 2px;")
+        layout.addWidget(self.month_only_status)
+        self.month_only_check.stateChanged.connect(self._on_month_only_changed)
+
         btn_layout = QHBoxLayout()
         ok_btn = QPushButton("OK")
         cancel_btn = QPushButton("Cancel")
@@ -118,6 +123,13 @@ class BillDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         self.category_combo.currentTextChanged.connect(lambda _: self._update_pays_card_visibility())
         self._update_pays_card_visibility()
+
+    def _on_month_only_changed(self) -> None:
+        if self.month_only_check.isChecked():
+            month_str = f"{self.current_month.month}/{self.current_month.year}"
+            self.month_only_status.setText(f"Changes saved for {month_str} only — template unchanged")
+        else:
+            self.month_only_status.setText("")
 
     def _update_pays_card_visibility(self) -> None:
         visible = self._internal_category(self.category_combo.currentText()) == "credit_payment"
@@ -154,6 +166,8 @@ class BillDialog(QDialog):
                     self.pays_card_combo.setCurrentIndex(i)
                     break
         self._update_pays_card_visibility()
+        if bill.has_month_override:
+            self.month_only_check.setChecked(True)
 
     def get_bill(self) -> Bill | None:
         """Get bill from form (returns None if invalid)."""

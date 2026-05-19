@@ -233,11 +233,40 @@ class BudgetService:
     def set_bill_active(self, *, bill_id: int, active: bool) -> None:  # pragma: no cover
         self.bill_repo.set_active(bill_id=bill_id, active=active)
 
+    def delete_bill_month_override(self, *, bill_id: int, year_month: YearMonth) -> None:  # pragma: no cover
+        cursor = self.bill_repo.conn.cursor()
+        cursor.execute(
+            "DELETE FROM bill_month_overrides WHERE bill_id = ? AND year = ? AND month = ?",
+            (bill_id, year_month.year, year_month.month),
+        )
+        self.bill_repo.conn.commit()
+
     def skip_bill_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:  # pragma: no cover
         self.bill_repo.skip_for_month(bill_id=bill_id, year_month=year_month)
 
     def unskip_bill_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:  # pragma: no cover
         self.bill_repo.unskip_for_month(bill_id=bill_id, year_month=year_month)
+
+    def get_projected_month_end_balance_pence(self, *, year_month: YearMonth, summary: "MonthSummary") -> int:
+        """Projected bank balance pence at end of year_month (signed — can be negative)."""
+        from datetime import date as _date
+        today = _date.today()
+        today_ym = YearMonth(today.year, today.month)
+        starting = self._projected_starting_balance_pence(year_month)
+        if year_month == today_ym:
+            income = sum(
+                i.amount.pence for i in summary.income_sources
+                if i.day_of_month is None or i.day_of_month >= today.day
+            )
+            bills = sum(
+                b.amount.pence for b in summary.bills
+                if b.payment_method_id == 1
+                and (b.day_of_month is None or b.day_of_month >= today.day)
+            )
+        else:
+            income = sum(i.amount.pence for i in summary.income_sources)
+            bills = sum(b.amount.pence for b in summary.bills if b.payment_method_id == 1)
+        return starting + income - bills
 
     def get_card_monthly_states(self, *, year_month: YearMonth) -> list:  # pragma: no cover
         from datetime import datetime
@@ -260,6 +289,43 @@ class BudgetService:
             results.append(calculate_card_monthly_state(
                 card=card, opening_balance_pence=balance_pence, bills=all_bills
             ))
+        return results
+
+    def get_card_projection_months(self, *, start_month: YearMonth, n_months: int) -> list[list]:  # pragma: no cover
+        """Return n_months of CardMonthlyState lists starting from start_month.
+
+        Result is a list of length n_months; each element is a list of CardMonthlyState
+        (one per active card) for that month. Balances chain forward correctly.
+        """
+        from datetime import datetime
+        from clear_budget.domain.services.card_monthly_calculator import calculate_card_monthly_state
+        cards = self.payment_method_repo.get_all_credit_cards(include_inactive=False)
+        today_ym = YearMonth(datetime.now().year, datetime.now().month)
+        balances = {card.id: card.current_balance_used.pence for card in cards}
+        cursor = today_ym
+        while cursor < start_month:
+            s = self.get_month_summary(year_month=cursor)
+            bills = list(s.all_bills)
+            for card in cards:
+                state = calculate_card_monthly_state(
+                    card=card, opening_balance_pence=balances[card.id], bills=bills
+                )
+                balances[card.id] = state.closing_balance.pence
+            cursor = cursor.next_month()
+        results = []
+        cursor = start_month
+        for _ in range(n_months):
+            s = self.get_month_summary(year_month=cursor)
+            bills = list(s.all_bills)
+            month_states = []
+            for card in cards:
+                state = calculate_card_monthly_state(
+                    card=card, opening_balance_pence=balances[card.id], bills=bills
+                )
+                balances[card.id] = state.closing_balance.pence
+                month_states.append(state)
+            results.append(month_states)
+            cursor = cursor.next_month()
         return results
 
     def add_income(self, *, income: "IncomeSource") -> "IncomeSource":  # pragma: no cover

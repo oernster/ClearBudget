@@ -237,11 +237,24 @@ class MonthView(QWidget):
         return "#f87171" if p < 0 else "#fbbf24" if p < 10000 else "#34d399"
 
     def _update_balance_display(self) -> None:
-        bank = self.view_model.budget_service.get_bank_balance()
         if summary := self.view_model.month_summary:
-            projected = bank.pence + summary.balance.pence
-            self.balance_label.setText(f"Balance: {Amount(pence=projected)}")
-            self.balance_label.setStyleSheet(ui_scale.style(f"font-size: 20px; font-weight: bold; color: {self._get_balance_color(projected)}; padding: 5px;"))
+            from clear_budget.domain.value_objects.year_month import YearMonth as _YM
+            from datetime import datetime as _dt
+            today_ym = _YM(_dt.now().year, _dt.now().month)
+            if self.view_model.current_month == today_ym:
+                pence = self.view_model.budget_service.get_bank_balance().pence
+                label = f"Balance: £{pence / 100:.2f}"
+            else:
+                pence = self.view_model.budget_service.get_projected_month_end_balance_pence(
+                    year_month=self.view_model.current_month,
+                    summary=summary,
+                )
+                if pence >= 0:
+                    label = f"Projected end: £{pence / 100:.2f}"
+                else:
+                    label = f"Projected end: −£{abs(pence) / 100:.2f} OVERDRAWN"
+            self.balance_label.setText(label)
+            self.balance_label.setStyleSheet(ui_scale.style(f"font-size: 20px; font-weight: bold; color: {self._get_balance_color(pence)}; padding: 5px;"))
 
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
@@ -358,6 +371,9 @@ class MonthView(QWidget):
                     if it:
                         it.setForeground(skip_color)
                 name_item.setText(f"{bill.name} (skipped this month)")
+            elif bill.has_month_override:
+                name_item.setText(f"{bill.name} (*)")
+                name_item.setForeground(QColor("#60a5fa"))
             elif self.view_model.current_month == self.view_model.base_month and bill.day_of_month:
                 d, t = bill.day_of_month, self.view_model.today.day
                 color = QColor("#9ca3af") if d < t else QColor("#fbbf24") if d == t else None
@@ -432,14 +448,19 @@ class MonthView(QWidget):
         if bill := self._get_bill_from_row(row): self._edit_bill_dialog(bill)
 
     def _edit_bill_dialog(self, bill) -> None:
+        had_override = bill.has_month_override
         dialog = BillDialog(
             self, bill,
             payment_method_repo=self.view_model.budget_service.payment_method_repo,
             current_month=self.view_model.current_month,
         )
         if dialog.exec() == BillDialog.Accepted and (eb := dialog.get_bill()):
-            fn = self.view_model.update_bill_for_month if dialog.month_only_check.isChecked() else self.view_model.update_bill
-            fn(bill=eb)
+            if dialog.month_only_check.isChecked():
+                self.view_model.update_bill_for_month(bill=eb)
+            else:
+                if had_override:
+                    self.view_model.delete_bill_month_override(bill_id=eb.id)
+                self.view_model.update_bill(bill=eb)
 
     def on_delete_bill(self) -> None:
         rows = sorted({idx.row() for idx in self.bills_table.selectedIndexes()})

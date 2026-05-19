@@ -35,6 +35,7 @@ class Bill:
     active: bool = True
     target_card_id: int | None = None
     skipped_for_month: bool = False
+    has_month_override: bool = False
 
     def is_active_in_month(self, year_month: YearMonth) -> bool:
         """Check if this bill is active in the given month."""

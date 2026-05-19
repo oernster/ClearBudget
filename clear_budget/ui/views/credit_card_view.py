@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QHeaderView,
+    QGroupBox,
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor
@@ -21,6 +22,9 @@ from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 from clear_budget.ui import ui_scale
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+
+_PROJECTION_MONTHS = 6
 
 
 class CreditCardView(QWidget):
@@ -56,7 +60,6 @@ class CreditCardView(QWidget):
         nav_layout.addWidget(self.next_btn)
         layout.addLayout(nav_layout)
 
-        from PySide6.QtWidgets import QGroupBox
         cards_group = QGroupBox("Credit Cards")
         cards_layout = QVBoxLayout()
 
@@ -114,6 +117,18 @@ class CreditCardView(QWidget):
         cards_group.setLayout(cards_layout)
         layout.addWidget(cards_group)
 
+        proj_group = QGroupBox(f"{_PROJECTION_MONTHS}-Month Balance Projection")
+        proj_layout = QVBoxLayout()
+        self.projection_table = QTableWidget()
+        self.projection_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.projection_table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        _ph = self.projection_table.horizontalHeader()
+        _ph.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.projection_table.verticalHeader().setDefaultSectionSize(ui_scale.px(28))
+        proj_layout.addWidget(self.projection_table)
+        proj_group.setLayout(proj_layout)
+        layout.addWidget(proj_group)
+
         self.setLayout(layout)
 
         # Connect buttons
@@ -140,6 +155,8 @@ class CreditCardView(QWidget):
             for s in self.budget_service.get_card_monthly_states(year_month=self.current_month)
         }
 
+        _today = _date.today()
+        _today_ym = YearMonth(_today.year, _today.month)
         self.cards_table.blockSignals(True)
         for card in cards:
             row = self.cards_table.rowCount()
@@ -154,19 +171,30 @@ class CreditCardView(QWidget):
             limit_item = QTableWidgetItem(str(card.credit_limit))
             limit_item.setFlags(_editable)
             self.cards_table.setItem(row, 1, limit_item)
-            used_item = QTableWidgetItem(str(card.current_balance_used))
+            state_snapshot = monthly_states.get(card.id)
+            if state_snapshot and self.current_month > _today_ym:
+                display_used = state_snapshot.closing_balance
+                display_util = (
+                    state_snapshot.closing_balance.pence / card.credit_limit.pence * 100
+                    if card.credit_limit.pence else 0.0
+                )
+            else:
+                display_used = card.current_balance_used
+                display_util = card.utilization_percent
+            display_available = Amount(pence=max(0, card.credit_limit.pence - display_used.pence))
+
+            used_item = QTableWidgetItem(str(display_used))
             used_item.setFlags(_editable)
             self.cards_table.setItem(row, 2, used_item)
-            self.cards_table.setItem(row, 3, QTableWidgetItem(str(card.available)))
+            self.cards_table.setItem(row, 3, QTableWidgetItem(str(display_available)))
 
-            util_item = QTableWidgetItem(f"{card.utilization_percent:.1f}%")
+            util_item = QTableWidgetItem(f"{display_util:.1f}%")
             self.cards_table.setItem(row, 4, util_item)
 
             # Due day
             due_item = QTableWidgetItem(str(card.payment_due_day))
             due_item.setFlags(_editable)
-            _today = _date.today()
-            if self.current_month == YearMonth(_today.year, _today.month):
+            if self.current_month == _today_ym:
                 d, t = card.payment_due_day, _today.day
                 if d < t:
                     due_item.setForeground(QColor("#9ca3af"))   # past - gray
@@ -200,7 +228,7 @@ class CreditCardView(QWidget):
             expiry_item.setFlags(_editable)
             self.cards_table.setItem(row, 8, expiry_item)
 
-            status = self._get_status_text(card.utilization_percent)
+            status = self._get_status_text(display_util)
             status_item = QTableWidgetItem(status)
             status_color = self._get_status_color(status)
             status_item.setForeground(Qt.GlobalColor.white)
@@ -229,6 +257,47 @@ class CreditCardView(QWidget):
                     self.cards_table.setItem(row, col, QTableWidgetItem("-"))
 
         self.cards_table.blockSignals(False)
+        self._build_projection_strip()
+
+    def _build_projection_strip(self) -> None:
+        """Populate the projection table with _PROJECTION_MONTHS of closing balances per card."""
+        _today = _date.today()
+        today_ym = YearMonth(_today.year, _today.month)
+        month_states_list = self.budget_service.get_card_projection_months(
+            start_month=today_ym, n_months=_PROJECTION_MONTHS
+        )
+        if not month_states_list or not month_states_list[0]:
+            self.projection_table.setRowCount(0)
+            self.projection_table.setColumnCount(0)
+            return
+
+        cards_in_strip = [ms.card for ms in month_states_list[0]]
+        self.projection_table.setColumnCount(len(cards_in_strip))
+        self.projection_table.setHorizontalHeaderLabels([c.name for c in cards_in_strip])
+        self.projection_table.setRowCount(_PROJECTION_MONTHS)
+
+        month_labels = []
+        cursor = today_ym
+        for _ in range(_PROJECTION_MONTHS):
+            month_labels.append(f"{MONTH_NAMES[cursor.month][:3]} {cursor.year}")
+            cursor = cursor.next_month()
+        self.projection_table.setVerticalHeaderLabels(month_labels)
+
+        _red_threshold_pence = 10_000    # <= £100 available → red
+        _amber_threshold_pence = 25_000  # <= £250 available → amber
+        for row_idx, month_states in enumerate(month_states_list):
+            for col_idx, state in enumerate(month_states):
+                closing = state.closing_balance.pence
+                available = state.card.credit_limit.pence - closing
+                cell = QTableWidgetItem(str(state.closing_balance))
+                cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                if available <= _red_threshold_pence:
+                    cell.setBackground(QColor("#7f1d1d"))
+                elif available <= _amber_threshold_pence:
+                    cell.setBackground(QColor("#f59e0b"))
+                else:
+                    cell.setBackground(QColor("#14532d"))
+                self.projection_table.setItem(row_idx, col_idx, cell)
 
     def _on_card_cell_clicked(self, row: int, col: int) -> None:
         if col != 10:

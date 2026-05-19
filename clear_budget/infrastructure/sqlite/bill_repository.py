@@ -41,7 +41,8 @@ class SQLiteBillRepository:
                 b.end_year,
                 b.end_month,
                 b.active,
-                CASE WHEN s.bill_id IS NOT NULL THEN 1 ELSE 0 END AS skipped_for_month
+                CASE WHEN s.bill_id IS NOT NULL THEN 1 ELSE 0 END AS skipped_for_month,
+                CASE WHEN o.bill_id IS NOT NULL THEN 1 ELSE 0 END AS has_month_override
             FROM bills b
             LEFT JOIN bill_month_overrides o
                 ON o.bill_id = b.id AND o.year = ? AND o.month = ?
@@ -80,6 +81,7 @@ class SQLiteBillRepository:
                 active=bool(row["active"]),
                 target_card_id=row["target_card_id"],
                 skipped_for_month=bool(row["skipped_for_month"]),
+                has_month_override=bool(row["has_month_override"]),
             )
             bills.append(bill)
 

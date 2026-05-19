@@ -5,6 +5,7 @@ from datetime import date as _date
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar, QPushButton
 from PySide6.QtCore import Qt
 
+from clear_budget.domain.services.card_monthly_calculator import calculate_card_monthly_state
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 from clear_budget.ui import ui_scale
@@ -101,13 +102,15 @@ class SolvencyPanel(QWidget):
         forward_label.setStyleSheet(ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 20px;"))
         layout.addWidget(forward_label)
 
-        self.projection_label = QLabel("Runway: calculating...")
-        self.projection_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
-        layout.addWidget(self.projection_label)
+        self.m1_projection_label = QLabel("")
+        self.m1_projection_label.setWordWrap(True)
+        self.m1_projection_label.setStyleSheet(ui_scale.style("font-size: 17px; padding: 5px;"))
+        layout.addWidget(self.m1_projection_label)
 
-        self.forward_shortfall_label = QLabel("Next 2-month shortfall (bills − income): £0.00")
-        self.forward_shortfall_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
-        layout.addWidget(self.forward_shortfall_label)
+        self.m2_projection_label = QLabel("")
+        self.m2_projection_label.setWordWrap(True)
+        self.m2_projection_label.setStyleSheet(ui_scale.style("font-size: 17px; padding: 5px;"))
+        layout.addWidget(self.m2_projection_label)
 
         layout.addStretch()
         self.setLayout(layout)
@@ -115,6 +118,137 @@ class SolvencyPanel(QWidget):
     def connect_signals(self) -> None:
         """Connect ViewModel signals to view updates."""
         self.view_model.solvency_updated.connect(self.update_display)
+
+    @staticmethod
+    def _health_color(balance_pence: int, monthly_drain_pence: int) -> str:
+        """Return traffic-light color based on balance vs monthly drain coverage.
+
+        Red only for actual overdraft (< 0).
+        Amber for positive but less than 2 months of drain coverage — tight but surviving.
+        Green for 2+ months coverage.
+        monthly_drain_pence: bills − income for a typical future month (positive = deficit).
+        """
+        if balance_pence < 0:
+            return "#f87171"
+        if monthly_drain_pence <= 0:
+            return "#34d399"
+        if balance_pence >= 2 * monthly_drain_pence:
+            return "#34d399"
+        return "#fbbf24"
+
+    def _build_month_cashflow_summary(
+        self, opening_pence: int, summary, monthly_drain_pence: int
+    ) -> tuple[str, str]:
+        """Build cashflow risk narrative for one month.
+
+        Simulates events in day order. Returns (display_text, color).
+        monthly_drain_pence used for amber/red thresholds.
+        """
+        events = []
+        for inc in summary.income_sources:
+            events.append((inc.day_of_month or 1, inc.amount.pence, inc.name))
+        for bill in summary.bills:
+            if bill.payment_method_id == 1:
+                events.append((bill.day_of_month or 28, -bill.amount.pence, bill.name))
+        # Income before bills on same day (positive delta sorts first)
+        events.sort(key=lambda e: (e[0], -e[1]))
+
+        balance = opening_pence
+        min_balance = opening_pence
+        min_day = 0
+        first_negative_day = None
+        rescue_event = None
+
+        for day, delta, name in events:
+            balance += delta
+            if balance < min_balance:
+                min_balance = balance
+                min_day = day
+            if balance < 0 and first_negative_day is None:
+                first_negative_day = day
+            if first_negative_day is not None and rescue_event is None and delta > 0 and balance >= 0:
+                rescue_event = (day, delta, name)
+
+        closing_pence = balance
+        lines = [f"Opens: £{opening_pence / 100:.2f}"]
+
+        if first_negative_day is not None:
+            lines.append(
+                f"OVERDRAWN by day {first_negative_day}  "
+                f"(low: −£{abs(min_balance) / 100:.2f})"
+            )
+            if rescue_event:
+                rday, ramt, rname = rescue_event
+                lines.append(f"Rescued day {rday}: {rname} +£{ramt / 100:.2f}")
+            else:
+                lines.append("No rescue income — remains overdrawn")
+        elif min_day and min_balance < monthly_drain_pence:
+            lines.append(f"Low point: £{min_balance / 100:.2f} on day {min_day}")
+
+        if closing_pence >= 0:
+            lines.append(f"Closes: £{closing_pence / 100:.2f}")
+        else:
+            lines.append(f"Closes: −£{abs(closing_pence) / 100:.2f}  (still overdrawn)")
+
+        color = self._health_color(min_balance, monthly_drain_pence)
+        return "\n".join(lines), color
+
+    @staticmethod
+    def _build_card_state_text(cards, bills, opening_balances: dict) -> str:
+        """Build per-card balance projection for one month.
+
+        opening_balances: {card_id: pence} — balance at start of this month.
+        Returns multi-line text block, empty string if no active cards.
+        """
+        if not cards:
+            return ""
+        lines = ["Cards:"]
+        for card in cards:
+            opening_pence = opening_balances.get(card.id, card.current_balance_used.pence)
+            state = calculate_card_monthly_state(
+                card=card, opening_balance_pence=opening_pence, bills=list(bills)
+            )
+            interest_str = (
+                f" +£{state.monthly_interest.pounds:.2f} int"
+                if state.monthly_interest.pence > 0 else ""
+            )
+            paid_p = state.payment_received.pence
+            min_p = state.minimum_payment.pence
+            if paid_p < min_p:
+                shortfall_p = min_p - paid_p
+                payment_str = (
+                    f"paid £{paid_p / 100:.2f} — "
+                    f"min £{min_p / 100:.2f} — "
+                    f"SHORTFALL £{shortfall_p / 100:.2f}"
+                )
+            elif paid_p == 0:
+                payment_str = f"no payment set (min £{min_p / 100:.2f})"
+            else:
+                payment_str = f"paid £{paid_p / 100:.2f} (min £{min_p / 100:.2f}) ✓"
+            lines.append(
+                f"  {card.name}: £{state.opening_balance.pounds:.2f}"
+                f"{interest_str} | {payment_str}"
+                f" | closes £{state.closing_balance.pounds:.2f}"
+            )
+        return "\n".join(lines)
+
+    def _simulate_runway(self, starting_balance_pence: int, from_month) -> tuple:
+        """Step forward month by month until balance goes negative.
+
+        Returns (overdrawn_month_or_None, months_solvent_count).
+        Caps at 24 months to avoid infinite loops on perpetually-solvent scenarios.
+        """
+        balance = starting_balance_pence
+        month = from_month.next_month()
+        for i in range(24):
+            s = self.view_model.budget_service.get_month_summary(year_month=month)
+            bank_bills = sum(b.amount.pence for b in s.bills if b.payment_method_id == 1)
+            income = s.total_income.pence
+            balance += income - bank_bills
+            if balance < 0:
+                return month, i + 1
+            month = month.next_month()
+        return None, 24
 
     def _calculate_card_utilization(self) -> float:
         """Calculate combined credit card utilization percentage."""
@@ -199,7 +333,7 @@ class SolvencyPanel(QWidget):
                 early_income = sum(amt for day, amt in income_days if day < max_income_day)
                 early_bills = sum(
                     b.amount.pence for b in summary.bills
-                    if b.payment_method_id == 1 and (b.day_of_month or 1) < max_income_day
+                    if b.payment_method_id == 1 and (b.day_of_month or 28) < max_income_day
                 )
                 mid_balance = starting_pence + early_income - early_bills
                 if mid_balance < 0:
@@ -271,31 +405,48 @@ class SolvencyPanel(QWidget):
             f"QProgressBar::chunk {{ background-color: {bar_color}; }}"
         )
 
-        # SECTION 3: FORWARD PROJECTION
-        shortfall_pence = report.forward_shortfall.pence
-        if shortfall_pence == 0:
-            self.projection_label.setText("Runway: income covers bills — no shortfall in next 2 months")
-            self.projection_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px; color: #34d399;"))
-        else:
-            monthly_shortfall = shortfall_pence / 2
-            if report.balance_pence <= 0:
-                self.projection_label.setText("Runway: already in deficit")
-                self.projection_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px; color: #f87171;"))
-            else:
-                months = report.balance_pence / monthly_shortfall
-                self.projection_label.setText(
-                    f"Runway: ~{months:.1f} months before overdraft at current spend rate"
-                )
-                color = "#f87171" if months < 2 else "#fbbf24" if months < 4 else "#34d399"
-                self.projection_label.setStyleSheet(ui_scale.style(f"font-size: 20px; padding: 5px; color: {color};"))
-
         m1 = report.year_month.next_month()
         m2 = m1.next_month()
         m1_name = MONTH_NAMES[m1.month]
         m2_name = MONTH_NAMES[m2.month]
-        monthly_gap = report.forward_shortfall.pence / 200  # pence → pounds, /2 months
-        forward_str = f"£{report.forward_shortfall.pounds:.2f}"
-        self.forward_shortfall_label.setText(
-            f"Bills exceed income by £{monthly_gap:.2f}/month in {m1_name} & {m2_name} "
-            f"(total shortfall: {forward_str})"
-        )
+        m1_summary = self.view_model.budget_service.get_month_summary(year_month=m1)
+        m2_summary = self.view_model.budget_service.get_month_summary(year_month=m2)
+        m1_bank = sum(b.amount.pence for b in m1_summary.bills if b.payment_method_id == 1)
+        m2_bank = sum(b.amount.pence for b in m2_summary.bills if b.payment_method_id == 1)
+        m1_drain = m1_bank - m1_summary.total_income.pence
+        m2_drain = m2_bank - m2_summary.total_income.pence
+        m1_end_pence = report.balance_pence + m1_summary.total_income.pence - m1_bank
+
+        m1_text, m1_color = self._build_month_cashflow_summary(report.balance_pence, m1_summary, m1_drain)
+        m2_text, m2_color = self._build_month_cashflow_summary(m1_end_pence, m2_summary, m2_drain)
+
+        cards = self.view_model.budget_service.get_credit_cards(include_inactive=False)
+        m1_card_opening = {c.id: c.current_balance_used.pence for c in cards}
+        m1_card_states = {
+            c.id: calculate_card_monthly_state(
+                card=c, opening_balance_pence=m1_card_opening[c.id], bills=list(m1_summary.bills)
+            )
+            for c in cards
+        }
+        m2_card_opening = {c.id: m1_card_states[c.id].closing_balance.pence for c in cards}
+
+        m1_card_text = self._build_card_state_text(cards, m1_summary.bills, m1_card_opening)
+        m2_card_text = self._build_card_state_text(cards, m2_summary.bills, m2_card_opening)
+
+        m1_full = f"{m1_name} {m1.year}\n{m1_text}"
+        if m1_card_text:
+            m1_full += f"\n{m1_card_text}"
+        m2_full = f"{m2_name} {m2.year}\n{m2_text}"
+        if m2_card_text:
+            m2_full += f"\n{m2_card_text}"
+
+        self.m1_projection_label.setText(m1_full)
+        self.m1_projection_label.setStyleSheet(ui_scale.style(f"font-size: 17px; padding: 5px; color: {m1_color};"))
+        self.m2_projection_label.setText(m2_full)
+        self.m2_projection_label.setStyleSheet(ui_scale.style(f"font-size: 17px; padding: 5px; color: {m2_color};"))
+
+        # Month label colour reflects current month's health vs its own upcoming drain
+        current_month_color = self._health_color(report.balance_pence, m1_drain)
+        self.month_label.setStyleSheet(ui_scale.style(
+            f"font-size: 20px; font-weight: bold; padding: 10px; color: {current_month_color};"
+        ))
