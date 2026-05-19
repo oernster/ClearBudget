@@ -27,7 +27,7 @@ class SolvencyPanel(QWidget):
         self.prev_btn = QPushButton("← Previous")
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.month_label = QLabel("May 2026")
-        self.month_label.setStyleSheet("font-size: 14px; font-weight: bold; padding: 10px; color: #9ca3af;")
+        self.month_label.setStyleSheet("font-size: 20px; font-weight: bold; padding: 10px; color: #9ca3af;")
         self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.next_btn = QPushButton("Next →")
         self.next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -38,42 +38,42 @@ class SolvencyPanel(QWidget):
 
         # SECTION 1: OVERDRAFT ALERT (Top - Prominent)
         alert_label = QLabel("Overdraft Status")
-        alert_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-top: 10px;")
+        alert_label.setStyleSheet("font-weight: bold; font-size: 17px; margin-top: 10px;")
         layout.addWidget(alert_label)
 
         self.overdraft_alert = QLabel("SAFE: £0.00 buffer")
         self.overdraft_alert.setStyleSheet(
-            "font-size: 16px; font-weight: bold; padding: 10px; border-radius: 5px;"
+            "font-size: 22px; font-weight: bold; padding: 10px; border-radius: 5px;"
         )
         layout.addWidget(self.overdraft_alert)
 
         # SECTION 2: OVERALL HEALTH (Middle)
         health_label = QLabel("Overall Health")
-        health_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-top: 20px;")
+        health_label.setStyleSheet("font-weight: bold; font-size: 17px; margin-top: 20px;")
         layout.addWidget(health_label)
 
         self.balance_label = QLabel("Bank Balance: £0.00")
-        self.balance_label.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.balance_label.setStyleSheet("font-size: 20px; padding: 5px;")
         layout.addWidget(self.balance_label)
 
         self.committed_label = QLabel("Committed this month: -")
-        self.committed_label.setStyleSheet("font-size: 13px; padding: 5px; color: #9ca3af;")
+        self.committed_label.setStyleSheet("font-size: 18px; padding: 5px; color: #9ca3af;")
         layout.addWidget(self.committed_label)
 
         self.remaining_bank_label = QLabel("Still due this month (bank): -")
-        self.remaining_bank_label.setStyleSheet("font-size: 13px; padding: 5px; color: #fbbf24;")
+        self.remaining_bank_label.setStyleSheet("font-size: 18px; padding: 5px; color: #fbbf24;")
         layout.addWidget(self.remaining_bank_label)
 
         self.remaining_card_label = QLabel("Still due this month (cards): -")
-        self.remaining_card_label.setStyleSheet("font-size: 13px; padding: 5px; color: #f59e0b;")
+        self.remaining_card_label.setStyleSheet("font-size: 18px; padding: 5px; color: #f59e0b;")
         layout.addWidget(self.remaining_card_label)
 
         self.card_util_label = QLabel("Credit Card Utilization: 0%")
-        self.card_util_label.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.card_util_label.setStyleSheet("font-size: 20px; padding: 5px;")
         layout.addWidget(self.card_util_label)
 
         self.health_score_label = QLabel("Health Score: 0/100")
-        self.health_score_label.setStyleSheet("font-size: 14px; padding: 5px; font-weight: bold;")
+        self.health_score_label.setStyleSheet("font-size: 20px; padding: 5px; font-weight: bold;")
         layout.addWidget(self.health_score_label)
 
         self.health_bar = QProgressBar()
@@ -83,15 +83,15 @@ class SolvencyPanel(QWidget):
 
         # SECTION 3: FORWARD PROJECTION (Bottom)
         forward_label = QLabel("Forward Projection")
-        forward_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-top: 20px;")
+        forward_label.setStyleSheet("font-weight: bold; font-size: 17px; margin-top: 20px;")
         layout.addWidget(forward_label)
 
         self.projection_label = QLabel("Runway: calculating...")
-        self.projection_label.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.projection_label.setStyleSheet("font-size: 20px; padding: 5px;")
         layout.addWidget(self.projection_label)
 
         self.forward_shortfall_label = QLabel("Next 2-month shortfall (bills − income): £0.00")
-        self.forward_shortfall_label.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.forward_shortfall_label.setStyleSheet("font-size: 20px; padding: 5px;")
         layout.addWidget(self.forward_shortfall_label)
 
         layout.addStretch()
@@ -132,7 +132,7 @@ class SolvencyPanel(QWidget):
         # SECTION 1: OVERDRAFT ALERT
         balance = report.balance_pence / 100
         buffer_pounds = report.buffer.pounds
-        base_style = "font-size: 16px; font-weight: bold; padding: 10px; border-radius: 5px; "
+        base_style = "font-size: 22px; font-weight: bold; padding: 10px; border-radius: 5px; "
         if balance < 0:
             self.overdraft_alert.setText(f"AT RISK: Needs £{abs(balance):.2f}")
             self.overdraft_alert.setStyleSheet(base_style + "background-color: #f87171; color: white;")
@@ -161,7 +161,7 @@ class SolvencyPanel(QWidget):
                                      if (not b.day_of_month or b.day_of_month >= today.day)
                                      and b.payment_method_id != 1)
                 self.committed_label.setText(f"Committed this month: £{committed / 100:.2f}")
-                self.remaining_bank_label.setStyleSheet("font-size: 13px; padding: 5px; color: #fbbf24;")
+                self.remaining_bank_label.setStyleSheet("font-size: 18px; padding: 5px; color: #fbbf24;")
                 self.remaining_bank_label.setText(f"Still due this month (bank): £{remaining_bank / 100:.2f}")
                 self.remaining_card_label.setText(f"Still due this month (cards): £{remaining_card / 100:.2f}")
             else:
@@ -178,7 +178,7 @@ class SolvencyPanel(QWidget):
                 self.remaining_bank_label.setText(
                     f"Bank bills this month: £{all_bank / 100:.2f} vs income £{income_pence / 100:.2f} 💰 net {net_str}"
                 )
-                self.remaining_bank_label.setStyleSheet(f"font-size: 13px; padding: 5px; color: {net_color};")
+                self.remaining_bank_label.setStyleSheet(f"font-size: 18px; padding: 5px; color: {net_color};")
                 self.remaining_card_label.setText(f"All bills this month (cards): £{all_card / 100:.2f}")
         else:
             self.committed_label.setText("Committed this month: -")
@@ -206,19 +206,19 @@ class SolvencyPanel(QWidget):
         shortfall_pence = report.forward_shortfall.pence
         if shortfall_pence == 0:
             self.projection_label.setText("Runway: income covers bills — no shortfall in next 2 months")
-            self.projection_label.setStyleSheet("font-size: 14px; padding: 5px; color: #34d399;")
+            self.projection_label.setStyleSheet("font-size: 20px; padding: 5px; color: #34d399;")
         else:
             monthly_shortfall = shortfall_pence / 2
             if report.balance_pence <= 0:
                 self.projection_label.setText("Runway: already in deficit")
-                self.projection_label.setStyleSheet("font-size: 14px; padding: 5px; color: #f87171;")
+                self.projection_label.setStyleSheet("font-size: 20px; padding: 5px; color: #f87171;")
             else:
                 months = report.balance_pence / monthly_shortfall
                 self.projection_label.setText(
                     f"Runway: ~{months:.1f} months before overdraft at current spend rate"
                 )
                 color = "#f87171" if months < 2 else "#fbbf24" if months < 4 else "#34d399"
-                self.projection_label.setStyleSheet(f"font-size: 14px; padding: 5px; color: {color};")
+                self.projection_label.setStyleSheet(f"font-size: 20px; padding: 5px; color: {color};")
 
         m1 = report.year_month.next_month()
         m2 = m1.next_month()

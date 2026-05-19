@@ -86,7 +86,7 @@ class MonthView(QWidget):
 
         self.month_label = QLabel(f"{MONTH_NAMES[self.view_model.current_month.month]} {self.view_model.current_month.year}")
         self.month_label.setStyleSheet(
-            "font-size: 36px; font-weight: bold; padding: 20px; "
+            "font-size: 50px; font-weight: bold; padding: 20px; "
             "background-color: #1a1a2e; color: #00d4ff; text-align: center; border-radius: 8px;"
         )
         self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -94,18 +94,18 @@ class MonthView(QWidget):
 
         summary_layout = QHBoxLayout()
         self.income_label = QLabel("Income: £0.00")
-        self.income_label.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.income_label.setStyleSheet("font-size: 20px; padding: 5px;")
         self.bills_label = QLabel("Bills: £0.00")
-        self.bills_label.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.bills_label.setStyleSheet("font-size: 20px; padding: 5px;")
         self.edit_balance_btn = QPushButton("📝")
         self.edit_balance_btn.setMaximumWidth(28)
         self.edit_balance_btn.setMaximumHeight(22)
         self.edit_balance_btn.setStyleSheet(
-            "QPushButton { border: none; background-color: transparent; color: #34d399; font-size: 14px; padding: 0px; }"
+            "QPushButton { border: none; background-color: transparent; color: #34d399; font-size: 20px; padding: 0px; }"
             "QPushButton:hover { background-color: #1a1a2e; border-radius: 3px; }"
         )
         self.balance_label = QLabel("Balance: £0.00")
-        self.balance_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #34d399; padding: 5px;")
+        self.balance_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #34d399; padding: 5px;")
         summary_layout.addWidget(self.income_label)
         summary_layout.addWidget(self.bills_label)
         summary_layout.addStretch()
@@ -240,7 +240,7 @@ class MonthView(QWidget):
         if summary := self.view_model.month_summary:
             projected = bank.pence + summary.balance.pence
             self.balance_label.setText(f"Balance: {Amount(pence=projected)}")
-            self.balance_label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {self._get_balance_color(projected)}; padding: 5px;")
+            self.balance_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {self._get_balance_color(projected)}; padding: 5px;")
 
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")

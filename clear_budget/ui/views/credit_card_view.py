@@ -45,7 +45,7 @@ class CreditCardView(QWidget):
         self.prev_btn = QPushButton("← Previous")
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.month_label = QLabel()
-        self.month_label.setStyleSheet("font-size: 14px; font-weight: bold; padding: 10px; color: #9ca3af;")
+        self.month_label.setStyleSheet("font-size: 20px; font-weight: bold; padding: 10px; color: #9ca3af;")
         self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._refresh_month_label()
         self.next_btn = QPushButton("Next →")

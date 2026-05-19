@@ -28,8 +28,8 @@ class MainWindow(QMainWindow):
         self.month_view_model = month_view_model
         self.solvency_view_model = solvency_view_model
         self.setWindowTitle("ClearBudget - Personal Budget Planner")
-        self.setGeometry(100, 100, 1600, 900)
-        self.setMinimumWidth(1400)
+        self.setGeometry(100, 100, 2240, 1260)
+        self.setMinimumWidth(1960)
         self.init_ui()
         self.apply_theme()
 
@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
         today = _date.today().strftime("%A, %d %B %Y")
         lbl = QLabel(f"  Today: {today}  ")
         lbl.setStyleSheet(
-            "font-size: 13px; font-weight: bold; color: #00d4ff; padding: 2px 8px;"
+            "font-size: 18px; font-weight: bold; color: #00d4ff; padding: 2px 8px;"
         )
         self.statusBar().addPermanentWidget(lbl)
         self.statusBar().setStyleSheet(
