@@ -40,6 +40,27 @@ class SQLiteIncomeSourceRepository:
 
         return sources
 
+    def list_all(self) -> list[IncomeSource]:
+        """List all income sources including inactive."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, name, amount_pence, is_reliable, day_of_month, active
+            FROM income_sources
+            """
+        )
+        return [
+            IncomeSource(
+                id=row["id"],
+                name=row["name"],
+                amount=Amount(pence=row["amount_pence"]),
+                is_reliable=bool(row["is_reliable"]),
+                day_of_month=row["day_of_month"],
+                active=bool(row["active"]),
+            )
+            for row in cursor.fetchall()
+        ]
+
     def list_reliable(self) -> list[IncomeSource]:
         """List all reliable (forward-projectable) income sources."""
         cursor = self.conn.cursor()
@@ -144,4 +165,10 @@ class SQLiteIncomeSourceRepository:
         cursor.execute(
             "UPDATE income_sources SET active = 0 WHERE id = ?", (income_id,)
         )
+        self.conn.commit()
+
+    def hard_delete(self, *, income_id: int) -> None:
+        """Permanently remove an income source from the database."""
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM income_sources WHERE id = ?", (income_id,))
         self.conn.commit()

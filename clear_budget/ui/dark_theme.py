@@ -183,4 +183,26 @@ QDialog {
 QMessageBox {
     background-color: #161827;
 }
+
+QCheckBox {
+    spacing: 8px;
+    color: #e5e7eb;
+}
+
+QCheckBox::indicator {
+    width: 15px;
+    height: 15px;
+    border: 2px solid #9ca3af;
+    border-radius: 3px;
+    background: transparent;
+}
+
+QCheckBox::indicator:checked {
+    background: #34d399;
+    border-color: #34d399;
+}
+
+QCheckBox::indicator:unchecked:hover {
+    border-color: #d1d5db;
+}
 """

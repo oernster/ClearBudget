@@ -158,10 +158,16 @@ class MonthView(QWidget):
             ["Name", "Amount", "Reliable", "Due Day", "Active"]
         )
         self.income_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.income_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.income_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.income_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
         self.income_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.income_table.horizontalHeader().setStretchLastSection(True)
+        self.income_table.setStyleSheet(
+            "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
+            "border-radius:3px;background:transparent;}"
+            "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
+            "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
+        )
         self.income_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
         self.income_table.verticalHeader().sectionClicked.connect(self._on_income_row_header_click)
         self.income_table.horizontalHeader().sectionClicked.connect(self.on_income_header_click)
@@ -169,6 +175,7 @@ class MonthView(QWidget):
         income_btn_layout = QHBoxLayout()
         self.add_income_btn = QPushButton("Add Income")
         self.delete_income_btn = QPushButton("Delete Income")
+        self.delete_income_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         income_btn_layout.addWidget(self.add_income_btn)
         income_btn_layout.addStretch()
         income_btn_layout.addWidget(self.delete_income_btn)
@@ -192,6 +199,7 @@ class MonthView(QWidget):
         self.view_model.month_changed.connect(self._update_prev_btn_state)
         self.bills_table.cellClicked.connect(self._on_bill_cell_clicked)
         self.bills_table.itemChanged.connect(self._on_bill_item_changed)
+        self.income_table.cellClicked.connect(self._on_income_cell_clicked)
         self.income_table.itemChanged.connect(self._on_income_item_changed)
         self._update_prev_btn_state(self.view_model.current_month)
 
@@ -269,6 +277,8 @@ class MonthView(QWidget):
     _EDITABLE_INCOME_COLS = {0, 1, 3}
 
     def _on_income_item_changed(self, item) -> None:
+        if item.column() in (2, 4):
+            return
         if item.column() not in self._EDITABLE_INCOME_COLS:
             QTimer.singleShot(0, self.view_model.refresh_month_summary)
             return
@@ -283,6 +293,19 @@ class MonthView(QWidget):
             if u == inc: return
             QTimer.singleShot(0, lambda: self.view_model.update_income(income=u))
         except (ValueError, AttributeError): QTimer.singleShot(0, self.view_model.refresh_month_summary)
+
+    def _on_income_cell_clicked(self, row: int, col: int) -> None:
+        if col not in (2, 4): return
+        from PySide6.QtWidgets import QApplication
+        mods = QApplication.keyboardModifiers()
+        if mods & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
+            return
+        inc = self._get_income_from_row(row)
+        if inc is None: return
+        if col == 2:
+            QTimer.singleShot(0, lambda: self.view_model.update_income(income=dataclasses.replace(inc, is_reliable=not inc.is_reliable)))
+        else:
+            QTimer.singleShot(0, lambda: self.view_model.update_income(income=dataclasses.replace(inc, active=not inc.active)))
 
     def update_bills_table(self, summary) -> None:
         if not summary: return
@@ -318,16 +341,22 @@ class MonthView(QWidget):
         self.bills_table.blockSignals(False)
         self.income_table.blockSignals(True); self.income_table.setRowCount(0); self.income_table.blockSignals(False)
         self.income_table.blockSignals(True)
-        for row, income in enumerate(self._sort_income(summary.income_sources)):
+        for row, income in enumerate(self._sort_income(summary.all_income_sources)):
             self.income_table.insertRow(row)
             self.income_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
             name_item = _ei(income.name)
             name_item.setData(Qt.ItemDataRole.UserRole, income.id)
             self.income_table.setItem(row, 0, name_item)
             self.income_table.setItem(row, 1, _ei(str(income.amount)))
-            self.income_table.setItem(row, 2, QTableWidgetItem("✓" if income.is_reliable else "✗"))
+            reliable_item = QTableWidgetItem()
+            reliable_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
+            reliable_item.setCheckState(Qt.CheckState.Checked if income.is_reliable else Qt.CheckState.Unchecked)
+            self.income_table.setItem(row, 2, reliable_item)
             self.income_table.setItem(row, 3, _ei(str(income.day_of_month) if income.day_of_month else "~"))
-            self.income_table.setItem(row, 4, QTableWidgetItem("✓" if income.active else "✗"))
+            active_item = QTableWidgetItem()
+            active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
+            active_item.setCheckState(Qt.CheckState.Checked if income.active else Qt.CheckState.Unchecked)
+            self.income_table.setItem(row, 4, active_item)
         self.income_table.blockSignals(False)
 
     def on_edit_balance(self) -> None:
@@ -361,7 +390,7 @@ class MonthView(QWidget):
         item = self.income_table.item(row, 0)
         if item is None: return None
         iid = item.data(Qt.ItemDataRole.UserRole)
-        return next((i for i in self.view_model.month_summary.income_sources if i.id == iid), None)
+        return next((i for i in self.view_model.month_summary.all_income_sources if i.id == iid), None)
 
     def _on_bill_row_header_click(self, row: int) -> None:
         if bill := self._get_bill_from_row(row): self._edit_bill_dialog(bill)
@@ -395,4 +424,6 @@ class MonthView(QWidget):
             self.view_model.update_income(income=inc)
 
     def on_delete_income(self) -> None:
-        if inc := self._get_income_from_row(self.income_table.currentRow()): self.view_model.delete_income(income_id=inc.id)
+        rows = sorted({idx.row() for idx in self.income_table.selectedIndexes()})
+        ids = [i.id for r in rows if (i := self._get_income_from_row(r)) is not None]
+        if ids: self.view_model.delete_incomes(income_ids=ids)

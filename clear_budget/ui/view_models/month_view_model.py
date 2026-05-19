@@ -96,3 +96,9 @@ class MonthViewModel(QObject):
         """Delete an income source and refresh summary."""
         self.budget_service.delete_income(income_id=income_id)
         self.refresh_month_summary()
+
+    def delete_incomes(self, *, income_ids: list[int]) -> None:
+        """Delete multiple income sources in one batch then refresh once."""
+        for income_id in income_ids:
+            self.budget_service.delete_income(income_id=income_id)
+        self.refresh_month_summary()

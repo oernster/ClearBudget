@@ -64,6 +64,7 @@ class BudgetService:
         active_bills = self.bill_repo.list_active_for_month(year_month=year_month)
         all_bills = self.bill_repo.list_active_for_month(year_month=year_month, include_inactive=True)
         income = self.income_repo.list_active()
+        all_income = self.income_repo.list_all()
 
         total_bills_pence = sum(bill.amount.pence for bill in active_bills)
         bank_bills_pence = sum(bill.amount.pence for bill in active_bills if bill.payment_method_id == 1)
@@ -81,6 +82,7 @@ class BudgetService:
             bills=tuple(active_bills),
             all_bills=tuple(all_bills),
             income_sources=tuple(income),
+            all_income_sources=tuple(all_income),
         )
 
     def calculate_solvency_from_summary(
@@ -263,7 +265,7 @@ class BudgetService:
         return self.income_repo.update(income=income)
 
     def delete_income(self, *, income_id: int) -> None:  # pragma: no cover
-        self.income_repo.deactivate(income_id=income_id)
+        self.income_repo.hard_delete(income_id=income_id)
 
     def get_credit_cards(self, include_inactive: bool = False) -> list:  # pragma: no cover
         return self.payment_method_repo.get_all_credit_cards(include_inactive=include_inactive)

@@ -12,6 +12,10 @@ class IncomeSourceRepository(Protocol):
         """List all active income sources."""
         ...
 
+    def list_all(self) -> list[IncomeSource]:
+        """List all income sources including inactive."""
+        ...
+
     def list_reliable(self) -> list[IncomeSource]:
         """List all reliable (forward-projectable) income sources."""
         ...
@@ -30,4 +34,8 @@ class IncomeSourceRepository(Protocol):
 
     def deactivate(self, *, income_id: int) -> None:
         """Deactivate an income source."""
+        ...
+
+    def hard_delete(self, *, income_id: int) -> None:
+        """Permanently remove an income source from the database."""
         ...
