@@ -60,9 +60,13 @@ class SolvencyPanel(QWidget):
         self.committed_label.setStyleSheet("font-size: 13px; padding: 5px; color: #9ca3af;")
         layout.addWidget(self.committed_label)
 
-        self.remaining_label = QLabel("Still due this month: -")
-        self.remaining_label.setStyleSheet("font-size: 13px; padding: 5px; color: #fbbf24;")
-        layout.addWidget(self.remaining_label)
+        self.remaining_bank_label = QLabel("Still due this month (bank): -")
+        self.remaining_bank_label.setStyleSheet("font-size: 13px; padding: 5px; color: #fbbf24;")
+        layout.addWidget(self.remaining_bank_label)
+
+        self.remaining_card_label = QLabel("Still due this month (cards): -")
+        self.remaining_card_label.setStyleSheet("font-size: 13px; padding: 5px; color: #f59e0b;")
+        layout.addWidget(self.remaining_card_label)
 
         self.card_util_label = QLabel("Credit Card Utilization: 0%")
         self.card_util_label.setStyleSheet("font-size: 14px; padding: 5px;")
@@ -82,11 +86,11 @@ class SolvencyPanel(QWidget):
         forward_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-top: 20px;")
         layout.addWidget(forward_label)
 
-        self.projection_label = QLabel("Safe for 0 days")
+        self.projection_label = QLabel("Runway: calculating...")
         self.projection_label.setStyleSheet("font-size: 14px; padding: 5px;")
         layout.addWidget(self.projection_label)
 
-        self.forward_shortfall_label = QLabel("Forward Shortfall: £0.00")
+        self.forward_shortfall_label = QLabel("Next 2-month shortfall (bills − income): £0.00")
         self.forward_shortfall_label.setStyleSheet("font-size: 14px; padding: 5px;")
         layout.addWidget(self.forward_shortfall_label)
 
@@ -116,12 +120,6 @@ class SolvencyPanel(QWidget):
 
         return int(bank_score * 0.6 + card_score * 0.4)
 
-    def _calculate_days_safe(self, balance_pence: int, first_negative_day: int | None) -> int:
-        """Calculate how many days account stays safe (positive balance)."""
-        if first_negative_day is None or balance_pence >= 0:
-            return 999  # Indefinite safety
-        return max(1, first_negative_day)
-
     def update_display(self, report) -> None:
         """Update display from solvency report."""
         if not report:
@@ -150,17 +148,31 @@ class SolvencyPanel(QWidget):
 
         today = _date.today()
         summary = self.view_model.current_summary
-        if (report.year_month.year == today.year and report.year_month.month == today.month
-                and summary):
-            committed = sum(b.amount.pence for b in summary.bills
-                            if b.day_of_month and b.day_of_month < today.day)
-            remaining = sum(b.amount.pence for b in summary.bills
-                            if not b.day_of_month or b.day_of_month >= today.day)
-            self.committed_label.setText(f"Committed this month: £{committed / 100:.2f}")
-            self.remaining_label.setText(f"Still due this month: £{remaining / 100:.2f}")
+        is_current_month = (report.year_month.year == today.year
+                            and report.year_month.month == today.month)
+        if summary:
+            if is_current_month:
+                committed = sum(b.amount.pence for b in summary.bills
+                                if b.day_of_month and b.day_of_month < today.day)
+                remaining_bank = sum(b.amount.pence for b in summary.bills
+                                     if (not b.day_of_month or b.day_of_month >= today.day)
+                                     and b.payment_method_id == 1)
+                remaining_card = sum(b.amount.pence for b in summary.bills
+                                     if (not b.day_of_month or b.day_of_month >= today.day)
+                                     and b.payment_method_id != 1)
+                self.committed_label.setText(f"Committed this month: £{committed / 100:.2f}")
+                self.remaining_bank_label.setText(f"Still due this month (bank): £{remaining_bank / 100:.2f}")
+                self.remaining_card_label.setText(f"Still due this month (cards): £{remaining_card / 100:.2f}")
+            else:
+                all_bank = sum(b.amount.pence for b in summary.bills if b.payment_method_id == 1)
+                all_card = sum(b.amount.pence for b in summary.bills if b.payment_method_id != 1)
+                self.committed_label.setText("Committed this month: —")
+                self.remaining_bank_label.setText(f"All bills this month (bank): £{all_bank / 100:.2f}")
+                self.remaining_card_label.setText(f"All bills this month (cards): £{all_card / 100:.2f}")
         else:
             self.committed_label.setText("Committed this month: -")
-            self.remaining_label.setText("Still due this month: -")
+            self.remaining_bank_label.setText("Still due this month (bank): -")
+            self.remaining_card_label.setText("Still due this month (cards): -")
 
         card_util = self._calculate_card_utilization()
         self.card_util_label.setText(f"Credit Card Utilization: {card_util:.1f}%")
@@ -180,11 +192,30 @@ class SolvencyPanel(QWidget):
         )
 
         # SECTION 3: FORWARD PROJECTION
-        days_safe = self._calculate_days_safe(report.balance_pence, report.first_negative_day)
-        if days_safe == 999:
-            self.projection_label.setText("Safe indefinitely")
+        shortfall_pence = report.forward_shortfall.pence
+        if shortfall_pence == 0:
+            self.projection_label.setText("Runway: income covers bills — no shortfall in next 2 months")
+            self.projection_label.setStyleSheet("font-size: 14px; padding: 5px; color: #34d399;")
         else:
-            self.projection_label.setText(f"Safe for {days_safe} days")
+            monthly_shortfall = shortfall_pence / 2
+            if report.balance_pence <= 0:
+                self.projection_label.setText("Runway: already in deficit")
+                self.projection_label.setStyleSheet("font-size: 14px; padding: 5px; color: #f87171;")
+            else:
+                months = report.balance_pence / monthly_shortfall
+                self.projection_label.setText(
+                    f"Runway: ~{months:.1f} months before overdraft at current spend rate"
+                )
+                color = "#f87171" if months < 2 else "#fbbf24" if months < 4 else "#34d399"
+                self.projection_label.setStyleSheet(f"font-size: 14px; padding: 5px; color: {color};")
 
+        m1 = report.year_month.next_month()
+        m2 = m1.next_month()
+        m1_name = MONTH_NAMES[m1.month]
+        m2_name = MONTH_NAMES[m2.month]
+        monthly_gap = report.forward_shortfall.pence / 200  # pence → pounds, /2 months
         forward_str = f"£{report.forward_shortfall.pounds:.2f}"
-        self.forward_shortfall_label.setText(f"Forward Shortfall: {forward_str}")
+        self.forward_shortfall_label.setText(
+            f"Bills exceed income by £{monthly_gap:.2f}/month in {m1_name} & {m2_name} "
+            f"(total shortfall: {forward_str})"
+        )

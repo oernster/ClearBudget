@@ -1,6 +1,8 @@
 """Main application window with tab-based interface."""
 
-from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QVBoxLayout
+from datetime import date as _date
+
+from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QVBoxLayout, QLabel
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt
 
@@ -91,6 +93,18 @@ class MainWindow(QMainWindow):
                 self.month_view_model.month_summary
             )
 
+    def _build_status_bar(self) -> None:
+        today = _date.today().strftime("%A, %d %B %Y")
+        lbl = QLabel(f"  Today: {today}  ")
+        lbl.setStyleSheet(
+            "font-size: 13px; font-weight: bold; color: #00d4ff; padding: 2px 8px;"
+        )
+        self.statusBar().addPermanentWidget(lbl)
+        self.statusBar().setStyleSheet(
+            "QStatusBar { background-color: #0d0d1a; border-top: 1px solid #1e3a5f; }"
+        )
+
     def apply_theme(self) -> None:
         """Apply dark theme stylesheet."""
         self.setStyleSheet(DARK_QSS)
+        self._build_status_bar()

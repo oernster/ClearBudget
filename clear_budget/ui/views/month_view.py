@@ -361,6 +361,14 @@ class MonthView(QWidget):
             active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
             active_item.setCheckState(Qt.CheckState.Checked if income.active else Qt.CheckState.Unchecked)
             self.income_table.setItem(row, 4, active_item)
+            if self.view_model.current_month == self.view_model.base_month and income.day_of_month:
+                d, t = income.day_of_month, self.view_model.today.day
+                color = QColor("#9ca3af") if d < t else QColor("#fbbf24") if d == t else None
+                if color:
+                    for c in range(self.income_table.columnCount()):
+                        it = self.income_table.item(row, c)
+                        if it:
+                            it.setForeground(color)
         self.income_table.blockSignals(False)
 
     def on_edit_balance(self) -> None:
