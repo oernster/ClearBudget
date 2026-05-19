@@ -161,13 +161,24 @@ class SolvencyPanel(QWidget):
                                      if (not b.day_of_month or b.day_of_month >= today.day)
                                      and b.payment_method_id != 1)
                 self.committed_label.setText(f"Committed this month: £{committed / 100:.2f}")
+                self.remaining_bank_label.setStyleSheet("font-size: 13px; padding: 5px; color: #fbbf24;")
                 self.remaining_bank_label.setText(f"Still due this month (bank): £{remaining_bank / 100:.2f}")
                 self.remaining_card_label.setText(f"Still due this month (cards): £{remaining_card / 100:.2f}")
             else:
                 all_bank = sum(b.amount.pence for b in summary.bills if b.payment_method_id == 1)
                 all_card = sum(b.amount.pence for b in summary.bills if b.payment_method_id != 1)
+                income_pence = summary.total_income.pence
+                net_pence = all_bank - income_pence
+                if net_pence > 0:
+                    net_str = f"−£{net_pence / 100:.2f}"
+                else:
+                    net_str = f"+£{abs(net_pence) / 100:.2f} surplus"
                 self.committed_label.setText("Committed this month: —")
-                self.remaining_bank_label.setText(f"All bills this month (bank): £{all_bank / 100:.2f}")
+                net_color = "#f87171" if net_pence > 0 else "#34d399"
+                self.remaining_bank_label.setText(
+                    f"Bank bills this month: £{all_bank / 100:.2f} vs income £{income_pence / 100:.2f} 💰 net {net_str}"
+                )
+                self.remaining_bank_label.setStyleSheet(f"font-size: 13px; padding: 5px; color: {net_color};")
                 self.remaining_card_label.setText(f"All bills this month (cards): £{all_card / 100:.2f}")
         else:
             self.committed_label.setText("Committed this month: -")

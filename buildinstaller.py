@@ -94,7 +94,6 @@ def main() -> int:
         f"{PROJECT_ROOT / 'VERSION'};.",
         # Licences (shown in installer UI and shipped for runtime UI dialogs).
         f"{PROJECT_ROOT / 'LICENSE'};.",
-        f"{PROJECT_ROOT / 'LGPL3-LICENSE'};.",
         # Ship icon assets so the installer can set its own window icon and so
         # it can deploy them next to ClearBudget.exe (for taskbar + shortcut icon
         # consistency).

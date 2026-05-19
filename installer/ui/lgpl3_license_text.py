@@ -1,10 +1,4 @@
-"""GNU LGPL v3 license text for display in the installer UI.
-
-Note:
-    The project-level [`LICENSE`](LICENSE:1) file is intentionally *not* LGPLv3.
-    This module exists solely to present the LGPLv3 text (used by components
-    in the installer runtime, e.g. Qt for Python) inside the installer UI.
-"""
+"""GNU LGPL v3 license text for display in the installer UI."""
 
 from __future__ import annotations
 
@@ -13,35 +7,28 @@ from pathlib import Path
 
 
 def _read_lgpl3_text() -> str:
-    """Load LGPL v3 text from repo-root `LGPL3-LICENSE`.
-
-    This is a shared single source of truth for both runtime UI + installer UI.
-    """
+    """Load LGPL v3 text from repo-root `LICENSE`."""
 
     candidates: list[Path] = []
 
-    # PyInstaller onefile extracts bundled data files to sys._MEIPASS.
     try:
         meipass = getattr(sys, "_MEIPASS", None)
         if meipass:
-            candidates.append(Path(meipass) / "LGPL3-LICENSE")
+            candidates.append(Path(meipass) / "LICENSE")
     except Exception:
         pass
 
-    # Next to the executable (frozen). In dev, this is the python.exe folder.
     try:
-        candidates.append(Path(sys.executable).resolve().parent / "LGPL3-LICENSE")
+        candidates.append(Path(sys.executable).resolve().parent / "LICENSE")
     except Exception:
         pass
 
-    # Repo layout fallback: installer/ui/lgpl3_license_text.py -> repo root is
-    # parents[2].
     try:
-        candidates.append(Path(__file__).resolve().parents[2] / "LGPL3-LICENSE")
+        candidates.append(Path(__file__).resolve().parents[2] / "LICENSE")
     except Exception:
         pass
 
-    candidates.append(Path.cwd() / "LGPL3-LICENSE")
+    candidates.append(Path.cwd() / "LICENSE")
 
     for p in candidates:
         try:
@@ -51,7 +38,7 @@ def _read_lgpl3_text() -> str:
             continue
 
     raise FileNotFoundError(
-        "Unable to locate LGPL3-LICENSE. Tried: "
+        "Unable to locate LICENSE. Tried: "
         + ", ".join(str(p) for p in candidates)
     )
 

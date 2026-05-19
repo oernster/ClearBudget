@@ -4,8 +4,8 @@
   "entries": [
     {
       "path": "ClearBudget.exe",
-      "size": 1838247,
-      "sha256": "0a865d713e3562ebaa1c2d1451817e13b251f045e3cc329a9441f6ca594596f4"
+      "size": 1868124,
+      "sha256": "6079a41ff42b085bc2057edf41cbb1efa995f2295f4732804eb65b8b4420edd1"
     },
     {
       "path": "_internal/PySide6/MSVCP140.dll",
@@ -955,12 +955,12 @@
     {
       "path": "_internal/base_library.zip",
       "size": 1401856,
-      "sha256": "6edf004a085501088086f10b6687c308a00616da16f9fdfe67af6c46ad74ab98"
+      "sha256": "f08cb085c95c961f2009dab07c047c75a10c9045e9bbadbee3836cb2d1960664"
     },
     {
       "path": "_internal/clear_budget/__init__.py",
       "size": 263,
-      "sha256": "e233e0583cb04b16940679e133de3c2d41b49ee984ef06c21ccd34ab78e20a69"
+      "sha256": "b8419e67f81c2de983d029bb6995291803e393b943536fae2bc03b90a3896201"
     },
     {
       "path": "_internal/clear_budget/application/__init__.py",
@@ -974,13 +974,13 @@
     },
     {
       "path": "_internal/clear_budget/application/dto/month_summary.py",
-      "size": 1249,
-      "sha256": "2a66ce9c9398a9c2da0806bb0044e9c5b65def163f43c37414e03d8d2f2ff4e2"
+      "size": 1821,
+      "sha256": "602a0dadffd7a38fad6481b2145c2008464ab3980dd1c75e6050fd6ab79cfe5b"
     },
     {
       "path": "_internal/clear_budget/application/dto/solvency_report.py",
       "size": 1356,
-      "sha256": "b99f50181504d65de9479045ae5820fbdcdacd41feeba96a1f8c3a4d52be6243"
+      "sha256": "ce2d7118d8c5b83dbd03f8d15d5a1337b252cab05eb86bce37a59f9ef2a6be29"
     },
     {
       "path": "_internal/clear_budget/application/services/__init__.py",
@@ -989,13 +989,13 @@
     },
     {
       "path": "_internal/clear_budget/application/services/budget_service.py",
-      "size": 7492,
-      "sha256": "10704f8b97dc6cf7c787e284592150f71078b0c3bc1fea86dcc9cdb894a828cb"
+      "size": 16342,
+      "sha256": "a6d8de4c973f7f966c528baf01c24abd9151bc6e87ad5e84866c6f6c1db6aab4"
     },
     {
       "path": "_internal/clear_budget/application/services/month_generator.py",
       "size": 2691,
-      "sha256": "9da5677b3c6cf806cf9d95adf81f1387dc695b714535649ae29c576c16841445"
+      "sha256": "bee2c26001111c7525c038f1d5db33d5937f7e60dd2b0909eb7ac055944fbae4"
     },
     {
       "path": "_internal/clear_budget/domain/__init__.py",
@@ -1009,28 +1009,28 @@
     },
     {
       "path": "_internal/clear_budget/domain/entities/bill.py",
-      "size": 1667,
-      "sha256": "7c2a108d0a58f7a8f52a79ca4f8b666daa1ce6cfb7aa93297f9d8f771959145e"
+      "size": 1754,
+      "sha256": "c2b232f6af4cd716ca15c863b8a52f01657e3f5169e4aac14161dd419c54932d"
     },
     {
       "path": "_internal/clear_budget/domain/entities/credit_card.py",
-      "size": 1724,
-      "sha256": "282298d99fe42b45b05d67db6af6e1d4bb766c975f6caec3e916e61a17b338f0"
+      "size": 1826,
+      "sha256": "c6932b4e80e8ff993958da05ec3bb5f91355232b32220032f6425a6e88a0b5e5"
     },
     {
       "path": "_internal/clear_budget/domain/entities/income_source.py",
       "size": 860,
-      "sha256": "c7b9aa13daddc6b50af0a56d9e69d4f42905013ee316b1942488bc0add25c4b0"
+      "sha256": "341f71d0db3ae8ab16c6218b9419adf56e8757b1f7e03d5e4217dc6022a477a9"
     },
     {
       "path": "_internal/clear_budget/domain/entities/month_bill.py",
       "size": 1171,
-      "sha256": "6b4a22c9e1bd54c751daea102117ccf63d71a8569ffa5fbbd238c216f0e72033"
+      "sha256": "71acae44c4271483c46d2bf9273b8f3d8949a6b6d45aab7c65bdbb2a53788c4a"
     },
     {
       "path": "_internal/clear_budget/domain/entities/month_income.py",
       "size": 1012,
-      "sha256": "c22f088fbf22a39d9425ab35f52754fac8273530b9a43db0b3b30159bea39287"
+      "sha256": "1851763b5ac2e8220ac92e80fa57c3e21509606773f00861a8be9bf552676a20"
     },
     {
       "path": "_internal/clear_budget/domain/interfaces/__init__.py",
@@ -1044,8 +1044,8 @@
     },
     {
       "path": "_internal/clear_budget/domain/interfaces/income_source_repository.py",
-      "size": 929,
-      "sha256": "efa9d54701b92cdaa19419ba333b350d72bb2e1266056667e04123ba571865d4"
+      "size": 1182,
+      "sha256": "713fc5098155f3e461d0881c52ee1acec4e738436826df8290700ab2b0da91b3"
     },
     {
       "path": "_internal/clear_budget/domain/interfaces/month_repository.py",
@@ -1065,22 +1065,22 @@
     {
       "path": "_internal/clear_budget/domain/services/bank_cashflow.py",
       "size": 1395,
-      "sha256": "eec271fd4e22f824679be9ced9b9b89ff267619ae39c45a688f64e30f8e5386a"
+      "sha256": "2305c957279778c77f6afdf94650b3e70c4760d3d4f4dec9be8118dc4b57f366"
     },
     {
       "path": "_internal/clear_budget/domain/services/card_exhaustion.py",
       "size": 2088,
-      "sha256": "9120ed5f25d25701802049928892eac807c25dd1178912edcdff7f13841d436d"
+      "sha256": "c5eb6e37d0768b91e197b7695f0607eaf5b9ab8a2eb007aca8201746e6a1d5ad"
+    },
+    {
+      "path": "_internal/clear_budget/domain/services/card_monthly_calculator.py",
+      "size": 2865,
+      "sha256": "836eb960f9da1ebeb728cfc0fba9a363b732e0ae593dda35ea982f866d58e02f"
     },
     {
       "path": "_internal/clear_budget/domain/services/solvency_calculator.py",
-      "size": 2884,
-      "sha256": "97f97121d05f07fc69485a0f69048b43954579b77e77dec89586f1da252f4b4f"
-    },
-    {
-      "path": "_internal/clear_budget/domain/services/working_day_calculator.py",
-      "size": 2531,
-      "sha256": "dd9ef693a456854a53884e501e2101560e0322afa047930b13e17dbce189427f"
+      "size": 2971,
+      "sha256": "e773a60544d9c6a97b56664c91d20b1acce6302a2f2779321762ad301fe5d55e"
     },
     {
       "path": "_internal/clear_budget/domain/value_objects/__init__.py",
@@ -1090,22 +1090,22 @@
     {
       "path": "_internal/clear_budget/domain/value_objects/amount.py",
       "size": 2797,
-      "sha256": "b85f288051eec6fe3e3b04ff7f190c360a3ea864c81c173415977c20605d12a2"
+      "sha256": "7117d567ff7fc354e9c8f35edb3e66d3ff2aeba24e82544959ebff27aad7ed8b"
     },
     {
       "path": "_internal/clear_budget/domain/value_objects/card_warning.py",
       "size": 1688,
-      "sha256": "8b5d96fe945aac993bcc9518895a0820a43da0eb74aff924e283b61ffb1121b1"
+      "sha256": "5d07ebcb967ed3c21ba81385b111c31cc6e318c8572b2e31d4b35ec8639705c4"
     },
     {
       "path": "_internal/clear_budget/domain/value_objects/solvency_result.py",
       "size": 1382,
-      "sha256": "0f0a556bf653208017a34dd5d4185193ce9a0aae767e0c2a631289af4e7682af"
+      "sha256": "f53f572bdfffceccdc25ac9871706c02bd79c68d49765d6e98843513266d076d"
     },
     {
       "path": "_internal/clear_budget/domain/value_objects/year_month.py",
       "size": 3552,
-      "sha256": "900fe48f5a8637cb61e058cc2f5c732f3c5622999b43be174b6c2ea44b4b514c"
+      "sha256": "699c4da02eb606365549359364a921ebeff591b6e0dfca4de6ca66611e3ae9a9"
     },
     {
       "path": "_internal/clear_budget/infrastructure/__init__.py",
@@ -1119,23 +1119,23 @@
     },
     {
       "path": "_internal/clear_budget/infrastructure/sqlite/bill_repository.py",
-      "size": 5687,
-      "sha256": "6348469bd6658e41012e3c270e5640799597d885e9e2c2f0c16e0be839604853"
+      "size": 7404,
+      "sha256": "06245e00d636d9ba5dbb1df92fd5a045b395dc2d3d6597b4726d1a29faa553a6"
     },
     {
       "path": "_internal/clear_budget/infrastructure/sqlite/database.py",
-      "size": 7919,
-      "sha256": "6c9aedbdf6b3945de81cebbd164a36a4159173dc962eaf248e88b791aedac78b"
+      "size": 9744,
+      "sha256": "3d364dd028ed3902755f92c13b08afd082f2a56c4b3e2b11c37dfedbc8459ddb"
     },
     {
       "path": "_internal/clear_budget/infrastructure/sqlite/income_source_repository.py",
-      "size": 4449,
-      "sha256": "613e18f6a8a3352808caa1cf15f72835c60b495fbe796d957085244aa59155b5"
+      "size": 5410,
+      "sha256": "46f5204eb184768a9a1dbcb6510091cc5725f8a76b70615d2583e5789ad03845"
     },
     {
       "path": "_internal/clear_budget/infrastructure/sqlite/payment_method_repository.py",
-      "size": 6433,
-      "sha256": "68f1e6c52cb9de6bdd9f64a1aa5d937425f40e7219f4c041715a4f81f12f8909"
+      "size": 7380,
+      "sha256": "d6bb72cdb31822fd0f39349c5e0e5ba02ff3c373f9d38e71f2787711e786d2db"
     },
     {
       "path": "_internal/clear_budget/shared/__init__.py",
@@ -1164,13 +1164,23 @@
     },
     {
       "path": "_internal/clear_budget/ui/dark_theme.py",
-      "size": 3008,
-      "sha256": "535295f0a56b242b18a84edd39dfd36e2a5d74f29804d5e440df448406fc3956"
+      "size": 3361,
+      "sha256": "ab6cdde835b1cb137a5206eb6062b360b667e8d0181e7d7db58644ab64ffec3c"
     },
     {
       "path": "_internal/clear_budget/ui/main_window.py",
-      "size": 2435,
-      "sha256": "d999821e9021f64946f7ef3288d811fb3a9e92a5fc4a14992801e03175b5f947"
+      "size": 4576,
+      "sha256": "515e050451e16662416fc1512a75015a8b6794d367ac45347081643cd6439645"
+    },
+    {
+      "path": "_internal/clear_budget/ui/utils/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "_internal/clear_budget/ui/utils/format_helpers.py",
+      "size": 518,
+      "sha256": "bbbf6e385ee52cefdcb25020bc2e4f208789f2037831cd3e71d7cc98de0341e4"
     },
     {
       "path": "_internal/clear_budget/ui/view_models/__init__.py",
@@ -1179,13 +1189,13 @@
     },
     {
       "path": "_internal/clear_budget/ui/view_models/month_view_model.py",
-      "size": 2939,
-      "sha256": "f4f89b8e0c66bfc965f49ed966801350401d421197f18f98bc1c9b1d61cf8136"
+      "size": 4288,
+      "sha256": "fa146686c5506cf05815302ccc2c71e679968a06c29208d9125585c6f731df46"
     },
     {
       "path": "_internal/clear_budget/ui/view_models/solvency_view_model.py",
-      "size": 1793,
-      "sha256": "a8c33053ecc5ce7bf0f8242398931ae5301352b288ca2645008e5665527b2d56"
+      "size": 2280,
+      "sha256": "353a602d830af6d1d095675d6cf5497c2d0b21048ac64d2dffbd612f4c1d5f23"
     },
     {
       "path": "_internal/clear_budget/ui/views/__init__.py",
@@ -1194,23 +1204,28 @@
     },
     {
       "path": "_internal/clear_budget/ui/views/archive_view.py",
-      "size": 2867,
-      "sha256": "01e9d76667ef916fc4fd3628ff5094972929e0a29ce8b32bf67f9844d04b6a81"
+      "size": 6330,
+      "sha256": "b7202cb6c1e32935919705edf5603cab0c1f91d3bf5ce9f66362ada3eca25926"
     },
     {
       "path": "_internal/clear_budget/ui/views/credit_card_view.py",
-      "size": 7498,
-      "sha256": "6c0634edf5722a70d6ad84a3334725f6233ed4fdd83bcda8495db7a467a9650e"
+      "size": 16784,
+      "sha256": "d84f46ab66dffd23d75a51bad518d44b6cf37804a7fb774d62d88c52b946e762"
     },
     {
       "path": "_internal/clear_budget/ui/views/month_view.py",
-      "size": 18699,
-      "sha256": "4ca2aa90c7d826558c9751b57aeba4e4ad32eb368d3cdc74c65c8dd60001cabf"
+      "size": 23543,
+      "sha256": "899d3acb73aeaa1016a31a3acd230bef36f7ee70f28aa355e5c00b04b2e6a0b1"
     },
     {
       "path": "_internal/clear_budget/ui/views/solvency_panel.py",
-      "size": 2996,
-      "sha256": "d88e71d2f464fed0fbf1e2db3135bd34468c6585e338959525789b0091aaf0f3"
+      "size": 11935,
+      "sha256": "26f81a68e71a9b064295f57232aa1c8f5ab3c40e4226b512b6102d1804946c75"
+    },
+    {
+      "path": "_internal/clear_budget/ui/widgets/archive_detail_dialog.py",
+      "size": 3942,
+      "sha256": "50b67db986e0de44cd71f5b418a2c752a165c7e5aad2d233b8846a3e37c1f628"
     },
     {
       "path": "_internal/clear_budget/ui/widgets/balance_dialog.py",
@@ -1219,18 +1234,23 @@
     },
     {
       "path": "_internal/clear_budget/ui/widgets/bill_dialog.py",
-      "size": 6744,
-      "sha256": "f4bcc1a78feed4c711a98d229c9294118b87c5c5e6fa5ace0294c6f8ab2a5308"
+      "size": 8011,
+      "sha256": "575d31ad290ef4858f6863c92221368f400165a543393f0d9c207566bbacb9ce"
+    },
+    {
+      "path": "_internal/clear_budget/ui/widgets/clickable_label.py",
+      "size": 464,
+      "sha256": "4a1cb1004b64236dcbb86f7eefd7d43496794ecce84651383ee7354b709377aa"
     },
     {
       "path": "_internal/clear_budget/ui/widgets/credit_card_dialog.py",
-      "size": 6165,
-      "sha256": "238f3edbb1e5e35f7b0bdfc0bab6d696f5f061b552667e31d5e296df61ccf143"
+      "size": 7704,
+      "sha256": "22c77a1059017da736161bd03fd62dae9eb4053503489a690443fa7e40c58d4c"
     },
     {
       "path": "_internal/clear_budget/ui/widgets/income_dialog.py",
-      "size": 2418,
-      "sha256": "ba17511595ddbe2fb948dbb7d5f9c406635184f6cdf7a2955ac5f4bc4ae334a9"
+      "size": 2911,
+      "sha256": "a107b0aa16cced3f8b6efa9c809eb6fe8e61f0afd0c2f7530e16fa2f12bcae30"
     },
     {
       "path": "_internal/clear_budget/version.py",
