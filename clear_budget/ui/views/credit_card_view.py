@@ -20,6 +20,7 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
+from clear_budget.ui import ui_scale
 
 
 class CreditCardView(QWidget):
@@ -45,7 +46,7 @@ class CreditCardView(QWidget):
         self.prev_btn = QPushButton("← Previous")
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.month_label = QLabel()
-        self.month_label.setStyleSheet("font-size: 20px; font-weight: bold; padding: 10px; color: #9ca3af;")
+        self.month_label.setStyleSheet(ui_scale.style("font-size: 20px; font-weight: bold; padding: 10px; color: #9ca3af;"))
         self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._refresh_month_label()
         self.next_btn = QPushButton("Next →")

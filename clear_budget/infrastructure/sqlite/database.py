@@ -225,6 +225,19 @@ class Database:
         except Exception:
             pass
 
+        # Per-month bill skips (excludes a bill from one month without deleting it)
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS bill_month_skips (
+                bill_id INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                PRIMARY KEY (bill_id, year, month),
+                FOREIGN KEY (bill_id) REFERENCES bills(id)
+            )
+            """
+        )
+
         self.conn.commit()
 
     def get_or_create_month(self, year_month: YearMonth) -> int:

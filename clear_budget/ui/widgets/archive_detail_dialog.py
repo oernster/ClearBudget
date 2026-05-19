@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.ui import ui_scale
 
 
 class ArchiveDetailDialog(QDialog):
@@ -34,7 +35,7 @@ class ArchiveDetailDialog(QDialog):
         # Header info
         header_layout = QHBoxLayout()
         month_label = QLabel(f"<b>{self.year_month}</b>")
-        month_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        month_label.setStyleSheet(ui_scale.style("font-size: 20px; font-weight: bold;"))
         header_layout.addWidget(month_label)
         header_layout.addStretch()
         layout.addLayout(header_layout)
@@ -47,7 +48,7 @@ class ArchiveDetailDialog(QDialog):
                 f"Balance: {self.summary.balance}"
             )
             summary_label = QLabel(summary_text)
-            summary_label.setStyleSheet("font-size: 17px; color: #888;")
+            summary_label.setStyleSheet(ui_scale.style("font-size: 17px; color: #888;"))
             layout.addWidget(summary_label)
 
         # Bills table

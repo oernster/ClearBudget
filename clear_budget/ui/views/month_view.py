@@ -23,6 +23,7 @@ from clear_budget.ui.widgets.income_dialog import IncomeDialog
 from clear_budget.ui.widgets.balance_dialog import BalanceDialog
 from clear_budget.ui.widgets.clickable_label import ClickableLabel
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES, format_category
+from clear_budget.ui import ui_scale
 
 _BANK_ACCOUNT_ID = 1
 _BILLS_SORT_KEYS = {
@@ -85,27 +86,27 @@ class MonthView(QWidget):
         header_layout.addLayout(nav_layout)
 
         self.month_label = QLabel(f"{MONTH_NAMES[self.view_model.current_month.month]} {self.view_model.current_month.year}")
-        self.month_label.setStyleSheet(
+        self.month_label.setStyleSheet(ui_scale.style(
             "font-size: 50px; font-weight: bold; padding: 20px; "
             "background-color: #1a1a2e; color: #00d4ff; text-align: center; border-radius: 8px;"
-        )
+        ))
         self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header_layout.addWidget(self.month_label)
 
         summary_layout = QHBoxLayout()
         self.income_label = QLabel("Income: £0.00")
-        self.income_label.setStyleSheet("font-size: 20px; padding: 5px;")
+        self.income_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
         self.bills_label = QLabel("Bills: £0.00")
-        self.bills_label.setStyleSheet("font-size: 20px; padding: 5px;")
+        self.bills_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
         self.edit_balance_btn = QPushButton("📝")
         self.edit_balance_btn.setMaximumWidth(28)
         self.edit_balance_btn.setMaximumHeight(22)
-        self.edit_balance_btn.setStyleSheet(
+        self.edit_balance_btn.setStyleSheet(ui_scale.style(
             "QPushButton { border: none; background-color: transparent; color: #34d399; font-size: 20px; padding: 0px; }"
             "QPushButton:hover { background-color: #1a1a2e; border-radius: 3px; }"
-        )
+        ))
         self.balance_label = QLabel("Balance: £0.00")
-        self.balance_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #34d399; padding: 5px;")
+        self.balance_label.setStyleSheet(ui_scale.style("font-size: 20px; font-weight: bold; color: #34d399; padding: 5px;"))
         summary_layout.addWidget(self.income_label)
         summary_layout.addWidget(self.bills_label)
         summary_layout.addStretch()
@@ -119,9 +120,9 @@ class MonthView(QWidget):
         bills_group = QGroupBox("Bills")
         bills_layout = QVBoxLayout()
         self.bills_table = QTableWidget()
-        self.bills_table.setColumnCount(6)
+        self.bills_table.setColumnCount(7)
         self.bills_table.setHorizontalHeaderLabels(
-            ["Name", "Amount", "Category", "Payment Method", "Due", "Active"]
+            ["Name", "Amount", "Category", "Payment Method", "Due", "Active", "Skip"]
         )
         self.bills_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.bills_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
@@ -240,30 +241,42 @@ class MonthView(QWidget):
         if summary := self.view_model.month_summary:
             projected = bank.pence + summary.balance.pence
             self.balance_label.setText(f"Balance: {Amount(pence=projected)}")
-            self.balance_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {self._get_balance_color(projected)}; padding: 5px;")
+            self.balance_label.setStyleSheet(ui_scale.style(f"font-size: 20px; font-weight: bold; color: {self._get_balance_color(projected)}; padding: 5px;"))
 
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
 
     def _on_bill_cell_clicked(self, row: int, col: int) -> None:
-        if col != 5: return
+        if col not in (5, 6): return
         from PySide6.QtWidgets import QApplication
         mods = QApplication.keyboardModifiers()
         bill = self._get_bill_from_row(row)
         if mods & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
-            item = self.bills_table.item(row, 5)
+            item = self.bills_table.item(row, col)
             if item and bill:
                 self.bills_table.blockSignals(True)
-                item.setCheckState(Qt.CheckState.Checked if bill.active else Qt.CheckState.Unchecked)
+                if col == 5:
+                    item.setCheckState(Qt.CheckState.Checked if bill.active else Qt.CheckState.Unchecked)
+                else:
+                    item.setCheckState(Qt.CheckState.Checked if bill.skipped_for_month else Qt.CheckState.Unchecked)
                 self.bills_table.blockSignals(False)
             return
-        if bill is not None: self.view_model.set_bill_active(bill_id=bill.id, active=not bill.active)
+        if bill is None:
+            return
+        if col == 5:
+            self.view_model.set_bill_active(bill_id=bill.id, active=not bill.active)
+        else:
+            if bill.skipped_for_month:
+                self.view_model.unskip_bill_for_month(bill_id=bill.id)
+            else:
+                self.view_model.skip_bill_for_month(bill_id=bill.id)
 
     _EDITABLE_BILL_COLS = {0, 1, 2, 4}
 
     def _on_bill_item_changed(self, item) -> None:
         if item.column() not in self._EDITABLE_BILL_COLS:
-            QTimer.singleShot(0, self.view_model.refresh_month_summary)
+            if item.column() != 6:  # skip col handled by cellClicked, no refresh needed here
+                QTimer.singleShot(0, self.view_model.refresh_month_summary)
             return
         bill = self._get_bill_from_row(item.row())
         if bill is None: return
@@ -334,7 +347,18 @@ class MonthView(QWidget):
             active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
             active_item.setCheckState(Qt.CheckState.Checked if bill.active else Qt.CheckState.Unchecked)
             self.bills_table.setItem(row, 5, active_item)
-            if self.view_model.current_month == self.view_model.base_month and bill.day_of_month:
+            skip_item = QTableWidgetItem()
+            skip_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
+            skip_item.setCheckState(Qt.CheckState.Checked if bill.skipped_for_month else Qt.CheckState.Unchecked)
+            self.bills_table.setItem(row, 6, skip_item)
+            if bill.skipped_for_month:
+                skip_color = QColor("#6b7280")
+                for c in range(self.bills_table.columnCount()):
+                    it = self.bills_table.item(row, c)
+                    if it:
+                        it.setForeground(skip_color)
+                name_item.setText(f"{bill.name} (skipped this month)")
+            elif self.view_model.current_month == self.view_model.base_month and bill.day_of_month:
                 d, t = bill.day_of_month, self.view_model.today.day
                 color = QColor("#9ca3af") if d < t else QColor("#fbbf24") if d == t else None
                 if color:

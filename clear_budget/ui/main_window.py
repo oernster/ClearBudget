@@ -6,7 +6,8 @@ from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QVBoxLayout, QLa
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt
 
-from clear_budget.ui.dark_theme import DARK_QSS
+from clear_budget.ui.dark_theme import get_dark_qss
+from clear_budget.ui import ui_scale
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.views.month_view import MonthView
@@ -28,8 +29,7 @@ class MainWindow(QMainWindow):
         self.month_view_model = month_view_model
         self.solvency_view_model = solvency_view_model
         self.setWindowTitle("ClearBudget - Personal Budget Planner")
-        self.setGeometry(100, 100, 2240, 1260)
-        self.setMinimumWidth(1960)
+        self.setMinimumWidth(ui_scale.px(1400))
         self.init_ui()
         self.apply_theme()
 
@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
         today = _date.today().strftime("%A, %d %B %Y")
         lbl = QLabel(f"  Today: {today}  ")
         lbl.setStyleSheet(
-            "font-size: 18px; font-weight: bold; color: #00d4ff; padding: 2px 8px;"
+            ui_scale.style("font-size: 18px; font-weight: bold; color: #00d4ff; padding: 2px 8px;")
         )
         self.statusBar().addPermanentWidget(lbl)
         self.statusBar().setStyleSheet(
@@ -106,5 +106,5 @@ class MainWindow(QMainWindow):
 
     def apply_theme(self) -> None:
         """Apply dark theme stylesheet."""
-        self.setStyleSheet(DARK_QSS)
+        self.setStyleSheet(get_dark_qss())
         self._build_status_bar()

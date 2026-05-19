@@ -20,10 +20,11 @@ class SQLiteBillRepository:
 
         Args:
             year_month: Month to query
-            include_inactive: When True, include deactivated bills (for display)
+            include_inactive: When True, include deactivated and skipped bills (for display)
         """
         cursor = self.conn.cursor()
         active_filter = "" if include_inactive else "AND b.active = 1"
+        skip_filter = "" if include_inactive else "AND s.bill_id IS NULL"
         cursor.execute(
             f"""
             SELECT
@@ -39,24 +40,24 @@ class SQLiteBillRepository:
                 b.start_month,
                 b.end_year,
                 b.end_month,
-                b.active
+                b.active,
+                CASE WHEN s.bill_id IS NOT NULL THEN 1 ELSE 0 END AS skipped_for_month
             FROM bills b
             LEFT JOIN bill_month_overrides o
                 ON o.bill_id = b.id AND o.year = ? AND o.month = ?
+            LEFT JOIN bill_month_skips s
+                ON s.bill_id = b.id AND s.year = ? AND s.month = ?
             WHERE (b.start_year < ? OR (b.start_year = ? AND b.start_month <= ?))
               AND (b.end_year IS NULL OR b.end_year > ? OR
                    (b.end_year = ? AND b.end_month >= ?))
               {active_filter}
+              {skip_filter}
             """,
             (
-                year_month.year,
-                year_month.month,
-                year_month.year,
-                year_month.year,
-                year_month.month,
-                year_month.year,
-                year_month.year,
-                year_month.month,
+                year_month.year, year_month.month,
+                year_month.year, year_month.month,
+                year_month.year, year_month.year, year_month.month,
+                year_month.year, year_month.year, year_month.month,
             ),
         )
 
@@ -78,10 +79,29 @@ class SQLiteBillRepository:
                 ),
                 active=bool(row["active"]),
                 target_card_id=row["target_card_id"],
+                skipped_for_month=bool(row["skipped_for_month"]),
             )
             bills.append(bill)
 
         return bills
+
+    def skip_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:
+        """Mark a bill as skipped for one specific month."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "INSERT OR IGNORE INTO bill_month_skips (bill_id, year, month) VALUES (?, ?, ?)",
+            (bill_id, year_month.year, year_month.month),
+        )
+        self.conn.commit()
+
+    def unskip_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:
+        """Remove a month-skip, restoring the bill to that month's calculations."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "DELETE FROM bill_month_skips WHERE bill_id = ? AND year = ? AND month = ?",
+            (bill_id, year_month.year, year_month.month),
+        )
+        self.conn.commit()
 
     def set_active(self, *, bill_id: int, active: bool) -> None:
         """Set the active state of a bill."""
@@ -187,5 +207,6 @@ class SQLiteBillRepository:
         """Permanently remove a bill and its overrides from the database."""
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM bill_month_overrides WHERE bill_id = ?", (bill_id,))
+        cursor.execute("DELETE FROM bill_month_skips WHERE bill_id = ?", (bill_id,))
         cursor.execute("DELETE FROM bills WHERE id = ?", (bill_id,))
         self.conn.commit()

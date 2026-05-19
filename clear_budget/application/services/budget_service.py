@@ -233,6 +233,12 @@ class BudgetService:
     def set_bill_active(self, *, bill_id: int, active: bool) -> None:  # pragma: no cover
         self.bill_repo.set_active(bill_id=bill_id, active=active)
 
+    def skip_bill_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:  # pragma: no cover
+        self.bill_repo.skip_for_month(bill_id=bill_id, year_month=year_month)
+
+    def unskip_bill_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:  # pragma: no cover
+        self.bill_repo.unskip_for_month(bill_id=bill_id, year_month=year_month)
+
     def get_card_monthly_states(self, *, year_month: YearMonth) -> list:  # pragma: no cover
         from datetime import datetime
         from clear_budget.domain.services.card_monthly_calculator import calculate_card_monthly_state

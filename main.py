@@ -1,9 +1,10 @@
 """Application entry point - composition root and Qt event loop."""
 
 import sys
+import ctypes
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtGui import QIcon
 
 from clear_budget.shared.config import Config
@@ -33,9 +34,30 @@ def _find_runtime_icon() -> Path | None:
     return None
 
 
+_MUTEX_NAME = "Global\\ClearBudget_SingleInstance"
+
+
+def _acquire_single_instance_mutex():
+    """Return a Windows mutex handle, or None if another instance is running."""
+    handle = ctypes.windll.kernel32.CreateMutexW(None, True, _MUTEX_NAME)
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return None
+    return handle
+
+
 def main() -> int:
     """Initialize application and start event loop."""
     app = QApplication([])
+
+    _mutex = _acquire_single_instance_mutex()
+    if _mutex is None:
+        QMessageBox.warning(None, "ClearBudget", "ClearBudget is already running.")
+        return 1
+
+    from clear_budget.ui import ui_scale
+    _avail_h = app.primaryScreen().availableGeometry().height()
+    ui_scale.init(_avail_h / 1260.0)
 
     icon_path = _find_runtime_icon()
     if icon_path:
@@ -76,7 +98,7 @@ def main() -> int:
         if not icon.isNull():
             window.setWindowIcon(icon)
 
-    window.show()
+    window.showMaximized()
 
     result = app.exec()
     database.close()
