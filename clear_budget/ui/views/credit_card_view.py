@@ -84,8 +84,10 @@ class CreditCardView(QWidget):
         self.cards_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.cards_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
         self.cards_table.itemChanged.connect(self._on_card_item_changed)
-        self.cards_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.cards_table.horizontalHeader().setStretchLastSection(True)
+        _ch = self.cards_table.horizontalHeader()
+        _ch.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        _ch.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        _ch.setStretchLastSection(False)
         self.cards_table.setStyleSheet(
             "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
             "border-radius:3px;background:transparent;}"

@@ -132,8 +132,10 @@ class MonthView(QWidget):
             "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
             "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
         )
-        self.bills_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.bills_table.horizontalHeader().setStretchLastSection(True)
+        _bh = self.bills_table.horizontalHeader()
+        _bh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        _bh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        _bh.setStretchLastSection(False)
         self.bills_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
         self.bills_table.verticalHeader().sectionClicked.connect(self._on_bill_row_header_click)
         self.bills_table.horizontalHeader().sectionClicked.connect(self.on_bills_header_click)
@@ -160,8 +162,10 @@ class MonthView(QWidget):
         self.income_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.income_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.income_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
-        self.income_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.income_table.horizontalHeader().setStretchLastSection(True)
+        _ih = self.income_table.horizontalHeader()
+        _ih.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        _ih.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        _ih.setStretchLastSection(False)
         self.income_table.setStyleSheet(
             "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
             "border-radius:3px;background:transparent;}"
