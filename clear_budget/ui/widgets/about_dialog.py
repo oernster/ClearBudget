@@ -35,7 +35,7 @@ and their communities:</p>
   <li><b>SQLite</b> &mdash; Dedicated to the public domain by D. Richard Hipp and contributors.</li>
   <li><b>pytest</b> &mdash; Copyright &copy; 2004&ndash;2025 Holger Krekel and pytest contributors.
       Licensed under the MIT Licence.</li>
-  <li><b>black</b> &mdash; Copyright &copy; 2018&ndash;2025 &Lstrok;ukasz Langa and contributors.
+  <li><b>black</b> &mdash; Copyright &copy; 2018&ndash;2025 Łukasz Langa and contributors.
       Licensed under the MIT Licence.</li>
   <li><b>pywin32</b> &mdash; Copyright &copy; Mark Hammond. Licensed under the PSF Licence.</li>
   <li><b>PyInstaller</b> &mdash; Copyright &copy; 2010&ndash;2025 PyInstaller contributors.
@@ -45,65 +45,56 @@ and their communities:</p>
 that makes projects like this possible.</p>
 """
 
-_LGPL3_NOTICE = """\
-GNU LESSER GENERAL PUBLIC LICENCE
-Version 3, 29 June 2007
-
-ClearBudget — Personal Budget Planner
-Copyright (C) 2025 Oliver Ernster
-
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public Licence as published by the Free
-Software Foundation, either version 3 of the Licence, or (at your option) any
-later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public Licence for more
-details.
-
-You should have received a copy of the GNU Lesser General Public Licence along
-with this program. If not, see <https://www.gnu.org/licenses/>.
-
-────────────────────────────────────────────────────────────────────────────────
-
-The full licence text is available at:
-
-    https://www.gnu.org/licenses/lgpl-3.0.html
-
-Key terms summary:
-  • You may use, copy, modify, and distribute this software under LGPL-3.0.
-  • If you distribute modified versions of this software, you must make the
-    modified source available under the same licence.
-  • You must allow end users to replace or relink the LGPL-licensed libraries
-    (PySide6 / Qt) used by this application.
-  • There is NO WARRANTY for this program, to the extent permitted by law.
-
-────────────────────────────────────────────────────────────────────────────────
-
-THIRD-PARTY LIBRARY LICENCES
-
-PySide6 (Qt for Python) — LGPL-3.0
-  https://www.gnu.org/licenses/lgpl-3.0.html
-
-Python Standard Library — PSF Licence
-  https://docs.python.org/3/license.html
-
-SQLite — Public Domain
-  https://www.sqlite.org/copyright.html
-
-pytest — MIT Licence
-  https://opensource.org/licenses/MIT
-
-black — MIT Licence
-  https://opensource.org/licenses/MIT
-
-pywin32 — PSF Licence
-  https://github.com/mhammond/pywin32/blob/main/LICENCE.txt
-
-PyInstaller — GPL-2.0 with bootloader exception
-  https://pyinstaller.org/en/stable/license.html
-"""
+_LGPL3_NOTICE = (
+    "GNU LESSER GENERAL PUBLIC LICENCE\n"
+    "Version 3, 29 June 2007\n"
+    "\n"
+    "ClearBudget — Personal Budget Planner\n"
+    "Copyright (C) 2025 Oliver Ernster\n"
+    "\n"
+    "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"
+    "\n"
+    "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public Licence for more details.\n"
+    "\n"
+    "You should have received a copy of the GNU Lesser General Public Licence along with this program. If not, see <https://www.gnu.org/licenses/>.\n"
+    "\n"
+    "----------------------------------------\n"
+    "\n"
+    "The full licence text is available at:\n"
+    "\n"
+    "    https://www.gnu.org/licenses/lgpl-3.0.html\n"
+    "\n"
+    "Key terms summary:\n"
+    "  • You may use, copy, modify, and distribute this software under LGPL-3.0.\n"
+    "  • If you distribute modified versions of this software, you must make the modified source available under the same licence.\n"
+    "  • You must allow end users to replace or relink the LGPL-licensed libraries (PySide6 / Qt) used by this application.\n"
+    "  • There is NO WARRANTY for this program, to the extent permitted by law.\n"
+    "\n"
+    "----------------------------------------\n"
+    "\n"
+    "THIRD-PARTY LIBRARY LICENCES\n"
+    "\n"
+    "PySide6 (Qt for Python) — LGPL-3.0\n"
+    "  https://www.gnu.org/licenses/lgpl-3.0.html\n"
+    "\n"
+    "Python Standard Library — PSF Licence\n"
+    "  https://docs.python.org/3/license.html\n"
+    "\n"
+    "SQLite — Public Domain\n"
+    "  https://www.sqlite.org/copyright.html\n"
+    "\n"
+    "pytest — MIT Licence\n"
+    "  https://opensource.org/licenses/MIT\n"
+    "\n"
+    "black — MIT Licence\n"
+    "  https://opensource.org/licenses/MIT\n"
+    "\n"
+    "pywin32 — PSF Licence\n"
+    "  https://github.com/mhammond/pywin32/blob/main/LICENCE.txt\n"
+    "\n"
+    "PyInstaller — GPL-2.0 with bootloader exception\n"
+    "  https://pyinstaller.org/en/stable/license.html\n"
+)
 
 
 class AboutDialog(QDialog):
@@ -162,6 +153,7 @@ class LicenceDialog(QDialog):
         browser = QTextBrowser()
         browser.setPlainText(_LGPL3_NOTICE)
         browser.setOpenExternalLinks(True)
+        browser.setLineWrapMode(QTextBrowser.LineWrapMode.WidgetWidth)
         layout.addWidget(browser)
 
         btn_row = QHBoxLayout()

@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, QPushButton, QMenuBar, QMenu, QApplication
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPixmap
 from pathlib import Path
 from datetime import datetime
 from ui.views.month_view import MonthView
@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
 
         # Set window icon
-        icon_path = Path(__file__).resolve().parents[2] / "ClearBudget_128.png"
+        icon_path = Path(__file__).resolve().parents[1] / "clearbudget_128.png"
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
 
@@ -43,6 +43,24 @@ class MainWindow(QMainWindow):
         # Solvency panel at top
         self.solvency_panel = SolvencyPanel(db, self.current_month)
         layout.addWidget(self.solvency_panel)
+
+        # Centered icon strip above tabs
+        icon_strip_widget = QWidget()
+        icon_strip_widget.setFixedHeight(44)
+        icon_strip = QHBoxLayout(icon_strip_widget)
+        icon_strip.setContentsMargins(0, 4, 0, 4)
+        nav_icon_label = QLabel()
+        nav_icon_path = Path(__file__).resolve().parents[1] / "clearbudget_32.png"
+        if nav_icon_path.exists():
+            nav_pixmap = QPixmap(str(nav_icon_path))
+            nav_icon_label.setPixmap(nav_pixmap.scaledToHeight(32, Qt.TransformationMode.SmoothTransformation))
+        else:
+            nav_icon_label.setText("ICON MISSING")
+        nav_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_strip.addStretch()
+        icon_strip.addWidget(nav_icon_label)
+        icon_strip.addStretch()
+        layout.addWidget(icon_strip_widget)
 
         # Tabs
         tabs = QTabWidget()

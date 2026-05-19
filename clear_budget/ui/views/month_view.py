@@ -22,7 +22,7 @@ from clear_budget.ui.widgets.bill_dialog import BillDialog
 from clear_budget.ui.widgets.income_dialog import IncomeDialog
 from clear_budget.ui.widgets.balance_dialog import BalanceDialog
 from clear_budget.ui.widgets.clickable_label import ClickableLabel
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES, format_category
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES, format_category, build_nav_month_widget
 from clear_budget.ui import ui_scale
 
 _BANK_ACCOUNT_ID = 1
@@ -77,21 +77,28 @@ class MonthView(QWidget):
         header_layout = QVBoxLayout()
         nav_layout = QHBoxLayout()
         self.prev_btn = QPushButton("← Previous")
+        self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         next_btn = QPushButton("Next →")
+        next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.archive_btn = QPushButton("Archive Month")
-        nav_layout.addWidget(self.prev_btn)
-        nav_layout.addStretch()
-        nav_layout.addWidget(self.archive_btn)
-        nav_layout.addWidget(next_btn)
+        _nav_center, self.month_label = build_nav_month_widget(
+            f"{MONTH_NAMES[self.view_model.current_month.month]} {self.view_model.current_month.year}"
+        )
+        left_group = QWidget()
+        left_lo = QHBoxLayout(left_group)
+        left_lo.setContentsMargins(0, 0, 0, 0)
+        left_lo.addWidget(self.prev_btn)
+        left_lo.addStretch()
+        right_group = QWidget()
+        right_lo = QHBoxLayout(right_group)
+        right_lo.setContentsMargins(0, 0, 0, 0)
+        right_lo.addStretch()
+        right_lo.addWidget(self.archive_btn)
+        right_lo.addWidget(next_btn)
+        nav_layout.addWidget(left_group, 1)
+        nav_layout.addWidget(_nav_center, 0)
+        nav_layout.addWidget(right_group, 1)
         header_layout.addLayout(nav_layout)
-
-        self.month_label = QLabel(f"{MONTH_NAMES[self.view_model.current_month.month]} {self.view_model.current_month.year}")
-        self.month_label.setStyleSheet(ui_scale.style(
-            "font-size: 50px; font-weight: bold; padding: 20px; "
-            "background-color: #1a1a2e; color: #00d4ff; text-align: center; border-radius: 8px;"
-        ))
-        self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.addWidget(self.month_label)
 
         summary_layout = QHBoxLayout()
         self.income_label = QLabel("Income: £0.00")

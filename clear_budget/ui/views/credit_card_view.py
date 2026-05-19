@@ -22,7 +22,7 @@ from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 from clear_budget.ui import ui_scale
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES, build_nav_month_widget
 
 _PROJECTION_MONTHS = 6
 
@@ -49,16 +49,24 @@ class CreditCardView(QWidget):
         nav_layout = QHBoxLayout()
         self.prev_btn = QPushButton("← Previous")
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.month_label = QLabel()
-        self.month_label.setStyleSheet(ui_scale.style("font-size: 20px; font-weight: bold; padding: 10px; color: #9ca3af;"))
-        self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._refresh_month_label()
         self.next_btn = QPushButton("Next →")
         self.next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        nav_layout.addWidget(self.prev_btn)
-        nav_layout.addWidget(self.month_label, stretch=1)
-        nav_layout.addWidget(self.next_btn)
+        _nav_center, self.month_label = build_nav_month_widget("")
+        left_group = QWidget()
+        left_lo = QHBoxLayout(left_group)
+        left_lo.setContentsMargins(0, 0, 0, 0)
+        left_lo.addWidget(self.prev_btn)
+        left_lo.addStretch()
+        right_group = QWidget()
+        right_lo = QHBoxLayout(right_group)
+        right_lo.setContentsMargins(0, 0, 0, 0)
+        right_lo.addStretch()
+        right_lo.addWidget(self.next_btn)
+        nav_layout.addWidget(left_group, 1)
+        nav_layout.addWidget(_nav_center, 0)
+        nav_layout.addWidget(right_group, 1)
         layout.addLayout(nav_layout)
+        self._refresh_month_label()
 
         cards_group = QGroupBox("Credit Cards")
         cards_layout = QVBoxLayout()

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from clear_budget.ui import ui_scale
 
+SCROLLBAR_WIDTH_PX = 8
+
 
 def get_dark_qss() -> str:
     base_pt = round(14 * ui_scale.factor())

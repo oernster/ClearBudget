@@ -7,7 +7,8 @@ from PySide6.QtCore import Qt
 
 from clear_budget.domain.services.card_monthly_calculator import calculate_card_monthly_state
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES, build_nav_month_widget
+from clear_budget.ui.dark_theme import SCROLLBAR_WIDTH_PX
 from clear_budget.ui import ui_scale
 
 
@@ -28,14 +29,23 @@ class SolvencyPanel(QWidget):
         nav_layout = QHBoxLayout()
         self.prev_btn = QPushButton("← Previous")
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.month_label = QLabel("May 2026")
-        self.month_label.setStyleSheet(ui_scale.style("font-size: 20px; font-weight: bold; padding: 10px; color: #9ca3af;"))
-        self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.next_btn = QPushButton("Next →")
         self.next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        nav_layout.addWidget(self.prev_btn)
-        nav_layout.addWidget(self.month_label, stretch=1)
-        nav_layout.addWidget(self.next_btn)
+        _nav_center, self.month_label = build_nav_month_widget("May 2026")
+        left_group = QWidget()
+        left_lo = QHBoxLayout(left_group)
+        left_lo.setContentsMargins(0, 0, 0, 0)
+        left_lo.addWidget(self.prev_btn)
+        left_lo.addStretch()
+        right_group = QWidget()
+        right_lo = QHBoxLayout(right_group)
+        right_lo.setContentsMargins(0, 0, 0, 0)
+        right_lo.addStretch()
+        right_lo.addWidget(self.next_btn)
+        nav_layout.addSpacing(SCROLLBAR_WIDTH_PX)
+        nav_layout.addWidget(left_group, 1)
+        nav_layout.addWidget(_nav_center, 0)
+        nav_layout.addWidget(right_group, 1)
         layout.addLayout(nav_layout)
 
         # SECTION 1: OVERDRAFT ALERT (Top - Prominent)
