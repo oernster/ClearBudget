@@ -28,18 +28,21 @@ QTabBar::tab {{
     background-color: #1e2130;
     color: #9ca3af;
     padding: 8px 16px;
-    border: 1px solid #2b2f44;
+    border: 2px solid #2b2f44;
     border-bottom: none;
 }}
 
 QTabBar::tab:selected {{
     background-color: #161827;
     color: #a78bfa;
-    border-bottom: 2px solid #a78bfa;
+    border: 2px solid #a78bfa;
+    border-bottom: none;
 }}
 
 QTabBar::tab:hover:!selected {{
     background-color: #2b2f44;
+    border: 2px solid #f59e0b;
+    color: #f59e0b;
 }}
 
 QGroupBox {{
@@ -78,7 +81,7 @@ QTableWidget::item:selected {{
 QPushButton {{
     background-color: #7fb0ff;
     color: white;
-    border: none;
+    border: 2px solid transparent;
     padding: 8px 16px;
     border-radius: 8px;
     font-weight: 600;
@@ -86,10 +89,12 @@ QPushButton {{
 
 QPushButton:hover {{
     background-color: #6aa2ff;
+    border: 2px solid #f59e0b;
 }}
 
 QPushButton:pressed {{
     background-color: #5a92ff;
+    border: 2px solid #f59e0b;
 }}
 
 QPushButton#DangerButton {{
@@ -211,5 +216,56 @@ QCheckBox::indicator:checked {{
 
 QCheckBox::indicator:unchecked:hover {{
     border-color: #d1d5db;
+}}
+
+QMenuBar {{
+    background-color: #161827;
+    color: #e5e7eb;
+    border-bottom: 1px solid #2b2f44;
+}}
+
+QMenuBar::item {{
+    background: transparent;
+    padding: 4px 12px;
+    border-radius: 4px;
+}}
+
+QMenuBar::item:selected {{
+    border: 2px solid #f59e0b;
+    border-radius: 4px;
+    color: #f59e0b;
+}}
+
+QMenuBar::item:pressed {{
+    background-color: #2b2f44;
+    border: 2px solid #f59e0b;
+    border-radius: 4px;
+}}
+
+QMenu {{
+    background-color: #1e2130;
+    color: #e5e7eb;
+    border: 1px solid #2b2f44;
+    border-radius: 4px;
+    padding: 4px 0px;
+}}
+
+QMenu::item {{
+    padding: 6px 24px 6px 12px;
+    border: 2px solid transparent;
+    border-radius: 3px;
+    margin: 2px 4px;
+}}
+
+QMenu::item:selected {{
+    border: 2px solid #f59e0b;
+    color: #f59e0b;
+    background-color: transparent;
+}}
+
+QMenu::separator {{
+    height: 1px;
+    background-color: #2b2f44;
+    margin: 4px 8px;
 }}
 """

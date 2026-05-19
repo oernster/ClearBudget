@@ -56,8 +56,12 @@ def main() -> int:
         return 1
 
     from clear_budget.ui import ui_scale
-    _avail_h = app.primaryScreen().availableGeometry().height()
-    ui_scale.init(_avail_h / 1260.0)
+    _screen = app.primaryScreen()
+    _avail = _screen.availableGeometry()
+    _avail_h = _avail.height()
+    _avail_w = _avail.width()
+    # Scale factor: reference design is 1260px tall. Cap at 1.5 so 4K doesn't produce enormous UI.
+    ui_scale.init(min(_avail_h / 1260.0, 1.5))
 
     icon_path = _find_runtime_icon()
     if icon_path:
@@ -98,6 +102,13 @@ def main() -> int:
         if not icon.isNull():
             window.setWindowIcon(icon)
 
+    # Set restored geometry to 88% of available screen, centred.
+    # Qt uses this size when the user un-maximises, ensuring it always fits on screen.
+    _restore_w = int(_avail_w * 0.88)
+    _restore_h = int(_avail_h * 0.88)
+    _restore_x = _avail.x() + (_avail_w - _restore_w) // 2
+    _restore_y = _avail.y() + (_avail_h - _restore_h) // 2
+    window.setGeometry(_restore_x, _restore_y, _restore_w, _restore_h)
     window.showMaximized()
 
     result = app.exec()

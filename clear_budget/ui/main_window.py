@@ -5,6 +5,7 @@ from datetime import date as _date
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QVBoxLayout, QLabel
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt
+from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 
 from clear_budget.ui.dark_theme import get_dark_qss
 from clear_budget.ui import ui_scale
@@ -29,7 +30,7 @@ class MainWindow(QMainWindow):
         self.month_view_model = month_view_model
         self.solvency_view_model = solvency_view_model
         self.setWindowTitle("ClearBudget - Personal Budget Planner")
-        self.setMinimumWidth(ui_scale.px(1400))
+        self.setMinimumSize(ui_scale.px(900), ui_scale.px(580))
         self.init_ui()
         self.apply_theme()
 
@@ -44,19 +45,19 @@ class MainWindow(QMainWindow):
         self.tabs.tabBar().setExpanding(False)
 
         month_view = MonthView(self.month_view_model)
-        self.tabs.addTab(month_view, "Monthly Budget")
+        self.tabs.addTab(self._scrollable(month_view), "Monthly Budget")
 
         solvency_panel = SolvencyPanel(self.solvency_view_model)
-        self.tabs.addTab(solvency_panel, "Solvency")
+        self.tabs.addTab(self._scrollable(solvency_panel), "Solvency")
 
         credit_card_view = CreditCardView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
         )
-        self.tabs.addTab(credit_card_view, "Credit Cards")
+        self.tabs.addTab(self._scrollable(credit_card_view), "Credit Cards")
 
         archive_view = ArchiveView(self.month_view_model.budget_service)
-        self.tabs.addTab(archive_view, "Archive")
+        self.tabs.addTab(self._scrollable(archive_view), "Archive")
 
         layout.addWidget(self.tabs)
         central_widget.setLayout(layout)
@@ -104,7 +105,27 @@ class MainWindow(QMainWindow):
             "QStatusBar { background-color: #0d0d1a; border-top: 1px solid #1e3a5f; }"
         )
 
+    @staticmethod
+    def _scrollable(widget: QWidget) -> ScrollableTab:
+        return ScrollableTab(widget)
+
+    def _build_help_menu(self) -> None:
+        help_menu = self.menuBar().addMenu("Help")
+        about_action = help_menu.addAction("About ClearBudget")
+        licence_action = help_menu.addAction("View Licence (LGPL-3.0)")
+        about_action.triggered.connect(self._on_about)
+        licence_action.triggered.connect(self._on_licence)
+
+    def _on_about(self) -> None:
+        from clear_budget.ui.widgets.about_dialog import AboutDialog
+        AboutDialog(self).exec()
+
+    def _on_licence(self) -> None:
+        from clear_budget.ui.widgets.about_dialog import LicenceDialog
+        LicenceDialog(self).exec()
+
     def apply_theme(self) -> None:
         """Apply dark theme stylesheet."""
         self.setStyleSheet(get_dark_qss())
         self._build_status_bar()
+        self._build_help_menu()
