@@ -15,12 +15,22 @@ from PySide6.QtGui import QPixmap, QDesktopServices
 from PySide6.QtCore import QUrl
 
 from clear_budget.ui import ui_scale
+from clear_budget.version import __version__ as _APP_VERSION
 
-_ICON_PATH = Path(__file__).parents[3] / "ClearBudget.png"
 
-_ABOUT_TEXT = """\
+def _resolve_about_icon() -> Path | None:
+    from clear_budget.shared.resources import iter_qt_window_icon_candidates
+    for p in iter_qt_window_icon_candidates():
+        if p.suffix.lower() == '.png':
+            return p
+    return None
+
+_ICON_PATH: Path | None = _resolve_about_icon()
+
+_ABOUT_TEXT = f"""\
 <h2>ClearBudget</h2>
 <p><b>Personal Budget Planner</b></p>
+<p><b>Version:</b> {_APP_VERSION}</p>
 <p><b>Author:</b> Oliver Ernster</p>
 <p>Distributed under the GNU Lesser General Public Licence v3.0 (LGPL-3.0).</p>
 <hr>
@@ -107,7 +117,7 @@ class AboutDialog(QDialog):
         layout = QVBoxLayout()
         layout.setSpacing(ui_scale.px(8))
 
-        if _ICON_PATH.exists():
+        if _ICON_PATH is not None:
             icon_lbl = QLabel()
             pixmap = QPixmap(str(_ICON_PATH)).scaled(
                 ui_scale.px(96), ui_scale.px(96),

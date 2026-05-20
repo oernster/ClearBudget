@@ -43,6 +43,7 @@ def build_exe() -> int:
         "--add-data=clearbudget_256.png:.",
         "--add-data=ClearBudget.ico:.",
         "--add-data=ClearBudget.png:.",
+        "--add-data=VERSION:.",
         "--noconfirm",
         "--distpath=dist-pyinstaller",
         "main.py",
