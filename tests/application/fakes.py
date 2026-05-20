@@ -99,11 +99,19 @@ class FakeIncomeSourceRepository:
                 return income
         return income
 
+    def list_all(self) -> list[IncomeSource]:
+        """List all income sources (active and inactive)."""
+        return list(self._sources)
+
     def deactivate(self, *, income_id: int) -> None:
         """Deactivate an income source."""
         for i, s in enumerate(self._sources):
             if s.id == income_id:
                 self._sources[i] = replace(s, active=False)
+
+    def hard_delete(self, *, income_id: int) -> None:
+        """Permanently remove an income source."""
+        self._sources = [s for s in self._sources if s.id != income_id]
 
 
 @dataclass

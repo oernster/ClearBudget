@@ -342,87 +342,13 @@ class BudgetService:
     def get_credit_cards(self, include_inactive: bool = False) -> list:  # pragma: no cover
         return self.payment_method_repo.get_all_credit_cards(include_inactive=include_inactive)
 
-    def get_recorded_months(self) -> list[YearMonth]:
-        cursor = self.bill_repo.conn.cursor()
-        cursor.execute("""
-            SELECT DISTINCT m.year, m.month
-            FROM months m
-            WHERE m.id IN (
-                SELECT DISTINCT month_id FROM month_bills
-                UNION
-                SELECT DISTINCT month_id FROM month_income
-            )
-            ORDER BY m.year ASC, m.month ASC
-        """)
-        rows = cursor.fetchall()
-        return [YearMonth(row['year'], row['month']) for row in rows]
+    def get_recorded_months(self) -> list[YearMonth]:  # pragma: no cover
+        from clear_budget.application.services._archive_helpers import _get_recorded_months
+        return _get_recorded_months(self.bill_repo.conn)
 
-    def archive_month(self, *, year_month: YearMonth) -> None:
-        cursor = self.bill_repo.conn.cursor()
-
-        cursor.execute(
-            "SELECT id FROM months WHERE year = ? AND month = ?",
-            (year_month.year, year_month.month),
-        )
-        existing = cursor.fetchone()
-
-        if existing:
-            month_id = existing['id']
-            cursor.execute("DELETE FROM month_bills WHERE month_id = ?", (month_id,))
-            cursor.execute("DELETE FROM month_income WHERE month_id = ?", (month_id,))
-        else:
-            cursor.execute(
-                "INSERT INTO months (year, month) VALUES (?, ?)",
-                (year_month.year, year_month.month),
-            )
-            month_id = cursor.lastrowid
-
-        month_bills = self.month_generator.generate_month_bills(
-            year_month=year_month,
-            month_id=month_id,
-        )
-        month_income = self.month_generator.generate_month_income(
-            year_month=year_month,
-            month_id=month_id,
-        )
-
-        for bill in month_bills:
-            cursor.execute(
-                """
-                INSERT INTO month_bills
-                (month_id, bill_template_id, name, amount_pence, payment_method_id, category, day_of_month, is_ad_hoc)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    bill.month_id,
-                    bill.bill_template_id,
-                    bill.name,
-                    bill.amount.pence,
-                    bill.payment_method_id,
-                    bill.category,
-                    bill.day_of_month,
-                    1 if bill.is_ad_hoc else 0,
-                ),
-            )
-
-        for inc in month_income:
-            cursor.execute(
-                """
-                INSERT INTO month_income
-                (month_id, income_source_id, name, amount_pence, is_reliable, day_of_month)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    inc.month_id,
-                    inc.income_source_id,
-                    inc.name,
-                    inc.amount.pence,
-                    1 if inc.is_reliable else 0,
-                    inc.day_of_month,
-                ),
-            )
-
-        self.bill_repo.conn.commit()
+    def archive_month(self, *, year_month: YearMonth) -> None:  # pragma: no cover
+        from clear_budget.application.services._archive_helpers import _do_archive_month
+        _do_archive_month(self.bill_repo.conn, year_month, self.month_generator)
 
     def auto_archive_previous_month_if_needed(self, *, current_month: YearMonth) -> None:
         prev_month = current_month.previous_month()

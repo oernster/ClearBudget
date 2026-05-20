@@ -129,6 +129,15 @@ class TestCalculateCardMonthlyState:
         state = calculate_card_monthly_state(card=card, opening_balance_pence=7500, bills=[])
         assert state.opening_balance.pence == 7500
 
+    def test_minimum_payment_uses_fixed_pence_when_set(self) -> None:
+        card = CreditCard(
+            id=2, name="FixedMin", credit_limit=Amount(pence=100000),
+            current_balance_used=Amount(pence=50000), interest_rate_apr=None,
+            payment_due_day=22, minimum_payment_pence=1500,
+        )
+        state = calculate_card_monthly_state(card=card, opening_balance_pence=50000, bills=[])
+        assert state.minimum_payment.pence == 1500
+
     def test_card_stored_on_state(self) -> None:
         card = _card(apr=24.9)
         state = calculate_card_monthly_state(card=card, opening_balance_pence=0, bills=[])

@@ -5,13 +5,9 @@ import dataclasses
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QTableWidget,
     QTableWidgetItem,
     QLabel,
-    QGroupBox,
-    QHeaderView,
+    QPushButton,
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor
@@ -21,9 +17,10 @@ from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.widgets.bill_dialog import BillDialog
 from clear_budget.ui.widgets.income_dialog import IncomeDialog
 from clear_budget.ui.widgets.balance_dialog import BalanceDialog
-from clear_budget.ui.widgets.clickable_label import ClickableLabel
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES, format_category, build_nav_month_widget
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES, format_category
 from clear_budget.ui import ui_scale
+from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
+from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
 
 _BANK_ACCOUNT_ID = 1
 _BILLS_SORT_KEYS = {
@@ -48,7 +45,7 @@ def _ei(text: str) -> QTableWidgetItem:
     it.setFlags(_EDITABLE)
     return it
 
-class MonthView(QWidget):
+class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
     """Displays bills and income for current month in tabular form."""
 
     def __init__(self, view_model: MonthViewModel) -> None:
@@ -72,138 +69,6 @@ class MonthView(QWidget):
         self._build_income_section(layout)
         self.setLayout(layout)
         self._connect_button_signals(prev_btn, next_btn)
-
-    def _build_header_section(self, layout: QVBoxLayout) -> tuple:
-        header_layout = QVBoxLayout()
-        nav_layout = QHBoxLayout()
-        self.prev_btn = QPushButton("← Previous")
-        self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        next_btn = QPushButton("Next →")
-        next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.archive_btn = QPushButton("Archive Month")
-        _nav_center, self.month_label = build_nav_month_widget(
-            f"{MONTH_NAMES[self.view_model.current_month.month]} {self.view_model.current_month.year}"
-        )
-        left_group = QWidget()
-        left_lo = QHBoxLayout(left_group)
-        left_lo.setContentsMargins(0, 0, 0, 0)
-        left_lo.addWidget(self.prev_btn)
-        left_lo.addStretch()
-        right_group = QWidget()
-        right_lo = QHBoxLayout(right_group)
-        right_lo.setContentsMargins(0, 0, 0, 0)
-        right_lo.addStretch()
-        right_lo.addWidget(self.archive_btn)
-        right_lo.addWidget(next_btn)
-        nav_layout.addWidget(left_group, 1)
-        nav_layout.addWidget(_nav_center, 0)
-        nav_layout.addWidget(right_group, 1)
-        header_layout.addLayout(nav_layout)
-
-        summary_layout = QHBoxLayout()
-        self.income_label = QLabel("Income: £0.00")
-        self.income_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
-        self.bills_label = QLabel("Bills: £0.00")
-        self.bills_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
-        self.edit_balance_btn = QPushButton("📝")
-        self.edit_balance_btn.setMaximumWidth(28)
-        self.edit_balance_btn.setMaximumHeight(22)
-        self.edit_balance_btn.setStyleSheet(ui_scale.style(
-            "QPushButton { border: none; background-color: transparent; color: #34d399; font-size: 20px; padding: 0px; }"
-            "QPushButton:hover { background-color: #1a1a2e; border-radius: 3px; }"
-        ))
-        self.balance_label = QLabel("Balance: £0.00")
-        self.balance_label.setStyleSheet(ui_scale.style("font-size: 20px; font-weight: bold; color: #34d399; padding: 5px;"))
-        summary_layout.addWidget(self.income_label)
-        summary_layout.addWidget(self.bills_label)
-        summary_layout.addStretch()
-        summary_layout.addWidget(self.edit_balance_btn)
-        summary_layout.addWidget(self.balance_label)
-        header_layout.addLayout(summary_layout)
-        layout.addLayout(header_layout)
-        return self.prev_btn, next_btn
-
-    def _build_bills_section(self, layout: QVBoxLayout) -> None:
-        bills_group = QGroupBox("Bills")
-        bills_layout = QVBoxLayout()
-        self.bills_table = QTableWidget()
-        self.bills_table.setColumnCount(7)
-        self.bills_table.setHorizontalHeaderLabels(
-            ["Name", "Amount", "Category", "Payment Method", "Due", "Active", "Skip"]
-        )
-        self.bills_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.bills_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
-        self.bills_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
-        self.bills_table.setStyleSheet(
-            "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
-            "border-radius:3px;background:transparent;}"
-            "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
-            "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
-        )
-        _bh = self.bills_table.horizontalHeader()
-        _bh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        _bh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        _bh.setStretchLastSection(False)
-        self.bills_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
-        self.bills_table.verticalHeader().sectionClicked.connect(self._on_bill_row_header_click)
-        self.bills_table.horizontalHeader().sectionClicked.connect(self.on_bills_header_click)
-        bills_layout.addWidget(self.bills_table)
-        bills_btn_layout = QHBoxLayout()
-        self.add_bill_btn = QPushButton("Add Bill")
-        self.delete_bill_btn = QPushButton("Delete Bill")
-        self.delete_bill_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        bills_btn_layout.addWidget(self.add_bill_btn)
-        bills_btn_layout.addStretch()
-        bills_btn_layout.addWidget(self.delete_bill_btn)
-        bills_layout.addLayout(bills_btn_layout)
-        bills_group.setLayout(bills_layout)
-        layout.addWidget(bills_group)
-
-    def _build_income_section(self, layout: QVBoxLayout) -> None:
-        income_group = QGroupBox("Income")
-        income_layout = QVBoxLayout()
-        self.income_table = QTableWidget()
-        self.income_table.setColumnCount(5)
-        self.income_table.setHorizontalHeaderLabels(
-            ["Name", "Amount", "Reliable", "Due Day", "Active"]
-        )
-        self.income_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.income_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
-        self.income_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
-        _ih = self.income_table.horizontalHeader()
-        _ih.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        _ih.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        _ih.setStretchLastSection(False)
-        self.income_table.setStyleSheet(
-            "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
-            "border-radius:3px;background:transparent;}"
-            "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
-            "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
-        )
-        self.income_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
-        self.income_table.verticalHeader().sectionClicked.connect(self._on_income_row_header_click)
-        self.income_table.horizontalHeader().sectionClicked.connect(self.on_income_header_click)
-        income_layout.addWidget(self.income_table)
-        income_btn_layout = QHBoxLayout()
-        self.add_income_btn = QPushButton("Add Income")
-        self.delete_income_btn = QPushButton("Delete Income")
-        self.delete_income_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        income_btn_layout.addWidget(self.add_income_btn)
-        income_btn_layout.addStretch()
-        income_btn_layout.addWidget(self.delete_income_btn)
-        income_layout.addLayout(income_btn_layout)
-        income_group.setLayout(income_layout)
-        layout.addWidget(income_group)
-
-    def _connect_button_signals(self, prev_btn: QPushButton, next_btn: QPushButton) -> None:
-        prev_btn.clicked.connect(self.view_model.previous_month)
-        next_btn.clicked.connect(self.view_model.next_month)
-        self.archive_btn.clicked.connect(self.on_archive_month)
-        self.edit_balance_btn.clicked.connect(self.on_edit_balance)
-        self.add_bill_btn.clicked.connect(self.on_add_bill)
-        self.delete_bill_btn.clicked.connect(self.on_delete_bill)
-        self.add_income_btn.clicked.connect(self.on_add_income)
-        self.delete_income_btn.clicked.connect(self.on_delete_income)
 
     def connect_signals(self) -> None:
         self.view_model.month_summary_updated.connect(self.update_bills_table)
@@ -265,84 +130,6 @@ class MonthView(QWidget):
 
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
-
-    def _on_bill_cell_clicked(self, row: int, col: int) -> None:
-        if col not in (5, 6): return
-        from PySide6.QtWidgets import QApplication
-        mods = QApplication.keyboardModifiers()
-        bill = self._get_bill_from_row(row)
-        if mods & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
-            item = self.bills_table.item(row, col)
-            if item and bill:
-                self.bills_table.blockSignals(True)
-                if col == 5:
-                    item.setCheckState(Qt.CheckState.Checked if bill.active else Qt.CheckState.Unchecked)
-                else:
-                    item.setCheckState(Qt.CheckState.Checked if bill.skipped_for_month else Qt.CheckState.Unchecked)
-                self.bills_table.blockSignals(False)
-            return
-        if bill is None:
-            return
-        if col == 5:
-            self.view_model.set_bill_active(bill_id=bill.id, active=not bill.active)
-        else:
-            if bill.skipped_for_month:
-                self.view_model.unskip_bill_for_month(bill_id=bill.id)
-            else:
-                self.view_model.skip_bill_for_month(bill_id=bill.id)
-
-    _EDITABLE_BILL_COLS = {0, 1, 2, 4}
-
-    def _on_bill_item_changed(self, item) -> None:
-        if item.column() not in self._EDITABLE_BILL_COLS:
-            if item.column() != 6:  # skip col handled by cellClicked, no refresh needed here
-                QTimer.singleShot(0, self.view_model.refresh_month_summary)
-            return
-        bill = self._get_bill_from_row(item.row())
-        if bill is None: return
-        col, v = item.column(), item.text().strip()
-        try:
-            if col == 0: u = dataclasses.replace(bill, name=v or bill.name)
-            elif col == 1: u = dataclasses.replace(bill, amount=Amount.from_pounds(float(v.lstrip('£'))))
-            elif col == 2: u = dataclasses.replace(bill, category=v.lower().replace(' ', '_'))
-            elif col == 4: u = dataclasses.replace(bill, day_of_month=int(v))
-            else: return
-            if u == bill: return
-            QTimer.singleShot(0, lambda: self.view_model.update_bill(bill=u))
-        except (ValueError, AttributeError): QTimer.singleShot(0, self.view_model.refresh_month_summary)
-
-    _EDITABLE_INCOME_COLS = {0, 1, 3}
-
-    def _on_income_item_changed(self, item) -> None:
-        if item.column() in (2, 4):
-            return
-        if item.column() not in self._EDITABLE_INCOME_COLS:
-            QTimer.singleShot(0, self.view_model.refresh_month_summary)
-            return
-        inc = self._get_income_from_row(item.row())
-        if inc is None: return
-        col, v = item.column(), item.text().strip()
-        try:
-            if col == 0: u = dataclasses.replace(inc, name=v or inc.name)
-            elif col == 1: u = dataclasses.replace(inc, amount=Amount.from_pounds(float(v.lstrip('£'))))
-            elif col == 3: u = dataclasses.replace(inc, day_of_month=int(v) if v.isdigit() else None)
-            else: return
-            if u == inc: return
-            QTimer.singleShot(0, lambda: self.view_model.update_income(income=u))
-        except (ValueError, AttributeError): QTimer.singleShot(0, self.view_model.refresh_month_summary)
-
-    def _on_income_cell_clicked(self, row: int, col: int) -> None:
-        if col not in (2, 4): return
-        from PySide6.QtWidgets import QApplication
-        mods = QApplication.keyboardModifiers()
-        if mods & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
-            return
-        inc = self._get_income_from_row(row)
-        if inc is None: return
-        if col == 2:
-            QTimer.singleShot(0, lambda: self.view_model.update_income(income=dataclasses.replace(inc, is_reliable=not inc.is_reliable)))
-        else:
-            QTimer.singleShot(0, lambda: self.view_model.update_income(income=dataclasses.replace(inc, active=not inc.active)))
 
     def update_bills_table(self, summary) -> None:
         if not summary: return

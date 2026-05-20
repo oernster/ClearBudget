@@ -213,6 +213,39 @@ class TestSQLiteBillRepositoryUpdate:
         assert retrieved.amount.pence == 150000
 
 
+class TestSQLiteBillRepositorySkipForMonth:
+    """Test skip_for_month and unskip_for_month."""
+
+    def test_skip_for_month_excludes_bill(self, db) -> None:
+        repo = SQLiteBillRepository(db.conn)
+        bill = repo.add(bill=Bill(
+            id=0, name="SkipMe", amount=Amount(pence=1000), payment_method_id=1,
+            category="groceries", bill_type="fixed", day_of_month=1,
+            start_ym=YearMonth(2026, 1), end_ym=None,
+        ))
+        ym = YearMonth(2026, 6)
+
+        repo.skip_for_month(bill_id=bill.id, year_month=ym)
+
+        active = repo.list_active_for_month(year_month=ym)
+        assert not any(b.id == bill.id for b in active)
+
+    def test_unskip_for_month_restores_bill(self, db) -> None:
+        repo = SQLiteBillRepository(db.conn)
+        bill = repo.add(bill=Bill(
+            id=0, name="Restored", amount=Amount(pence=1000), payment_method_id=1,
+            category="groceries", bill_type="fixed", day_of_month=1,
+            start_ym=YearMonth(2026, 1), end_ym=None,
+        ))
+        ym = YearMonth(2026, 6)
+
+        repo.skip_for_month(bill_id=bill.id, year_month=ym)
+        repo.unskip_for_month(bill_id=bill.id, year_month=ym)
+
+        active = repo.list_active_for_month(year_month=ym)
+        assert any(b.id == bill.id for b in active)
+
+
 class TestSQLiteBillRepositorySetActive:
     """Test set_active method."""
 
