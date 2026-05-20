@@ -5,7 +5,14 @@ from pathlib import Path
 MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
 
-_APP_ICON_PATH = Path(__file__).resolve().parents[3] / "clearbudget_32.png"
+def _resolve_app_icon() -> Path | None:
+    from clear_budget.shared.resources import iter_qt_window_icon_candidates
+    for p in iter_qt_window_icon_candidates():
+        if p.suffix.lower() == '.png':
+            return p
+    return None
+
+_APP_ICON_PATH: Path | None = _resolve_app_icon()
 
 
 def build_nav_month_widget(initial_text: str):
@@ -20,7 +27,7 @@ def build_nav_month_widget(initial_text: str):
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(8)
 
-    if _APP_ICON_PATH.exists():
+    if _APP_ICON_PATH is not None:
         icon_lbl = QLabel()
         icon_lbl.setPixmap(
             QPixmap(str(_APP_ICON_PATH)).scaledToHeight(
