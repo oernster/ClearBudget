@@ -93,117 +93,52 @@ class BudgetService:
     ) -> SolvencyReport:
         if month_summary is None:
             return self.calculate_solvency(year_month=year_month)
-
         from datetime import date as _date
         today = _date.today()
         today_ym = YearMonth(today.year, today.month)
-
-        month_bills = month_summary.bills
-        month_income = month_summary.income_sources
-
-        if year_month == today_ym:
-            month_bills = tuple(
-                b for b in month_bills
-                if b.day_of_month is None or b.day_of_month >= today.day
-            )
-            month_income = tuple(
-                i for i in month_income
-                if i.day_of_month is None or i.day_of_month >= today.day
-            )
-
-        next_month = year_month.next_month()
-        next_next_month = next_month.next_month()
-
-        next_summary = self.get_month_summary(year_month=next_month)
-        next_bills = next_summary.bills
-        next_income = next_summary.income_sources
-
-        next_next_summary = self.get_month_summary(year_month=next_next_month)
-        next_next_bills = next_next_summary.bills
-        next_next_income = next_next_summary.income_sources
-
-        solvency = SolvencyCalculatorService.calculate(
-            month_bills=_bills_to_month_bills(month_bills, 0),
-            month_income=_income_to_month_income(month_income, 0),
-            next_two_months_bills=[
-                _bills_to_month_bills(next_bills, 1),
-                _bills_to_month_bills(next_next_bills, 2),
-            ],
-            next_two_months_income=[
-                _income_to_month_income(next_income, 1),
-                _income_to_month_income(next_next_income, 2),
-            ],
+        month_bills, month_income = self._apply_current_month_filters(
+            month_summary.bills, month_summary.income_sources, year_month, today_ym, today.day
         )
+        return self._build_solvency_report(month_bills, month_income, year_month)
 
-        projected_balance = self._projected_starting_balance_pence(year_month) + solvency.balance
-        return SolvencyReport(
-            year_month=year_month,
-            balance_pence=projected_balance,
-            deficit=solvency.deficit,
-            buffer=solvency.buffer,
-            forward_shortfall=solvency.forward_shortfall,
-            desired_acquire=solvency.desired_acquire,
-            is_solvent=projected_balance >= 0,
-            first_negative_day=None,
-        )
-
-    def calculate_solvency(
-        self,
-        *,
-        year_month: YearMonth,
-    ) -> SolvencyReport:
+    def calculate_solvency(self, *, year_month: YearMonth) -> SolvencyReport:
         from datetime import date as _date
         today = _date.today()
         today_ym = YearMonth(today.year, today.month)
-
         summary = self.get_month_summary(year_month=year_month)
-        month_bills = summary.bills
-        month_income = summary.income_sources
+        month_bills, month_income = self._apply_current_month_filters(
+            summary.bills, summary.income_sources, year_month, today_ym, today.day
+        )
+        return self._build_solvency_report(month_bills, month_income, year_month)
 
-        if year_month == today_ym:
-            month_bills = tuple(
-                b for b in month_bills
-                if b.day_of_month is None or b.day_of_month >= today.day
-            )
-            month_income = tuple(
-                i for i in month_income
-                if i.day_of_month is None or i.day_of_month >= today.day
-            )
+    def _apply_current_month_filters(self, bills, income, year_month, today_ym, today_day: int):
+        if year_month != today_ym:
+            return tuple(bills), tuple(income)
+        balance_day = self._get_bank_balance_day()
+        filtered_bills = tuple(b for b in bills if b.day_of_month is None or b.day_of_month >= today_day)
+        if balance_day > 0:
+            filtered_income = tuple(i for i in income if i.day_of_month is None or i.day_of_month > balance_day)
+        else:
+            filtered_income = tuple(i for i in income if i.day_of_month is None or i.day_of_month >= today_day)
+        return filtered_bills, filtered_income
 
-        next_month = year_month.next_month()
-        next_next_month = next_month.next_month()
-
-        next_summary = self.get_month_summary(year_month=next_month)
-        next_bills = next_summary.bills
-        next_income = next_summary.income_sources
-
-        next_next_summary = self.get_month_summary(year_month=next_next_month)
-        next_next_bills = next_next_summary.bills
-        next_next_income = next_next_summary.income_sources
-
+    def _build_solvency_report(self, month_bills, month_income, year_month: YearMonth) -> SolvencyReport:
+        m1 = year_month.next_month()
+        m2 = m1.next_month()
+        s1 = self.get_month_summary(year_month=m1)
+        s2 = self.get_month_summary(year_month=m2)
         solvency = SolvencyCalculatorService.calculate(
             month_bills=_bills_to_month_bills(month_bills, 0),
             month_income=_income_to_month_income(month_income, 0),
-            next_two_months_bills=[
-                _bills_to_month_bills(next_bills, 1),
-                _bills_to_month_bills(next_next_bills, 2),
-            ],
-            next_two_months_income=[
-                _income_to_month_income(next_income, 1),
-                _income_to_month_income(next_next_income, 2),
-            ],
+            next_two_months_bills=[_bills_to_month_bills(s1.bills, 1), _bills_to_month_bills(s2.bills, 2)],
+            next_two_months_income=[_income_to_month_income(s1.income_sources, 1), _income_to_month_income(s2.income_sources, 2)],
         )
-
         projected_balance = self._projected_starting_balance_pence(year_month) + solvency.balance
         return SolvencyReport(
-            year_month=year_month,
-            balance_pence=projected_balance,
-            deficit=solvency.deficit,
-            buffer=solvency.buffer,
-            forward_shortfall=solvency.forward_shortfall,
-            desired_acquire=solvency.desired_acquire,
-            is_solvent=projected_balance >= 0,
-            first_negative_day=None,
+            year_month=year_month, balance_pence=projected_balance,
+            deficit=solvency.deficit, buffer=solvency.buffer,
+            forward_shortfall=solvency.forward_shortfall, desired_acquire=solvency.desired_acquire,
+            is_solvent=projected_balance >= 0, first_negative_day=None,
         )
 
     def add_bill(self, *, bill: Bill) -> Bill:  # pragma: no cover
@@ -254,10 +189,17 @@ class BudgetService:
         today_ym = YearMonth(today.year, today.month)
         starting = self._projected_starting_balance_pence(year_month)
         if year_month == today_ym:
-            income = sum(
-                i.amount.pence for i in summary.income_sources
-                if i.day_of_month is None or i.day_of_month >= today.day
-            )
+            balance_day = self._get_bank_balance_day()
+            if balance_day > 0:
+                income = sum(
+                    i.amount.pence for i in summary.income_sources
+                    if i.day_of_month is None or i.day_of_month > balance_day
+                )
+            else:
+                income = sum(
+                    i.amount.pence for i in summary.income_sources
+                    if i.day_of_month is None or i.day_of_month >= today.day
+                )
             bills = sum(
                 b.amount.pence for b in summary.bills
                 if b.payment_method_id == 1
@@ -365,10 +307,17 @@ class BudgetService:
         while cursor < year_month:
             s = self.get_month_summary(year_month=cursor)
             if cursor == today_ym:
-                income = sum(
-                    i.amount.pence for i in s.income_sources
-                    if i.day_of_month is None or i.day_of_month >= today.day
-                )
+                balance_day = self._get_bank_balance_day()
+                if balance_day > 0:
+                    income = sum(
+                        i.amount.pence for i in s.income_sources
+                        if i.day_of_month is None or i.day_of_month > balance_day
+                    )
+                else:
+                    income = sum(
+                        i.amount.pence for i in s.income_sources
+                        if i.day_of_month is None or i.day_of_month >= today.day
+                    )
                 bills = sum(
                     b.amount.pence for b in s.bills
                     if b.payment_method_id == 1 and (b.day_of_month is None or b.day_of_month >= today.day)
@@ -387,10 +336,22 @@ class BudgetService:
         row = cursor.fetchone()
         return Amount(pence=int(row["value"]) if row else 0)
 
+    def _get_bank_balance_day(self) -> int:  # pragma: no cover
+        if not hasattr(self.bill_repo, 'conn'): return 0
+        cursor = self.bill_repo.conn.cursor()
+        cursor.execute("SELECT value FROM settings WHERE key = ?", ("bank_balance_day",))
+        row = cursor.fetchone()
+        return int(row["value"]) if row else 0
+
     def set_bank_balance(self, *, amount: Amount) -> None:  # pragma: no cover
+        from datetime import date as _date
         cursor = self.bill_repo.conn.cursor()
         cursor.execute(
             "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
             ("bank_balance", str(amount.pence)),
+        )
+        cursor.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            ("bank_balance_day", str(_date.today().day)),
         )
         self.bill_repo.conn.commit()

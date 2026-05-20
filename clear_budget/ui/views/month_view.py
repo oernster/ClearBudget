@@ -114,7 +114,15 @@ class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
             from datetime import datetime as _dt
             today_ym = _YM(_dt.now().year, _dt.now().month)
             if self.view_model.current_month == today_ym:
+                today_day = _dt.now().day
                 pence = self.view_model.budget_service.get_bank_balance().pence
+                balance_day = self.view_model.budget_service._get_bank_balance_day()
+                if balance_day > 0:
+                    arrived_pence = sum(
+                        i.amount.pence for i in summary.income_sources
+                        if i.day_of_month and balance_day < i.day_of_month <= today_day
+                    )
+                    pence += arrived_pence
                 label = f"Balance: £{pence / 100:.2f}"
             else:
                 pence = self.view_model.budget_service.get_projected_month_end_balance_pence(

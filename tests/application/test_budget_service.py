@@ -347,8 +347,9 @@ class TestBudgetServiceSolvency:
 
         assert report.is_solvent
 
-    def test_calculate_solvency_current_month_filters_past_bills(self) -> None:
-        """Bills/income with day=1 (before today=19) excluded — bank_balance already reflects them."""
+    def test_calculate_solvency_current_month_no_balance_day_uses_today_filter(self) -> None:
+        """With no bank_balance_day set (FakeRepo returns 0), income filtered by today (safe fallback).
+        Bills/income with day=1 (before today≈20) excluded — balance stays at bank_balance(0)."""
         bill_repo, income_repo, pm_repo = FakeBillRepository(), FakeIncomeSourceRepository(), FakePaymentMethodRepository()
         service = BudgetService(bill_repo, income_repo, pm_repo, MonthGenerator(bill_repo, income_repo))
         bill_repo.add(bill=Bill(id=1, name="Rent", amount=Amount(pence=100000), payment_method_id=1,
