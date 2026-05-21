@@ -1,28 +1,25 @@
 """Month budget view widget - displays bills and income for selected month."""
 
-import dataclasses
-
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QTableWidgetItem,
-    QLabel,
-    QPushButton,
+    QMessageBox,
 )
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt
 
-from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.widgets.bill_dialog import BillDialog
 from clear_budget.ui.widgets.income_dialog import IncomeDialog
 from clear_budget.ui.widgets.balance_dialog import BalanceDialog
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES, format_category
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 from clear_budget.ui import ui_scale
 from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
 from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
+from clear_budget.ui.views._month_view_table_mixin import (
+    MonthViewTableMixin,
+    _BANK_ACCOUNT_ID,
+)
 
-_BANK_ACCOUNT_ID = 1
 _BILLS_SORT_KEYS = {
     0: lambda b: b.name.lower(),
     1: lambda b: b.amount.pence,
@@ -38,14 +35,11 @@ _INCOME_SORT_KEYS = {
     3: lambda i: i.day_of_month or 99,
     4: lambda i: not i.active,
 }
-_EDITABLE = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
 
-def _ei(text: str) -> QTableWidgetItem:
-    it = QTableWidgetItem(text)
-    it.setFlags(_EDITABLE)
-    return it
 
-class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
+class MonthView(
+    MonthViewBuilderMixin, MonthViewTableMixin, MonthViewEditMixin, QWidget
+):
     """Displays bills and income for current month in tabular form."""
 
     def __init__(self, view_model: MonthViewModel) -> None:
@@ -92,18 +86,32 @@ class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
         return (new_col, not current_asc) if current_col == new_col else (new_col, True)
 
     def on_bills_header_click(self, i: int) -> None:
-        self.bills_sort_column, self.bills_sort_ascending = self._toggle_sort(self.bills_sort_column, self.bills_sort_ascending, i)
+        self.bills_sort_column, self.bills_sort_ascending = self._toggle_sort(
+            self.bills_sort_column, self.bills_sort_ascending, i
+        )
         self.view_model.refresh_month_summary()
 
     def on_income_header_click(self, i: int) -> None:
-        self.income_sort_column, self.income_sort_ascending = self._toggle_sort(self.income_sort_column, self.income_sort_ascending, i)
+        self.income_sort_column, self.income_sort_ascending = self._toggle_sort(
+            self.income_sort_column, self.income_sort_ascending, i
+        )
         self.view_model.refresh_month_summary()
 
     def _sort_bills(self, bills) -> list:
-        return sorted(bills, key=_BILLS_SORT_KEYS.get(self.bills_sort_column, lambda b: b.name.lower()), reverse=not self.bills_sort_ascending)
+        return sorted(
+            bills,
+            key=_BILLS_SORT_KEYS.get(self.bills_sort_column, lambda b: b.name.lower()),
+            reverse=not self.bills_sort_ascending,
+        )
 
     def _sort_income(self, income_sources) -> list:
-        return sorted(income_sources, key=_INCOME_SORT_KEYS.get(self.income_sort_column, lambda i: i.name.lower()), reverse=not self.income_sort_ascending)
+        return sorted(
+            income_sources,
+            key=_INCOME_SORT_KEYS.get(
+                self.income_sort_column, lambda i: i.name.lower()
+            ),
+            reverse=not self.income_sort_ascending,
+        )
 
     def _get_balance_color(self, p: int) -> str:
         return "#f87171" if p < 0 else "#fbbf24" if p < 10000 else "#34d399"
@@ -112,6 +120,7 @@ class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
         if summary := self.view_model.month_summary:
             from clear_budget.domain.value_objects.year_month import YearMonth as _YM
             from datetime import datetime as _dt
+
             today_ym = _YM(_dt.now().year, _dt.now().month)
             if self.view_model.current_month == today_ym:
                 today_day = _dt.now().day
@@ -119,13 +128,15 @@ class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
                 balance_day = self.view_model.budget_service._get_bank_balance_day()
                 if balance_day > 0:
                     arrived_pence = sum(
-                        i.amount.pence for i in summary.income_sources
+                        i.amount.pence
+                        for i in summary.income_sources
                         if i.day_of_month and balance_day < i.day_of_month <= today_day
                     )
                     pence += arrived_pence
                 label = f"Balance: £{pence / 100:.2f}"
             else:
-                pence = self.view_model.budget_service.get_projected_month_end_balance_pence(
+                _svc = self.view_model.budget_service
+                pence = _svc.get_projected_month_end_balance_pence(
                     year_month=self.view_model.current_month,
                     summary=summary,
                 )
@@ -134,99 +145,43 @@ class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
                 else:
                     label = f"Projected end: −£{abs(pence) / 100:.2f} OVERDRAWN"
             self.balance_label.setText(label)
-            self.balance_label.setStyleSheet(ui_scale.style(f"font-size: 20px; font-weight: bold; color: {self._get_balance_color(pence)}; padding: 5px;"))
+            color = self._get_balance_color(pence)
+            self.balance_label.setStyleSheet(
+                ui_scale.style(
+                    f"font-size: 20px; font-weight: bold;"
+                    f" color: {color}; padding: 5px;"
+                )
+            )
 
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
-        return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
-
-    def update_bills_table(self, summary) -> None:
-        if not summary: return
-        self.income_label.setText(f"Income: {summary.total_income}")
-        self.bills_label.setText(f"Bills: {summary.total_bills}")
-        self._update_balance_display()
-        cards = self.view_model.budget_service.payment_method_repo.get_all_credit_cards()
-        card_map = {c.id: c.name for c in cards}
-        self.bills_table.blockSignals(True); self.bills_table.setRowCount(0); self.bills_table.blockSignals(False)
-        self.bills_table.blockSignals(True)
-        for row, bill in enumerate(self._sort_bills(summary.all_bills)):
-            self.bills_table.insertRow(row)
-            self.bills_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
-            name_item = _ei(bill.name)
-            name_item.setData(Qt.ItemDataRole.UserRole, bill.id)
-            self.bills_table.setItem(row, 0, name_item)
-            self.bills_table.setItem(row, 1, _ei(str(bill.amount)))
-            self.bills_table.setItem(row, 2, _ei(format_category(bill.category)))
-            self.bills_table.setItem(row, 3, QTableWidgetItem(self._get_payment_method_label(bill.payment_method_id, card_map)))
-            self.bills_table.setItem(row, 4, _ei(str(bill.day_of_month or "N/A")))
-            active_item = QTableWidgetItem()
-            active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
-            active_item.setCheckState(Qt.CheckState.Checked if bill.active else Qt.CheckState.Unchecked)
-            self.bills_table.setItem(row, 5, active_item)
-            skip_item = QTableWidgetItem()
-            skip_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
-            skip_item.setCheckState(Qt.CheckState.Checked if bill.skipped_for_month else Qt.CheckState.Unchecked)
-            self.bills_table.setItem(row, 6, skip_item)
-            if bill.skipped_for_month:
-                skip_color = QColor("#6b7280")
-                for c in range(self.bills_table.columnCount()):
-                    it = self.bills_table.item(row, c)
-                    if it:
-                        it.setForeground(skip_color)
-                name_item.setText(f"{bill.name} (skipped this month)")
-            elif bill.has_month_override:
-                name_item.setText(f"{bill.name} (*)")
-                name_item.setForeground(QColor("#60a5fa"))
-            elif self.view_model.current_month == self.view_model.base_month and bill.day_of_month:
-                d, t = bill.day_of_month, self.view_model.today.day
-                color = QColor("#9ca3af") if d < t else QColor("#fbbf24") if d == t else None
-                if color:
-                    for c in range(self.bills_table.columnCount()):
-                        it = self.bills_table.item(row, c)
-                        if it:
-                            it.setForeground(color)
-        self.bills_table.blockSignals(False)
-        self.income_table.blockSignals(True); self.income_table.setRowCount(0); self.income_table.blockSignals(False)
-        self.income_table.blockSignals(True)
-        for row, income in enumerate(self._sort_income(summary.all_income_sources)):
-            self.income_table.insertRow(row)
-            self.income_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
-            name_item = _ei(income.name)
-            name_item.setData(Qt.ItemDataRole.UserRole, income.id)
-            self.income_table.setItem(row, 0, name_item)
-            self.income_table.setItem(row, 1, _ei(str(income.amount)))
-            reliable_item = QTableWidgetItem()
-            reliable_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
-            reliable_item.setCheckState(Qt.CheckState.Checked if income.is_reliable else Qt.CheckState.Unchecked)
-            self.income_table.setItem(row, 2, reliable_item)
-            self.income_table.setItem(row, 3, _ei(str(income.day_of_month) if income.day_of_month else "~"))
-            active_item = QTableWidgetItem()
-            active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
-            active_item.setCheckState(Qt.CheckState.Checked if income.active else Qt.CheckState.Unchecked)
-            self.income_table.setItem(row, 4, active_item)
-            if self.view_model.current_month == self.view_model.base_month and income.day_of_month:
-                d, t = income.day_of_month, self.view_model.today.day
-                color = QColor("#9ca3af") if d < t else QColor("#fbbf24") if d == t else None
-                if color:
-                    for c in range(self.income_table.columnCount()):
-                        it = self.income_table.item(row, c)
-                        if it:
-                            it.setForeground(color)
-        self.income_table.blockSignals(False)
+        return (
+            "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
+        )
 
     def on_edit_balance(self) -> None:
         dialog = BalanceDialog(self, self.view_model.budget_service.get_bank_balance())
-        if dialog.exec() == BalanceDialog.Accepted and (balance := dialog.get_balance()) is not None:
+        if (
+            dialog.exec() == BalanceDialog.Accepted
+            and (balance := dialog.get_balance()) is not None
+        ):
             self.view_model.budget_service.set_bank_balance(amount=balance)
-            self.view_model.month_summary = self.view_model.budget_service.get_month_summary(year_month=self.view_model.current_month)
+            self.view_model.month_summary = (
+                self.view_model.budget_service.get_month_summary(
+                    year_month=self.view_model.current_month
+                )
+            )
             self._update_balance_display()
             self.view_model.month_summary_updated.emit(self.view_model.month_summary)
 
     def on_archive_month(self) -> None:
-        self.view_model.budget_service.archive_month(year_month=self.view_model.current_month)
+        self.view_model.budget_service.archive_month(
+            year_month=self.view_model.current_month
+        )
 
     def on_add_bill(self) -> None:
         dialog = BillDialog(
-            self, None,
+            self,
+            None,
             payment_method_repo=self.view_model.budget_service.payment_method_repo,
             current_month=self.view_model.current_month,
         )
@@ -234,26 +189,42 @@ class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
             self.view_model.add_bill(bill=bill)
 
     def _get_bill_from_row(self, row: int):
-        if row < 0 or not self.view_model.month_summary: return None
+        if row < 0 or not self.view_model.month_summary:
+            return None
         item = self.bills_table.item(row, 0)
-        if item is None: return None
+        if item is None:
+            return None
         bill_id = item.data(Qt.ItemDataRole.UserRole)
-        return next((b for b in self.view_model.month_summary.all_bills if b.id == bill_id), None)
+        return next(
+            (b for b in self.view_model.month_summary.all_bills if b.id == bill_id),
+            None,
+        )
 
     def _get_income_from_row(self, row: int):
-        if row < 0 or not self.view_model.month_summary: return None
+        if row < 0 or not self.view_model.month_summary:
+            return None
         item = self.income_table.item(row, 0)
-        if item is None: return None
+        if item is None:
+            return None
         iid = item.data(Qt.ItemDataRole.UserRole)
-        return next((i for i in self.view_model.month_summary.all_income_sources if i.id == iid), None)
+        return next(
+            (
+                i
+                for i in self.view_model.month_summary.all_income_sources
+                if i.id == iid
+            ),
+            None,
+        )
 
     def _on_bill_row_header_click(self, row: int) -> None:
-        if bill := self._get_bill_from_row(row): self._edit_bill_dialog(bill)
+        if bill := self._get_bill_from_row(row):
+            self._edit_bill_dialog(bill)
 
     def _edit_bill_dialog(self, bill) -> None:
         had_override = bill.has_month_override
         dialog = BillDialog(
-            self, bill,
+            self,
+            bill,
             payment_method_repo=self.view_model.budget_service.payment_method_repo,
             current_month=self.view_model.current_month,
         )
@@ -268,7 +239,19 @@ class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
     def on_delete_bill(self) -> None:
         rows = sorted({idx.row() for idx in self.bills_table.selectedIndexes()})
         ids = [b.id for r in rows if (b := self._get_bill_from_row(r)) is not None]
-        if ids: self.view_model.delete_bills(bill_ids=ids)
+        if not ids:
+            return
+        count = len(ids)
+        noun = "bill" if count == 1 else f"{count} bills"
+        reply = QMessageBox.question(
+            self,
+            "Delete Bill",
+            f"Permanently delete {noun}?\n\nThis cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.view_model.delete_bills(bill_ids=ids)
 
     def on_add_income(self) -> None:
         dialog = IncomeDialog(self, None)
@@ -276,7 +259,8 @@ class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
             self.view_model.add_income(income=inc)
 
     def _on_income_row_header_click(self, row: int) -> None:
-        if inc := self._get_income_from_row(row): self._edit_income_dialog(inc)
+        if inc := self._get_income_from_row(row):
+            self._edit_income_dialog(inc)
 
     def _edit_income_dialog(self, income) -> None:
         dialog = IncomeDialog(self, income)
@@ -286,4 +270,16 @@ class MonthView(MonthViewBuilderMixin, MonthViewEditMixin, QWidget):
     def on_delete_income(self) -> None:
         rows = sorted({idx.row() for idx in self.income_table.selectedIndexes()})
         ids = [i.id for r in rows if (i := self._get_income_from_row(r)) is not None]
-        if ids: self.view_model.delete_incomes(income_ids=ids)
+        if not ids:
+            return
+        count = len(ids)
+        noun = "income source" if count == 1 else f"{count} income sources"
+        reply = QMessageBox.question(
+            self,
+            "Delete Income",
+            f"Permanently delete {noun}?\n\nThis cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.view_model.delete_incomes(income_ids=ids)

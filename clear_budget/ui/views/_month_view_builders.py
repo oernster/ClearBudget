@@ -1,4 +1,4 @@
-"""Builder mixin for MonthView — UI construction methods extracted to stay under LOC limit."""
+"""Builder mixin for MonthView — UI construction extracted to stay under LOC limit."""
 
 from PySide6.QtWidgets import (
     QVBoxLayout,
@@ -27,8 +27,9 @@ class MonthViewBuilderMixin:
         next_btn = QPushButton("Next →")
         next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.archive_btn = QPushButton("Archive Month")
+        _ym = self.view_model.current_month
         _nav_center, self.month_label = build_nav_month_widget(
-            f"{MONTH_NAMES[self.view_model.current_month.month]} {self.view_model.current_month.year}"
+            f"{MONTH_NAMES[_ym.month]} {_ym.year}"
         )
         left_group = QWidget()
         left_lo = QHBoxLayout(left_group)
@@ -48,18 +49,27 @@ class MonthViewBuilderMixin:
 
         summary_layout = QHBoxLayout()
         self.income_label = QLabel("Income: £0.00")
-        self.income_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
+        self.income_label.setStyleSheet(
+            ui_scale.style("font-size: 20px; padding: 5px;")
+        )
         self.bills_label = QLabel("Bills: £0.00")
         self.bills_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
         self.edit_balance_btn = QPushButton("📝")
         self.edit_balance_btn.setMaximumWidth(28)
         self.edit_balance_btn.setMaximumHeight(22)
-        self.edit_balance_btn.setStyleSheet(ui_scale.style(
-            "QPushButton { border: none; background-color: transparent; color: #34d399; font-size: 20px; padding: 0px; }"
-            "QPushButton:hover { background-color: #1a1a2e; border-radius: 3px; }"
-        ))
+        self.edit_balance_btn.setStyleSheet(
+            ui_scale.style(
+                "QPushButton { border: none; background-color: transparent;"
+                " color: #34d399; font-size: 20px; padding: 0px; }"
+                "QPushButton:hover { background-color: #1a1a2e; border-radius: 3px; }"
+            )
+        )
         self.balance_label = QLabel("Balance: £0.00")
-        self.balance_label.setStyleSheet(ui_scale.style("font-size: 20px; font-weight: bold; color: #34d399; padding: 5px;"))
+        self.balance_label.setStyleSheet(
+            ui_scale.style(
+                "font-size: 20px; font-weight: bold; color: #34d399; padding: 5px;"
+            )
+        )
         summary_layout.addWidget(self.income_label)
         summary_layout.addWidget(self.bills_label)
         summary_layout.addStretch()
@@ -88,11 +98,16 @@ class MonthViewBuilderMixin:
         )
         _bh = self.bills_table.horizontalHeader()
         _bh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        _bh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         _bh.setStretchLastSection(False)
-        self.bills_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
-        self.bills_table.verticalHeader().sectionClicked.connect(self._on_bill_row_header_click)
-        self.bills_table.horizontalHeader().sectionClicked.connect(self.on_bills_header_click)
+        self.bills_table.verticalHeader().setStyleSheet(
+            "QHeaderView::section { color: #34d399; }"
+        )
+        self.bills_table.verticalHeader().sectionClicked.connect(
+            self._on_bill_row_header_click
+        )
+        self.bills_table.horizontalHeader().sectionClicked.connect(
+            self.on_bills_header_click
+        )
         bills_layout.addWidget(self.bills_table)
         bills_btn_layout = QHBoxLayout()
         self.add_bill_btn = QPushButton("Add Bill")
@@ -113,12 +128,13 @@ class MonthViewBuilderMixin:
         self.income_table.setHorizontalHeaderLabels(
             ["Name", "Amount", "Reliable", "Due Day", "Active"]
         )
-        self.income_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.income_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
         self.income_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.income_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
         _ih = self.income_table.horizontalHeader()
         _ih.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        _ih.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         _ih.setStretchLastSection(False)
         self.income_table.setStyleSheet(
             "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
@@ -126,9 +142,15 @@ class MonthViewBuilderMixin:
             "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
             "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
         )
-        self.income_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
-        self.income_table.verticalHeader().sectionClicked.connect(self._on_income_row_header_click)
-        self.income_table.horizontalHeader().sectionClicked.connect(self.on_income_header_click)
+        self.income_table.verticalHeader().setStyleSheet(
+            "QHeaderView::section { color: #34d399; }"
+        )
+        self.income_table.verticalHeader().sectionClicked.connect(
+            self._on_income_row_header_click
+        )
+        self.income_table.horizontalHeader().sectionClicked.connect(
+            self.on_income_header_click
+        )
         income_layout.addWidget(self.income_table)
         income_btn_layout = QHBoxLayout()
         self.add_income_btn = QPushButton("Add Income")
@@ -141,7 +163,9 @@ class MonthViewBuilderMixin:
         income_group.setLayout(income_layout)
         layout.addWidget(income_group)
 
-    def _connect_button_signals(self, prev_btn: QPushButton, next_btn: QPushButton) -> None:
+    def _connect_button_signals(
+        self, prev_btn: QPushButton, next_btn: QPushButton
+    ) -> None:
         prev_btn.clicked.connect(self.view_model.previous_month)
         next_btn.clicked.connect(self.view_model.next_month)
         self.archive_btn.clicked.connect(self.on_archive_month)

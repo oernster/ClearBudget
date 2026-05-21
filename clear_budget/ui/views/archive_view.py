@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QHeaderView,
     QFileDialog,
     QMessageBox,
 )
@@ -68,9 +69,19 @@ class ArchiveView(QWidget):
         self.archive_table.setHorizontalHeaderLabels(
             ["Month", "Income", "Bills", "Balance", "Status"]
         )
-        self.archive_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.archive_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
-        self.archive_table.verticalHeader().sectionClicked.connect(self.on_row_header_click)
+        self.archive_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
+        self.archive_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.archive_table.horizontalHeader().setStretchLastSection(False)
+        self.archive_table.verticalHeader().setStyleSheet(
+            "QHeaderView::section { color: #34d399; }"
+        )
+        self.archive_table.verticalHeader().sectionClicked.connect(
+            self.on_row_header_click
+        )
         layout.addWidget(self.archive_table)
 
         btn_layout = QHBoxLayout()
@@ -111,7 +122,11 @@ class ArchiveView(QWidget):
             all_months = self.budget_service.get_recorded_months()
         year_months = [m for m in all_months if m.year == self.current_year]
         self.year_label.setText(str(self.current_year) if self.current_year else "")
-        idx = self.available_years.index(self.current_year) if self.current_year in self.available_years else -1
+        idx = (
+            self.available_years.index(self.current_year)
+            if self.current_year in self.available_years
+            else -1
+        )
         self.prev_year_btn.setEnabled(idx > 0)
         self.next_year_btn.setEnabled(0 <= idx < len(self.available_years) - 1)
         self.load_history(year_months)
@@ -127,9 +142,20 @@ class ArchiveView(QWidget):
         self._refresh_year_view()
 
     _REQUIRED_SCHEMA: dict[str, set[str]] = {
-        "bills": {"amount_pence", "payment_method_id", "category", "bill_type", "active"},
+        "bills": {
+            "amount_pence",
+            "payment_method_id",
+            "category",
+            "bill_type",
+            "active",
+        },
         "income_sources": {"amount_pence", "is_reliable", "day_of_month", "active"},
-        "credit_cards": {"credit_limit_pence", "current_balance_used_pence", "payment_due_day", "active"},
+        "credit_cards": {
+            "credit_limit_pence",
+            "current_balance_used_pence",
+            "payment_due_day",
+            "active",
+        },
         "payment_methods": {"name", "type"},
         "settings": {"key", "value"},
         "bill_month_overrides": {"bill_id", "year", "month", "amount_pence"},
@@ -137,8 +163,9 @@ class ArchiveView(QWidget):
     }
 
     def _validate_db(self, path: Path) -> str | None:
-        """Return an error string if path is not a valid ClearBudget database, else None."""
+        """Return an error string if path is not a valid ClearBudget db, else None."""
         import sqlite3
+
         try:
             conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
             conn.row_factory = sqlite3.Row
@@ -149,7 +176,8 @@ class ArchiveView(QWidget):
             missing_tables = set(self._REQUIRED_SCHEMA) - tables
             if missing_tables:
                 conn.close()
-                return f"Not a ClearBudget database — missing tables: {', '.join(sorted(missing_tables))}"
+                missing = ", ".join(sorted(missing_tables))
+                return f"Not a ClearBudget database — missing tables: {missing}"
 
             for table, required_cols in self._REQUIRED_SCHEMA.items():
                 cursor.execute(f"PRAGMA table_info({table})")
@@ -158,7 +186,8 @@ class ArchiveView(QWidget):
                 if missing_cols:
                     conn.close()
                     return (
-                        f"Not a ClearBudget database — table '{table}' missing columns: "
+                        f"Not a ClearBudget database — table '{table}' "
+                        f"missing columns: "
                         f"{', '.join(sorted(missing_cols))}"
                     )
 
@@ -206,7 +235,11 @@ class ArchiveView(QWidget):
             return
         src_path = Path(src)
         if src_path.resolve() == db_path.resolve():
-            QMessageBox.warning(self, "Import", "Selected file is the active database — nothing to import.")
+            QMessageBox.warning(
+                self,
+                "Import",
+                "Selected file is the active database — nothing to import.",
+            )
             return
 
         has_data = False
@@ -223,7 +256,8 @@ class ArchiveView(QWidget):
                 self,
                 "Overwrite Existing Data?",
                 "The active database already contains data.\n\n"
-                "Importing will permanently replace all bills, income sources, credit cards, "
+                "Importing will permanently replace all bills, income sources, "
+                "credit cards, "
                 "overrides and settings with the contents of the selected file.\n\n"
                 "This cannot be undone. Continue?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -234,7 +268,11 @@ class ArchiveView(QWidget):
 
         validation_error = self._validate_db(src_path)
         if validation_error:
-            QMessageBox.critical(self, "Invalid Database", f"Cannot import — file is not a valid ClearBudget database.\n\n{validation_error}")
+            QMessageBox.critical(
+                self,
+                "Invalid Database",
+                f"Cannot import — invalid ClearBudget database.\n\n{validation_error}",
+            )
             return
 
         try:
@@ -242,7 +280,8 @@ class ArchiveView(QWidget):
             QMessageBox.information(
                 self,
                 "Import Successful",
-                "Database imported successfully.\n\nPlease restart ClearBudget to load the new data.",
+                "Database imported successfully.\n\n"
+                "Please restart ClearBudget to load the new data.",
             )
         except OSError as exc:
             QMessageBox.critical(self, "Import Failed", str(exc))
@@ -261,8 +300,12 @@ class ArchiveView(QWidget):
             self.months_by_row[row] = (month, summary)
 
             self.archive_table.setItem(row, 0, QTableWidgetItem(str(month)))
-            self.archive_table.setItem(row, 1, QTableWidgetItem(str(summary.total_income)))
-            self.archive_table.setItem(row, 2, QTableWidgetItem(str(summary.total_bills)))
+            self.archive_table.setItem(
+                row, 1, QTableWidgetItem(str(summary.total_income))
+            )
+            self.archive_table.setItem(
+                row, 2, QTableWidgetItem(str(summary.total_bills))
+            )
             self.archive_table.setItem(row, 3, QTableWidgetItem(str(summary.balance)))
 
             status = "✓ Solvent" if summary.balance.pence >= 0 else "✗ Deficit"

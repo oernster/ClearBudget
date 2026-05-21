@@ -1,4 +1,12 @@
-"""Application entry point - composition root and Qt event loop."""
+"""Application entry point — composition root and Qt event loop.
+
+Handles the full login lifecycle:
+1. Open central users store.
+2. If no users exist → first-run CreateUserDialog.
+3. Show LoginDialog.
+4. On success, open that user's budget database and show MainWindow.
+5. On MainWindow.logout_requested → close window, loop back to step 3.
+"""
 
 import sys
 import ctypes
@@ -8,6 +16,8 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtGui import QIcon
 
 from clear_budget.shared.config import Config
+from clear_budget.auth.user_store import UserStore
+from clear_budget.auth.models import User
 from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
 from clear_budget.infrastructure.sqlite.income_source_repository import (
@@ -24,14 +34,9 @@ from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 
 
 def _find_runtime_icon() -> Path | None:
-    """Locate runtime PNG icon beside the executable.
-
-    Qt sometimes fails to decode ICO files in frozen apps, so we use PNG.
-    """
+    """Locate runtime PNG icon beside the executable."""
     icon_path = Path(sys.executable).resolve().parent / "clearbudget_256.png"
-    if icon_path.exists():
-        return icon_path
-    return None
+    return icon_path if icon_path.exists() else None
 
 
 _MUTEX_NAME = "Global\\ClearBudget_SingleInstance"
@@ -46,6 +51,60 @@ def _acquire_single_instance_mutex():
     return handle
 
 
+def _run_login_flow(user_store: UserStore) -> User | None:
+    """Show first-run or login dialog.  Returns authenticated User or None (quit)."""
+    from clear_budget.ui.widgets.create_user_dialog import CreateUserDialog
+    from clear_budget.ui.widgets.login_dialog import LoginDialog
+
+    if not user_store.has_users():
+        dlg = CreateUserDialog(user_store, is_first_user=True)
+        if dlg.exec() != CreateUserDialog.Accepted or dlg.created_user is None:
+            return None
+        # First user just created — log them in directly.
+        return dlg.created_user
+
+    dlg = LoginDialog(user_store)
+    if dlg.exec() != LoginDialog.Accepted:
+        return None
+    return dlg.authenticated_user
+
+
+def _open_user_database(username: str) -> Database:
+    """Open (or create) the budget database for username."""
+    config = Config.for_user(username)
+    config.ensure_directories()
+    database = Database(config.db_path)
+    database.connect()
+    database.create_schema()
+    return database
+
+
+def _build_main_window(
+    database: Database,
+    current_user: User,
+    user_store: UserStore,
+) -> MainWindow:
+    """Wire all services and return a ready MainWindow."""
+    bill_repo = SQLiteBillRepository(database.conn)
+    income_repo = SQLiteIncomeSourceRepository(database.conn)
+    payment_method_repo = SQLitePaymentMethodRepository(database.conn)
+    month_generator = MonthGenerator(bill_repo, income_repo)
+    budget_service = BudgetService(
+        bill_repo=bill_repo,
+        income_repo=income_repo,
+        payment_method_repo=payment_method_repo,
+        month_generator=month_generator,
+    )
+    month_view_model = MonthViewModel(budget_service=budget_service)
+    solvency_view_model = SolvencyViewModel(budget_service=budget_service)
+    return MainWindow(
+        month_view_model=month_view_model,
+        solvency_view_model=solvency_view_model,
+        current_user=current_user,
+        user_store=user_store,
+    )
+
+
 def main() -> int:
     """Initialize application and start event loop."""
     app = QApplication([])
@@ -56,11 +115,11 @@ def main() -> int:
         return 1
 
     from clear_budget.ui import ui_scale
+
     _screen = app.primaryScreen()
     _avail = _screen.availableGeometry()
     _avail_h = _avail.height()
     _avail_w = _avail.width()
-    # Scale factor: reference design is 1260px tall. Cap at 1.5 so 4K doesn't produce enormous UI.
     ui_scale.init(min(_avail_h / 1260.0, 1.5))
 
     icon_path = _find_runtime_icon()
@@ -69,50 +128,48 @@ def main() -> int:
         if not icon.isNull():
             app.setWindowIcon(icon)
 
-    config = Config.default()
-    config.ensure_directories()
+    Config.app_dir().mkdir(parents=True, exist_ok=True)
+    user_store = UserStore(Config.users_db_path())
 
-    database = Database(config.db_path)
-    database.connect()
-    database.create_schema()
+    _active_database: list[Database] = []
 
-    bill_repo = SQLiteBillRepository(database.conn)
-    income_repo = SQLiteIncomeSourceRepository(database.conn)
-    payment_method_repo = SQLitePaymentMethodRepository(database.conn)
+    def _session_loop() -> None:
+        """Run login → main window → (optional) re-login cycle."""
+        user = _run_login_flow(user_store)
+        if user is None:
+            app.quit()
+            return
 
-    month_generator = MonthGenerator(bill_repo, income_repo)
+        if _active_database:
+            _active_database[0].close()
+            _active_database.clear()
 
-    budget_service = BudgetService(
-        bill_repo=bill_repo,
-        income_repo=income_repo,
-        payment_method_repo=payment_method_repo,
-        month_generator=month_generator,
-    )
+        database = _open_user_database(user.username)
+        _active_database.append(database)
 
-    month_view_model = MonthViewModel(budget_service=budget_service)
-    solvency_view_model = SolvencyViewModel(budget_service=budget_service)
+        window = _build_main_window(database, user, user_store)
 
-    window = MainWindow(
-        month_view_model=month_view_model,
-        solvency_view_model=solvency_view_model,
-    )
+        if icon_path:
+            icon = QIcon(str(icon_path))
+            if not icon.isNull():
+                window.setWindowIcon(icon)
 
-    if icon_path:
-        icon = QIcon(str(icon_path))
-        if not icon.isNull():
-            window.setWindowIcon(icon)
+        _restore_w = int(_avail_w * 0.88)
+        _restore_h = int(_avail_h * 0.88)
+        _restore_x = _avail.x() + (_avail_w - _restore_w) // 2
+        _restore_y = _avail.y() + (_avail_h - _restore_h) // 2
+        window.setGeometry(_restore_x, _restore_y, _restore_w, _restore_h)
+        window.showMaximized()
 
-    # Set restored geometry to 88% of available screen, centred.
-    # Qt uses this size when the user un-maximises, ensuring it always fits on screen.
-    _restore_w = int(_avail_w * 0.88)
-    _restore_h = int(_avail_h * 0.88)
-    _restore_x = _avail.x() + (_avail_w - _restore_w) // 2
-    _restore_y = _avail.y() + (_avail_h - _restore_h) // 2
-    window.setGeometry(_restore_x, _restore_y, _restore_w, _restore_h)
-    window.showMaximized()
+        # When logout is requested, re-enter the session loop.
+        window.logout_requested.connect(_session_loop)
+
+    _session_loop()
 
     result = app.exec()
-    database.close()
+    if _active_database:
+        _active_database[0].close()
+    user_store.close()
     return result
 
 
