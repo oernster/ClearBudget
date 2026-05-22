@@ -70,9 +70,22 @@ def _run_login_flow(user_store: UserStore) -> User | None:
 
 
 def _open_user_database(username: str) -> Database:
-    """Open (or create) the budget database for username."""
+    """Open (or create) the budget database for username.
+
+    On first use, if a legacy single-user budget.db exists and no
+    per-user database has been created yet, the legacy file is copied
+    across automatically so existing data is preserved.
+    """
+    import shutil
+
     config = Config.for_user(username)
     config.ensure_directories()
+
+    if not config.db_path.exists():
+        legacy = Config.default().db_path
+        if legacy.exists():
+            shutil.copy2(legacy, config.db_path)
+
     database = Database(config.db_path)
     database.connect()
     database.create_schema()
