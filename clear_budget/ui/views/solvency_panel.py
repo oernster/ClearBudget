@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QProgressBar,
     QPushButton,
 )
@@ -97,6 +98,32 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         )
         layout.addWidget(self.freedom_label)
 
+        disc_row = QHBoxLayout()
+        disc_lbl = QLabel("Discretionary buffer: £")
+        disc_lbl.setStyleSheet(ui_scale.style("font-size: 12px; color: #6b7280;"))
+        self.discretionary_buffer_edit = QLineEdit()
+        self.discretionary_buffer_edit.setMaximumWidth(ui_scale.px(70))
+        self.discretionary_buffer_edit.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.discretionary_buffer_edit.setStyleSheet(
+            ui_scale.style(
+                "QLineEdit { background: #0d1b2a; color: #9ca3af; border: 1px solid #1e3a5f;"
+                " border-radius: 3px; padding: 2px 4px; font-size: 12px; }"
+                "QLineEdit:focus { border-color: #00d4ff; color: #e2e8f0; }"
+            )
+        )
+        buf_pence = self.view_model.budget_service.get_discretionary_buffer()
+        self.discretionary_buffer_edit.setText(f"{buf_pence / 100:.2f}")
+        self.discretionary_buffer_edit.returnPressed.connect(
+            self._save_discretionary_buffer
+        )
+        self.discretionary_buffer_edit.editingFinished.connect(
+            self._save_discretionary_buffer
+        )
+        disc_row.addWidget(disc_lbl)
+        disc_row.addWidget(self.discretionary_buffer_edit)
+        disc_row.addStretch()
+        layout.addLayout(disc_row)
+
         self.balance_label = QLabel(f"Bank Balance: {fmt(0)}")
         self.balance_label.setStyleSheet(
             ui_scale.style("font-size: 20px; padding: 5px;")
@@ -162,6 +189,16 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         """Connect ViewModel signals to view updates."""
         self.view_model.solvency_updated.connect(self.update_display)
 
+    def _save_discretionary_buffer(self) -> None:
+        """Persist the discretionary buffer value from the edit field."""
+        text = self.discretionary_buffer_edit.text().strip().lstrip("£")
+        try:
+            pence = int(round(float(text) * 100))
+            self.view_model.budget_service.set_discretionary_buffer(pence=pence)
+            self.view_model.refresh_solvency()
+        except ValueError:
+            pass
+
     @staticmethod
     def _health_color(balance_pence: int, monthly_drain_pence: int) -> str:
         """Return traffic-light color based on balance vs monthly drain coverage.
@@ -178,6 +215,24 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         if balance_pence >= 2 * monthly_drain_pence:
             return "#34d399"
         return "#fbbf24"
+
+    @staticmethod
+    def _compute_month_min_balance(opening_pence: int, summary) -> int:
+        """Return the minimum bank balance at any point during the month (pence)."""
+        events = []
+        for inc in summary.income_sources:
+            events.append((inc.day_of_month or 1, inc.amount.pence))
+        for bill in summary.bills:
+            if bill.payment_method_id == 1:
+                events.append((bill.day_of_month or 28, -bill.amount.pence))
+        events.sort(key=lambda e: (e[0], -e[1]))
+        balance = opening_pence
+        min_balance = opening_pence
+        for _day, delta in events:
+            balance += delta
+            if balance < min_balance:
+                min_balance = balance
+        return min_balance
 
     def _build_month_cashflow_summary(
         self, opening_pence: int, summary, monthly_drain_pence: int

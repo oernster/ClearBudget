@@ -131,7 +131,7 @@ or the bill template:
 
 - **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected balance
 - **Mid-month alert**: detects temporary overdraft when bills cluster before the last income payment of the month
-- **Freedom to spend**: income minus all bills (discretionary budget available)
+- **Freedom to spend**: discretionary headroom calculated as the next month's lowest projected bank balance minus a configurable buffer (default £50). Represents money genuinely safe to spend without the account dipping below the buffer at any point in the coming month. Editable buffer field shown directly on the panel.
 - **Credit Card Status**: one progress bar per card showing current balance vs limit; projected month-end closing balance, charges, payment, interest, minimum due, and net direction all shown inline
 - **Forward Projection**: day-by-day cashflow narrative for the next two months including card state
 

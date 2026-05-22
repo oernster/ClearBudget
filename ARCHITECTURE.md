@@ -98,6 +98,8 @@ An additional Auth layer sits alongside the main layers for user identity and cr
 - `delete_bill_month_override(bill_id, year_month)`
 - `get_projected_month_end_balance_pence(year_month)` → `int` (signed)
 - `get_bank_balance()` / `set_bank_balance(amount)`
+- `get_discretionary_buffer()` → `int` (pence, default 5000 = £50)
+- `set_discretionary_buffer(pence)` - persists user-chosen freedom-to-spend buffer
 - `reset_all_data()` - wipes all user budget data (New Budget feature)
 
 **DTOs**:
@@ -116,7 +118,7 @@ An additional Auth layer sits alongside the main layers for user identity and cr
   5. `month_bills`
   6. `month_income`
   7. `credit_cards` - includes `minimum_payment_percent` (migration)
-  8. `settings` - key/value store (`bank_balance`, `bank_balance_day`, `currency`)
+  8. `settings` - key/value store (`bank_balance`, `bank_balance_day`, `currency`, `discretionary_buffer`)
   9. `bill_month_overrides` - includes `day_of_month` (migration)
   10. `bill_month_skips` - per-month bill exclusion (bill_id, year, month)
   11. `sqlite_sequence`
@@ -183,7 +185,7 @@ Separate from budget infrastructure. Manages user identity and credentials.
 
 **Views**:
 - `MonthView` - bill/income tables with inline editing; balance display adapts to current vs future month
-- `SolvencyPanel` - overdraft alert, mid-month alert, freedom-to-spend, card bars, forward projection
+- `SolvencyPanel` - overdraft alert, mid-month alert, freedom-to-spend (next-month low-point minus configurable buffer), card bars, forward projection; includes inline discretionary buffer editor
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
 
@@ -226,10 +228,13 @@ main()
   └── QApplication created
   └── app.setStyleSheet(get_dark_qss())        # theme applied globally
   └── UserStore opened (users.db)
-  └── _session_loop()
+  └── QTimer.singleShot(0, _session_loop)   # deferred — app.exec() must be live first
+  └── app.exec()
+  └── _session_loop()                        # fires on first event loop tick
         └── _run_login_flow()
               └── first run? → CreateUserDialog → RecoveryCodeDialog
               └── else       → LoginDialog
+              └── X button   → app.quit() → process exits
         └── _open_user_database(username)       # budget_<username>.db
         └── _load_currency(database)            # set_currency() from settings
         └── _build_main_window(database, user, user_store)

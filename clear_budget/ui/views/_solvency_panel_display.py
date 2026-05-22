@@ -188,8 +188,27 @@ class SolvencyPanelDisplayMixin:
             self.remaining_bank_label.setText("Still due this month (bank): -")
             self.remaining_card_label.setText("Still due this month (cards): -")
 
+        # Compute M1/M2 forward data early — needed for freedom calc and projections.
+        m1 = report.year_month.next_month()
+        m2 = m1.next_month()
+        m1_name = MONTH_NAMES[m1.month]
+        m2_name = MONTH_NAMES[m2.month]
+        m1_summary = self.view_model.budget_service.get_month_summary(year_month=m1)
+        m2_summary = self.view_model.budget_service.get_month_summary(year_month=m2)
+        m1_bank = sum(
+            b.amount.pence for b in m1_summary.bills if b.payment_method_id == 1
+        )
+        m2_bank = sum(
+            b.amount.pence for b in m2_summary.bills if b.payment_method_id == 1
+        )
+        m1_drain = m1_bank - m1_summary.total_income.pence
+        m2_drain = m2_bank - m2_summary.total_income.pence
+        m1_end_pence = report.balance_pence + m1_summary.total_income.pence - m1_bank
+        m1_min_balance = self._compute_month_min_balance(report.balance_pence, m1_summary)
+
         if summary:
-            freedom_pence = summary.total_income.pence - summary.total_bills.pence
+            disc_buffer = self.view_model.budget_service.get_discretionary_buffer()
+            freedom_pence = max(0, m1_min_balance - disc_buffer)
             if freedom_pence > 0:
                 self.freedom_label.setText(f"Freedom to spend: {fmt(freedom_pence)}")
                 self.freedom_label.setStyleSheet(
@@ -207,22 +226,6 @@ class SolvencyPanelDisplayMixin:
             self.freedom_label.setText("")
 
         self._rebuild_card_bars(report)
-
-        m1 = report.year_month.next_month()
-        m2 = m1.next_month()
-        m1_name = MONTH_NAMES[m1.month]
-        m2_name = MONTH_NAMES[m2.month]
-        m1_summary = self.view_model.budget_service.get_month_summary(year_month=m1)
-        m2_summary = self.view_model.budget_service.get_month_summary(year_month=m2)
-        m1_bank = sum(
-            b.amount.pence for b in m1_summary.bills if b.payment_method_id == 1
-        )
-        m2_bank = sum(
-            b.amount.pence for b in m2_summary.bills if b.payment_method_id == 1
-        )
-        m1_drain = m1_bank - m1_summary.total_income.pence
-        m2_drain = m2_bank - m2_summary.total_income.pence
-        m1_end_pence = report.balance_pence + m1_summary.total_income.pence - m1_bank
 
         m1_text, m1_color = self._build_month_cashflow_summary(
             report.balance_pence, m1_summary, m1_drain

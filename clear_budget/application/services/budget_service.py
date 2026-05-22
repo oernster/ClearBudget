@@ -371,6 +371,26 @@ class BudgetService:
 
         reset_budget_data(self.bill_repo.conn)
 
+    def get_discretionary_buffer(self) -> int:  # pragma: no cover
+        """Return discretionary buffer in pence (default 5000 = £50)."""
+        if not hasattr(self.bill_repo, "conn"):
+            return 5000
+        cursor = self.bill_repo.conn.cursor()
+        cursor.execute(
+            "SELECT value FROM settings WHERE key = ?", ("discretionary_buffer",)
+        )
+        row = cursor.fetchone()
+        return int(row["value"]) if row else 5000
+
+    def set_discretionary_buffer(self, *, pence: int) -> None:  # pragma: no cover
+        """Save discretionary buffer in pence."""
+        cursor = self.bill_repo.conn.cursor()
+        cursor.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            ("discretionary_buffer", str(pence)),
+        )
+        self.bill_repo.conn.commit()
+
     def set_bank_balance(self, *, amount: Amount) -> None:  # pragma: no cover
         from datetime import date as _date
 
