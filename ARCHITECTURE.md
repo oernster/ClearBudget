@@ -1,6 +1,7 @@
 # ClearBudget Architecture
 
 A clean architecture implementation with 4 isolated layers: Domain, Application, Infrastructure, and UI.
+An additional Auth layer sits alongside the main layers for user identity and credential management.
 
 ## Overview
 
@@ -26,6 +27,16 @@ A clean architecture implementation with 4 isolated layers: Domain, Application,
 ┌──────────────────────▼──────────────────────────────────────┐
 │       Infrastructure Layer (SQLite Persistence)             │
 │    Database, Repositories, Schema Management                │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│       Auth Layer (User Identity - cross-cutting)            │
+│    UserStore → users.db   User, UserManagementDialog        │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│       Shared Layer (Config, Currency, Errors)               │
+│    Config, Currency, Errors - used by all layers            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -58,7 +69,7 @@ A clean architecture implementation with 4 isolated layers: Domain, Application,
 - `MonthIncome` - Income for a specific month
 
 **Value Objects** (frozen, immutable):
-- `Amount(pence: int)` - Non-negative currency
+- `Amount(pence: int)` - Non-negative currency; `__str__` uses `get_symbol()` from `shared.currency`
 - `YearMonth(year, month)` - Date validation with arithmetic
 - `SolvencyResult` - Outcome of solvency calculation
 - `CardExhaustionWarning` - Credit card exhaustion analysis
@@ -82,15 +93,12 @@ A clean architecture implementation with 4 isolated layers: Domain, Application,
 - `calculate_solvency(year_month)` → `SolvencyReport`
 - `calculate_solvency_from_summary(year_month, month_summary)` → `SolvencyReport`
 - `get_card_monthly_states(year_month)` → `list[CardMonthlyState]`
-  - Projects each card's balance forward from today through the target month
 - `get_card_projection_months(start_month, n_months)` → `list[list[CardMonthlyState]]`
-  - Chains balances forward in one pass; used by 6-month projection strip
-- `skip_bill_for_month(bill_id, year_month)` - Inserts into `bill_month_skips`
-- `unskip_bill_for_month(bill_id, year_month)` - Removes from `bill_month_skips`
-- `delete_bill_month_override(bill_id, year_month)` - Removes month override
+- `skip_bill_for_month(bill_id, year_month)` / `unskip_bill_for_month(bill_id, year_month)`
+- `delete_bill_month_override(bill_id, year_month)`
 - `get_projected_month_end_balance_pence(year_month)` → `int` (signed)
-  - Returns signed int to avoid `InvalidAmountError` on negative projected balances
-- `get_bank_balance()` / `set_bank_balance(amount)` - Persistent bank balance via settings table
+- `get_bank_balance()` / `set_bank_balance(amount)`
+- `reset_all_data()` - wipes all user budget data (New Budget feature)
 
 **DTOs**:
 - `MonthSummary` - `year_month`, `total_income`, `total_bills`, `bank_bills`, `balance`, `bills`, `all_bills`, `income_sources`, `all_income_sources`
@@ -98,98 +106,151 @@ A clean architecture implementation with 4 isolated layers: Domain, Application,
 
 ### Infrastructure Layer
 
-**Database** (`~/.clearbudget/budget.db`):
+**Per-user database** (`~/.clearbudget/budget_<username>.db`):
 - `Database(db_path)` - SQLite connection and schema management
 - Schema — 11 tables:
   1. `payment_methods` - id=1 is "Bank Account"
-  2. `bills` - templates; columns include `target_card_id` (migration)
+  2. `bills` - templates; includes `target_card_id` (migration)
   3. `income_sources`
   4. `months`
   5. `month_bills`
   6. `month_income`
   7. `credit_cards` - includes `minimum_payment_percent` (migration)
-  8. `settings` - key/value store (bank balance, etc.)
-  9. `bill_month_overrides` - per-month amount/day overrides; includes `day_of_month` (migration)
+  8. `settings` - key/value store (`bank_balance`, `bank_balance_day`, `currency`)
+  9. `bill_month_overrides` - includes `day_of_month` (migration)
   10. `bill_month_skips` - per-month bill exclusion (bill_id, year, month)
   11. `sqlite_sequence`
 
 **Repositories**:
 - `SQLiteBillRepository`
-  - `list_active_for_month()` - LEFT JOINs `bill_month_skips` and `bill_month_overrides`; sets `skipped_for_month` and `has_month_override` on returned entities; uses `o.bill_id IS NOT NULL` (not `o.id`) to avoid column ambiguity
-  - `skip_for_month(bill_id, year_month)` / `unskip_for_month(bill_id, year_month)`
-  - `hard_delete(bill_id)` - also cleans `bill_month_skips` and `bill_month_overrides`
+  - `list_active_for_month()` - LEFT JOINs `bill_month_skips` and `bill_month_overrides`
+  - `skip_for_month` / `unskip_for_month`
+  - `hard_delete(bill_id)` - cleans related skips and overrides
 - `SQLiteIncomeSourceRepository`
 - `SQLitePaymentMethodRepository`
   - `set_card_active(card_id, active)` - soft-delete toggle
+
+### Auth Layer
+
+Separate from budget infrastructure. Manages user identity and credentials.
+
+**Central users database** (`~/.clearbudget/users.db`):
+- Single SQLite database shared across all users on the machine
+- `users` table: `id`, `username`, `password_hash` (bcrypt), `recovery_code_hash` (bcrypt), `is_admin`
+
+**`UserStore`** (`clear_budget/auth/user_store.py`):
+- `has_users()` - drives first-run wizard
+- `find_user(username)` → `User | None`
+- `verify_password(username, password)` → `User | None`
+- `verify_recovery_code(username, code)` → `bool`
+- `create_user(username, password, is_admin)` → `User` - hashes password and recovery code with bcrypt
+- `change_password(username, new_password)`
+- `delete_user(user_id)`
+- `get_all_users()` → `list[User]`
+- `close()`
+
+**`User`** model (`clear_budget/auth/models.py`):
+- `id`, `username`, `is_admin`
+
+### Shared Layer
+
+**`Config`** (`clear_budget/shared/config.py`):
+- `Config.default()` → legacy single-user path (`budget.db`) - kept for reference only
+- `Config.for_user(username)` → `budget_<safe_username>.db`
+- `Config.users_db_path()` → `users.db`
+- `Config.app_dir()` → `~/.clearbudget/`
+
+**`Currency`** (`clear_budget/shared/currency.py`):
+- `CURRENCIES: list[Currency]` - 25 currencies for English-speaking countries
+- `DEFAULT_CURRENCY` - GBP
+- `get_symbol()` → active currency symbol (used by `Amount.__str__`)
+- `get_currency()` → active `Currency` object
+- `set_currency(code)` → activates named currency (falls back to GBP for unknown codes)
+- Module-level state: set once per session after loading user's DB settings
+
+**`format_helpers.fmt(amount)`** (`clear_budget/ui/utils/format_helpers.py`):
+- `fmt(pence: int)` → `"{symbol}{pence/100:.2f}"`
+- `fmt(pounds: float)` → `"{symbol}{pounds:.2f}"`
+- Used throughout UI for all inline currency formatting not going through `Amount.__str__`
 
 ### UI Layer
 
 **ViewModels**:
 - `MonthViewModel` - month state, signals: `month_changed`, `month_summary_updated`
-- `SolvencyViewModel`
-  - `set_month()` now fetches the new month's summary before refreshing (fixes stale data on navigation)
-  - `update_month_summary()` called by `MonthView` after balance edits (via `month_summary_updated` signal)
+- `SolvencyViewModel` - signals: `solvency_updated`, `danger_warning_triggered`
+  - `set_month()` fetches new month summary before refreshing
+  - `update_month_summary()` called after balance edits via `month_summary_updated`
 
 **Views**:
-- `MonthView`
-  - Bill table: 7 columns — Name, Category, Amount, Type, Due, Active, Skip
-  - Skip column (col 6): per-bill checkbox toggles `skip_bill_for_month` / `unskip_bill_for_month`
-  - Skipped bills: grey text + "(skipped this month)" suffix
-  - Override bills: blue `(*)` suffix on name
-  - Balance display: current month shows actual balance; future months show projected end balance via `get_projected_month_end_balance_pence`; negative renders as "−£X OVERDRAWN"
-  - `on_edit_balance` emits `month_summary_updated` after saving so Solvency panel refreshes
-
-- `SolvencyPanel`
-  - Section 1: Overdraft alert (colour-coded SAFE/AT RISK/CAUTION/CRITICAL)
-  - Mid-month CRITICAL alert: detects temporary overdraft when bills cluster before last income; undated bills use day 28 (not 1) to avoid false alarms
-  - Section 2: Overall Health — freedom to spend, projected balance, committed/remaining breakdown
-  - Credit Card Status: per-card `QProgressBar` (current balance / limit) with projected month-end closing balance in format text; detail line shows charges / payment / interest / min due / net direction; colour by available headroom (red ≤£100, amber ≤£250, green >£250)
-  - Section 3: Forward Projection — m1 and m2 cashflow summaries with card state text
-  - Health score and aggregate card utilisation percentage removed
-
-- `CreditCardView`
-  - Month navigation; snapshot columns (Used, Available, Util%, Status) show projected closing balance when viewing future months
-  - 6-Month Balance Projection strip: rows = months, columns = active cards; colour by available headroom (same thresholds as Solvency)
-  - Powered by `get_card_projection_months`
-
-- `ArchiveView`
-  - Auto-loads last 12 months on init (no button required)
-  - Export Database: Save dialog, forces `.db` extension, copies active database
-  - Import Database: Open dialog; three-layer validation before any write:
-    1. Must be valid SQLite (opened read-only via URI)
-    2. Must contain all 7 required ClearBudget tables
-    3. Each required table must have correct ClearBudget columns (verified via `PRAGMA table_info`)
-  - Overwrite confirmation shown if active database has data
+- `MonthView` - bill/income tables with inline editing; balance display adapts to current vs future month
+- `SolvencyPanel` - overdraft alert, mid-month alert, freedom-to-spend, card bars, forward projection
+- `CreditCardView` - card CRUD, month navigation, 6-month projection strip
+- `ArchiveView` - historical month summaries by year; year navigation
 
 **Widgets**:
-- `BillDialog` - `month_only_status` label shows scope when "This month only" checked; `load_bill` pre-checks checkbox for override bills; unchecking + OK on override bill calls `delete_bill_month_override`
-- `AboutDialog` - app icon, author (Oliver Ernster), LGPL-3.0 notice, open source credits; accessed via Help menu
-- `LicenceDialog` - LGPL-3.0 full notice + third-party attributions; "Open Full Licence Text" button opens gnu.org
-- `ScrollableTab` - wraps any view in `QScrollArea`; overlays ▲/▼ system-icon buttons (sky blue, `rgba(56,189,248,200)`) at top-right/bottom-right; buttons appear only when scrollable content exists in that direction; clicking scrolls by a fixed step
+- `LoginDialog` - username/password form; "Forgot password?" link opens `ResetPasswordDialog`
+- `ResetPasswordDialog` - username + recovery code + new password; distinct error for unknown username vs wrong code
+- `CreateUserDialog` - new user form (first-run wizard or admin add-user); includes `RecoveryCodeDialog` on success
+- `RecoveryCodeDialog` - displays one-time recovery code; X button disabled; clipboard copy button; checkbox gate before OK activates
+- `UserManagementDialog` - admin-only; lists users; Delete Selected disabled when own row selected
+- `CurrencyDialog` - combobox of 25 currencies; opened via File > Preferences
+- `BillDialog` - add/edit bill; month-only scope toggle
+- `CreditCardDialog` - add/edit credit card
+- `IncomeDialog` - add/edit income source
+- `BalanceDialog` - edit current bank balance
+- `ArchiveDetailDialog` - drill-down for a single archived month
+- `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text
+- `ScrollableTab` - wraps any view in `QScrollArea` with scroll indicator buttons
 
 **Main Application**:
-- `MainWindow` - all tabs wrapped in `ScrollableTab`; Help menu (About / View Licence); restored geometry set to 88% of available screen before `showMaximized` so un-maximize always fits on screen
-- `main.py` - scale factor capped at 1.5× to prevent oversized UI on 4K monitors; restored geometry calculated from `availableGeometry()`
-- `ui_scale.py` - `init(factor)`, `px(value)`, `style(css)` — referenced throughout UI
+- `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
+  - File menu: New Budget, Export Database, Import Database, Preferences, Switch User, Exit
+  - Users menu (admin only): Manage Users
+  - Help menu: About, View Licence
+- `main.py` - composition root; manages full session lifecycle:
+  - `_session_loop()` → login → open DB → load currency → build window → show
+  - `_reload_database()` → triggered by `database_replaced`; closes old DB, reopens, loads currency, rebuilds window
+  - Single-instance mutex prevents duplicate launches
+  - UI scale capped at 1.5x for 4K monitors
 
 **Theme** (`dark_theme.py`):
-- `QMenuBar` / `QMenu` hover: orange `#f59e0b` 2px border
-- `QPushButton` hover/press: orange `#f59e0b` 2px border; base has `border: 2px solid transparent` to prevent layout shift
-- `QTabBar::tab` hover: orange `#f59e0b` 2px border; selected tab uses purple `#a78bfa` border
+- Applied at `QApplication` level - covers all windows and dialogs
+- `QPushButton` hover/press: orange `#f59e0b` 2px border
+- `QTabBar::tab` hover: orange `#f59e0b`; selected: purple `#a78bfa`
+- `QMenuBar` / `QMenu` hover: orange `#f59e0b`
+
+## Application Startup Flow
+
+```
+main()
+  └── QApplication created
+  └── app.setStyleSheet(get_dark_qss())        # theme applied globally
+  └── UserStore opened (users.db)
+  └── _session_loop()
+        └── _run_login_flow()
+              └── first run? → CreateUserDialog → RecoveryCodeDialog
+              └── else       → LoginDialog
+        └── _open_user_database(username)       # budget_<username>.db
+        └── _load_currency(database)            # set_currency() from settings
+        └── _build_main_window(database, user, user_store)
+        └── _show_window(user, window)
+              └── window.database_replaced → _reload_database()
+              └── window.logout_requested  → _session_loop()
+```
 
 ## Dependency Injection
 
-No container — dependencies passed via constructor.
+No container - dependencies passed via constructor.
 
 ```python
-database = Database(config.db_path)
+database = Database(config.db_path)        # Config.for_user(username)
 database.connect()
 database.create_schema()
 
-bill_repo = SQLiteBillRepository(database.conn)
-income_repo = SQLiteIncomeSourceRepository(database.conn)
-payment_method_repo = SQLitePaymentMethodRepository(database.conn)
-month_generator = MonthGenerator(bill_repo, income_repo)
+bill_repo             = SQLiteBillRepository(database.conn)
+income_repo           = SQLiteIncomeSourceRepository(database.conn)
+payment_method_repo   = SQLitePaymentMethodRepository(database.conn)
+month_generator       = MonthGenerator(bill_repo, income_repo)
 
 budget_service = BudgetService(
     bill_repo=bill_repo,
@@ -198,18 +259,36 @@ budget_service = BudgetService(
     month_generator=month_generator,
 )
 
-month_view_model = MonthViewModel(budget_service=budget_service)
+month_view_model    = MonthViewModel(budget_service=budget_service)
 solvency_view_model = SolvencyViewModel(budget_service=budget_service)
 
 window = MainWindow(
     month_view_model=month_view_model,
     solvency_view_model=solvency_view_model,
+    current_user=user,
+    user_store=user_store,
+    db_path=database.db_path,
 )
 ```
 
-## Database Location
+## Database Locations
 
-`~/.clearbudget/budget.db` (Windows: `C:\Users\<user>\.clearbudget\budget.db`)
+| File | Path | Purpose |
+|------|------|---------|
+| `users.db` | `~/.clearbudget/users.db` | Central user accounts (all users) |
+| `budget_<username>.db` | `~/.clearbudget/budget_<username>.db` | Per-user budget data |
+
+Username is sanitised to lowercase alphanumeric + `_-` before use in filename.
+
+## Currency
+
+Currency is stored per-user in the `settings` table (`key='currency'`, `value='GBP'`).
+It is loaded from the DB immediately after opening the user session and activates the
+module-level symbol in `shared.currency`. `Amount.__str__` and `fmt()` both call
+`get_symbol()` at render time, so all displayed values reflect the active currency
+without any additional wiring. On currency change (File > Preferences), the new code is
+saved to the DB, `set_currency()` is called, and `database_replaced` is emitted to
+rebuild the window with updated labels.
 
 ## Testing Strategy
 
@@ -223,8 +302,16 @@ window = MainWindow(
 - No database access
 
 ### Infrastructure Layer
-- Real SQLite via `tmp_path` fixture — no mocking
+- Real SQLite via `tmp_path` fixture - no mocking
 - Schema created fresh per test
+
+### Auth Layer
+- Real SQLite via `tmp_path` fixture
+- bcrypt round-trip tested
+
+### Shared Layer
+- `test_config.py` - path construction and safe username
+- `test_currency.py` - currency registry, `get_symbol`, `set_currency`, reset fixture
 
 ### UI Layer
 - ViewModel tests with mocked `BudgetService`
@@ -233,20 +320,25 @@ window = MainWindow(
 ### Structural Tests
 - `test_layering_rules.py` - AST-based forbidden import enforcement
 - `test_loc_limits.py` - No file > 400 LOC
+- `test_auth_structure.py` - Auth layer structure validation
 
 ## Code Quality Standards
 
 - **Black** 88-char line length
 - **Flake8** no violations
 - **100% test coverage** (`pytest --cov-fail-under=100`) excluding UI, interfaces, main, build scripts
-- **No magic numbers** — all domain values derive from data, config, or named constants
+- **No magic numbers** - all domain values derive from data, config, or named constants
 
 ## Design Principles
 
 **Dependency direction**: always inward. UI → Application → Domain ← Infrastructure.
 
-**No magic numbers**: no hardcoded financial amounts, thresholds, day numbers, or limits in logic. All such values derive from data or named constants defined at the appropriate layer.
+**No magic numbers**: no hardcoded financial amounts, thresholds, day numbers, or limits in logic.
 
-**Immutable value objects**: `Amount`, `YearMonth`, `SolvencyResult`, `CardMonthlyState` — all frozen dataclasses. Mutation creates new instances.
+**Immutable value objects**: `Amount`, `YearMonth`, `SolvencyResult`, `CardMonthlyState` - all frozen dataclasses.
 
-**Signed balance**: projected balances returned as `int` pence (not `Amount`) wherever negative values are valid, avoiding `InvalidAmountError` from `Amount.__post_init__`.
+**Signed balance**: projected balances returned as `int` pence (not `Amount`) wherever negative values are valid.
+
+**Per-user isolation**: each user has a completely separate budget database. No cross-user data access is possible.
+
+**Session lifecycle signals**: `logout_requested` and `database_replaced` on `MainWindow` drive all session transitions without tight coupling between UI and `main.py`.
