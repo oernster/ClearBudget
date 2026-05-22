@@ -353,9 +353,7 @@ class MainWindow(QMainWindow):
         has_data = False
         if self.db_path.exists():
             try:
-                cursor = (
-                    self.month_view_model.budget_service.bill_repo.conn.cursor()
-                )
+                cursor = self.month_view_model.budget_service.bill_repo.conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM bills")
                 has_data = cursor.fetchone()[0] > 0
             except Exception:

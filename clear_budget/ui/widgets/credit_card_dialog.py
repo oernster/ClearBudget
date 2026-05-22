@@ -39,6 +39,7 @@ class CreditCardDialog(QDialog):
         layout.addWidget(self.name_edit)
 
         from clear_budget.shared.currency import get_symbol
+
         _sym = get_symbol()
         layout.addWidget(QLabel(f"Credit Limit ({_sym}):"))
         self.limit_edit = QLineEdit()

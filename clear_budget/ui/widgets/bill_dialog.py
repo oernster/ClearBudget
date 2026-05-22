@@ -71,6 +71,7 @@ class BillDialog(QDialog):
         layout.addWidget(self.name_edit)
 
         from clear_budget.shared.currency import get_symbol
+
         layout.addWidget(QLabel(f"Amount ({get_symbol()}):"))
         self.amount_edit = QLineEdit()
         layout.addWidget(self.amount_edit)

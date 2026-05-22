@@ -29,6 +29,7 @@ class BalanceDialog(QDialog):
         layout = QVBoxLayout()
 
         from clear_budget.shared.currency import get_symbol
+
         layout.addWidget(QLabel(f"Bank Account Balance ({get_symbol()}):"))
         self.amount_edit = QLineEdit()
         self.amount_edit.setText(f"{self.current_balance.pounds:.2f}")

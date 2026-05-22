@@ -149,9 +149,7 @@ class SolvencyPanelDisplayMixin:
                     if (not b.day_of_month or b.day_of_month >= today.day)
                     and b.payment_method_id != 1
                 )
-                self.committed_label.setText(
-                    f"Committed this month: {fmt(committed)}"
-                )
+                self.committed_label.setText(f"Committed this month: {fmt(committed)}")
                 self.remaining_bank_label.setStyleSheet(
                     ui_scale.style("font-size: 18px; padding: 5px; color: #fbbf24;")
                 )
@@ -193,9 +191,7 @@ class SolvencyPanelDisplayMixin:
         if summary:
             freedom_pence = summary.total_income.pence - summary.total_bills.pence
             if freedom_pence > 0:
-                self.freedom_label.setText(
-                    f"Freedom to spend: {fmt(freedom_pence)}"
-                )
+                self.freedom_label.setText(f"Freedom to spend: {fmt(freedom_pence)}")
                 self.freedom_label.setStyleSheet(
                     ui_scale.style(
                         "font-size: 20px; font-weight: bold;"

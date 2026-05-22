@@ -12,7 +12,11 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES, build_nav_month_widget, fmt
+from clear_budget.ui.utils.format_helpers import (
+    MONTH_NAMES,
+    build_nav_month_widget,
+    fmt,
+)
 from clear_budget.ui import ui_scale
 
 

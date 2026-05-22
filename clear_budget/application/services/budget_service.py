@@ -384,4 +384,3 @@ class BudgetService:
             ("bank_balance_day", str(_date.today().day)),
         )
         self.bill_repo.conn.commit()
-

@@ -12,6 +12,7 @@ import sys
 import ctypes
 from pathlib import Path
 
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtGui import QIcon
 
@@ -168,9 +169,7 @@ def main() -> int:
         window.setGeometry(_restore_x, _restore_y, _restore_w, _restore_h)
         window.showMaximized()
         window.logout_requested.connect(_session_loop)
-        window.database_replaced.connect(
-            lambda: _reload_database(user, window)
-        )
+        window.database_replaced.connect(lambda: _reload_database(user, window))
 
     def _reload_database(user: "User", old_window: "MainWindow") -> None:
         """Reload the database in-place after an import or settings change."""
@@ -203,7 +202,7 @@ def main() -> int:
         window = _build_main_window(database, user, user_store)
         _show_window(user, window)
 
-    _session_loop()
+    QTimer.singleShot(0, _session_loop)
 
     result = app.exec()
     if _active_database:
