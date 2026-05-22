@@ -189,9 +189,7 @@ def find_splash_image_path(*, project_root: Path | None = None) -> Path | None:
     return None
 
 
-def iter_qt_window_icon_candidates(
-    *, project_root: Path | None = None
-) -> list[Path]:
+def iter_qt_window_icon_candidates(*, project_root: Path | None = None) -> list[Path]:
     """Return icon file candidates (in preference order) for Qt window/taskbar icons.
 
     This does *not* require Qt and only checks for file existence.

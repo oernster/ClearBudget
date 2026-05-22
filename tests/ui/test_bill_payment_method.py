@@ -13,7 +13,9 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
-from clear_budget.infrastructure.sqlite.income_source_repository import SQLiteIncomeSourceRepository
+from clear_budget.infrastructure.sqlite.income_source_repository import (
+    SQLiteIncomeSourceRepository,
+)
 from clear_budget.infrastructure.sqlite.payment_method_repository import (
     SQLitePaymentMethodRepository,
 )
@@ -175,8 +177,8 @@ def test_bill_displays_credit_card_name_in_ui(app, database, repos):
         f"Bill payment_method_id should be {card_id} (CapitalOne), not 1 (Bank). "
         f"Got {bill.payment_method_id}"
     )
-    assert bill.payment_method_id != 1, (
-        f"Bill MUST NOT be recorded as Bank (payment_method_id=1). Got {bill.payment_method_id}"
-    )
+    assert (
+        bill.payment_method_id != 1
+    ), f"Bill MUST NOT be recorded as Bank (payment_method_id=1). Got {bill.payment_method_id}"
 
     print(f"PASS: Bill is recorded with CapitalOne (id={card_id}), not Bank")

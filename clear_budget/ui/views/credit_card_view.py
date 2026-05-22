@@ -1,14 +1,12 @@
 """Credit card view widget - displays credit card status and exhaustion warnings."""
 
 import dataclasses
-from datetime import date as _date
 
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QTableWidget,
-    QTableWidgetItem,
     QPushButton,
     QHeaderView,
     QGroupBox,
@@ -21,8 +19,11 @@ from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 from clear_budget.ui import ui_scale
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES, build_nav_month_widget
-from clear_budget.ui.views._credit_card_view_loaders import CreditCardViewLoaderMixin, _PROJECTION_MONTHS
+from clear_budget.ui.utils.format_helpers import build_nav_month_widget
+from clear_budget.ui.views._credit_card_view_loaders import (
+    CreditCardViewLoaderMixin,
+    _PROJECTION_MONTHS,
+)
 
 
 class CreditCardView(CreditCardViewLoaderMixin, QWidget):
@@ -104,8 +105,12 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
             "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
             "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
         )
-        self.cards_table.verticalHeader().setStyleSheet("QHeaderView::section { color: #34d399; }")
-        self.cards_table.verticalHeader().sectionClicked.connect(self._on_card_row_header_click)
+        self.cards_table.verticalHeader().setStyleSheet(
+            "QHeaderView::section { color: #34d399; }"
+        )
+        self.cards_table.verticalHeader().sectionClicked.connect(
+            self._on_card_row_header_click
+        )
         self.cards_table.cellClicked.connect(self._on_card_cell_clicked)
         cards_layout.addWidget(self.cards_table)
 
@@ -146,22 +151,31 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         if col != 10:
             return
         from PySide6.QtWidgets import QApplication
+
         mods = QApplication.keyboardModifiers()
         item = self.cards_table.item(row, 10)
         if not item:
             return
         card_id = item.data(Qt.ItemDataRole.UserRole)
-        if mods & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
+        if mods & (
+            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+        ):
             self.cards_table.blockSignals(True)
             cursor = self.budget_service.payment_method_repo.conn.cursor()
             cursor.execute("SELECT active FROM credit_cards WHERE id=?", (card_id,))
             r = cursor.fetchone()
             if r:
-                item.setCheckState(Qt.CheckState.Checked if r["active"] == 1 else Qt.CheckState.Unchecked)
+                item.setCheckState(
+                    Qt.CheckState.Checked
+                    if r["active"] == 1
+                    else Qt.CheckState.Unchecked
+                )
             self.cards_table.blockSignals(False)
             return
         active = item.checkState() == Qt.CheckState.Checked
-        self.budget_service.payment_method_repo.set_card_active(card_id=card_id, active=active)
+        self.budget_service.payment_method_repo.set_card_active(
+            card_id=card_id, active=active
+        )
         self.load_cards()
 
     def set_month(self, year_month: YearMonth) -> None:
@@ -172,7 +186,10 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
 
     def _refresh_month_label(self) -> None:
         from clear_budget.ui.utils.format_helpers import MONTH_NAMES
-        self.month_label.setText(f"{MONTH_NAMES[self.current_month.month]} {self.current_month.year}")
+
+        self.month_label.setText(
+            f"{MONTH_NAMES[self.current_month.month]} {self.current_month.year}"
+        )
 
     def _get_status_text(self, utilization: float) -> str:
         """Get status text based on card utilization."""
@@ -207,7 +224,12 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
                 existing = self.budget_service.get_credit_cards(include_inactive=True)
                 if any(c.name.lower() == card.name.lower() for c in existing):
                     from PySide6.QtWidgets import QMessageBox
-                    QMessageBox.warning(self, "Duplicate Card", f"A card named '{card.name}' already exists.")
+
+                    QMessageBox.warning(
+                        self,
+                        "Duplicate Card",
+                        f"A card named '{card.name}' already exists.",
+                    )
                     return
                 self.budget_service.payment_method_repo.add_credit_card(card=card)
                 self.load_cards()
@@ -219,14 +241,18 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         card_id = self._card_id_from_row(row)
         if card_id is None:
             return
-        card = self.budget_service.payment_method_repo.get_credit_card_by_id(card_id=card_id)
+        card = self.budget_service.payment_method_repo.get_credit_card_by_id(
+            card_id=card_id
+        )
         if not card:
             return
         dialog = CreditCardDialog(self, card)
         if dialog.exec():
             updated_card = dialog.get_card()
             if updated_card:
-                self.budget_service.payment_method_repo.update_credit_card(card=updated_card)
+                self.budget_service.payment_method_repo.update_credit_card(
+                    card=updated_card
+                )
                 self.load_cards()
 
     _EDITABLE_COLS = {0, 1, 2, 5, 6, 7, 8}
@@ -236,40 +262,86 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
             QTimer.singleShot(0, self.load_cards)
             return
         card_id = self._card_id_from_row(item.row())
-        if card_id is None: return
-        card = self.budget_service.payment_method_repo.get_credit_card_by_id(card_id=card_id)
-        if card is None: return
+        if card_id is None:
+            return
+        card = self.budget_service.payment_method_repo.get_credit_card_by_id(
+            card_id=card_id
+        )
+        if card is None:
+            return
         col, v = item.column(), item.text().strip()
         try:
-            if col == 0: u, d = dataclasses.replace(card, name=v or card.name), v or card.name
-            elif col == 1: a = Amount.from_pounds(float(v.lstrip('£'))); u, d = dataclasses.replace(card, credit_limit=a), str(a)
-            elif col == 2: a = Amount.from_pounds(float(v.lstrip('£'))); u, d = dataclasses.replace(card, current_balance_used=a), str(a)
-            elif col == 5: u, d = dataclasses.replace(card, payment_due_day=int(v)), str(int(v))
+            if col == 0:
+                u, d = dataclasses.replace(card, name=v or card.name), v or card.name
+            elif col == 1:
+                a = Amount.from_pounds(float(v.lstrip("£")))
+                u, d = dataclasses.replace(card, credit_limit=a), str(a)
+            elif col == 2:
+                a = Amount.from_pounds(float(v.lstrip("£")))
+                u, d = dataclasses.replace(card, current_balance_used=a), str(a)
+            elif col == 5:
+                u, d = dataclasses.replace(card, payment_due_day=int(v)), str(int(v))
             elif col == 6:
-                apr = float(v.rstrip('%').strip()) if v != '-' else None
-                u, d = dataclasses.replace(card, interest_rate_apr=apr), (f"{apr:.2f}%" if apr else " - ")
+                apr = float(v.rstrip("%").strip()) if v != "-" else None
+                u, d = dataclasses.replace(card, interest_rate_apr=apr), (
+                    f"{apr:.2f}%" if apr else " - "
+                )
             elif col == 7:
-                pence = Amount.from_pounds(float(v.lstrip('£'))).pence if v != '-' else None
-                u, d = dataclasses.replace(card, minimum_payment_pence=pence), (str(Amount(pence=pence)) if pence is not None else " - ")
+                pence = (
+                    Amount.from_pounds(float(v.lstrip("£"))).pence if v != "-" else None
+                )
+                u, d = dataclasses.replace(card, minimum_payment_pence=pence), (
+                    str(Amount(pence=pence)) if pence is not None else " - "
+                )
             elif col == 8:
-                if v == '-': u, d = dataclasses.replace(card, card_expiry_month=None, card_expiry_year=None), " - "
+                if v == "-":
+                    u, d = (
+                        dataclasses.replace(
+                            card, card_expiry_month=None, card_expiry_year=None
+                        ),
+                        " - ",
+                    )
                 else:
-                    m, y2 = int(v.split('/')[0]), int(v.split('/')[1])
-                    u, d = dataclasses.replace(card, card_expiry_month=m, card_expiry_year=2000 + y2 if y2 < 100 else y2), f"{m:02d}/{y2:02d}"
+                    m, y2 = int(v.split("/")[0]), int(v.split("/")[1])
+                    u, d = (
+                        dataclasses.replace(
+                            card,
+                            card_expiry_month=m,
+                            card_expiry_year=2000 + y2 if y2 < 100 else y2,
+                        ),
+                        f"{m:02d}/{y2:02d}",
+                    )
             elif col == 14:
-                pence = Amount.from_pounds(float(v.lstrip('£'))).pence if v not in ('-', '') else None
-                u, d = dataclasses.replace(card, minimum_payment_pence=pence), (str(Amount(pence=pence)) if pence is not None else " - ")
-            else: return
-            if u == card: return  # nothing changed — editor just opened, don't rebuild
+                pence = (
+                    Amount.from_pounds(float(v.lstrip("£"))).pence
+                    if v not in ("-", "")
+                    else None
+                )
+                u, d = dataclasses.replace(card, minimum_payment_pence=pence), (
+                    str(Amount(pence=pence)) if pence is not None else " - "
+                )
+            else:
+                return
+            if u == card:
+                return  # nothing changed — editor just opened, don't rebuild
             self.budget_service.payment_method_repo.update_credit_card(card=u)
-            self.cards_table.blockSignals(True); item.setText(d); self.cards_table.blockSignals(False)
+            self.cards_table.blockSignals(True)
+            item.setText(d)
+            self.cards_table.blockSignals(False)
             QTimer.singleShot(0, self.load_cards)
-        except Exception: QTimer.singleShot(0, self.load_cards)
+        except Exception:
+            QTimer.singleShot(0, self.load_cards)
 
     def on_delete_card(self) -> None:
-        selected_rows = sorted({idx.row() for idx in self.cards_table.selectedIndexes()})
-        card_ids = [cid for row in selected_rows if (cid := self._card_id_from_row(row))]
+        selected_rows = sorted(
+            {idx.row() for idx in self.cards_table.selectedIndexes()}
+        )
+        card_ids = [
+            cid for row in selected_rows if (cid := self._card_id_from_row(row))
+        ]
         for card_id in card_ids:
-            self.budget_service.payment_method_repo.hard_delete_credit_card(card_id=card_id)
+            self.budget_service.payment_method_repo.hard_delete_credit_card(
+                card_id=card_id
+            )
         if card_ids:
             self.load_cards()

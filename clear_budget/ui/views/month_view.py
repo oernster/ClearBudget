@@ -154,9 +154,7 @@ class MonthView(
             )
 
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
-        return (
-            "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
-        )
+        return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
 
     def on_edit_balance(self) -> None:
         dialog = BalanceDialog(self, self.view_model.budget_service.get_bank_balance())

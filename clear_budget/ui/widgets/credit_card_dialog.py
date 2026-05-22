@@ -11,8 +11,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QPushButton,
 )
-from PySide6.QtCore import Qt
-
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.value_objects.amount import Amount
 
@@ -96,7 +94,11 @@ class CreditCardDialog(QDialog):
         min_pmt_row.addWidget(self.min_payment_edit)
         layout.addLayout(min_pmt_row)
 
-        layout.addWidget(QLabel("Min Payment % of balance [optional, e.g. 4.43 — overrides fixed £]:"))
+        layout.addWidget(
+            QLabel(
+                "Min Payment % of balance [optional, e.g. 4.43 — overrides fixed £]:"
+            )
+        )
         self.min_pct_spin = QDoubleSpinBox()
         self.min_pct_spin.setMinimum(0.0)
         self.min_pct_spin.setMaximum(100.0)
@@ -130,7 +132,9 @@ class CreditCardDialog(QDialog):
         if card.interest_rate_apr is not None:
             self.interest_spin.setValue(card.interest_rate_apr)
         self.due_day_spin.setValue(card.payment_due_day)
-        has_expiry = card.card_expiry_month is not None and card.card_expiry_year is not None
+        has_expiry = (
+            card.card_expiry_month is not None and card.card_expiry_year is not None
+        )
         self.has_expiry_checkbox.setChecked(has_expiry)
         if has_expiry:
             self.expiry_month_spin.setValue(card.card_expiry_month)
@@ -154,7 +158,11 @@ class CreditCardDialog(QDialog):
             limit = Amount.from_pounds(float(limit_str))
 
             balance_str = self.balance_edit.text().strip()
-            balance = Amount.from_pounds(float(balance_str)) if balance_str else Amount(pence=0)
+            balance = (
+                Amount.from_pounds(float(balance_str))
+                if balance_str
+                else Amount(pence=0)
+            )
 
             interest_rate = (
                 self.interest_spin.value() if self.interest_spin.value() > 0 else None
@@ -176,7 +184,9 @@ class CreditCardDialog(QDialog):
 
             active = 1 if self.active_checkbox.isChecked() else 0
 
-            min_pct = self.min_pct_spin.value() if self.min_pct_spin.value() > 0 else None
+            min_pct = (
+                self.min_pct_spin.value() if self.min_pct_spin.value() > 0 else None
+            )
 
             return CreditCard(
                 id=self.card.id if self.card else 0,

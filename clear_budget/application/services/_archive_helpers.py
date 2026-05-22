@@ -16,7 +16,7 @@ def _get_recorded_months(conn) -> list[YearMonth]:  # pragma: no cover
         ORDER BY m.year ASC, m.month ASC
     """)
     rows = cursor.fetchall()
-    return [YearMonth(row['year'], row['month']) for row in rows]
+    return [YearMonth(row["year"], row["month"]) for row in rows]
 
 
 def _do_archive_month(  # pragma: no cover
@@ -31,7 +31,7 @@ def _do_archive_month(  # pragma: no cover
     existing = cursor.fetchone()
 
     if existing:
-        month_id = existing['id']
+        month_id = existing["id"]
         cursor.execute("DELETE FROM month_bills WHERE month_id = ?", (month_id,))
         cursor.execute("DELETE FROM month_income WHERE month_id = ?", (month_id,))
     else:

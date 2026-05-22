@@ -1,13 +1,20 @@
 """Solvency panel widget - displays financial health status and warnings."""
 
-from datetime import date as _date
-
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar, QPushButton
+from PySide6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QProgressBar,
+    QPushButton,
+)
 from PySide6.QtCore import Qt
 
-from clear_budget.domain.services.card_monthly_calculator import calculate_card_monthly_state
+from clear_budget.domain.services.card_monthly_calculator import (
+    calculate_card_monthly_state,
+)
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES, build_nav_month_widget
+from clear_budget.ui.utils.format_helpers import build_nav_month_widget
 from clear_budget.ui.dark_theme import SCROLLBAR_WIDTH_PX
 from clear_budget.ui import ui_scale
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
@@ -51,52 +58,74 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
 
         # SECTION 1: OVERDRAFT ALERT (Top - Prominent)
         alert_label = QLabel("Overdraft Status")
-        alert_label.setStyleSheet(ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 10px;"))
+        alert_label.setStyleSheet(
+            ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 10px;")
+        )
         layout.addWidget(alert_label)
 
         self.overdraft_alert = QLabel("SAFE: £0.00 buffer")
-        self.overdraft_alert.setStyleSheet(ui_scale.style(
-            "font-size: 22px; font-weight: bold; padding: 10px; border-radius: 5px;"
-        ))
+        self.overdraft_alert.setStyleSheet(
+            ui_scale.style(
+                "font-size: 22px; font-weight: bold; padding: 10px; border-radius: 5px;"
+            )
+        )
         layout.addWidget(self.overdraft_alert)
 
         self.midmonth_alert = QLabel("")
         self.midmonth_alert.setWordWrap(True)
-        self.midmonth_alert.setStyleSheet(ui_scale.style(
-            "font-size: 18px; font-weight: bold; padding: 8px; border-radius: 5px; "
-            "background-color: #dc2626; color: white;"
-        ))
+        self.midmonth_alert.setStyleSheet(
+            ui_scale.style(
+                "font-size: 18px; font-weight: bold; padding: 8px; border-radius: 5px; "
+                "background-color: #dc2626; color: white;"
+            )
+        )
         self.midmonth_alert.hide()
         layout.addWidget(self.midmonth_alert)
 
         # SECTION 2: OVERALL HEALTH (Middle)
         health_label = QLabel("Overall Health")
-        health_label.setStyleSheet(ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 20px;"))
+        health_label.setStyleSheet(
+            ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 20px;")
+        )
         layout.addWidget(health_label)
 
         self.freedom_label = QLabel("")
-        self.freedom_label.setStyleSheet(ui_scale.style("font-size: 20px; font-weight: bold; padding: 5px; color: #34d399;"))
+        self.freedom_label.setStyleSheet(
+            ui_scale.style(
+                "font-size: 20px; font-weight: bold; padding: 5px; color: #34d399;"
+            )
+        )
         layout.addWidget(self.freedom_label)
 
         self.balance_label = QLabel("Bank Balance: £0.00")
-        self.balance_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
+        self.balance_label.setStyleSheet(
+            ui_scale.style("font-size: 20px; padding: 5px;")
+        )
         layout.addWidget(self.balance_label)
 
         self.committed_label = QLabel("Committed this month: -")
-        self.committed_label.setStyleSheet(ui_scale.style("font-size: 18px; padding: 5px; color: #9ca3af;"))
+        self.committed_label.setStyleSheet(
+            ui_scale.style("font-size: 18px; padding: 5px; color: #9ca3af;")
+        )
         layout.addWidget(self.committed_label)
 
         self.remaining_bank_label = QLabel("Still due this month (bank): -")
         self.remaining_bank_label.setWordWrap(True)
-        self.remaining_bank_label.setStyleSheet(ui_scale.style("font-size: 18px; padding: 5px; color: #fbbf24;"))
+        self.remaining_bank_label.setStyleSheet(
+            ui_scale.style("font-size: 18px; padding: 5px; color: #fbbf24;")
+        )
         layout.addWidget(self.remaining_bank_label)
 
         self.remaining_card_label = QLabel("Still due this month (cards): -")
-        self.remaining_card_label.setStyleSheet(ui_scale.style("font-size: 18px; padding: 5px; color: #f59e0b;"))
+        self.remaining_card_label.setStyleSheet(
+            ui_scale.style("font-size: 18px; padding: 5px; color: #f59e0b;")
+        )
         layout.addWidget(self.remaining_card_label)
 
         cards_header = QLabel("Credit Card Status")
-        cards_header.setStyleSheet(ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 10px;"))
+        cards_header.setStyleSheet(
+            ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 10px;")
+        )
         layout.addWidget(cards_header)
 
         self.card_bars_container = QWidget()
@@ -107,17 +136,23 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
 
         # SECTION 3: FORWARD PROJECTION (Bottom)
         forward_label = QLabel("Forward Projection")
-        forward_label.setStyleSheet(ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 20px;"))
+        forward_label.setStyleSheet(
+            ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 20px;")
+        )
         layout.addWidget(forward_label)
 
         self.m1_projection_label = QLabel("")
         self.m1_projection_label.setWordWrap(True)
-        self.m1_projection_label.setStyleSheet(ui_scale.style("font-size: 17px; padding: 5px;"))
+        self.m1_projection_label.setStyleSheet(
+            ui_scale.style("font-size: 17px; padding: 5px;")
+        )
         layout.addWidget(self.m1_projection_label)
 
         self.m2_projection_label = QLabel("")
         self.m2_projection_label.setWordWrap(True)
-        self.m2_projection_label.setStyleSheet(ui_scale.style("font-size: 17px; padding: 5px;"))
+        self.m2_projection_label.setStyleSheet(
+            ui_scale.style("font-size: 17px; padding: 5px;")
+        )
         layout.addWidget(self.m2_projection_label)
 
         layout.addStretch()
@@ -132,9 +167,9 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         """Return traffic-light color based on balance vs monthly drain coverage.
 
         Red only for actual overdraft (< 0).
-        Amber for positive but less than 2 months of drain coverage — tight but surviving.
+        Amber for positive but less than 2 months coverage — tight but surviving.
         Green for 2+ months coverage.
-        monthly_drain_pence: bills − income for a typical future month (positive = deficit).
+        monthly_drain_pence: bills − income for a future month (positive = deficit).
         """
         if balance_pence < 0:
             return "#f87171"
@@ -174,7 +209,12 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
                 min_day = day
             if balance < 0 and first_negative_day is None:
                 first_negative_day = day
-            if first_negative_day is not None and rescue_event is None and delta > 0 and balance >= 0:
+            if (
+                first_negative_day is not None
+                and rescue_event is None
+                and delta > 0
+                and balance >= 0
+            ):
                 rescue_event = (day, delta, name)
 
         closing_pence = balance
@@ -212,13 +252,16 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
             return ""
         lines = ["Cards:"]
         for card in cards:
-            opening_pence = opening_balances.get(card.id, card.current_balance_used.pence)
+            opening_pence = opening_balances.get(
+                card.id, card.current_balance_used.pence
+            )
             state = calculate_card_monthly_state(
                 card=card, opening_balance_pence=opening_pence, bills=list(bills)
             )
             interest_str = (
                 f" +£{state.monthly_interest.pounds:.2f} int"
-                if state.monthly_interest.pence > 0 else ""
+                if state.monthly_interest.pence > 0
+                else ""
             )
             paid_p = state.payment_received.pence
             min_p = state.minimum_payment.pence
@@ -250,7 +293,9 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         month = from_month.next_month()
         for i in range(24):
             s = self.view_model.budget_service.get_month_summary(year_month=month)
-            bank_bills = sum(b.amount.pence for b in s.bills if b.payment_method_id == 1)
+            bank_bills = sum(
+                b.amount.pence for b in s.bills if b.payment_method_id == 1
+            )
             income = s.total_income.pence
             balance += income - bank_bills
             if balance < 0:
@@ -271,10 +316,12 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
 
         monthly_states = {
             s.card.id: s
-            for s in self.view_model.budget_service.get_card_monthly_states(year_month=report.year_month)
+            for s in self.view_model.budget_service.get_card_monthly_states(
+                year_month=report.year_month
+            )
         }
 
-        _red_threshold_pence = 10_000    # <= £100 available
+        _red_threshold_pence = 10_000  # <= £100 available
         _amber_threshold_pence = 25_000  # <= £250 available
 
         for card in cards:
@@ -286,7 +333,9 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
             util_pct = (used_pence / limit_pence * 100) if limit_pence else 0.0
 
             name_lbl = QLabel(card.name)
-            name_lbl.setStyleSheet(ui_scale.style("font-size: 16px; font-weight: bold; padding-top: 5px;"))
+            name_lbl.setStyleSheet(
+                ui_scale.style("font-size: 16px; font-weight: bold; padding-top: 5px;")
+            )
             self.card_bars_layout.addWidget(name_lbl)
 
             bar = QProgressBar()
@@ -307,8 +356,10 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
                 chunk_color = "#34d399"
 
             bar.setStyleSheet(
-                "QProgressBar { border-radius: 4px; background-color: #1f2937; color: white; font-weight: bold; }"
-                f"QProgressBar::chunk {{ background-color: {chunk_color}; border-radius: 4px; }}"
+                "QProgressBar { border-radius: 4px; background-color: #1f2937;"
+                " color: white; font-weight: bold; }"
+                f"QProgressBar::chunk {{"
+                f" background-color: {chunk_color}; border-radius: 4px; }}"
             )
             self.card_bars_layout.addWidget(bar)
 
@@ -320,10 +371,16 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
                     f"Payment −£{state.payment_received.pence / 100:.2f}  ·  "
                     f"Interest +£{state.monthly_interest.pence / 100:.2f}  ·  "
                     f"Min due £{state.minimum_payment.pence / 100:.2f}  "
-                    f"{arrow} £{abs(delta) / 100:.2f} {'increase' if delta > 0 else 'decrease'}"
+                    f"{arrow} £{abs(delta) / 100:.2f}"
+                    f" {'increase' if delta > 0 else 'decrease'}"
                 )
-                detail_color = "#f87171" if delta > 0 else "#34d399" if delta < 0 else "#9ca3af"
+                detail_color = (
+                    "#f87171" if delta > 0 else "#34d399" if delta < 0 else "#9ca3af"
+                )
                 detail_lbl = QLabel(detail)
-                detail_lbl.setStyleSheet(ui_scale.style(f"font-size: 15px; padding: 2px 0px; color: {detail_color};"))
+                detail_lbl.setStyleSheet(
+                    ui_scale.style(
+                        f"font-size: 15px; padding: 2px 0px; color: {detail_color};"
+                    )
+                )
                 self.card_bars_layout.addWidget(detail_lbl)
-

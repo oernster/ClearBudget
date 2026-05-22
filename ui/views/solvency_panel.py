@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
 from PySide6.QtCore import Qt, Qt as QtCore_Qt
 from services.solvency_calculator import SolvencyCalculator
 
+
 class SolvencyPanel(QWidget):
     def __init__(self, db, year_month):
         super().__init__()
@@ -60,25 +61,33 @@ class SolvencyPanel(QWidget):
     def _refresh(self):
         """Refresh solvency data."""
         current = SolvencyCalculator.calculate_current_month(self.db, self.year_month)
-        solvency = SolvencyCalculator.calculate_desired_acquire(self.db, self.year_month)
+        solvency = SolvencyCalculator.calculate_desired_acquire(
+            self.db, self.year_month
+        )
         cards = SolvencyCalculator.check_card_exhaustion(self.db, self.year_month)
 
         # Balance
-        balance = current['balance']
+        balance = current["balance"]
         balance_color = "green" if balance >= 0 else "red"
-        self.balance_label.setText(f"Balance: <span style='color: {balance_color}; font-weight: bold;'>£{balance:.2f}</span>")
+        self.balance_label.setText(
+            f"Balance: <span style='color: {balance_color}; font-weight: bold;'>£{balance:.2f}</span>"
+        )
         self.balance_label.setTextFormat(Qt.TextFormat.RichText)
 
         # Deficit
-        if solvency['deficit'] > 0:
-            self.deficit_label.setText(f"Deficit: <span style='color: red; font-weight: bold;'>£{solvency['deficit']:.2f}</span>")
+        if solvency["deficit"] > 0:
+            self.deficit_label.setText(
+                f"Deficit: <span style='color: red; font-weight: bold;'>£{solvency['deficit']:.2f}</span>"
+            )
             self.deficit_label.setTextFormat(Qt.TextFormat.RichText)
         else:
             self.deficit_label.setText("Deficit: None")
 
         # Desired acquire
-        if solvency['desired_acquire'] > 0:
-            self.acquire_label.setText(f"Acquire needed: <span style='color: darkred; font-weight: bold;'>£{solvency['desired_acquire']:.2f}</span> (£{solvency['deficit']:.2f} deficit + £600 buffer + £{solvency['forward_shortfall']:.2f} forward)")
+        if solvency["desired_acquire"] > 0:
+            self.acquire_label.setText(
+                f"Acquire needed: <span style='color: darkred; font-weight: bold;'>£{solvency['desired_acquire']:.2f}</span> (£{solvency['deficit']:.2f} deficit + £600 buffer + £{solvency['forward_shortfall']:.2f} forward)"
+            )
             self.acquire_label.setTextFormat(Qt.TextFormat.RichText)
         else:
             self.acquire_label.setText("Acquire needed: None")
@@ -88,7 +97,7 @@ class SolvencyPanel(QWidget):
             warnings_text = "⚠️ Card warnings: "
             warnings_list = []
             for card in cards:
-                status_emoji = "🔴" if card['status'] == 'danger' else "🟡"
+                status_emoji = "🔴" if card["status"] == "danger" else "🟡"
                 warnings_list.append(
                     f"{status_emoji} {card['card']}: £{card['available']:.0f} available, "
                     f"£{card['monthly_charge']:.0f}/mo charge - £{card['monthly_payment']:.0f}/mo payment = "

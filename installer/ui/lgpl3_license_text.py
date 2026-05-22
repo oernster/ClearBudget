@@ -38,8 +38,7 @@ def _read_lgpl3_text() -> str:
             continue
 
     raise FileNotFoundError(
-        "Unable to locate LICENSE. Tried: "
-        + ", ".join(str(p) for p in candidates)
+        "Unable to locate LICENSE. Tried: " + ", ".join(str(p) for p in candidates)
     )
 
 

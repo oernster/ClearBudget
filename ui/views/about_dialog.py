@@ -30,7 +30,9 @@ class AboutDialog(QDialog):
         # Title + Version
         text_layout = QVBoxLayout()
         title = QLabel(f"<b style='font-size: 18px;'>{APP_NAME}</b>")
-        version = QLabel(f"<span style='font-size: 13px; color: #999;'>v{__version__}</span>")
+        version = QLabel(
+            f"<span style='font-size: 13px; color: #999;'>v{__version__}</span>"
+        )
         version.setTextFormat(1)  # Rich text
         text_layout.addWidget(title)
         text_layout.addWidget(version)
@@ -40,15 +42,11 @@ class AboutDialog(QDialog):
 
         # Icon top-right (128px source scaled to 64px)
         icon_label = QLabel()
-        icon_path = (
-            Path(__file__).resolve().parents[2] / "clearbudget_128.png"
-        )
+        icon_path = Path(__file__).resolve().parents[2] / "clearbudget_128.png"
         if icon_path.exists():
             pixmap = QPixmap(str(icon_path))
             icon_label.setPixmap(
-                pixmap.scaledToWidth(
-                    64, Qt.TransformationMode.SmoothTransformation
-                )
+                pixmap.scaledToWidth(64, Qt.TransformationMode.SmoothTransformation)
             )
         icon_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
         header_layout.addWidget(icon_label)

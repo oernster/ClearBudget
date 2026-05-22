@@ -12,13 +12,16 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
-from clear_budget.infrastructure.sqlite.income_source_repository import SQLiteIncomeSourceRepository
-from clear_budget.infrastructure.sqlite.payment_method_repository import SQLitePaymentMethodRepository
+from clear_budget.infrastructure.sqlite.income_source_repository import (
+    SQLiteIncomeSourceRepository,
+)
+from clear_budget.infrastructure.sqlite.payment_method_repository import (
+    SQLitePaymentMethodRepository,
+)
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.views.month_view import MonthView
-
 
 MONTH = YearMonth(2026, 5)
 BILL_NAMES = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"]
@@ -99,6 +102,7 @@ def _select_range(view, first_row, last_row):
 # ViewModel layer — delete_bills batch logic
 # ---------------------------------------------------------------------------
 
+
 def test_delete_bills_all_ids_removed_from_db(app, service):
     """delete_bills removes every specified bill from the database."""
     saved = _add_bills(service, BILL_NAMES)
@@ -140,6 +144,7 @@ def test_delete_bills_all_bills(app, service):
 # ---------------------------------------------------------------------------
 # UI layer — on_delete_bill with simulated selections
 # ---------------------------------------------------------------------------
+
 
 def test_ctrl_style_nonsequential_selection_deletes_all(app, service):
     """Ctrl+click non-sequential rows: Delete removes all selected bills."""
@@ -222,18 +227,20 @@ def test_ctrl_style_single_row_deletes_one(app, service):
 def test_duplicate_names_ctrl_select_deletes_correct_bills(app, service):
     """Ctrl+click rows 0 and 2 with three identically-named bills deletes exactly those two."""
     for i in range(3):
-        service.bill_repo.add(bill=Bill(
-            id=0,
-            name="Amazon Prime",
-            amount=Amount.from_pounds(8 + i),
-            payment_method_id=1,
-            category="subscriptions",
-            bill_type="fixed",
-            day_of_month=i + 1,
-            start_ym=MONTH,
-            end_ym=None,
-            active=True,
-        ))
+        service.bill_repo.add(
+            bill=Bill(
+                id=0,
+                name="Amazon Prime",
+                amount=Amount.from_pounds(8 + i),
+                payment_method_id=1,
+                category="subscriptions",
+                bill_type="fixed",
+                day_of_month=i + 1,
+                start_ym=MONTH,
+                end_ym=None,
+                active=True,
+            )
+        )
 
     vm = MonthViewModel(budget_service=service, current_month=MONTH)
     view = MonthView(vm)
@@ -243,5 +250,7 @@ def test_duplicate_names_ctrl_select_deletes_correct_bills(app, service):
     _select_rows(view, [0, 2])
     view.on_delete_bill()
 
-    all_bills = service.bill_repo.list_active_for_month(year_month=MONTH, include_inactive=True)
+    all_bills = service.bill_repo.list_active_for_month(
+        year_month=MONTH, include_inactive=True
+    )
     assert len(all_bills) == 1, f"Expected 1 remaining, got {len(all_bills)}"

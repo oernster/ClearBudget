@@ -19,17 +19,16 @@ class SQLitePaymentMethodRepository:
         """Get all credit cards."""
         cursor = self.conn.cursor()
         where_clause = "" if include_inactive else "WHERE active = 1"
-        cursor.execute(
-            f"""SELECT id, name,
+        cursor.execute(f"""SELECT id, name,
                    credit_limit_pence, current_balance_used_pence,
                    interest_rate_apr, payment_due_day,
                    card_expiry_month, card_expiry_year,
                    minimum_payment_pence, minimum_payment_percent, active
-            FROM credit_cards {where_clause}"""
-        )
+            FROM credit_cards {where_clause}""")
         return [
             CreditCard(
-                id=row["id"], name=row["name"],
+                id=row["id"],
+                name=row["name"],
                 credit_limit=Amount(pence=row["credit_limit_pence"]),
                 current_balance_used=Amount(pence=row["current_balance_used_pence"]),
                 interest_rate_apr=row["interest_rate_apr"],
@@ -61,7 +60,8 @@ class SQLitePaymentMethodRepository:
         if not row:
             return None
         return CreditCard(
-            id=row["id"], name=row["name"],
+            id=row["id"],
+            name=row["name"],
             credit_limit=Amount(pence=row["credit_limit_pence"]),
             current_balance_used=Amount(pence=row["current_balance_used_pence"]),
             interest_rate_apr=row["interest_rate_apr"],
@@ -110,17 +110,24 @@ class SQLitePaymentMethodRepository:
                 minimum_payment_pence, minimum_payment_percent, active
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
-                card_id, card.name,
-                card.credit_limit.pence, card.current_balance_used.pence,
-                card.interest_rate_apr, card.payment_due_day,
-                card.card_expiry_month, card.card_expiry_year,
-                card.minimum_payment_pence, card.minimum_payment_percent,
+                card_id,
+                card.name,
+                card.credit_limit.pence,
+                card.current_balance_used.pence,
+                card.interest_rate_apr,
+                card.payment_due_day,
+                card.card_expiry_month,
+                card.card_expiry_year,
+                card.minimum_payment_pence,
+                card.minimum_payment_percent,
                 card.active,
             ),
         )
         self.conn.commit()
         return CreditCard(
-            id=card_id, name=card.name, credit_limit=card.credit_limit,
+            id=card_id,
+            name=card.name,
+            credit_limit=card.credit_limit,
             current_balance_used=card.current_balance_used,
             interest_rate_apr=card.interest_rate_apr,
             payment_due_day=card.payment_due_day,
@@ -140,10 +147,19 @@ class SQLitePaymentMethodRepository:
                 card_expiry_month=?, card_expiry_year=?, minimum_payment_pence=?,
                 minimum_payment_percent=?, active=?
             WHERE id=?""",
-            (card.name, card.credit_limit.pence, card.current_balance_used.pence,
-             card.interest_rate_apr, card.payment_due_day, card.card_expiry_month,
-             card.card_expiry_year, card.minimum_payment_pence,
-             card.minimum_payment_percent, card.active, card.id),
+            (
+                card.name,
+                card.credit_limit.pence,
+                card.current_balance_used.pence,
+                card.interest_rate_apr,
+                card.payment_due_day,
+                card.card_expiry_month,
+                card.card_expiry_year,
+                card.minimum_payment_pence,
+                card.minimum_payment_percent,
+                card.active,
+                card.id,
+            ),
         )
         self.conn.commit()
         return card

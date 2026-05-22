@@ -204,4 +204,3 @@ class InstallerMainWindow(QMainWindow):
 
     def _confirm_and_run_uninstall(self) -> None:
         confirm_and_run_uninstall(self)
-

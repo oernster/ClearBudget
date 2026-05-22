@@ -48,7 +48,9 @@ def test_set_month_fetches_summary(mock_budget_service, qapplication):
     vm = MonthViewModel(budget_service=mock_budget_service)
     vm.set_month(YearMonth(2026, 6))
 
-    mock_budget_service.get_month_summary.assert_called_with(year_month=YearMonth(2026, 6))
+    mock_budget_service.get_month_summary.assert_called_with(
+        year_month=YearMonth(2026, 6)
+    )
     assert vm.month_summary is not None
 
 

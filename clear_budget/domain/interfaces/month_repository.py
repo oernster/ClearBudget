@@ -9,12 +9,10 @@ class Month(Protocol):
     """A month record with id, year_month, and calculated totals."""
 
     @property
-    def id(self) -> int:
-        ...
+    def id(self) -> int: ...
 
     @property
-    def year_month(self) -> YearMonth:
-        ...
+    def year_month(self) -> YearMonth: ...
 
 
 class MonthRepository(Protocol):

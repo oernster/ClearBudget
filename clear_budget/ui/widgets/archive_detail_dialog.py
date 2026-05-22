@@ -9,8 +9,6 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QPushButton,
 )
-from PySide6.QtCore import Qt
-
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import ui_scale
 
@@ -58,7 +56,9 @@ class ArchiveDetailDialog(QDialog):
 
         bills_table = QTableWidget()
         bills_table.setColumnCount(5)
-        bills_table.setHorizontalHeaderLabels(["Name", "Amount", "Category", "Payment Method", "Due Day"])
+        bills_table.setHorizontalHeaderLabels(
+            ["Name", "Amount", "Category", "Payment Method", "Due Day"]
+        )
         bills_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         layout.addWidget(bills_table)
 
@@ -69,8 +69,16 @@ class ArchiveDetailDialog(QDialog):
                 bills_table.setItem(row, 0, QTableWidgetItem(bill.name))
                 bills_table.setItem(row, 1, QTableWidgetItem(str(bill.amount)))
                 bills_table.setItem(row, 2, QTableWidgetItem(bill.category))
-                bills_table.setItem(row, 3, QTableWidgetItem(str(bill.payment_method_id)))
-                bills_table.setItem(row, 4, QTableWidgetItem(str(bill.day_of_month) if bill.day_of_month else "~"))
+                bills_table.setItem(
+                    row, 3, QTableWidgetItem(str(bill.payment_method_id))
+                )
+                bills_table.setItem(
+                    row,
+                    4,
+                    QTableWidgetItem(
+                        str(bill.day_of_month) if bill.day_of_month else "~"
+                    ),
+                )
 
         # Income table
         income_label = QLabel("Income")
@@ -79,7 +87,9 @@ class ArchiveDetailDialog(QDialog):
 
         income_table = QTableWidget()
         income_table.setColumnCount(4)
-        income_table.setHorizontalHeaderLabels(["Name", "Amount", "Reliable", "Due Day"])
+        income_table.setHorizontalHeaderLabels(
+            ["Name", "Amount", "Reliable", "Due Day"]
+        )
         income_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         layout.addWidget(income_table)
 
@@ -89,8 +99,16 @@ class ArchiveDetailDialog(QDialog):
             for row, income in enumerate(self.summary.income_sources):
                 income_table.setItem(row, 0, QTableWidgetItem(income.name))
                 income_table.setItem(row, 1, QTableWidgetItem(str(income.amount)))
-                income_table.setItem(row, 2, QTableWidgetItem("✓" if income.is_reliable else "✗"))
-                income_table.setItem(row, 3, QTableWidgetItem(str(income.day_of_month) if income.day_of_month else "~"))
+                income_table.setItem(
+                    row, 2, QTableWidgetItem("✓" if income.is_reliable else "✗")
+                )
+                income_table.setItem(
+                    row,
+                    3,
+                    QTableWidgetItem(
+                        str(income.day_of_month) if income.day_of_month else "~"
+                    ),
+                )
 
         # Close button
         close_btn = QPushButton("Close")

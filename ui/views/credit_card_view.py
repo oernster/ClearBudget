@@ -1,6 +1,15 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QProgressBar, QScrollArea
+from PySide6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QGroupBox,
+    QLabel,
+    QProgressBar,
+    QScrollArea,
+)
 from PySide6.QtCore import Qt
 from models.month import Month
+
 
 class CreditCardView(QWidget):
     def __init__(self, db, year_month):
@@ -16,7 +25,9 @@ class CreditCardView(QWidget):
         scroll_layout = QVBoxLayout()
 
         # Get all credit cards
-        cursor = db.execute('SELECT id, name, credit_limit, current_balance_used FROM payment_methods WHERE type = "credit_card" ORDER BY name')
+        cursor = db.execute(
+            'SELECT id, name, credit_limit, current_balance_used FROM payment_methods WHERE type = "credit_card" ORDER BY name'
+        )
         cards = cursor.fetchall()
 
         for card in cards:
@@ -31,37 +42,45 @@ class CreditCardView(QWidget):
 
     def _build_card_widget(self, card):
         """Build a credit card status widget."""
-        group = QGroupBox(card['name'])
+        group = QGroupBox(card["name"])
         layout = QVBoxLayout()
 
         # Balance bar
-        limit = card['credit_limit']
-        used = card['current_balance_used']
+        limit = card["credit_limit"]
+        used = card["current_balance_used"]
         available = limit - used
         percent = int((used / limit) * 100) if limit > 0 else 0
 
         bar = QProgressBar()
         bar.setValue(percent)
-        bar.setStyleSheet("""
+        bar.setStyleSheet(
+            """
             QProgressBar {
                 border: 1px solid #ccc;
                 border-radius: 5px;
                 text-align: center;
             }
             QProgressBar::chunk {
-                background-color: """ + ("red" if percent > 90 else "orange" if percent > 75 else "green") + """;
+                background-color: """
+            + ("red" if percent > 90 else "orange" if percent > 75 else "green")
+            + """;
             }
-        """)
+        """
+        )
 
         layout.addWidget(bar)
 
         # Stats
-        stats = QLabel(f"Used: £{used:.2f} / Limit: £{limit:.2f} | Available: £{available:.2f}")
+        stats = QLabel(
+            f"Used: £{used:.2f} / Limit: £{limit:.2f} | Available: £{available:.2f}"
+        )
         layout.addWidget(stats)
 
         # Bills on this card
         month_data = Month.get_month_data(self.db, self.year_month)
-        bills_on_card = [b for b in month_data['bills'] if b['payment_method_id'] == card['id']]
+        bills_on_card = [
+            b for b in month_data["bills"] if b["payment_method_id"] == card["id"]
+        ]
 
         if bills_on_card:
             bills_label = QLabel("Bills on card:")

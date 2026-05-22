@@ -17,7 +17,9 @@ def build_exe() -> int:
 
     pyinstaller_exe = shutil.which("pyinstaller")
     if not pyinstaller_exe:
-        print("Error: pyinstaller not found. Activate the venv and install requirements-dev.txt")
+        print(
+            "Error: pyinstaller not found. Activate the venv and install requirements-dev.txt"
+        )
         return 1
 
     if spec_file.exists():

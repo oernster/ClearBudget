@@ -17,15 +17,18 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
-from clear_budget.infrastructure.sqlite.income_source_repository import SQLiteIncomeSourceRepository
-from clear_budget.infrastructure.sqlite.payment_method_repository import SQLitePaymentMethodRepository
+from clear_budget.infrastructure.sqlite.income_source_repository import (
+    SQLiteIncomeSourceRepository,
+)
+from clear_budget.infrastructure.sqlite.payment_method_repository import (
+    SQLitePaymentMethodRepository,
+)
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.ui.views.credit_card_view import CreditCardView
 
-
 MONTH = YearMonth(2026, 5)
-COL_FIXED_MIN = 7   # "Fixed Min (£)" — user-settable minimum payment
+COL_FIXED_MIN = 7  # "Fixed Min (£)" — user-settable minimum payment
 
 
 @pytest.fixture(scope="module")
@@ -58,7 +61,8 @@ def service(db):
 
 def _add_card(service, name="Jaja", balance_pence=295444, apr=25.54):
     card = CreditCard(
-        id=0, name=name,
+        id=0,
+        name=name,
         credit_limit=Amount(pence=500000),
         current_balance_used=Amount(pence=balance_pence),
         interest_rate_apr=apr,
@@ -121,16 +125,16 @@ class TestInlineEditMinPaymentPound:
 
         QTest.keyClick(editor, Qt.Key.Key_Return)
         app.processEvents()
-        app.processEvents()   # fire QTimer.singleShot(0, load_cards)
-        QTest.qWait(100)      # allow load_cards to complete
+        app.processEvents()  # fire QTimer.singleShot(0, load_cards)
+        QTest.qWait(100)  # allow load_cards to complete
         app.processEvents()
 
         # THE ASSERTION: cell must display £120.45
         item_after = table.item(0, COL_FIXED_MIN)
         assert item_after is not None, "Cell item is None after edit"
-        assert item_after.text() == "£120.45", (
-            f"FAIL: expected '£120.45', got {item_after.text()!r}"
-        )
+        assert (
+            item_after.text() == "£120.45"
+        ), f"FAIL: expected '£120.45', got {item_after.text()!r}"
 
     def test_edit_from_existing_value_preserves_pound(self, app, view, service):
         """
@@ -140,6 +144,7 @@ class TestInlineEditMinPaymentPound:
         card = _add_card(service, name="CapitalOne", balance_pence=139523, apr=24.9)
         # Set an existing fixed minimum
         from dataclasses import replace
+
         updated = replace(card, minimum_payment_pence=6354)
         service.payment_method_repo.update_credit_card(card=updated)
 
@@ -148,7 +153,8 @@ class TestInlineEditMinPaymentPound:
 
         table = view.cards_table
         row = next(
-            r for r in range(table.rowCount())
+            r
+            for r in range(table.rowCount())
             if table.item(r, 0) and table.item(r, 0).text() == "CapitalOne"
         )
 
@@ -177,6 +183,6 @@ class TestInlineEditMinPaymentPound:
 
         item_after = table.item(row, COL_FIXED_MIN)
         assert item_after is not None
-        assert item_after.text() == "£120.45", (
-            f"FAIL: expected '£120.45', got {item_after.text()!r}"
-        )
+        assert (
+            item_after.text() == "£120.45"
+        ), f"FAIL: expected '£120.45', got {item_after.text()!r}"

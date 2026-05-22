@@ -155,10 +155,9 @@ class HeaderFitController:
         # Strong guard: avoid 1-2px clipping even when not elided.
         try:
             tight = fm.tightBoundingRect(title.text())
-            return (
-                title.contentsRect().width() >= int(tight.width() + 4)
-                and title.contentsRect().height() >= int(tight.height() + 4)
-            )
+            return title.contentsRect().width() >= int(
+                tight.width() + 4
+            ) and title.contentsRect().height() >= int(tight.height() + 4)
         except Exception:
             return True
 
@@ -253,4 +252,3 @@ class HeaderFitController:
                 self._ensure_label_has_bbox_room(title)
                 if self._fits(title):
                     return
-

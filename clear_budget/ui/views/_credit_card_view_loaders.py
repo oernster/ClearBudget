@@ -1,4 +1,4 @@
-"""Loader mixin for CreditCardView — load_cards and projection strip extracted to stay under LOC limit."""
+"""Loader mixin for CreditCardView — load_cards and projection strip extracted."""
 
 from datetime import date as _date
 
@@ -9,8 +9,6 @@ from PySide6.QtGui import QColor
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
-from clear_budget.ui import ui_scale
-
 _PROJECTION_MONTHS = 6
 
 
@@ -32,7 +30,9 @@ class CreditCardViewLoaderMixin:
 
         monthly_states = {
             s.card.id: s
-            for s in self.budget_service.get_card_monthly_states(year_month=self.current_month)
+            for s in self.budget_service.get_card_monthly_states(
+                year_month=self.current_month
+            )
         }
 
         _today = _date.today()
@@ -43,7 +43,11 @@ class CreditCardViewLoaderMixin:
             self.cards_table.insertRow(row)
             self.cards_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
 
-            _editable = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
+            _editable = (
+                Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsEditable
+            )
             name_item = QTableWidgetItem(card.name)
             name_item.setData(Qt.ItemDataRole.UserRole, card.id)
             name_item.setFlags(_editable)
@@ -56,12 +60,15 @@ class CreditCardViewLoaderMixin:
                 display_used = state_snapshot.closing_balance
                 display_util = (
                     state_snapshot.closing_balance.pence / card.credit_limit.pence * 100
-                    if card.credit_limit.pence else 0.0
+                    if card.credit_limit.pence
+                    else 0.0
                 )
             else:
                 display_used = card.current_balance_used
                 display_util = card.utilization_percent
-            display_available = Amount(pence=max(0, card.credit_limit.pence - display_used.pence))
+            display_available = Amount(
+                pence=max(0, card.credit_limit.pence - display_used.pence)
+            )
 
             used_item = QTableWidgetItem(str(display_used))
             used_item.setFlags(_editable)
@@ -83,7 +90,9 @@ class CreditCardViewLoaderMixin:
                     due_item.setForeground(QColor("#34d399"))
             self.cards_table.setItem(row, 5, due_item)
 
-            interest_str = f"{card.interest_rate_apr:.2f}%" if card.interest_rate_apr else " - "
+            interest_str = (
+                f"{card.interest_rate_apr:.2f}%" if card.interest_rate_apr else " - "
+            )
             interest_item = QTableWidgetItem(interest_str)
             interest_item.setFlags(_editable)
             self.cards_table.setItem(row, 6, interest_item)
@@ -97,7 +106,9 @@ class CreditCardViewLoaderMixin:
             self.cards_table.setItem(row, 7, min_item)
 
             if card.card_expiry_month and card.card_expiry_year:
-                expiry_str = f"{card.card_expiry_month:02d}/{card.card_expiry_year % 100:02d}"
+                expiry_str = (
+                    f"{card.card_expiry_month:02d}/{card.card_expiry_year % 100:02d}"
+                )
             else:
                 expiry_str = " - "
             expiry_item = QTableWidgetItem(expiry_str)
@@ -112,17 +123,29 @@ class CreditCardViewLoaderMixin:
             self.cards_table.setItem(row, 9, status_item)
 
             active_item = QTableWidgetItem()
-            active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
-            active_item.setCheckState(Qt.CheckState.Checked if card.active == 1 else Qt.CheckState.Unchecked)
+            active_item.setFlags(
+                Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsUserCheckable
+            )
+            active_item.setCheckState(
+                Qt.CheckState.Checked if card.active == 1 else Qt.CheckState.Unchecked
+            )
             active_item.setData(Qt.ItemDataRole.UserRole, card.id)
             self.cards_table.setItem(row, 10, active_item)
 
             state = monthly_states.get(card.id)
             if state:
-                pdate = f" (paid day {state.payment_date})" if state.payment_date else ""
+                pdate = (
+                    f" (paid day {state.payment_date})" if state.payment_date else ""
+                )
                 self.cards_table.setItem(row, 11, QTableWidgetItem(str(state.charges)))
-                self.cards_table.setItem(row, 12, QTableWidgetItem(f"{state.payment_received}{pdate}"))
-                self.cards_table.setItem(row, 13, QTableWidgetItem(str(state.monthly_interest)))
+                self.cards_table.setItem(
+                    row, 12, QTableWidgetItem(f"{state.payment_received}{pdate}")
+                )
+                self.cards_table.setItem(
+                    row, 13, QTableWidgetItem(str(state.monthly_interest))
+                )
                 min_due_item = QTableWidgetItem(str(state.minimum_payment))
                 min_due_item.setFlags(_editable)
                 self.cards_table.setItem(row, 14, min_due_item)
@@ -146,7 +169,9 @@ class CreditCardViewLoaderMixin:
 
         cards_in_strip = [ms.card for ms in month_states_list[0]]
         self.projection_table.setColumnCount(len(cards_in_strip))
-        self.projection_table.setHorizontalHeaderLabels([c.name for c in cards_in_strip])
+        self.projection_table.setHorizontalHeaderLabels(
+            [c.name for c in cards_in_strip]
+        )
         self.projection_table.setRowCount(_PROJECTION_MONTHS)
 
         month_labels = []

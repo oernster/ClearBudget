@@ -74,4 +74,3 @@ class SafeLabel(QLabel):
         painter.setFont(self.font())
         painter.setPen(self.palette().color(QPalette.WindowText))
         painter.drawText(r, flags, self.text())
-

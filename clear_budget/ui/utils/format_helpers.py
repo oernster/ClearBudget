@@ -2,15 +2,31 @@
 
 from pathlib import Path
 
-MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June",
-               "July", "August", "September", "October", "November", "December"]
+MONTH_NAMES = [
+    "",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]
+
 
 def _resolve_app_icon() -> Path | None:
     from clear_budget.shared.resources import iter_qt_window_icon_candidates
+
     for p in iter_qt_window_icon_candidates():
-        if p.suffix.lower() == '.png':
+        if p.suffix.lower() == ".png":
             return p
     return None
+
 
 _APP_ICON_PATH: Path | None = _resolve_app_icon()
 
@@ -38,7 +54,9 @@ def build_nav_month_widget(initial_text: str):
 
     month_lbl = QLabel(initial_text)
     month_lbl.setStyleSheet(
-        ui_scale.style("font-size: 20px; font-weight: bold; padding: 10px; color: #9ca3af;")
+        ui_scale.style(
+            "font-size: 20px; font-weight: bold; padding: 10px; color: #9ca3af;"
+        )
     )
     month_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
     layout.addWidget(month_lbl)

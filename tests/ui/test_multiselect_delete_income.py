@@ -12,13 +12,16 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
-from clear_budget.infrastructure.sqlite.income_source_repository import SQLiteIncomeSourceRepository
-from clear_budget.infrastructure.sqlite.payment_method_repository import SQLitePaymentMethodRepository
+from clear_budget.infrastructure.sqlite.income_source_repository import (
+    SQLiteIncomeSourceRepository,
+)
+from clear_budget.infrastructure.sqlite.payment_method_repository import (
+    SQLitePaymentMethodRepository,
+)
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.views.month_view import MonthView
-
 
 MONTH = YearMonth(2026, 5)
 INCOME_NAMES = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"]
@@ -98,6 +101,7 @@ def _select_income_range(view, first_row, last_row):
 # ViewModel layer — delete_incomes batch logic
 # ---------------------------------------------------------------------------
 
+
 def test_delete_incomes_all_ids_removed_from_db(app, service):
     """delete_incomes removes every specified income from the database."""
     saved = _add_incomes(service, INCOME_NAMES)
@@ -139,6 +143,7 @@ def test_delete_incomes_all_incomes(app, service):
 # ---------------------------------------------------------------------------
 # UI layer — on_delete_income with simulated selections
 # ---------------------------------------------------------------------------
+
 
 def test_income_ctrl_style_nonsequential_selection_deletes_all(app, service):
     """Ctrl+click non-sequential income rows: Delete removes all selected incomes."""
@@ -230,23 +235,25 @@ def test_income_delete_removes_from_table_not_just_deactivates(app, service):
     view.on_delete_income()
 
     all_incomes = service.income_repo.list_all()
-    assert not any(i.id == saved[0].id for i in all_incomes), (
-        "Deleted income must be removed from DB entirely, not just deactivated"
-    )
+    assert not any(
+        i.id == saved[0].id for i in all_incomes
+    ), "Deleted income must be removed from DB entirely, not just deactivated"
     assert view.income_table.rowCount() == 0
 
 
 def test_duplicate_income_names_ctrl_select_deletes_correct_incomes(app, service):
     """Ctrl+click rows 0 and 2 with three identically-named incomes deletes exactly those two."""
     for i in range(3):
-        service.income_repo.add(income=IncomeSource(
-            id=0,
-            name="Salary",
-            amount=Amount.from_pounds(1000 + i * 100),
-            is_reliable=True,
-            day_of_month=i + 1,
-            active=True,
-        ))
+        service.income_repo.add(
+            income=IncomeSource(
+                id=0,
+                name="Salary",
+                amount=Amount.from_pounds(1000 + i * 100),
+                is_reliable=True,
+                day_of_month=i + 1,
+                active=True,
+            )
+        )
 
     vm = MonthViewModel(budget_service=service, current_month=MONTH)
     view = MonthView(vm)

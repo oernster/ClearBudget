@@ -218,11 +218,19 @@ class TestSQLiteBillRepositorySkipForMonth:
 
     def test_skip_for_month_excludes_bill(self, db) -> None:
         repo = SQLiteBillRepository(db.conn)
-        bill = repo.add(bill=Bill(
-            id=0, name="SkipMe", amount=Amount(pence=1000), payment_method_id=1,
-            category="groceries", bill_type="fixed", day_of_month=1,
-            start_ym=YearMonth(2026, 1), end_ym=None,
-        ))
+        bill = repo.add(
+            bill=Bill(
+                id=0,
+                name="SkipMe",
+                amount=Amount(pence=1000),
+                payment_method_id=1,
+                category="groceries",
+                bill_type="fixed",
+                day_of_month=1,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
         ym = YearMonth(2026, 6)
 
         repo.skip_for_month(bill_id=bill.id, year_month=ym)
@@ -232,11 +240,19 @@ class TestSQLiteBillRepositorySkipForMonth:
 
     def test_unskip_for_month_restores_bill(self, db) -> None:
         repo = SQLiteBillRepository(db.conn)
-        bill = repo.add(bill=Bill(
-            id=0, name="Restored", amount=Amount(pence=1000), payment_method_id=1,
-            category="groceries", bill_type="fixed", day_of_month=1,
-            start_ym=YearMonth(2026, 1), end_ym=None,
-        ))
+        bill = repo.add(
+            bill=Bill(
+                id=0,
+                name="Restored",
+                amount=Amount(pence=1000),
+                payment_method_id=1,
+                category="groceries",
+                bill_type="fixed",
+                day_of_month=1,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
         ym = YearMonth(2026, 6)
 
         repo.skip_for_month(bill_id=bill.id, year_month=ym)
@@ -251,11 +267,19 @@ class TestSQLiteBillRepositorySetActive:
 
     def test_set_active_false_excludes_from_active_list(self, db) -> None:
         repo = SQLiteBillRepository(db.conn)
-        bill = repo.add(bill=Bill(
-            id=0, name="Test", amount=Amount(pence=1000), payment_method_id=1,
-            category="groceries", bill_type="fixed", day_of_month=1,
-            start_ym=YearMonth(2026, 1), end_ym=None,
-        ))
+        bill = repo.add(
+            bill=Bill(
+                id=0,
+                name="Test",
+                amount=Amount(pence=1000),
+                payment_method_id=1,
+                category="groceries",
+                bill_type="fixed",
+                day_of_month=1,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
 
         repo.set_active(bill_id=bill.id, active=False)
 
@@ -264,11 +288,19 @@ class TestSQLiteBillRepositorySetActive:
 
     def test_set_active_true_restores_bill(self, db) -> None:
         repo = SQLiteBillRepository(db.conn)
-        bill = repo.add(bill=Bill(
-            id=0, name="Restored", amount=Amount(pence=500), payment_method_id=1,
-            category="groceries", bill_type="fixed", day_of_month=1,
-            start_ym=YearMonth(2026, 1), end_ym=None,
-        ))
+        bill = repo.add(
+            bill=Bill(
+                id=0,
+                name="Restored",
+                amount=Amount(pence=500),
+                payment_method_id=1,
+                category="groceries",
+                bill_type="fixed",
+                day_of_month=1,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
         repo.set_active(bill_id=bill.id, active=False)
         repo.set_active(bill_id=bill.id, active=True)
 

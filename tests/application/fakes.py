@@ -21,10 +21,13 @@ class FakeBillRepository:
 
     _bills: list[Bill] = field(default_factory=list)
 
-    def list_active_for_month(self, *, year_month: YearMonth, include_inactive: bool = False) -> list[Bill]:
+    def list_active_for_month(
+        self, *, year_month: YearMonth, include_inactive: bool = False
+    ) -> list[Bill]:
         """List bills active in a given month."""
         return [
-            b for b in self._bills
+            b
+            for b in self._bills
             if b.is_active_in_month(year_month) and (include_inactive or b.active)
         ]
 
@@ -155,6 +158,9 @@ class FakePaymentMethodRepository:
     def update_credit_card_balance(self, *, card_id: int, balance_used: int) -> None:
         """Update credit card balance."""
         from clear_budget.domain.value_objects.amount import Amount
+
         for i, c in enumerate(self._cards):
             if c.id == card_id:
-                self._cards[i] = replace(c, current_balance_used=Amount(pence=balance_used))
+                self._cards[i] = replace(
+                    c, current_balance_used=Amount(pence=balance_used)
+                )

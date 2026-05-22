@@ -8,8 +8,12 @@ from PySide6.QtTest import QTest
 from clear_budget.shared.config import Config
 from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
-from clear_budget.infrastructure.sqlite.income_source_repository import SQLiteIncomeSourceRepository
-from clear_budget.infrastructure.sqlite.payment_method_repository import SQLitePaymentMethodRepository
+from clear_budget.infrastructure.sqlite.income_source_repository import (
+    SQLiteIncomeSourceRepository,
+)
+from clear_budget.infrastructure.sqlite.payment_method_repository import (
+    SQLitePaymentMethodRepository,
+)
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
@@ -42,10 +46,16 @@ def test_add_bill():
     month_view_model = MonthViewModel(budget_service=budget_service)
     month_view = MonthView(month_view_model)
 
-    print(f"Initial bills: {len(month_view_model.month_summary.bills if month_view_model.month_summary else [])}")
+    print(
+        f"Initial bills: {len(month_view_model.month_summary.bills if month_view_model.month_summary else [])}"
+    )
 
     # Get initial count
-    initial_count = len(month_view_model.month_summary.bills) if month_view_model.month_summary else 0
+    initial_count = (
+        len(month_view_model.month_summary.bills)
+        if month_view_model.month_summary
+        else 0
+    )
     print(f"Bills before add: {initial_count}")
 
     # Try clicking the add button programmatically
@@ -56,7 +66,9 @@ def test_add_bill():
     # Instead, let's just verify the button click doesn't crash
     print("Button clicked without crashing")
 
-    print(f"Bills after click: {len(month_view_model.month_summary.bills) if month_view_model.month_summary else 0}")
+    print(
+        f"Bills after click: {len(month_view_model.month_summary.bills) if month_view_model.month_summary else 0}"
+    )
 
     database.close()
     print("TEST PASSED - No crashes")

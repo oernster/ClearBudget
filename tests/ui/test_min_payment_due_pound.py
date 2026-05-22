@@ -17,12 +17,15 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
-from clear_budget.infrastructure.sqlite.income_source_repository import SQLiteIncomeSourceRepository
-from clear_budget.infrastructure.sqlite.payment_method_repository import SQLitePaymentMethodRepository
+from clear_budget.infrastructure.sqlite.income_source_repository import (
+    SQLiteIncomeSourceRepository,
+)
+from clear_budget.infrastructure.sqlite.payment_method_repository import (
+    SQLitePaymentMethodRepository,
+)
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.ui.views.credit_card_view import CreditCardView
-
 
 MONTH = YearMonth(2026, 5)
 COL_MIN_PAYMENT_DUE = 14
@@ -58,7 +61,8 @@ def service(db):
 
 def _add_card(service, name="Jaja", balance_pence=295444, apr=25.54):
     card = CreditCard(
-        id=0, name=name,
+        id=0,
+        name=name,
         credit_limit=Amount(pence=500000),
         current_balance_used=Amount(pence=balance_pence),
         interest_rate_apr=apr,
@@ -79,7 +83,9 @@ class TestMinPaymentDuePoundPrefix:
         """Foundation: Amount.__str__ always returns £X.XX — underpins all display."""
         for pence in [0, 100, 2500, 6354, 12045, 295444]:
             result = str(Amount(pence=pence))
-            assert result.startswith("£"), f"Amount(pence={pence}).__str__() = {result!r}"
+            assert result.startswith(
+                "£"
+            ), f"Amount(pence={pence}).__str__() = {result!r}"
 
     def test_col14_shows_pound_prefix_after_load_cards(self, view, service):
         """After load_cards(), col 14 Min Payment Due starts with £."""
@@ -104,8 +110,9 @@ class TestMinPaymentDuePoundPrefix:
         uses a column allowlist instead of the flag."""
         _add_card(service)
         view.load_cards()
-        assert COL_MIN_PAYMENT_DUE not in view._EDITABLE_COLS, \
-            "Col 14 must be outside the editable column set so handler reverts it"
+        assert (
+            COL_MIN_PAYMENT_DUE not in view._EDITABLE_COLS
+        ), "Col 14 must be outside the editable column set so handler reverts it"
 
     def test_col14_pound_prefix_survives_handler_call(self, app, view, service):
         """Core fix: calling _on_card_item_changed with non-editable col 14 item
@@ -125,14 +132,15 @@ class TestMinPaymentDuePoundPrefix:
 
         new_item = view.cards_table.item(0, COL_MIN_PAYMENT_DUE)
         assert new_item is not None
-        assert new_item.text().startswith("£"), \
-            f"After handler+revert: col 14 = {new_item.text()!r}, must have £"
+        assert new_item.text().startswith(
+            "£"
+        ), f"After handler+revert: col 14 = {new_item.text()!r}, must have £"
 
     def test_all_cards_col14_have_pound_prefix(self, view, service):
         """Every card row in the table shows £ prefix in Min Payment Due."""
         _add_card(service, name="CapitalOne", balance_pence=143272, apr=25.69)
-        _add_card(service, name="Vanquis",    balance_pence=50000,  apr=34.90)
-        _add_card(service, name="Jaja",       balance_pence=295444, apr=25.54)
+        _add_card(service, name="Vanquis", balance_pence=50000, apr=34.90)
+        _add_card(service, name="Jaja", balance_pence=295444, apr=25.54)
         view.load_cards()
 
         row_count = view.cards_table.rowCount()
@@ -140,10 +148,13 @@ class TestMinPaymentDuePoundPrefix:
         for row in range(row_count):
             item = view.cards_table.item(row, COL_MIN_PAYMENT_DUE)
             assert item is not None, f"Row {row} col 14 is None"
-            assert item.text().startswith("£"), \
-                f"Row {row} col 14 = {item.text()!r}, must start with £"
+            assert item.text().startswith(
+                "£"
+            ), f"Row {row} col 14 = {item.text()!r}, must start with £"
 
-    def test_col14_pound_preserved_after_another_column_edited(self, app, view, service):
+    def test_col14_pound_preserved_after_another_column_edited(
+        self, app, view, service
+    ):
         """Editing an editable column (col 5 due day) and rebuilding still shows £ on col 14."""
         _add_card(service, balance_pence=139523, apr=24.9)
         view.load_cards()
@@ -159,5 +170,6 @@ class TestMinPaymentDuePoundPrefix:
 
         col14 = view.cards_table.item(0, COL_MIN_PAYMENT_DUE)
         assert col14 is not None
-        assert col14.text().startswith("£"), \
-            f"After col-5 edit rebuild, col 14 = {col14.text()!r}"
+        assert col14.text().startswith(
+            "£"
+        ), f"After col-5 edit rebuild, col 14 = {col14.text()!r}"

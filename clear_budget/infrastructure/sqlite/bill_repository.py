@@ -56,10 +56,16 @@ class SQLiteBillRepository:
               {skip_filter}
             """,
             (
-                year_month.year, year_month.month,
-                year_month.year, year_month.month,
-                year_month.year, year_month.year, year_month.month,
-                year_month.year, year_month.year, year_month.month,
+                year_month.year,
+                year_month.month,
+                year_month.year,
+                year_month.month,
+                year_month.year,
+                year_month.year,
+                year_month.month,
+                year_month.year,
+                year_month.year,
+                year_month.month,
             ),
         )
 
@@ -163,21 +169,32 @@ class SQLiteBillRepository:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                bill.name, bill.amount.pence,
-                bill.payment_method_id, bill.category,
-                bill.bill_type, bill.day_of_month,
-                bill.start_ym.year, bill.start_ym.month,
+                bill.name,
+                bill.amount.pence,
+                bill.payment_method_id,
+                bill.category,
+                bill.bill_type,
+                bill.day_of_month,
+                bill.start_ym.year,
+                bill.start_ym.month,
                 bill.end_ym.year if bill.end_ym else None,
                 bill.end_ym.month if bill.end_ym else None,
-                1 if bill.active else 0, bill.target_card_id,
+                1 if bill.active else 0,
+                bill.target_card_id,
             ),
         )
         self.conn.commit()
         return Bill(
-            id=cursor.lastrowid, name=bill.name, amount=bill.amount,
-            payment_method_id=bill.payment_method_id, category=bill.category,
-            bill_type=bill.bill_type, day_of_month=bill.day_of_month,
-            start_ym=bill.start_ym, end_ym=bill.end_ym, active=bill.active,
+            id=cursor.lastrowid,
+            name=bill.name,
+            amount=bill.amount,
+            payment_method_id=bill.payment_method_id,
+            category=bill.category,
+            bill_type=bill.bill_type,
+            day_of_month=bill.day_of_month,
+            start_ym=bill.start_ym,
+            end_ym=bill.end_ym,
+            active=bill.active,
             target_card_id=bill.target_card_id,
         )
 
@@ -194,13 +211,19 @@ class SQLiteBillRepository:
             WHERE id = ?
             """,
             (
-                bill.name, bill.amount.pence,
-                bill.payment_method_id, bill.category,
-                bill.bill_type, bill.day_of_month,
-                bill.start_ym.year, bill.start_ym.month,
+                bill.name,
+                bill.amount.pence,
+                bill.payment_method_id,
+                bill.category,
+                bill.bill_type,
+                bill.day_of_month,
+                bill.start_ym.year,
+                bill.start_ym.month,
                 bill.end_ym.year if bill.end_ym else None,
                 bill.end_ym.month if bill.end_ym else None,
-                1 if bill.active else 0, bill.target_card_id, bill.id,
+                1 if bill.active else 0,
+                bill.target_card_id,
+                bill.id,
             ),
         )
         self.conn.commit()

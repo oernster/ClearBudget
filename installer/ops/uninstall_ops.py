@@ -126,4 +126,3 @@ def _schedule_delete_after_exit(install_dir: Path) -> None:
         stderr=subprocess.DEVNULL,
         creationflags=create_no_window | subprocess.DETACHED_PROCESS,
     )
-

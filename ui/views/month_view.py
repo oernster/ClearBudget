@@ -1,11 +1,21 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea,
-    QGroupBox, QTableWidget, QTableWidgetItem, QHeaderView, QSpinBox
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QGroupBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
+    QSpinBox,
 )
 from PySide6.QtCore import Qt
 from datetime import datetime
 from models.month import Month
 from services.solvency_calculator import SolvencyCalculator
+
 
 class MonthView(QWidget):
     def __init__(self, db, year_month, on_month_changed=None):
@@ -48,7 +58,9 @@ class MonthView(QWidget):
 
         # Totals
         self.totals_label = QLabel("")
-        self.totals_label.setStyleSheet("font-size: 12px; font-weight: bold; padding: 10px;")
+        self.totals_label.setStyleSheet(
+            "font-size: 12px; font-weight: bold; padding: 10px;"
+        )
         scroll_layout.addWidget(self.totals_label)
 
         scroll_layout.addStretch()
@@ -73,7 +85,9 @@ class MonthView(QWidget):
         self.income_table = QTableWidget()
         self.income_table.setColumnCount(3)
         self.income_table.setHorizontalHeaderLabels(["Name", "Amount", "Day"])
-        self.income_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.income_table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.Stretch
+        )
 
         layout.addWidget(self.income_table)
         group.setLayout(layout)
@@ -98,40 +112,47 @@ class MonthView(QWidget):
         month_data = Month.get_month_data(self.db, self.year_month)
 
         # Fill income table
-        self.income_table.setRowCount(len(month_data['income']))
+        self.income_table.setRowCount(len(month_data["income"]))
         total_income = 0
-        for row, inc in enumerate(month_data['income']):
-            self.income_table.setItem(row, 0, QTableWidgetItem(inc['name']))
+        for row, inc in enumerate(month_data["income"]):
+            self.income_table.setItem(row, 0, QTableWidgetItem(inc["name"]))
             self.income_table.setItem(row, 1, QTableWidgetItem(f"£{inc['amount']:.2f}"))
-            day = inc['day_of_month'] or "—"
+            day = inc["day_of_month"] or "—"
             self.income_table.setItem(row, 2, QTableWidgetItem(str(day)))
-            total_income += inc['amount']
+            total_income += inc["amount"]
 
         # Fill bills table
-        self.bills_table.setRowCount(len(month_data['bills']))
+        self.bills_table.setRowCount(len(month_data["bills"]))
         total_bills = 0
-        for row, bill in enumerate(month_data['bills']):
-            self.bills_table.setItem(row, 0, QTableWidgetItem(bill['name']))
+        for row, bill in enumerate(month_data["bills"]):
+            self.bills_table.setItem(row, 0, QTableWidgetItem(bill["name"]))
             self.bills_table.setItem(row, 1, QTableWidgetItem(f"£{bill['amount']:.2f}"))
-            day = bill['day_of_month'] or "—"
+            day = bill["day_of_month"] or "—"
             self.bills_table.setItem(row, 2, QTableWidgetItem(str(day)))
 
             # Get payment method name
-            cursor = self.db.execute('SELECT name FROM payment_methods WHERE id = ?', (bill['payment_method_id'],))
-            pm_name = cursor.fetchone()['name']
+            cursor = self.db.execute(
+                "SELECT name FROM payment_methods WHERE id = ?",
+                (bill["payment_method_id"],),
+            )
+            pm_name = cursor.fetchone()["name"]
             self.bills_table.setItem(row, 3, QTableWidgetItem(pm_name))
 
-            total_bills += bill['amount']
+            total_bills += bill["amount"]
 
         # Update totals
         balance = total_income - total_bills
         color = "green" if balance >= 0 else "red"
-        self.totals_label.setText(f"Income: £{total_income:.2f} | Bills: £{total_bills:.2f} | Balance: £{balance:.2f}")
-        self.totals_label.setStyleSheet(f"color: {color}; font-weight: bold; padding: 10px;")
+        self.totals_label.setText(
+            f"Income: £{total_income:.2f} | Bills: £{total_bills:.2f} | Balance: £{balance:.2f}"
+        )
+        self.totals_label.setStyleSheet(
+            f"color: {color}; font-weight: bold; padding: 10px;"
+        )
 
     def _prev_month(self):
         """Go to previous month."""
-        year, month = map(int, self.year_month.split('-'))
+        year, month = map(int, self.year_month.split("-"))
         month -= 1
         if month < 1:
             month = 12
@@ -144,7 +165,7 @@ class MonthView(QWidget):
 
     def _next_month(self):
         """Go to next month."""
-        year, month = map(int, self.year_month.split('-'))
+        year, month = map(int, self.year_month.split("-"))
         month += 1
         if month > 12:
             month = 1

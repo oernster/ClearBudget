@@ -1,5 +1,14 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, QPushButton, QMenuBar, QMenu, QApplication
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTabWidget,
+    QLabel,
+    QPushButton,
+    QMenuBar,
+    QMenu,
+    QApplication,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QPixmap
@@ -12,6 +21,7 @@ from ui.views.archive_view import ArchiveView
 from ui.views.about_dialog import AboutDialog
 from clear_budget.version import APP_NAME, __version__
 from clear_budget.ui.dark_theme import DARK_QSS
+
 
 class MainWindow(QMainWindow):
     def __init__(self, db):
@@ -53,7 +63,11 @@ class MainWindow(QMainWindow):
         nav_icon_path = Path(__file__).resolve().parents[1] / "clearbudget_32.png"
         if nav_icon_path.exists():
             nav_pixmap = QPixmap(str(nav_icon_path))
-            nav_icon_label.setPixmap(nav_pixmap.scaledToHeight(32, Qt.TransformationMode.SmoothTransformation))
+            nav_icon_label.setPixmap(
+                nav_pixmap.scaledToHeight(
+                    32, Qt.TransformationMode.SmoothTransformation
+                )
+            )
         else:
             nav_icon_label.setText("ICON MISSING")
         nav_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)

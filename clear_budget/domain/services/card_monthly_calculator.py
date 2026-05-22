@@ -6,7 +6,6 @@ from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.value_objects.amount import Amount
 
-
 _MIN_PAYMENT_FLOOR_PENCE = 2500  # £25 minimum floor
 
 
@@ -20,7 +19,7 @@ class CardMonthlyState:
     payment_received: Amount
     monthly_interest: Amount
     closing_balance: Amount
-    minimum_payment: Amount   # max(£25, interest + 1% of balance)
+    minimum_payment: Amount  # max(£25, interest + 1% of balance)
     payment_date: int | None
 
 
@@ -37,11 +36,10 @@ def calculate_card_monthly_state(
         opening_balance_pence: Balance at start of month in pence
         bills: All bills for the month (used to find charges and payments)
     """
-    charges_pence = sum(
-        b.amount.pence for b in bills if b.payment_method_id == card.id
-    )
+    charges_pence = sum(b.amount.pence for b in bills if b.payment_method_id == card.id)
     payment_pence = sum(
-        b.amount.pence for b in bills
+        b.amount.pence
+        for b in bills
         if b.category == "credit_payment" and b.target_card_id == card.id
     )
     apr = card.interest_rate_apr or 0.0
@@ -70,7 +68,8 @@ def calculate_card_monthly_state(
 
     payment_bill = next(
         (
-            b for b in bills
+            b
+            for b in bills
             if b.category == "credit_payment" and b.target_card_id == card.id
         ),
         None,

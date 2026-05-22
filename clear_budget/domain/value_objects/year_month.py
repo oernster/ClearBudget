@@ -19,13 +19,9 @@ class YearMonth:
     def __post_init__(self) -> None:
         """Validate year and month are in valid ranges."""
         if not 1 <= self.month <= 12:
-            raise InvalidYearMonthError(
-                f"Month must be 1-12, got {self.month}"
-            )
+            raise InvalidYearMonthError(f"Month must be 1-12, got {self.month}")
         if self.year < 1900 or self.year > 2100:
-            raise InvalidYearMonthError(
-                f"Year must be 1900-2100, got {self.year}"
-            )
+            raise InvalidYearMonthError(f"Year must be 1900-2100, got {self.year}")
 
     @classmethod
     def parse(cls, s: str) -> "YearMonth":
@@ -38,9 +34,7 @@ class YearMonth:
             month = int(parts[1])
             return cls(year=year, month=month)
         except (ValueError, IndexError) as e:
-            raise InvalidYearMonthError(
-                f"Invalid YearMonth format: {s!r}"
-            ) from e
+            raise InvalidYearMonthError(f"Invalid YearMonth format: {s!r}") from e
 
     @classmethod
     def today(cls) -> "YearMonth":

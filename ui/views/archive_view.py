@@ -1,5 +1,13 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton
+from PySide6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
+    QPushButton,
+)
 from models.month import Month
+
 
 class ArchiveView(QWidget):
     def __init__(self, db):
@@ -11,7 +19,9 @@ class ArchiveView(QWidget):
         # Archived months table
         self.table = QTableWidget()
         self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["Month", "Total Income", "Total Bills", "Balance"])
+        self.table.setHorizontalHeaderLabels(
+            ["Month", "Total Income", "Total Bills", "Balance"]
+        )
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
 
         layout.addWidget(self.table)
@@ -31,8 +41,8 @@ class ArchiveView(QWidget):
 
         for row, ym in enumerate(archived):
             month_data = Month.get_month_data(self.db, ym)
-            total_income = sum(i['amount'] for i in month_data['income'])
-            total_bills = sum(b['amount'] for b in month_data['bills'])
+            total_income = sum(i["amount"] for i in month_data["income"])
+            total_bills = sum(b["amount"] for b in month_data["bills"])
             balance = total_income - total_bills
 
             self.table.setItem(row, 0, QTableWidgetItem(ym))

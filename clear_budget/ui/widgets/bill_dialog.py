@@ -11,8 +11,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QPushButton,
 )
-from PySide6.QtCore import Qt
-
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -33,16 +31,23 @@ class BillDialog(QDialog):
 
     @staticmethod
     def _display_category(internal_name: str) -> str:
-        """Convert internal category name to display format (title case, no underscores)."""
+        """Convert internal category name to display format (title case)."""
         return internal_name.replace("_", " ").title()
 
     @staticmethod
     def _internal_category(display_name: str) -> str:
         """Convert display category name to internal format (lowercase, underscores)."""
         return display_name.lower().replace(" ", "_")
+
     BILL_TYPES = ["fixed", "variable", "expiring"]
 
-    def __init__(self, parent=None, bill: Bill | None = None, payment_method_repo=None, current_month: YearMonth | None = None) -> None:
+    def __init__(
+        self,
+        parent=None,
+        bill: Bill | None = None,
+        payment_method_repo=None,
+        current_month: YearMonth | None = None,
+    ) -> None:
         """Initialize bill dialog."""
         super().__init__(parent)
         self.bill = bill
@@ -97,16 +102,22 @@ class BillDialog(QDialog):
         self.pays_card_combo = QComboBox()
         self.pays_card_combo.addItem("(none)", None)
         if self.payment_method_repo:
-            for card in self.payment_method_repo.get_all_credit_cards(include_inactive=False):
+            for card in self.payment_method_repo.get_all_credit_cards(
+                include_inactive=False
+            ):
                 self.pays_card_combo.addItem(card.name, card.id)
         layout.addWidget(self.pays_card_combo)
 
         self.month_only_check = QCheckBox("This month only")
-        self.month_only_check.setToolTip("Override amount/date for this month; other months unchanged")
+        self.month_only_check.setToolTip(
+            "Override amount/date for this month; other months unchanged"
+        )
         layout.addWidget(self.month_only_check)
 
         self.month_only_status = QLabel("")
-        self.month_only_status.setStyleSheet("color: #60a5fa; font-size: 11px; padding: 2px;")
+        self.month_only_status.setStyleSheet(
+            "color: #60a5fa; font-size: 11px; padding: 2px;"
+        )
         layout.addWidget(self.month_only_status)
         self.month_only_check.stateChanged.connect(self._on_month_only_changed)
 
@@ -121,18 +132,25 @@ class BillDialog(QDialog):
 
         ok_btn.clicked.connect(self.accept)
         cancel_btn.clicked.connect(self.reject)
-        self.category_combo.currentTextChanged.connect(lambda _: self._update_pays_card_visibility())
+        self.category_combo.currentTextChanged.connect(
+            lambda _: self._update_pays_card_visibility()
+        )
         self._update_pays_card_visibility()
 
     def _on_month_only_changed(self) -> None:
         if self.month_only_check.isChecked():
             month_str = f"{self.current_month.month}/{self.current_month.year}"
-            self.month_only_status.setText(f"Changes saved for {month_str} only — template unchanged")
+            self.month_only_status.setText(
+                f"Changes saved for {month_str} only — template unchanged"
+            )
         else:
             self.month_only_status.setText("")
 
     def _update_pays_card_visibility(self) -> None:
-        visible = self._internal_category(self.category_combo.currentText()) == "credit_payment"
+        visible = (
+            self._internal_category(self.category_combo.currentText())
+            == "credit_payment"
+        )
         self.pays_card_label.setVisible(visible)
         self.pays_card_combo.setVisible(visible)
 
@@ -141,7 +159,9 @@ class BillDialog(QDialog):
         self.payment_method_combo.addItem("Bank Account")
         self.payment_method_combo.setItemData(0, 1)
         if self.payment_method_repo:
-            for i, card in enumerate(self.payment_method_repo.get_all_credit_cards(), start=1):
+            for i, card in enumerate(
+                self.payment_method_repo.get_all_credit_cards(), start=1
+            ):
                 self.payment_method_combo.addItem(card.name)
                 self.payment_method_combo.setItemData(i, card.id)
 

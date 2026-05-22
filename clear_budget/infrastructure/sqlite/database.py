@@ -53,28 +53,23 @@ class Database:
         cursor = self.conn.cursor()
 
         # Payment methods table
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS payment_methods (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
                 type TEXT NOT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
-            """
-        )
+            """)
 
         # Ensure bank account exists with id=1
-        cursor.execute(
-            """
+        cursor.execute("""
             INSERT OR IGNORE INTO payment_methods (id, name, type)
             VALUES (1, 'Bank Account', 'bank')
-            """
-        )
+            """)
 
         # Bill templates table
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS bills (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -90,12 +85,10 @@ class Database:
                 active INTEGER DEFAULT 1,
                 FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id)
             )
-            """
-        )
+            """)
 
         # Income sources table
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS income_sources (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -104,12 +97,10 @@ class Database:
                 day_of_month INTEGER,
                 active INTEGER DEFAULT 1
             )
-            """
-        )
+            """)
 
         # Months table
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS months (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 year INTEGER NOT NULL,
@@ -117,12 +108,10 @@ class Database:
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(year, month)
             )
-            """
-        )
+            """)
 
         # Month bills table (instantiated bills for specific months)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS month_bills (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 month_id INTEGER NOT NULL,
@@ -137,12 +126,10 @@ class Database:
                 FOREIGN KEY (bill_template_id) REFERENCES bills(id),
                 FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id)
             )
-            """
-        )
+            """)
 
         # Month income table (instantiated income for specific months)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS month_income (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 month_id INTEGER NOT NULL,
@@ -154,12 +141,10 @@ class Database:
                 FOREIGN KEY (month_id) REFERENCES months(id),
                 FOREIGN KEY (income_source_id) REFERENCES income_sources(id)
             )
-            """
-        )
+            """)
 
         # Credit cards table
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS credit_cards (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -172,25 +157,21 @@ class Database:
                 minimum_payment_pence INTEGER DEFAULT NULL,
                 active INTEGER DEFAULT 1
             )
-            """
-        )
+            """)
 
         # Migrations: add columns to credit_cards if missing (existing databases)
         self._migrate_credit_cards_schema(cursor)
 
         # Settings table (for app configuration)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             )
-            """
-        )
+            """)
 
         # Per-month bill overrides (independent of archive)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS bill_month_overrides (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 bill_id INTEGER NOT NULL,
@@ -201,8 +182,7 @@ class Database:
                 UNIQUE(bill_id, year, month),
                 FOREIGN KEY (bill_id) REFERENCES bills(id)
             )
-            """
-        )
+            """)
 
         # Migrate bills added with current-month start_ym to always-visible 2000-01
         cursor.execute(
@@ -237,8 +217,7 @@ class Database:
             pass
 
         # Per-month bill skips (excludes a bill from one month without deleting it)
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS bill_month_skips (
                 bill_id INTEGER NOT NULL,
                 year INTEGER NOT NULL,
@@ -246,8 +225,7 @@ class Database:
                 PRIMARY KEY (bill_id, year, month),
                 FOREIGN KEY (bill_id) REFERENCES bills(id)
             )
-            """
-        )
+            """)
 
         self.conn.commit()
 

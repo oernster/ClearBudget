@@ -1,26 +1,27 @@
 from datetime import datetime
 from models.month import Month
 
+
 class SolvencyCalculator:
     @staticmethod
     def calculate_current_month(db, year_month):
         """Calculate balance and solvency for current month."""
         month_data = Month.get_month_data(db, year_month)
 
-        total_income = sum(i['amount'] for i in month_data['income'])
-        total_bills = sum(b['amount'] for b in month_data['bills'])
+        total_income = sum(i["amount"] for i in month_data["income"])
+        total_bills = sum(b["amount"] for b in month_data["bills"])
         balance = total_income - total_bills
 
         deficit = max(0, -balance)
 
         return {
-            'year_month': year_month,
-            'total_income': total_income,
-            'total_bills': total_bills,
-            'balance': balance,
-            'deficit': deficit,
-            'bills': month_data['bills'],
-            'income': month_data['income'],
+            "year_month": year_month,
+            "total_income": total_income,
+            "total_bills": total_bills,
+            "balance": balance,
+            "deficit": deficit,
+            "bills": month_data["bills"],
+            "income": month_data["income"],
         }
 
     @staticmethod
@@ -30,10 +31,10 @@ class SolvencyCalculator:
         deficit + £600 buffer + next 2 months shortfall (using reliable income only)
         """
         current = SolvencyCalculator.calculate_current_month(db, year_month)
-        deficit = current['deficit']
+        deficit = current["deficit"]
 
         # Get next 2 months
-        year, month = map(int, year_month.split('-'))
+        year, month = map(int, year_month.split("-"))
         next_months = []
         for i in range(1, 3):
             next_month = month + i
@@ -47,8 +48,8 @@ class SolvencyCalculator:
         forward_shortfall = 0
         for ym in next_months:
             m = SolvencyCalculator.calculate_current_month(db, ym)
-            reliable_income = sum(i['amount'] for i in m['income'] if i['is_reliable'])
-            total_bills = m['total_bills']
+            reliable_income = sum(i["amount"] for i in m["income"] if i["is_reliable"])
+            total_bills = m["total_bills"]
             net = reliable_income - total_bills
             if net < 0:
                 forward_shortfall += abs(net)
@@ -56,11 +57,11 @@ class SolvencyCalculator:
         desired = deficit + 600 + forward_shortfall
 
         return {
-            'deficit': deficit,
-            'buffer': 600,
-            'forward_shortfall': forward_shortfall,
-            'desired_acquire': desired,
-            'next_months': next_months,
+            "deficit": deficit,
+            "buffer": 600,
+            "forward_shortfall": forward_shortfall,
+            "desired_acquire": desired,
+            "next_months": next_months,
         }
 
     @staticmethod
@@ -73,55 +74,59 @@ class SolvencyCalculator:
 
         # Group bills by payment method
         bills_by_method = {}
-        for bill in month_data['bills']:
-            pm_id = bill['payment_method_id']
+        for bill in month_data["bills"]:
+            pm_id = bill["payment_method_id"]
             if pm_id not in bills_by_method:
                 bills_by_method[pm_id] = []
             bills_by_method[pm_id].append(bill)
 
         # Get payment methods
-        cursor = db.execute('SELECT id, name, type, credit_limit, current_balance_used FROM payment_methods WHERE type = "credit_card"')
+        cursor = db.execute(
+            'SELECT id, name, type, credit_limit, current_balance_used FROM payment_methods WHERE type = "credit_card"'
+        )
         cards = cursor.fetchall()
 
         warnings = []
         for card in cards:
-            card_id = card['id']
+            card_id = card["id"]
             bills_on_card = bills_by_method.get(card_id, [])
-            monthly_charge = sum(b['amount'] for b in bills_on_card)
+            monthly_charge = sum(b["amount"] for b in bills_on_card)
 
             # Get payment to this card
             payment_cursor = db.execute(
                 'SELECT amount FROM month_bills WHERE category = "credit_payment" AND payment_method_id = ? AND month_id = ?',
-                (1, 1)  # Simplified - would need actual month_id
+                (1, 1),  # Simplified - would need actual month_id
             )
 
             # For now, hardcode known payments
             monthly_payments = {
                 2: 80,  # CapitalOne
                 3: 150,  # Jaja
-                4: 70,   # Vanquis
+                4: 70,  # Vanquis
             }
 
             payment_out = monthly_payments.get(card_id, 0)
             net_monthly = monthly_charge - payment_out
 
-            available = card['credit_limit'] - card['current_balance_used']
+            available = card["credit_limit"] - card["current_balance_used"]
 
             if net_monthly > 0 and available > 0:
                 months_until_max = available / net_monthly
             else:
-                months_until_max = float('inf')
+                months_until_max = float("inf")
 
             if months_until_max <= 3:
-                warnings.append({
-                    'card': card['name'],
-                    'available': available,
-                    'monthly_charge': monthly_charge,
-                    'monthly_payment': payment_out,
-                    'net_monthly': net_monthly,
-                    'months_until_max': months_until_max,
-                    'status': 'danger' if months_until_max <= 1 else 'warning'
-                })
+                warnings.append(
+                    {
+                        "card": card["name"],
+                        "available": available,
+                        "monthly_charge": monthly_charge,
+                        "monthly_payment": payment_out,
+                        "net_monthly": net_monthly,
+                        "months_until_max": months_until_max,
+                        "status": "danger" if months_until_max <= 1 else "warning",
+                    }
+                )
 
         return warnings
 
@@ -134,22 +139,28 @@ class SolvencyCalculator:
         month_data = Month.get_month_data(db, year_month)
 
         # Get bank account ID
-        cursor = db.execute('SELECT id FROM payment_methods WHERE name = "Bank Account"')
-        bank_id = cursor.fetchone()['id']
+        cursor = db.execute(
+            'SELECT id FROM payment_methods WHERE name = "Bank Account"'
+        )
+        bank_id = cursor.fetchone()["id"]
 
         # Filter to bank account only
-        bank_bills = [b for b in month_data['bills'] if b['payment_method_id'] == bank_id]
-        bank_income = month_data['income']
+        bank_bills = [
+            b for b in month_data["bills"] if b["payment_method_id"] == bank_id
+        ]
+        bank_income = month_data["income"]
 
         # Create daily timeline
         events = []
         for bill in bank_bills:
-            if bill['day_of_month']:
-                events.append(('out', bill['day_of_month'], bill['amount'], bill['name']))
+            if bill["day_of_month"]:
+                events.append(
+                    ("out", bill["day_of_month"], bill["amount"], bill["name"])
+                )
 
         for inc in bank_income:
-            if inc['day_of_month']:
-                events.append(('in', inc['day_of_month'], inc['amount'], inc['name']))
+            if inc["day_of_month"]:
+                events.append(("in", inc["day_of_month"], inc["amount"], inc["name"]))
 
         # Sort by day
         events.sort(key=lambda x: x[1])
@@ -159,18 +170,20 @@ class SolvencyCalculator:
         warnings = []
 
         for event_type, day, amount, name in events:
-            if event_type == 'out':
+            if event_type == "out":
                 balance -= amount
             else:
                 balance += amount
 
             if balance < 0:
-                warnings.append({
-                    'day': day,
-                    'amount': amount,
-                    'name': name,
-                    'shortfall': abs(balance),
-                    'event': event_type
-                })
+                warnings.append(
+                    {
+                        "day": day,
+                        "amount": amount,
+                        "name": name,
+                        "shortfall": abs(balance),
+                        "event": event_type,
+                    }
+                )
 
         return warnings

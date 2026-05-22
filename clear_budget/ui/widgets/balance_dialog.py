@@ -8,8 +8,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
 )
-from PySide6.QtCore import Qt
-
 from clear_budget.domain.value_objects.amount import Amount
 
 

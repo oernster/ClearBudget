@@ -103,4 +103,3 @@ def repair(
         shortcut_start_menu=opts.restore_start_menu_shortcut,
         installer_path=entry.installer_path or "",
     )
-

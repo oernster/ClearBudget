@@ -75,7 +75,7 @@ class TestLayeringRules:
             if bad_imports:
                 violations.append(f"{py_file.relative_to(project_root)}: {bad_imports}")
 
-        assert not violations, f"Domain layer imports forbidden modules:\n" + "\n".join(
+        assert not violations, "Domain layer imports forbidden modules:\n" + "\n".join(
             violations
         )
 
@@ -93,9 +93,9 @@ class TestLayeringRules:
             if bad_imports:
                 violations.append(f"{py_file.relative_to(project_root)}: {bad_imports}")
 
-        assert not violations, (
-            f"Application layer imports forbidden modules:\n" + "\n".join(violations)
-        )
+        assert (
+            not violations
+        ), "Application layer imports forbidden modules:\n" + "\n".join(violations)
 
     def test_infrastructure_has_no_forbidden_imports(self):
         """Infrastructure layer must not import from application, ui."""
@@ -114,9 +114,9 @@ class TestLayeringRules:
             if bad_imports:
                 violations.append(f"{py_file.relative_to(project_root)}: {bad_imports}")
 
-        assert not violations, (
-            f"Infrastructure layer imports forbidden modules:\n" + "\n".join(violations)
-        )
+        assert (
+            not violations
+        ), "Infrastructure layer imports forbidden modules:\n" + "\n".join(violations)
 
     def test_ui_has_no_forbidden_imports(self):
         """UI layer must not import from other layers for logic (only domain/infrastructure)."""
@@ -137,6 +137,6 @@ class TestLayeringRules:
             if bad_imports:
                 violations.append(f"{py_file.relative_to(project_root)}: {bad_imports}")
 
-        assert not violations, (
-            f"UI layer imports forbidden modules:\n" + "\n".join(violations)
+        assert not violations, "UI layer imports forbidden modules:\n" + "\n".join(
+            violations
         )

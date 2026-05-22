@@ -25,25 +25,37 @@ def create_icon(size: int) -> Image.Image:
     # Coin 1
     coin1_x = padding + int(inner_size * 0.25)
     draw.ellipse(
-        [coin1_x - coin_radius, coin_y - coin_radius,
-         coin1_x + coin_radius, coin_y + coin_radius],
-        fill=(52, 211, 153, 255)
+        [
+            coin1_x - coin_radius,
+            coin_y - coin_radius,
+            coin1_x + coin_radius,
+            coin_y + coin_radius,
+        ],
+        fill=(52, 211, 153, 255),
     )
 
     # Coin 2
     coin2_x = padding + int(inner_size * 0.55)
     draw.ellipse(
-        [coin2_x - coin_radius, coin_y - coin_radius,
-         coin2_x + coin_radius, coin_y + coin_radius],
-        fill=(96, 165, 250, 255)
+        [
+            coin2_x - coin_radius,
+            coin_y - coin_radius,
+            coin2_x + coin_radius,
+            coin_y + coin_radius,
+        ],
+        fill=(96, 165, 250, 255),
     )
 
     # Coin 3
     coin3_x = padding + int(inner_size * 0.75)
     draw.ellipse(
-        [coin3_x - coin_radius, coin_y - coin_radius,
-         coin3_x + coin_radius, coin_y + coin_radius],
-        fill=(251, 191, 36, 255)
+        [
+            coin3_x - coin_radius,
+            coin_y - coin_radius,
+            coin3_x + coin_radius,
+            coin_y + coin_radius,
+        ],
+        fill=(251, 191, 36, 255),
     )
 
     return img
@@ -74,7 +86,9 @@ def main() -> int:
 
     if ico_sizes:
         ico_path = root / "clearbudget.ico"
-        ico_sizes[0].save(ico_path, "ICO", sizes=[(s.width, s.height) for s in ico_sizes])
+        ico_sizes[0].save(
+            ico_path, "ICO", sizes=[(s.width, s.height) for s in ico_sizes]
+        )
         print(f"  [OK] clearbudget.ico")
 
     print("Icon generation complete!")

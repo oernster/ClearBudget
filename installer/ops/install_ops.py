@@ -67,7 +67,9 @@ def _extract_payload_to(
     exe = staging_dir / "ClearBudget.exe"
     internal = staging_dir / "_internal"
     if not exe.exists() or not internal.exists():
-        raise InstallerOperationError("Payload is missing ClearBudget.exe or _internal/")
+        raise InstallerOperationError(
+            "Payload is missing ClearBudget.exe or _internal/"
+        )
 
 
 def _swap_in_bundle(staging_dir: Path, target_dir: Path) -> None:
@@ -366,4 +368,3 @@ def _apply_shortcuts(
             sp.start_menu_lnk.unlink(missing_ok=True)
         except Exception:
             pass
-

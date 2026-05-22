@@ -19,7 +19,16 @@ class TestLOCLimits:
         for py_file in project_root.rglob("*.py"):
             if any(
                 part in py_file.parts
-                for part in ["__pycache__", "venv", ".venv", "build", "dist", "dist-installer", "dist-pyinstaller", ".egg"]
+                for part in [
+                    "__pycache__",
+                    "venv",
+                    ".venv",
+                    "build",
+                    "dist",
+                    "dist-installer",
+                    "dist-pyinstaller",
+                    ".egg",
+                ]
             ):
                 continue
 
@@ -35,9 +44,7 @@ class TestLOCLimits:
                 rel_path = py_file.relative_to(project_root)
                 violations.append(f"{rel_path}: {loc} lines (limit: 400)")
 
-        assert not violations, (
-            f"Files exceed 400 LOC limit:\n" + "\n".join(violations)
-        )
+        assert not violations, "Files exceed 400 LOC limit:\n" + "\n".join(violations)
 
     def test_test_files_under_400_loc(self):
         """Test files also must not exceed 400 lines of code."""
@@ -61,6 +68,6 @@ class TestLOCLimits:
                 rel_path = py_file.relative_to(project_root)
                 violations.append(f"{rel_path}: {loc} lines (limit: 400)")
 
-        assert not violations, (
-            f"Test files exceed 400 LOC limit:\n" + "\n".join(violations)
+        assert not violations, "Test files exceed 400 LOC limit:\n" + "\n".join(
+            violations
         )

@@ -30,7 +30,9 @@ class SolvencyViewModel(QObject):
     def set_month(self, year_month: YearMonth) -> None:
         """Update month and refresh solvency report."""
         self.current_month = year_month
-        self.current_summary = self.budget_service.get_month_summary(year_month=year_month)
+        self.current_summary = self.budget_service.get_month_summary(
+            year_month=year_month
+        )
         self.refresh_solvency()
 
     def update_month_summary(self, summary: MonthSummary) -> None:

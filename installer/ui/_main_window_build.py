@@ -158,4 +158,3 @@ def build_installer_main_window_ui(window: Any) -> None:
 
     # Return the browse button so the caller can connect signals.
     window._browse_btn = browse
-

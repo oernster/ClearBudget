@@ -20,10 +20,12 @@ from clear_budget.version import __version__ as _APP_VERSION
 
 def _resolve_about_icon() -> Path | None:
     from clear_budget.shared.resources import iter_qt_window_icon_candidates
+
     for p in iter_qt_window_icon_candidates():
-        if p.suffix.lower() == '.png':
+        if p.suffix.lower() == ".png":
             return p
     return None
+
 
 _ICON_PATH: Path | None = _resolve_about_icon()
 
@@ -42,13 +44,13 @@ and their communities:</p>
       Licensed under the PSF Licence.</li>
   <li><b>PySide6 (Qt for Python)</b> &mdash; Copyright &copy; The Qt Company Ltd.
       Licensed under LGPL-3.0.</li>
-  <li><b>SQLite</b> &mdash; Dedicated to the public domain by D. Richard Hipp and contributors.</li>
-  <li><b>pytest</b> &mdash; Copyright &copy; 2004&ndash;2025 Holger Krekel and pytest contributors.
+  <li><b>SQLite</b> &mdash; Dedicated to the public domain by D. Richard Hipp and contributors.</li>  # noqa: E501
+  <li><b>pytest</b> &mdash; Copyright &copy; 2004&ndash;2025 Holger Krekel and pytest contributors.  # noqa: E501
       Licensed under the MIT Licence.</li>
-  <li><b>black</b> &mdash; Copyright &copy; 2018&ndash;2025 Łukasz Langa and contributors.
+  <li><b>black</b> &mdash; Copyright &copy; 2018&ndash;2025 Łukasz Langa and contributors.  # noqa: E501
       Licensed under the MIT Licence.</li>
-  <li><b>pywin32</b> &mdash; Copyright &copy; Mark Hammond. Licensed under the PSF Licence.</li>
-  <li><b>PyInstaller</b> &mdash; Copyright &copy; 2010&ndash;2025 PyInstaller contributors.
+  <li><b>pywin32</b> &mdash; Copyright &copy; Mark Hammond. Licensed under the PSF Licence.</li>  # noqa: E501
+  <li><b>PyInstaller</b> &mdash; Copyright &copy; 2010&ndash;2025 PyInstaller contributors.  # noqa: E501
       Licensed under GPL-2.0 with a classpath exception for bundled applications.</li>
 </ul>
 <p>My thanks to the Python community for providing an outstanding ecosystem
@@ -62,11 +64,11 @@ _LGPL3_NOTICE = (
     "ClearBudget — Personal Budget Planner\n"
     "Copyright (C) 2025 Oliver Ernster\n"
     "\n"
-    "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"
+    "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"  # noqa: E501
     "\n"
-    "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public Licence for more details.\n"
+    "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public Licence for more details.\n"  # noqa: E501
     "\n"
-    "You should have received a copy of the GNU Lesser General Public Licence along with this program. If not, see <https://www.gnu.org/licenses/>.\n"
+    "You should have received a copy of the GNU Lesser General Public Licence along with this program. If not, see <https://www.gnu.org/licenses/>.\n"  # noqa: E501
     "\n"
     "----------------------------------------\n"
     "\n"
@@ -76,8 +78,8 @@ _LGPL3_NOTICE = (
     "\n"
     "Key terms summary:\n"
     "  • You may use, copy, modify, and distribute this software under LGPL-3.0.\n"
-    "  • If you distribute modified versions of this software, you must make the modified source available under the same licence.\n"
-    "  • You must allow end users to replace or relink the LGPL-licensed libraries (PySide6 / Qt) used by this application.\n"
+    "  • If you distribute modified versions of this software, you must make the modified source available under the same licence.\n"  # noqa: E501
+    "  • You must allow end users to replace or relink the LGPL-licensed libraries (PySide6 / Qt) used by this application.\n"  # noqa: E501
     "  • There is NO WARRANTY for this program, to the extent permitted by law.\n"
     "\n"
     "----------------------------------------\n"
@@ -120,7 +122,8 @@ class AboutDialog(QDialog):
         if _ICON_PATH is not None:
             icon_lbl = QLabel()
             pixmap = QPixmap(str(_ICON_PATH)).scaled(
-                ui_scale.px(96), ui_scale.px(96),
+                ui_scale.px(96),
+                ui_scale.px(96),
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
@@ -176,6 +179,8 @@ class LicenceDialog(QDialog):
 
         self.setLayout(layout)
         full_text_btn.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://www.gnu.org/licenses/lgpl-3.0.html"))
+            lambda: QDesktopServices.openUrl(
+                QUrl("https://www.gnu.org/licenses/lgpl-3.0.html")
+            )
         )
         close_btn.clicked.connect(self.accept)

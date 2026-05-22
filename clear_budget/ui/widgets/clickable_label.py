@@ -7,6 +7,7 @@ from PySide6.QtGui import QMouseEvent
 
 class ClickableLabel(QLabel):
     """QLabel that emits clicked signal on mouse press."""
+
     clicked = Signal()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:

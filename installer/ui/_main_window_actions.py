@@ -397,4 +397,3 @@ def operation_callable(
         )
 
     raise InstallerOperationError(f"Unsupported operation: {op}")
-

@@ -16,13 +16,11 @@ class SQLiteIncomeSourceRepository:
     def list_active(self) -> list[IncomeSource]:
         """List all active income sources."""
         cursor = self.conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT id, name, amount_pence, is_reliable, day_of_month
             FROM income_sources
             WHERE active = 1
-            """
-        )
+            """)
 
         sources = []
         for row in cursor.fetchall():
@@ -40,12 +38,10 @@ class SQLiteIncomeSourceRepository:
     def list_all(self) -> list[IncomeSource]:
         """List all income sources including inactive."""
         cursor = self.conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT id, name, amount_pence, is_reliable, day_of_month, active
             FROM income_sources
-            """
-        )
+            """)
         return [
             IncomeSource(
                 id=row["id"],
@@ -61,13 +57,11 @@ class SQLiteIncomeSourceRepository:
     def list_reliable(self) -> list[IncomeSource]:
         """List all reliable (forward-projectable) income sources."""
         cursor = self.conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT id, name, amount_pence, is_reliable, day_of_month
             FROM income_sources
             WHERE active = 1 AND is_reliable = 1
-            """
-        )
+            """)
 
         sources = []
         for row in cursor.fetchall():

@@ -22,6 +22,8 @@ def px(value: int) -> int:
 
 def style(css: str) -> str:
     """Return css with all font-size: Xpx values scaled by the current factor."""
+
     def _scale(m: re.Match) -> str:
         return f"font-size: {round(int(m.group(1)) * _factor)}px"
-    return re.sub(r'font-size:\s*(\d+)px', _scale, css)
+
+    return re.sub(r"font-size:\s*(\d+)px", _scale, css)
