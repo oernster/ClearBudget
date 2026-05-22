@@ -1,4 +1,4 @@
-"""Loader mixin for CreditCardView — load_cards and projection strip extracted."""
+"""Loader mixin for CreditCardView - load_cards and projection strip extracted."""
 
 from datetime import date as _date
 

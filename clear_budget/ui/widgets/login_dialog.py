@@ -1,4 +1,4 @@
-"""Login dialog — shown at startup and on lock/switch-user."""
+"""Login dialog - shown at startup and on lock/switch-user."""
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -29,7 +29,7 @@ class LoginDialog(QDialog):
         super().__init__(parent)
         self.user_store = user_store
         self.authenticated_user: User | None = None
-        self.setWindowTitle("ClearBudget — Sign In")
+        self.setWindowTitle("ClearBudget - Sign In")
         self.setMinimumWidth(ui_scale.px(380))
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowCloseButtonHint)
         self._build_ui()
@@ -245,6 +245,9 @@ class ResetPasswordDialog(QDialog):
             return
         if len(pw1) < 6:
             self._show_error("Password must be at least 6 characters.")
+            return
+        if self.user_store.find_user(username) is None:
+            self._show_error("No account with that username exists.")
             return
         if not self.user_store.verify_recovery_code(username, code):
             self._show_error("Recovery code is incorrect.")

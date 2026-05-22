@@ -1,9 +1,12 @@
 """Main application window with tab-based interface."""
 
+import shutil
 from datetime import date as _date
+from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QFileDialog,
     QMainWindow,
     QMessageBox,
     QTabWidget,
@@ -15,7 +18,6 @@ from PySide6.QtWidgets import (
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import ui_scale
-from clear_budget.ui.dark_theme import get_dark_qss
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.views.archive_view import ArchiveView
@@ -28,9 +30,9 @@ from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 class MainWindow(QMainWindow):
     """Application main window with tabbed views."""
 
-    # Emitted when the user requests logout (lock screen) or switch user.
+    # Emitted when the user switches account.
     logout_requested = Signal()
-    # Emitted after a database import — signals main to reload without restart.
+    # Emitted after a database import - signals main to reload without restart.
     database_replaced = Signal()
 
     def __init__(
@@ -39,6 +41,7 @@ class MainWindow(QMainWindow):
         solvency_view_model: SolvencyViewModel,
         current_user: User,
         user_store: UserStore,
+        db_path: Path,
     ) -> None:
         """Initialize main window and tabs."""
         super().__init__()
@@ -46,7 +49,8 @@ class MainWindow(QMainWindow):
         self.solvency_view_model = solvency_view_model
         self.current_user = current_user
         self.user_store = user_store
-        self.setWindowTitle(f"ClearBudget — {current_user.username}")
+        self.db_path = db_path
+        self.setWindowTitle(f"ClearBudget - {current_user.username}")
         self.setMinimumSize(ui_scale.px(900), ui_scale.px(580))
         self.init_ui()
         self.apply_theme()
@@ -75,7 +79,6 @@ class MainWindow(QMainWindow):
 
         archive_view = ArchiveView(self.month_view_model.budget_service)
         self.tabs.addTab(self._scrollable(archive_view), "Archive")
-        archive_view.database_replaced.connect(self.database_replaced)
 
         layout.addWidget(self.tabs)
         central_widget.setLayout(layout)
@@ -141,7 +144,20 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        logout_action = file_menu.addAction("&Lock / Switch User")
+        export_action = file_menu.addAction("&Export Database…")
+        export_action.triggered.connect(self._on_export_database)
+
+        import_action = file_menu.addAction("&Import Database…")
+        import_action.triggered.connect(self._on_import_database)
+
+        file_menu.addSeparator()
+
+        prefs_action = file_menu.addAction("&Preferences…")
+        prefs_action.triggered.connect(self._on_preferences)
+
+        file_menu.addSeparator()
+
+        logout_action = file_menu.addAction("&Switch User")
         logout_action.triggered.connect(self._on_logout)
 
         file_menu.addSeparator()
@@ -177,7 +193,7 @@ class MainWindow(QMainWindow):
             return
         second = QMessageBox.question(
             self,
-            "New Budget — Final Confirmation",
+            "New Budget - Final Confirmation",
             "Really wipe everything and start fresh?\n\n" "Last chance to cancel.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -191,8 +207,31 @@ class MainWindow(QMainWindow):
                 "Budget data wiped.  You can now enter your new bills and income.",
             )
 
+    def _on_preferences(self) -> None:
+        """Open currency preferences dialog; rebuild window on change."""
+        from clear_budget.ui.widgets.currency_dialog import CurrencyDialog
+        from clear_budget.shared.currency import set_currency
+
+        conn = self.month_view_model.budget_service.bill_repo.conn
+        row = conn.execute(
+            "SELECT value FROM settings WHERE key = 'currency'"
+        ).fetchone()
+        current_code = row["value"] if row else "GBP"
+        dlg = CurrencyDialog(current_code, parent=self)
+        if dlg.exec() == CurrencyDialog.DialogCode.Accepted:
+            new_code = dlg.selected_code
+            if new_code != current_code:
+                conn.execute(
+                    "INSERT OR REPLACE INTO settings (key, value)"
+                    " VALUES ('currency', ?)",
+                    (new_code,),
+                )
+                conn.commit()
+                set_currency(new_code)
+                self.database_replaced.emit()
+
     def _on_logout(self) -> None:
-        """Lock the screen and return to login."""
+        """Return to login to switch user."""
         self.logout_requested.emit()
         self.hide()
 
@@ -212,8 +251,147 @@ class MainWindow(QMainWindow):
 
         LicenceDialog(self).exec()
 
+    _REQUIRED_SCHEMA: dict[str, set[str]] = {
+        "bills": {
+            "amount_pence",
+            "payment_method_id",
+            "category",
+            "bill_type",
+            "active",
+        },
+        "income_sources": {"amount_pence", "is_reliable", "day_of_month", "active"},
+        "credit_cards": {
+            "credit_limit_pence",
+            "current_balance_used_pence",
+            "payment_due_day",
+            "active",
+        },
+        "payment_methods": {"name", "type"},
+        "settings": {"key", "value"},
+        "bill_month_overrides": {"bill_id", "year", "month", "amount_pence"},
+        "bill_month_skips": {"bill_id", "year", "month"},
+    }
+
+    def _validate_db(self, path: Path) -> str | None:
+        """Return an error string if path is not a valid ClearBudget db, else None."""
+        import sqlite3
+
+        try:
+            conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = {r["name"] for r in cursor.fetchall()}
+
+            missing_tables = set(self._REQUIRED_SCHEMA) - tables
+            if missing_tables:
+                conn.close()
+                missing = ", ".join(sorted(missing_tables))
+                return f"Not a ClearBudget database - missing tables: {missing}"
+
+            for table, required_cols in self._REQUIRED_SCHEMA.items():
+                cursor.execute(f"PRAGMA table_info({table})")
+                present_cols = {r["name"] for r in cursor.fetchall()}
+                missing_cols = required_cols - present_cols
+                if missing_cols:
+                    conn.close()
+                    return (
+                        f"Not a ClearBudget database - table '{table}' "
+                        f"missing columns: "
+                        f"{', '.join(sorted(missing_cols))}"
+                    )
+
+            conn.close()
+        except sqlite3.DatabaseError as exc:
+            return f"Not a valid SQLite database: {exc}"
+        except Exception as exc:
+            return f"Could not open file: {exc}"
+        return None
+
+    def _on_export_database(self) -> None:
+        """Copy the active database to a user-chosen backup location."""
+        dest, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Database",
+            str(Path.home() / "clearbudget_backup.db"),
+            "ClearBudget Database (*.db)",
+        )
+        if not dest:
+            return
+        dest_path = Path(dest)
+        if dest_path.suffix.lower() != ".db":
+            dest_path = dest_path.with_suffix(".db")
+        try:
+            shutil.copy2(self.db_path, dest_path)
+            QMessageBox.information(
+                self,
+                "Export Successful",
+                f"Database exported to:\n{dest_path}",
+            )
+        except OSError as exc:
+            QMessageBox.critical(self, "Export Failed", str(exc))
+
+    def _on_import_database(self) -> None:
+        """Replace the active database with a user-chosen backup file."""
+        src, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Database",
+            str(Path.home()),
+            "ClearBudget Database (*.db)",
+        )
+        if not src:
+            return
+        src_path = Path(src)
+        if src_path.resolve() == self.db_path.resolve():
+            QMessageBox.warning(
+                self,
+                "Import",
+                "Selected file is the active database - nothing to import.",
+            )
+            return
+
+        has_data = False
+        if self.db_path.exists():
+            try:
+                cursor = (
+                    self.month_view_model.budget_service.bill_repo.conn.cursor()
+                )
+                cursor.execute("SELECT COUNT(*) FROM bills")
+                has_data = cursor.fetchone()[0] > 0
+            except Exception:
+                has_data = True
+
+        if has_data:
+            reply = QMessageBox.question(
+                self,
+                "Overwrite Existing Data?",
+                "The active database already contains data.\n\n"
+                "Importing will permanently replace all bills, income sources, "
+                "credit cards, "
+                "overrides and settings with the contents of the selected file.\n\n"
+                "This cannot be undone. Continue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        validation_error = self._validate_db(src_path)
+        if validation_error:
+            QMessageBox.critical(
+                self,
+                "Invalid Database",
+                f"Cannot import - invalid ClearBudget database.\n\n{validation_error}",
+            )
+            return
+
+        try:
+            shutil.copy2(src_path, self.db_path)
+            self.database_replaced.emit()
+        except OSError as exc:
+            QMessageBox.critical(self, "Import Failed", str(exc))
+
     def apply_theme(self) -> None:
-        """Apply dark theme stylesheet."""
-        self.setStyleSheet(get_dark_qss())
+        """Build status bar and menus (theme applied app-wide via QApplication)."""
         self._build_status_bar()
         self._build_menus()

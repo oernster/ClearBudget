@@ -1,11 +1,11 @@
-"""Display mixin for SolvencyPanel.update_display — extracted for LOC limit."""
+"""Display mixin for SolvencyPanel.update_display - extracted for LOC limit."""
 
 from datetime import date as _date
 
 from clear_budget.domain.services.card_monthly_calculator import (
     calculate_card_monthly_state,
 )
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES, fmt
 from clear_budget.ui import ui_scale
 
 
@@ -38,7 +38,7 @@ class SolvencyPanelDisplayMixin:
 
         deficit_pounds = monthly_deficit_pence / 100
         deficit_note = (
-            f" (bills exceed income by £{deficit_pounds:.2f})"
+            f" (bills exceed income by {fmt(deficit_pounds)})"
             if monthly_deficit_pence > 0
             else ""
         )
@@ -48,15 +48,15 @@ class SolvencyPanelDisplayMixin:
         )
         if balance < 0:
             self.overdraft_alert.setText(
-                f"CRITICAL: £{abs(balance):.2f} overdrawn{deficit_note}"
+                f"CRITICAL: {fmt(abs(balance))} overdrawn{deficit_note}"
             )
             self.overdraft_alert.setStyleSheet(
                 base_style + "background-color: #f87171; color: white;"
             )
         elif overdrawn_next_month:
             self.overdraft_alert.setText(
-                f"CRITICAL: overdrawn in {next_month_name} — "
-                f"£{balance:.2f} left in savings{deficit_note}"
+                f"CRITICAL: overdrawn in {next_month_name} - "
+                f"{fmt(balance)} left in savings{deficit_note}"
             )
             self.overdraft_alert.setStyleSheet(
                 base_style + "background-color: #f87171; color: white;"
@@ -64,35 +64,35 @@ class SolvencyPanelDisplayMixin:
         elif monthly_deficit_pence > 0 and balance <= 500:
             self.overdraft_alert.setText(
                 f"CRITICAL: projected end of {month_name}: "
-                f"£{balance:.2f} — drawing down savings{deficit_note}"
+                f"{fmt(balance)} - drawing down savings{deficit_note}"
             )
             self.overdraft_alert.setStyleSheet(
                 base_style + "background-color: #f87171; color: white;"
             )
         elif balance <= 200:
             self.overdraft_alert.setText(
-                f"AT RISK: only £{balance:.2f} remaining{deficit_note}"
+                f"AT RISK: only {fmt(balance)} remaining{deficit_note}"
             )
             self.overdraft_alert.setStyleSheet(
                 base_style + "background-color: #f59e0b; color: white;"
             )
         elif balance <= 500:
             self.overdraft_alert.setText(
-                f"CAUTION: £{balance:.2f} remaining{deficit_note}"
+                f"CAUTION: {fmt(balance)} remaining{deficit_note}"
             )
             self.overdraft_alert.setStyleSheet(
                 base_style + "background-color: #fbbf24; color: #1a1a1a;"
             )
         elif monthly_deficit_pence > 0:
             self.overdraft_alert.setText(
-                f"CAUTION: £{balance:.2f} after {month_name} bills{deficit_note}"
+                f"CAUTION: {fmt(balance)} after {month_name} bills{deficit_note}"
             )
             self.overdraft_alert.setStyleSheet(
                 base_style + "background-color: #fbbf24; color: #1a1a1a;"
             )
         else:
             self.overdraft_alert.setText(
-                f"SAFE: £{balance:.2f} remaining after all {month_name} bills"
+                f"SAFE: {fmt(balance)} remaining after all {month_name} bills"
             )
             self.overdraft_alert.setStyleSheet(
                 base_style + "background-color: #34d399; color: white;"
@@ -122,13 +122,13 @@ class SolvencyPanelDisplayMixin:
                 mid_balance = starting_pence + early_income - early_bills
                 if mid_balance < 0:
                     self.midmonth_alert.setText(
-                        f"CRITICAL: overdrawn £{abs(mid_balance) / 100:.2f} "
+                        f"CRITICAL: overdrawn {fmt(abs(mid_balance))} "
                         f"before day-{max_income_day} income"
-                        f" — rescued day {max_income_day}"
+                        f" - rescued day {max_income_day}"
                     )
                     self.midmonth_alert.show()
 
-        self.balance_label.setText(f"Projected Balance: £{balance:.2f}")
+        self.balance_label.setText(f"Projected Balance: {fmt(balance)}")
 
         if summary:
             if is_current_month:
@@ -150,16 +150,16 @@ class SolvencyPanelDisplayMixin:
                     and b.payment_method_id != 1
                 )
                 self.committed_label.setText(
-                    f"Committed this month: £{committed / 100:.2f}"
+                    f"Committed this month: {fmt(committed)}"
                 )
                 self.remaining_bank_label.setStyleSheet(
                     ui_scale.style("font-size: 18px; padding: 5px; color: #fbbf24;")
                 )
                 self.remaining_bank_label.setText(
-                    f"Still due this month (bank): £{remaining_bank / 100:.2f}"
+                    f"Still due this month (bank): {fmt(remaining_bank)}"
                 )
                 self.remaining_card_label.setText(
-                    f"Still due this month (cards): £{remaining_card / 100:.2f}"
+                    f"Still due this month (cards): {fmt(remaining_card)}"
                 )
             else:
                 all_bank = sum(
@@ -170,12 +170,12 @@ class SolvencyPanelDisplayMixin:
                 )
                 income_pence = summary.total_income.pence
                 net_pence = all_bank - income_pence
-                self.committed_label.setText("Committed this month: —")
+                self.committed_label.setText("Committed this month: -")
                 net_color = "#f87171" if net_pence > 0 else "#34d399"
                 self.remaining_bank_label.setText(
-                    f"Bank bills: £{all_bank / 100:.2f}"
-                    f" vs income £{income_pence / 100:.2f}"
-                    f"\n💰 projected end: £{balance:.2f}"
+                    f"Bank bills: {fmt(all_bank)}"
+                    f" vs income {fmt(income_pence)}"
+                    f"\n💰 projected end: {fmt(balance)}"
                 )
                 self.remaining_bank_label.setStyleSheet(
                     ui_scale.style(
@@ -183,7 +183,7 @@ class SolvencyPanelDisplayMixin:
                     )
                 )
                 self.remaining_card_label.setText(
-                    f"All bills this month (cards): £{all_card / 100:.2f}"
+                    f"All bills this month (cards): {fmt(all_card)}"
                 )
         else:
             self.committed_label.setText("Committed this month: -")
@@ -194,7 +194,7 @@ class SolvencyPanelDisplayMixin:
             freedom_pence = summary.total_income.pence - summary.total_bills.pence
             if freedom_pence > 0:
                 self.freedom_label.setText(
-                    f"Freedom to spend: £{freedom_pence / 100:.2f}"
+                    f"Freedom to spend: {fmt(freedom_pence)}"
                 )
                 self.freedom_label.setStyleSheet(
                     ui_scale.style(

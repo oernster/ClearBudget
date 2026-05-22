@@ -1,4 +1,4 @@
-"""UserManagementDialog — admin screen to view and manage user accounts."""
+"""UserManagementDialog - admin screen to view and manage user accounts."""
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -61,11 +61,14 @@ class UserManagementDialog(QDialog):
         self.add_btn = QPushButton("Add User")
         self.add_btn.clicked.connect(self._on_add_user)
         self.delete_btn = QPushButton("Delete Selected")
+        self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self._on_delete_user)
         btn_layout.addWidget(self.add_btn)
         btn_layout.addStretch()
         btn_layout.addWidget(self.delete_btn)
         layout.addLayout(btn_layout)
+
+        self.table.itemSelectionChanged.connect(self._on_selection_changed)
 
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
@@ -86,6 +89,19 @@ class UserManagementDialog(QDialog):
             role = "Admin" if user.is_admin else "User"
             self.table.setItem(row, 1, QTableWidgetItem(role))
             self.table.setItem(row, 2, QTableWidgetItem(str(user.id)))
+
+    def _on_selection_changed(self) -> None:
+        """Enable Delete only when a row other than the current user is selected."""
+        row = self.table.currentRow()
+        if row < 0:
+            self.delete_btn.setEnabled(False)
+            return
+        item = self.table.item(row, 0)
+        if item is None:
+            self.delete_btn.setEnabled(False)
+            return
+        uid = item.data(Qt.ItemDataRole.UserRole)
+        self.delete_btn.setEnabled(uid != self.current_user.id)
 
     def _on_add_user(self) -> None:
         from clear_budget.ui.widgets.create_user_dialog import CreateUserDialog
@@ -110,7 +126,7 @@ class UserManagementDialog(QDialog):
             return
         msg = (
             "Permanently delete user account?\n\n"
-            "Their budget database file will NOT be deleted — "
+            "Their budget database file will NOT be deleted - "
             "it can be recovered by recreating the username."
         )
         reply = QMessageBox.question(

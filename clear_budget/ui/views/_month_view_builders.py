@@ -1,4 +1,4 @@
-"""Builder mixin for MonthView — UI construction extracted to stay under LOC limit."""
+"""Builder mixin for MonthView - UI construction extracted to stay under LOC limit."""
 
 from PySide6.QtWidgets import (
     QVBoxLayout,
@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES, build_nav_month_widget
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES, build_nav_month_widget, fmt
 from clear_budget.ui import ui_scale
 
 
@@ -48,11 +48,11 @@ class MonthViewBuilderMixin:
         header_layout.addLayout(nav_layout)
 
         summary_layout = QHBoxLayout()
-        self.income_label = QLabel("Income: £0.00")
+        self.income_label = QLabel(f"Income: {fmt(0)}")
         self.income_label.setStyleSheet(
             ui_scale.style("font-size: 20px; padding: 5px;")
         )
-        self.bills_label = QLabel("Bills: £0.00")
+        self.bills_label = QLabel(f"Bills: {fmt(0)}")
         self.bills_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
         self.edit_balance_btn = QPushButton("📝")
         self.edit_balance_btn.setMaximumWidth(28)
@@ -64,7 +64,7 @@ class MonthViewBuilderMixin:
                 "QPushButton:hover { background-color: #1a1a2e; border-radius: 3px; }"
             )
         )
-        self.balance_label = QLabel("Balance: £0.00")
+        self.balance_label = QLabel(f"Balance: {fmt(0)}")
         self.balance_label.setStyleSheet(
             ui_scale.style(
                 "font-size: 20px; font-weight: bold; color: #34d399; padding: 5px;"

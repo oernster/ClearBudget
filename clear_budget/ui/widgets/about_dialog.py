@@ -61,7 +61,7 @@ _LGPL3_NOTICE = (
     "GNU LESSER GENERAL PUBLIC LICENCE\n"
     "Version 3, 29 June 2007\n"
     "\n"
-    "ClearBudget — Personal Budget Planner\n"
+    "ClearBudget - Personal Budget Planner\n"
     "Copyright (C) 2025 Oliver Ernster\n"
     "\n"
     "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"  # noqa: E501
@@ -86,25 +86,25 @@ _LGPL3_NOTICE = (
     "\n"
     "THIRD-PARTY LIBRARY LICENCES\n"
     "\n"
-    "PySide6 (Qt for Python) — LGPL-3.0\n"
+    "PySide6 (Qt for Python) - LGPL-3.0\n"
     "  https://www.gnu.org/licenses/lgpl-3.0.html\n"
     "\n"
-    "Python Standard Library — PSF Licence\n"
+    "Python Standard Library - PSF Licence\n"
     "  https://docs.python.org/3/license.html\n"
     "\n"
-    "SQLite — Public Domain\n"
+    "SQLite - Public Domain\n"
     "  https://www.sqlite.org/copyright.html\n"
     "\n"
-    "pytest — MIT Licence\n"
+    "pytest - MIT Licence\n"
     "  https://opensource.org/licenses/MIT\n"
     "\n"
-    "black — MIT Licence\n"
+    "black - MIT Licence\n"
     "  https://opensource.org/licenses/MIT\n"
     "\n"
-    "pywin32 — PSF Licence\n"
+    "pywin32 - PSF Licence\n"
     "  https://github.com/mhammond/pywin32/blob/main/LICENCE.txt\n"
     "\n"
-    "PyInstaller — GPL-2.0 with bootloader exception\n"
+    "PyInstaller - GPL-2.0 with bootloader exception\n"
     "  https://pyinstaller.org/en/stable/license.html\n"
 )
 
@@ -159,7 +159,7 @@ class LicenceDialog(QDialog):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Licence — LGPL-3.0")
+        self.setWindowTitle("Licence - LGPL-3.0")
         self.setMinimumSize(ui_scale.px(680), ui_scale.px(520))
         layout = QVBoxLayout()
 

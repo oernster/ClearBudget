@@ -70,7 +70,8 @@ class BillDialog(QDialog):
         self.name_edit = QLineEdit()
         layout.addWidget(self.name_edit)
 
-        layout.addWidget(QLabel("Amount (£):"))
+        from clear_budget.shared.currency import get_symbol
+        layout.addWidget(QLabel(f"Amount ({get_symbol()}):"))
         self.amount_edit = QLineEdit()
         layout.addWidget(self.amount_edit)
 
@@ -141,7 +142,7 @@ class BillDialog(QDialog):
         if self.month_only_check.isChecked():
             month_str = f"{self.current_month.month}/{self.current_month.year}"
             self.month_only_status.setText(
-                f"Changes saved for {month_str} only — template unchanged"
+                f"Changes saved for {month_str} only - template unchanged"
             )
         else:
             self.month_only_status.setText("")

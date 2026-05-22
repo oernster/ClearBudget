@@ -14,7 +14,7 @@ from clear_budget.domain.services.card_monthly_calculator import (
     calculate_card_monthly_state,
 )
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
-from clear_budget.ui.utils.format_helpers import build_nav_month_widget
+from clear_budget.ui.utils.format_helpers import build_nav_month_widget, fmt
 from clear_budget.ui.dark_theme import SCROLLBAR_WIDTH_PX
 from clear_budget.ui import ui_scale
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
@@ -63,7 +63,7 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         )
         layout.addWidget(alert_label)
 
-        self.overdraft_alert = QLabel("SAFE: £0.00 buffer")
+        self.overdraft_alert = QLabel(f"SAFE: {fmt(0)} buffer")
         self.overdraft_alert.setStyleSheet(
             ui_scale.style(
                 "font-size: 22px; font-weight: bold; padding: 10px; border-radius: 5px;"
@@ -97,7 +97,7 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         )
         layout.addWidget(self.freedom_label)
 
-        self.balance_label = QLabel("Bank Balance: £0.00")
+        self.balance_label = QLabel(f"Bank Balance: {fmt(0)}")
         self.balance_label.setStyleSheet(
             ui_scale.style("font-size: 20px; padding: 5px;")
         )
@@ -167,7 +167,7 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         """Return traffic-light color based on balance vs monthly drain coverage.
 
         Red only for actual overdraft (< 0).
-        Amber for positive but less than 2 months coverage — tight but surviving.
+        Amber for positive but less than 2 months coverage - tight but surviving.
         Green for 2+ months coverage.
         monthly_drain_pence: bills − income for a future month (positive = deficit).
         """
@@ -218,25 +218,25 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
                 rescue_event = (day, delta, name)
 
         closing_pence = balance
-        lines = [f"Opens: £{opening_pence / 100:.2f}"]
+        lines = [f"Opens: {fmt(opening_pence)}"]
 
         if first_negative_day is not None:
             lines.append(
                 f"OVERDRAWN by day {first_negative_day}  "
-                f"(low: −£{abs(min_balance) / 100:.2f})"
+                f"(low: -{fmt(abs(min_balance))})"
             )
             if rescue_event:
                 rday, ramt, rname = rescue_event
-                lines.append(f"Rescued day {rday}: {rname} +£{ramt / 100:.2f}")
+                lines.append(f"Rescued day {rday}: {rname} +{fmt(ramt)}")
             else:
-                lines.append("No rescue income — remains overdrawn")
+                lines.append("No rescue income - remains overdrawn")
         elif min_day and min_balance < monthly_drain_pence:
-            lines.append(f"Low point: £{min_balance / 100:.2f} on day {min_day}")
+            lines.append(f"Low point: {fmt(min_balance)} on day {min_day}")
 
         if closing_pence >= 0:
-            lines.append(f"Closes: £{closing_pence / 100:.2f}")
+            lines.append(f"Closes: {fmt(closing_pence)}")
         else:
-            lines.append(f"Closes: −£{abs(closing_pence) / 100:.2f}  (still overdrawn)")
+            lines.append(f"Closes: -{fmt(abs(closing_pence))}  (still overdrawn)")
 
         color = self._health_color(min_balance, monthly_drain_pence)
         return "\n".join(lines), color
@@ -245,7 +245,7 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
     def _build_card_state_text(cards, bills, opening_balances: dict) -> str:
         """Build per-card balance projection for one month.
 
-        opening_balances: {card_id: pence} — balance at start of this month.
+        opening_balances: {card_id: pence} - balance at start of this month.
         Returns multi-line text block, empty string if no active cards.
         """
         if not cards:
@@ -259,7 +259,7 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
                 card=card, opening_balance_pence=opening_pence, bills=list(bills)
             )
             interest_str = (
-                f" +£{state.monthly_interest.pounds:.2f} int"
+                f" +{fmt(state.monthly_interest.pence)} int"
                 if state.monthly_interest.pence > 0
                 else ""
             )
@@ -268,18 +268,18 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
             if paid_p < min_p:
                 shortfall_p = min_p - paid_p
                 payment_str = (
-                    f"paid £{paid_p / 100:.2f} — "
-                    f"min £{min_p / 100:.2f} — "
-                    f"SHORTFALL £{shortfall_p / 100:.2f}"
+                    f"paid {fmt(paid_p)} - "
+                    f"min {fmt(min_p)} - "
+                    f"SHORTFALL {fmt(shortfall_p)}"
                 )
             elif paid_p == 0:
-                payment_str = f"no payment set (min £{min_p / 100:.2f})"
+                payment_str = f"no payment set (min {fmt(min_p)})"
             else:
-                payment_str = f"paid £{paid_p / 100:.2f} (min £{min_p / 100:.2f}) ✓"
+                payment_str = f"paid {fmt(paid_p)} (min {fmt(min_p)}) ✓"
             lines.append(
-                f"  {card.name}: £{state.opening_balance.pounds:.2f}"
+                f"  {card.name}: {fmt(state.opening_balance.pence)}"
                 f"{interest_str} | {payment_str}"
-                f" | closes £{state.closing_balance.pounds:.2f}"
+                f" | closes {fmt(state.closing_balance.pence)}"
             )
         return "\n".join(lines)
 
@@ -344,8 +344,8 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
             bar.setMinimumHeight(ui_scale.px(26))
             bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
             bar.setFormat(
-                f"£{used_pence / 100:.2f} of £{limit_pence / 100:.2f} ({util_pct:.1f}%)"
-                f"   ·   month-end: £{closing_pence / 100:.2f}"
+                f"{fmt(used_pence)} of {fmt(limit_pence)} ({util_pct:.1f}%)"
+                f"   ·   month-end: {fmt(closing_pence)}"
             )
 
             if available_pence <= _red_threshold_pence:
@@ -367,11 +367,11 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
                 delta = closing_pence - used_pence
                 arrow = "↑" if delta > 0 else "↓" if delta < 0 else "→"
                 detail = (
-                    f"Charges +£{state.charges.pence / 100:.2f}  ·  "
-                    f"Payment −£{state.payment_received.pence / 100:.2f}  ·  "
-                    f"Interest +£{state.monthly_interest.pence / 100:.2f}  ·  "
-                    f"Min due £{state.minimum_payment.pence / 100:.2f}  "
-                    f"{arrow} £{abs(delta) / 100:.2f}"
+                    f"Charges +{fmt(state.charges.pence)}  ·  "
+                    f"Payment -{fmt(state.payment_received.pence)}  ·  "
+                    f"Interest +{fmt(state.monthly_interest.pence)}  ·  "
+                    f"Min due {fmt(state.minimum_payment.pence)}  "
+                    f"{arrow} {fmt(abs(delta))}"
                     f" {'increase' if delta > 0 else 'decrease'}"
                 )
                 detail_color = (

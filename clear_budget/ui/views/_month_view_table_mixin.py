@@ -1,4 +1,4 @@
-"""MonthViewTableMixin — table population extracted from MonthView (LOC limit)."""
+"""MonthViewTableMixin - table population extracted from MonthView (LOC limit)."""
 
 from PySide6.QtWidgets import QTableWidgetItem
 from PySide6.QtCore import Qt

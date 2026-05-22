@@ -50,7 +50,9 @@ class SolvencyViewModel(QObject):
         self.solvency_updated.emit(report)
 
         if report.balance_pence < 0:
-            msg = f"Deficit: £{abs(report.balance_pence / 100):.2f}"
+            from clear_budget.ui.utils.format_helpers import fmt
+
+            msg = f"Deficit: {fmt(abs(report.balance_pence))}"
             self.danger_warning_triggered.emit(msg)
 
     def get_status_color(self) -> str:

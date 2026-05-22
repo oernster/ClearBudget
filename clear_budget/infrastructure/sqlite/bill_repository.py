@@ -230,7 +230,7 @@ class SQLiteBillRepository:
         return bill
 
     def deactivate(self, *, bill_id: int) -> None:
-        """Deactivate a bill (soft delete — sets active=0)."""
+        """Deactivate a bill (soft delete - sets active=0)."""
         cursor = self.conn.cursor()
         cursor.execute("UPDATE bills SET active = 0 WHERE id = ?", (bill_id,))
         self.conn.commit()

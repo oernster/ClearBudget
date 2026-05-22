@@ -17,6 +17,7 @@ from PySide6.QtGui import QColor
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.shared.currency import get_symbol
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 from clear_budget.ui import ui_scale
 from clear_budget.ui.utils.format_helpers import build_nav_month_widget
@@ -81,7 +82,7 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
                 "Util %",
                 "Due Day",
                 "Interest %",
-                "Fixed Min (£)",
+                f"Fixed Min ({get_symbol()})",
                 "Expiry",
                 "Status",
                 "Active",
@@ -274,10 +275,10 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
             if col == 0:
                 u, d = dataclasses.replace(card, name=v or card.name), v or card.name
             elif col == 1:
-                a = Amount.from_pounds(float(v.lstrip("£")))
+                a = Amount.from_pounds(float(v.lstrip(get_symbol())))
                 u, d = dataclasses.replace(card, credit_limit=a), str(a)
             elif col == 2:
-                a = Amount.from_pounds(float(v.lstrip("£")))
+                a = Amount.from_pounds(float(v.lstrip(get_symbol())))
                 u, d = dataclasses.replace(card, current_balance_used=a), str(a)
             elif col == 5:
                 u, d = dataclasses.replace(card, payment_due_day=int(v)), str(int(v))
@@ -288,7 +289,9 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
                 )
             elif col == 7:
                 pence = (
-                    Amount.from_pounds(float(v.lstrip("£"))).pence if v != "-" else None
+                    Amount.from_pounds(float(v.lstrip(get_symbol()))).pence
+                    if v != "-"
+                    else None
                 )
                 u, d = dataclasses.replace(card, minimum_payment_pence=pence), (
                     str(Amount(pence=pence)) if pence is not None else " - "
@@ -313,7 +316,7 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
                     )
             elif col == 14:
                 pence = (
-                    Amount.from_pounds(float(v.lstrip("£"))).pence
+                    Amount.from_pounds(float(v.lstrip(get_symbol()))).pence
                     if v not in ("-", "")
                     else None
                 )
@@ -323,7 +326,7 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
             else:
                 return
             if u == card:
-                return  # nothing changed — editor just opened, don't rebuild
+                return  # nothing changed - editor just opened, don't rebuild
             self.budget_service.payment_method_repo.update_credit_card(card=u)
             self.cards_table.blockSignals(True)
             item.setText(d)

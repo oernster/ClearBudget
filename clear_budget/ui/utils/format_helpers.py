@@ -32,7 +32,7 @@ _APP_ICON_PATH: Path | None = _resolve_app_icon()
 
 
 def build_nav_month_widget(initial_text: str):
-    """Return (QWidget, QLabel) — centered icon + month label for nav rows."""
+    """Return (QWidget, QLabel) - centered icon + month label for nav rows."""
     from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel
     from PySide6.QtGui import QPixmap
     from PySide6.QtCore import Qt
@@ -62,6 +62,19 @@ def build_nav_month_widget(initial_text: str):
     layout.addWidget(month_lbl)
 
     return container, month_lbl
+
+
+def fmt(amount: "int | float") -> str:
+    """Format as a currency string using the active symbol.
+
+    Pass pence as int (divided by 100 internally) or pounds as float (used directly).
+    """
+    from clear_budget.shared.currency import get_symbol
+
+    sym = get_symbol()
+    if isinstance(amount, int):
+        return f"{sym}{amount / 100:.2f}"
+    return f"{sym}{amount:.2f}"
 
 
 def format_category(category: str) -> str:

@@ -1,10 +1,11 @@
-"""Inline-edit handler mixin for MonthView — extracted to stay under LOC limit."""
+"""Inline-edit handler mixin for MonthView - extracted to stay under LOC limit."""
 
 import dataclasses
 
 from PySide6.QtCore import Qt, QTimer
 
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.shared.currency import get_symbol
 
 
 class MonthViewEditMixin:
@@ -64,7 +65,7 @@ class MonthViewEditMixin:
                 u = dataclasses.replace(bill, name=v or bill.name)
             elif col == 1:
                 u = dataclasses.replace(
-                    bill, amount=Amount.from_pounds(float(v.lstrip("£")))
+                    bill, amount=Amount.from_pounds(float(v.lstrip(get_symbol())))
                 )
             elif col == 2:
                 u = dataclasses.replace(bill, category=v.lower().replace(" ", "_"))
@@ -93,7 +94,7 @@ class MonthViewEditMixin:
                 u = dataclasses.replace(inc, name=v or inc.name)
             elif col == 1:
                 u = dataclasses.replace(
-                    inc, amount=Amount.from_pounds(float(v.lstrip("£")))
+                    inc, amount=Amount.from_pounds(float(v.lstrip(get_symbol())))
                 )
             elif col == 3:
                 u = dataclasses.replace(

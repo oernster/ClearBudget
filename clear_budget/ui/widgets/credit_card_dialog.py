@@ -38,11 +38,13 @@ class CreditCardDialog(QDialog):
         self.name_edit.setPlaceholderText("e.g., CapitalOne, Vanquis, Jaja")
         layout.addWidget(self.name_edit)
 
-        layout.addWidget(QLabel("Credit Limit (£):"))
+        from clear_budget.shared.currency import get_symbol
+        _sym = get_symbol()
+        layout.addWidget(QLabel(f"Credit Limit ({_sym}):"))
         self.limit_edit = QLineEdit()
         layout.addWidget(self.limit_edit)
 
-        layout.addWidget(QLabel("Current Balance (£):"))
+        layout.addWidget(QLabel(f"Current Balance ({_sym}):"))
         self.balance_edit = QLineEdit()
         self.balance_edit.setText("0.00")
         layout.addWidget(self.balance_edit)
@@ -89,14 +91,14 @@ class CreditCardDialog(QDialog):
 
         layout.addWidget(QLabel("Minimum Payment [optional, overridden by % below]:"))
         min_pmt_row = QHBoxLayout()
-        min_pmt_row.addWidget(QLabel("£"))
+        min_pmt_row.addWidget(QLabel(_sym))
         self.min_payment_edit = QLineEdit()
         min_pmt_row.addWidget(self.min_payment_edit)
         layout.addLayout(min_pmt_row)
 
         layout.addWidget(
             QLabel(
-                "Min Payment % of balance [optional, e.g. 4.43 — overrides fixed £]:"
+                f"Min Payment % of balance [optional, e.g. 4.43 - overrides fixed {_sym}]:"
             )
         )
         self.min_pct_spin = QDoubleSpinBox()

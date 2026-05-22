@@ -11,7 +11,7 @@ from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.widgets.bill_dialog import BillDialog
 from clear_budget.ui.widgets.income_dialog import IncomeDialog
 from clear_budget.ui.widgets.balance_dialog import BalanceDialog
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES, fmt
 from clear_budget.ui import ui_scale
 from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
 from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
@@ -133,7 +133,7 @@ class MonthView(
                         if i.day_of_month and balance_day < i.day_of_month <= today_day
                     )
                     pence += arrived_pence
-                label = f"Balance: £{pence / 100:.2f}"
+                label = f"Balance: {fmt(pence)}"
             else:
                 _svc = self.view_model.budget_service
                 pence = _svc.get_projected_month_end_balance_pence(
@@ -141,9 +141,9 @@ class MonthView(
                     summary=summary,
                 )
                 if pence >= 0:
-                    label = f"Projected end: £{pence / 100:.2f}"
+                    label = f"Projected end: {fmt(pence)}"
                 else:
-                    label = f"Projected end: −£{abs(pence) / 100:.2f} OVERDRAWN"
+                    label = f"Projected end: -{fmt(abs(pence))} OVERDRAWN"
             self.balance_label.setText(label)
             color = self._get_balance_color(pence)
             self.balance_label.setStyleSheet(

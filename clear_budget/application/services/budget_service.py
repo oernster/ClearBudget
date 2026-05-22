@@ -215,7 +215,7 @@ class BudgetService:
     ) -> int:
         """Projected bank balance pence at end of year_month.
 
-        Signed — can be negative.
+        Signed - can be negative.
         """
         from datetime import date as _date
 
@@ -384,3 +384,4 @@ class BudgetService:
             ("bank_balance_day", str(_date.today().day)),
         )
         self.bill_repo.conn.commit()
+

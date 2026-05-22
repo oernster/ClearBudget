@@ -1,4 +1,4 @@
-"""ScrollableTab — QScrollArea wrapper with visible up/down scroll indicators."""
+"""ScrollableTab - QScrollArea wrapper with visible up/down scroll indicators."""
 
 from PySide6.QtWidgets import (
     QWidget,

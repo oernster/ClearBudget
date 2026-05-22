@@ -1,4 +1,4 @@
-"""Card projection helpers — extracted from BudgetService to stay under LOC limit."""
+"""Card projection helpers - extracted from BudgetService to stay under LOC limit."""
 
 from datetime import datetime
 

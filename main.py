@@ -1,4 +1,4 @@
-"""Application entry point — composition root and Qt event loop.
+"""Application entry point - composition root and Qt event loop.
 
 Handles the full login lifecycle:
 1. Open central users store.
@@ -28,6 +28,8 @@ from clear_budget.infrastructure.sqlite.payment_method_repository import (
 )
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
+from clear_budget.shared.currency import set_currency
+from clear_budget.ui.dark_theme import get_dark_qss
 from clear_budget.ui.main_window import MainWindow
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
@@ -67,7 +69,7 @@ def _run_login_flow(user_store: UserStore) -> User | None:
         dlg = CreateUserDialog(user_store, is_first_user=True)
         if dlg.exec() != CreateUserDialog.Accepted or dlg.created_user is None:
             return None
-        # First user just created — log them in directly.
+        # First user just created - log them in directly.
         return dlg.created_user
 
     dlg = LoginDialog(user_store)
@@ -84,6 +86,16 @@ def _open_user_database(username: str) -> Database:
     database.connect()
     database.create_schema()
     return database
+
+
+def _load_currency(database: Database) -> None:
+    """Activate the currency saved in this user's settings (defaults to GBP)."""
+    if database.conn is None:
+        return
+    row = database.conn.execute(
+        "SELECT value FROM settings WHERE key = 'currency'"
+    ).fetchone()
+    set_currency(row["value"] if row else "GBP")
 
 
 def _build_main_window(
@@ -109,6 +121,7 @@ def _build_main_window(
         solvency_view_model=solvency_view_model,
         current_user=current_user,
         user_store=user_store,
+        db_path=database.db_path,
     )
 
 
@@ -135,6 +148,8 @@ def main() -> int:
         if not icon.isNull():
             app.setWindowIcon(icon)
 
+    app.setStyleSheet(get_dark_qss())
+
     Config.app_dir().mkdir(parents=True, exist_ok=True)
     user_store = UserStore(Config.users_db_path())
 
@@ -158,13 +173,14 @@ def main() -> int:
         )
 
     def _reload_database(user: "User", old_window: "MainWindow") -> None:
-        """Reload the database in-place after an import — no re-login needed."""
+        """Reload the database in-place after an import or settings change."""
         old_window.hide()
         if _active_database:
             _active_database[0].close()
             _active_database.clear()
         database = _open_user_database(user.username)
         _active_database.append(database)
+        _load_currency(database)
         window = _build_main_window(database, user, user_store)
         _show_window(user, window)
         old_window.deleteLater()
@@ -182,6 +198,7 @@ def main() -> int:
 
         database = _open_user_database(user.username)
         _active_database.append(database)
+        _load_currency(database)
 
         window = _build_main_window(database, user, user_store)
         _show_window(user, window)

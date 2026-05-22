@@ -1,4 +1,4 @@
-"""CardMonthlyCalculator — computes per-card monthly charges, payments and interest."""
+"""CardMonthlyCalculator - computes per-card monthly charges, payments and interest."""
 
 from dataclasses import dataclass
 
@@ -53,7 +53,7 @@ def calculate_card_monthly_state(
         if card.minimum_payment_pence is not None:
             minimum_pence = card.minimum_payment_pence
         elif card.minimum_payment_percent:
-            # Per-card calibrated percentage (no fixed floor — some cards sit below £25)
+            # Per-card calibrated percentage (no fixed floor - some cards sit below £25)
             minimum_pence = max(
                 1, int(opening_balance_pence * card.minimum_payment_percent / 100)
             )

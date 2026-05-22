@@ -1,4 +1,4 @@
-"""Budget reset helper — wipes all user data from the active database."""
+"""Budget reset helper - wipes all user data from the active database."""
 
 import sqlite3
 

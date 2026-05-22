@@ -36,7 +36,8 @@ class IncomeDialog(QDialog):
         self.name_edit = QLineEdit()
         layout.addWidget(self.name_edit)
 
-        layout.addWidget(QLabel("Amount (£):"))
+        from clear_budget.shared.currency import get_symbol
+        layout.addWidget(QLabel(f"Amount ({get_symbol()}):"))
         self.amount_edit = QLineEdit()
         layout.addWidget(self.amount_edit)
 

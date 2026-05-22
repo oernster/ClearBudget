@@ -36,8 +36,10 @@ class Amount:
         return self.pence / 100
 
     def __str__(self) -> str:
-        """Format as £X.XX."""
-        return f"£{self.pounds:.2f}"
+        """Format as <symbol>X.XX using the active currency."""
+        from clear_budget.shared.currency import get_symbol
+
+        return f"{get_symbol()}{self.pounds:.2f}"
 
     def __repr__(self) -> str:
         return f"Amount({self.pounds:.2f})"

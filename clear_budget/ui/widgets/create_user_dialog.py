@@ -1,4 +1,4 @@
-"""CreateUserDialog — new account creation (first-run wizard and admin add-user)."""
+"""CreateUserDialog - new account creation (first-run wizard and admin add-user)."""
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -46,7 +46,7 @@ class CreateUserDialog(QDialog):
         self.created_user: User | None = None
         self.recovery_code: str = ""
         title = (
-            "Welcome to ClearBudget — Create Your Account"
+            "Welcome to ClearBudget - Create Your Account"
             if is_first_user
             else "Add User"
         )
@@ -66,7 +66,7 @@ class CreateUserDialog(QDialog):
         if self.is_first_user:
             intro = QLabel(
                 "No user accounts exist yet.\n"
-                "Create the first account — this will be the admin account."
+                "Create the first account - this will be the admin account."
             )
             intro.setWordWrap(True)
             intro.setStyleSheet("color: #94a3b8; font-size: 12px;")
@@ -173,7 +173,7 @@ class CreateUserDialog(QDialog):
 class RecoveryCodeDialog(QDialog):
     """Displays the one-time recovery code after account creation.
 
-    The close button is disabled — the user must tick the confirmation
+    The close button is disabled - the user must tick the confirmation
     checkbox and click Continue to proceed.
     """
 

@@ -1,4 +1,4 @@
-"""Month mapper helpers — convert domain entities to month-bill/income DTOs.
+"""Month mapper helpers - convert domain entities to month-bill/income DTOs.
 
 Extracted from BudgetService to stay under LOC limit.
 """

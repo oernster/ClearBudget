@@ -1,4 +1,4 @@
-"""UserStore — manages the central users authentication database.
+"""UserStore - manages the central users authentication database.
 
 Passwords are hashed with bcrypt (Blowfish-based).  A one-time recovery code
 is generated at account creation, shown to the user exactly once, and stored
@@ -14,7 +14,7 @@ import bcrypt
 
 from clear_budget.auth.models import User
 
-# bcrypt work factor — 12 is a solid default (≈0.3 s on modern hardware).
+# bcrypt work factor - 12 is a solid default (≈0.3 s on modern hardware).
 _BCRYPT_ROUNDS = 12
 
 # Recovery code: 20 url-safe characters
