@@ -1,22 +1,30 @@
 """CreateUserDialog — new account creation (first-run wizard and admin add-user)."""
 
 from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
     QDialog,
-    QVBoxLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
-    QCheckBox,
-    QFrame,
     QTextEdit,
+    QVBoxLayout,
 )
 from PySide6.QtCore import Qt
 
-from clear_budget.auth.user_store import UserStore
 from clear_budget.auth.models import User
+from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import ui_scale
 from clear_budget.ui.widgets.login_dialog import LoginDialog
+
+# Flags that give a titled dialog window WITHOUT a close button on Windows.
+_NO_CLOSE_FLAGS = (
+    Qt.WindowType.Dialog
+    | Qt.WindowType.WindowTitleHint
+    | Qt.WindowType.CustomizeWindowHint
+)
 
 
 class CreateUserDialog(QDialog):
@@ -45,9 +53,7 @@ class CreateUserDialog(QDialog):
         self.setWindowTitle(title)
         self.setMinimumWidth(ui_scale.px(420))
         if is_first_user:
-            self.setWindowFlags(
-                Qt.WindowType.Dialog & ~Qt.WindowType.WindowCloseButtonHint
-            )
+            self.setWindowFlags(_NO_CLOSE_FLAGS)
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -165,13 +171,18 @@ class CreateUserDialog(QDialog):
 
 
 class RecoveryCodeDialog(QDialog):
-    """Displays the one-time recovery code after account creation."""
+    """Displays the one-time recovery code after account creation.
+
+    The close button is disabled — the user must tick the confirmation
+    checkbox and click Continue to proceed.
+    """
 
     def __init__(self, recovery_code: str, parent=None) -> None:
         super().__init__(parent)
+        self._code = recovery_code
         self.setWindowTitle("Save Your Recovery Code")
-        self.setMinimumWidth(ui_scale.px(440))
-        self.setWindowFlags(Qt.WindowType.Dialog & ~Qt.WindowType.WindowCloseButtonHint)
+        self.setMinimumWidth(ui_scale.px(460))
+        self.setWindowFlags(_NO_CLOSE_FLAGS)
         self._build_ui(recovery_code)
 
     def _build_ui(self, code: str) -> None:
@@ -195,11 +206,11 @@ class RecoveryCodeDialog(QDialog):
         info.setStyleSheet("color: #94a3b8; font-size: 12px;")
         layout.addWidget(info)
 
-        code_box = QTextEdit()
-        code_box.setPlainText(code)
-        code_box.setReadOnly(True)
-        code_box.setFixedHeight(ui_scale.px(48))
-        code_box.setStyleSheet(
+        self._code_box = QTextEdit()
+        self._code_box.setPlainText(code)
+        self._code_box.setReadOnly(True)
+        self._code_box.setFixedHeight(ui_scale.px(52))
+        self._code_box.setStyleSheet(
             ui_scale.style(
                 "QTextEdit {"
                 "  font-family: monospace;"
@@ -212,13 +223,32 @@ class RecoveryCodeDialog(QDialog):
                 "}"
             )
         )
-        layout.addWidget(code_box)
+        layout.addWidget(self._code_box)
 
-        confirm_lbl = QLabel("I have saved my recovery code in a safe place.")
-        confirm_lbl.setStyleSheet("color: #94a3b8; font-size: 12px;")
-        layout.addWidget(confirm_lbl)
+        copy_btn = QPushButton("📋  Copy code to clipboard")
+        copy_btn.setStyleSheet(
+            ui_scale.style(
+                "QPushButton { font-size: 13px; padding: 4px 10px; }"
+            )
+        )
+        copy_btn.clicked.connect(self._copy_to_clipboard)
+        layout.addWidget(copy_btn)
 
-        ok_btn = QPushButton("I've saved it — Continue")
-        ok_btn.setDefault(True)
-        ok_btn.clicked.connect(self.accept)
-        layout.addWidget(ok_btn)
+        self._confirm_check = QCheckBox(
+            "I have saved my recovery code in a safe place."
+        )
+        self._confirm_check.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        self._confirm_check.stateChanged.connect(self._on_confirm_changed)
+        layout.addWidget(self._confirm_check)
+
+        self._ok_btn = QPushButton("Continue")
+        self._ok_btn.setDefault(True)
+        self._ok_btn.setEnabled(False)  # locked until checkbox ticked
+        self._ok_btn.clicked.connect(self.accept)
+        layout.addWidget(self._ok_btn)
+
+    def _copy_to_clipboard(self) -> None:
+        QApplication.clipboard().setText(self._code)
+
+    def _on_confirm_changed(self, state: int) -> None:
+        self._ok_btn.setEnabled(state == Qt.CheckState.Checked.value)
