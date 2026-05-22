@@ -34,9 +34,16 @@ from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 
 
 def _find_runtime_icon() -> Path | None:
-    """Locate runtime PNG icon beside the executable."""
-    icon_path = Path(sys.executable).resolve().parent / "clearbudget_256.png"
-    return icon_path if icon_path.exists() else None
+    """Locate runtime PNG icon.
+
+    Checks beside the executable first (installed/frozen), then falls back
+    to the project root beside main.py (dev mode).
+    """
+    beside_exe = Path(sys.executable).resolve().parent / "clearbudget_256.png"
+    if beside_exe.exists():
+        return beside_exe
+    beside_main = Path(__file__).resolve().parent / "clearbudget_256.png"
+    return beside_main if beside_main.exists() else None
 
 
 _MUTEX_NAME = "Global\\ClearBudget_SingleInstance"
