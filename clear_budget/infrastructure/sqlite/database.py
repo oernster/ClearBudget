@@ -39,7 +39,9 @@ class Database:
 
         for col_name, col_def in columns_to_add:
             try:
-                cursor.execute(f"ALTER TABLE credit_cards ADD COLUMN {col_name} {col_def}")
+                cursor.execute(
+                    f"ALTER TABLE credit_cards ADD COLUMN {col_name} {col_def}"
+                )
             except Exception:
                 pass
 
@@ -173,7 +175,7 @@ class Database:
             """
         )
 
-        # Migrations: add columns to credit_cards if they don't exist (for existing databases)
+        # Migrations: add columns to credit_cards if missing (existing databases)
         self._migrate_credit_cards_schema(cursor)
 
         # Settings table (for app configuration)
@@ -204,24 +206,33 @@ class Database:
 
         # Migrate bills added with current-month start_ym to always-visible 2000-01
         cursor.execute(
-            "UPDATE bills SET start_year = 2000, start_month = 1 WHERE start_year > 2000"
+            "UPDATE bills SET start_year = 2000, start_month = 1"
+            " WHERE start_year > 2000"
         )
 
-        # Add target_card_id to bills (links credit_payment bills to the card being paid)
+        # Add target_card_id to bills (links credit_payment bills to their card)
         try:
-            cursor.execute("ALTER TABLE bills ADD COLUMN target_card_id INTEGER DEFAULT NULL")
+            cursor.execute(
+                "ALTER TABLE bills ADD COLUMN target_card_id INTEGER DEFAULT NULL"
+            )
         except Exception:
             pass
 
         # Add day_of_month override to bill_month_overrides
         try:
-            cursor.execute("ALTER TABLE bill_month_overrides ADD COLUMN day_of_month INTEGER DEFAULT NULL")
+            cursor.execute(
+                "ALTER TABLE bill_month_overrides"
+                " ADD COLUMN day_of_month INTEGER DEFAULT NULL"
+            )
         except Exception:
             pass
 
         # Add per-card minimum payment percentage
         try:
-            cursor.execute("ALTER TABLE credit_cards ADD COLUMN minimum_payment_percent REAL DEFAULT NULL")
+            cursor.execute(
+                "ALTER TABLE credit_cards"
+                " ADD COLUMN minimum_payment_percent REAL DEFAULT NULL"
+            )
         except Exception:
             pass
 

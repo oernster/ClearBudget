@@ -4,9 +4,6 @@ import sqlite3
 from dataclasses import dataclass
 
 from clear_budget.domain.entities.income_source import IncomeSource
-from clear_budget.domain.interfaces.income_source_repository import (
-    IncomeSourceRepository,
-)
 from clear_budget.domain.value_objects.amount import Amount
 
 

@@ -4,7 +4,6 @@ import sqlite3
 from dataclasses import dataclass
 
 from clear_budget.domain.entities.bill import Bill
-from clear_budget.domain.interfaces.bill_repository import BillRepository
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 
@@ -15,12 +14,14 @@ class SQLiteBillRepository:
 
     conn: sqlite3.Connection
 
-    def list_active_for_month(self, *, year_month: YearMonth, include_inactive: bool = False) -> list[Bill]:
+    def list_active_for_month(
+        self, *, year_month: YearMonth, include_inactive: bool = False
+    ) -> list[Bill]:
         """List bills for a given month, applying per-month overrides.
 
         Args:
             year_month: Month to query
-            include_inactive: When True, include deactivated and skipped bills (for display)
+            include_inactive: When True, include deactivated and skipped bills (display)
         """
         cursor = self.conn.cursor()
         active_filter = "" if include_inactive else "AND b.active = 1"
@@ -91,7 +92,8 @@ class SQLiteBillRepository:
         """Mark a bill as skipped for one specific month."""
         cursor = self.conn.cursor()
         cursor.execute(
-            "INSERT OR IGNORE INTO bill_month_skips (bill_id, year, month) VALUES (?, ?, ?)",
+            "INSERT OR IGNORE INTO bill_month_skips"
+            " (bill_id, year, month) VALUES (?, ?, ?)",
             (bill_id, year_month.year, year_month.month),
         )
         self.conn.commit()
@@ -156,12 +158,15 @@ class SQLiteBillRepository:
             """
             INSERT INTO bills
             (name, amount_pence, payment_method_id, category, bill_type,
-             day_of_month, start_year, start_month, end_year, end_month, active, target_card_id)
+             day_of_month, start_year, start_month,
+             end_year, end_month, active, target_card_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                bill.name, bill.amount.pence, bill.payment_method_id, bill.category,
-                bill.bill_type, bill.day_of_month, bill.start_ym.year, bill.start_ym.month,
+                bill.name, bill.amount.pence,
+                bill.payment_method_id, bill.category,
+                bill.bill_type, bill.day_of_month,
+                bill.start_ym.year, bill.start_ym.month,
                 bill.end_ym.year if bill.end_ym else None,
                 bill.end_ym.month if bill.end_ym else None,
                 1 if bill.active else 0, bill.target_card_id,
@@ -189,8 +194,10 @@ class SQLiteBillRepository:
             WHERE id = ?
             """,
             (
-                bill.name, bill.amount.pence, bill.payment_method_id, bill.category,
-                bill.bill_type, bill.day_of_month, bill.start_ym.year, bill.start_ym.month,
+                bill.name, bill.amount.pence,
+                bill.payment_method_id, bill.category,
+                bill.bill_type, bill.day_of_month,
+                bill.start_ym.year, bill.start_ym.month,
                 bill.end_ym.year if bill.end_ym else None,
                 bill.end_ym.month if bill.end_ym else None,
                 1 if bill.active else 0, bill.target_card_id, bill.id,

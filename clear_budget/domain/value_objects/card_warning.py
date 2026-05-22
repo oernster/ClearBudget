@@ -15,7 +15,7 @@ class CardExhaustionWarning:
         monthly_charge: Monthly bills charged to this card
         monthly_payment: Monthly payment FROM bank TO this card
         net_monthly: monthly_charge - monthly_payment (can be positive or negative)
-        months_until_max: Estimated months until card is exhausted (inf if net_monthly <= 0)
+        months_until_max: Estimated months until exhaustion (inf if net_monthly <= 0)
         status: 'danger' if <= 1 month, 'warning' if <= 3 months
     """
 

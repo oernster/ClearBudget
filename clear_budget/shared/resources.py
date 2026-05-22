@@ -106,7 +106,7 @@ def find_qt_window_icon_path(*, project_root: Path | None = None) -> Path | None
         except Exception:
             pass
 
-        # Repo layout fallback: clear_budget/shared/resources.py -> repo root is parents[2].
+        # Repo layout: clear_budget/shared/resources.py -> repo root is parents[2].
         try:
             roots.append(Path(__file__).resolve().parents[2])
         except Exception:

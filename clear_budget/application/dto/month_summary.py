@@ -22,7 +22,7 @@ class MonthSummary:
         balance: total_income - bank_bills (affects bank account)
         bills: List of active bills for this month
         income_sources: List of active income sources (used for calculations)
-        all_income_sources: List of all income sources including inactive (used for display)
+        all_income_sources: All income sources including inactive (used for display)
     """
 
     year_month: YearMonth
@@ -30,10 +30,10 @@ class MonthSummary:
     total_bills: Amount
     bank_bills: Amount
     balance: Amount
-    bills: tuple[Bill, ...] = ()                  # active only — used for calculations
-    all_bills: tuple[Bill, ...] = ()              # active + inactive — used for display
-    income_sources: tuple[IncomeSource, ...] = () # active only — used for calculations
-    all_income_sources: tuple[IncomeSource, ...] = ()  # active + inactive — used for display
+    bills: tuple[Bill, ...] = ()  # active only — used for calculations
+    all_bills: tuple[Bill, ...] = ()  # active + inactive — used for display
+    income_sources: tuple[IncomeSource, ...] = ()  # active only — used for calculations
+    all_income_sources: tuple[IncomeSource, ...] = ()  # active + inactive — display
 
     def __str__(self) -> str:
         return (

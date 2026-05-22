@@ -19,7 +19,9 @@ def _get_recorded_months(conn) -> list[YearMonth]:  # pragma: no cover
     return [YearMonth(row['year'], row['month']) for row in rows]
 
 
-def _do_archive_month(conn, year_month: YearMonth, month_generator) -> None:  # pragma: no cover
+def _do_archive_month(  # pragma: no cover
+    conn, year_month: YearMonth, month_generator
+) -> None:
     cursor = conn.cursor()
 
     cursor.execute(
@@ -39,14 +41,19 @@ def _do_archive_month(conn, year_month: YearMonth, month_generator) -> None:  # 
         )
         month_id = cursor.lastrowid
 
-    month_bills = month_generator.generate_month_bills(year_month=year_month, month_id=month_id)
-    month_income = month_generator.generate_month_income(year_month=year_month, month_id=month_id)
+    month_bills = month_generator.generate_month_bills(
+        year_month=year_month, month_id=month_id
+    )
+    month_income = month_generator.generate_month_income(
+        year_month=year_month, month_id=month_id
+    )
 
     for bill in month_bills:
         cursor.execute(
             """
             INSERT INTO month_bills
-            (month_id, bill_template_id, name, amount_pence, payment_method_id, category, day_of_month, is_ad_hoc)
+            (month_id, bill_template_id, name, amount_pence,
+             payment_method_id, category, day_of_month, is_ad_hoc)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (

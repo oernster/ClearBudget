@@ -2,8 +2,6 @@
 
 from dataclasses import dataclass
 
-from clear_budget.domain.value_objects.year_month import YearMonth
-
 
 @dataclass(frozen=True, slots=True)
 class DailyCashflowEvent:

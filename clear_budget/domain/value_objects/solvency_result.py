@@ -13,7 +13,7 @@ class SolvencyResult:
         balance: Total income - total bills in pence (can be negative)
         deficit: Absolute value of negative balance (0 if surplus)
         buffer: Safety cushion amount (typically £600)
-        forward_shortfall: Sum of shortfalls in next 2 months (using reliable income only)
+        forward_shortfall: Sum of shortfalls in next 2 months (reliable income only)
         desired_acquire: deficit + buffer + forward_shortfall (total to acquire)
     """
 

@@ -41,7 +41,9 @@ class SolvencyCalculatorService:
 
         # Calculate current month balance (bank account only)
         total_in = sum((inc.amount.pence for inc in month_income), 0)
-        total_out = sum((bill.amount.pence for bill in month_bills if bill.payment_method_id == 1), 0)
+        total_out = sum(
+            (b.amount.pence for b in month_bills if b.payment_method_id == 1), 0
+        )
         balance = total_in - total_out
 
         # Calculate deficit if negative
@@ -51,7 +53,11 @@ class SolvencyCalculatorService:
         forward_shortfall_pence = 0
         for month_idx in range(len(next_two_months_bills)):
             future_out = sum(
-                (bill.amount.pence for bill in next_two_months_bills[month_idx] if bill.payment_method_id == 1),
+                (
+                    b.amount.pence
+                    for b in next_two_months_bills[month_idx]
+                    if b.payment_method_id == 1
+                ),
                 0,
             )
             future_in_reliable = sum(

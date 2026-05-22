@@ -15,7 +15,8 @@ class Bill:
         name: Human-readable name (e.g., "Rent", "Electricity")
         amount: Monthly amount due
         payment_method_id: Which account/card to debit (FK to PaymentMethod)
-        category: Type of bill (housing, utilities, subscriptions, credit_payment, groceries, discretionary, one_time)
+        category: Type of bill (housing, utilities, subscriptions,
+            credit_payment, groceries, discretionary, one_time)
         bill_type: fixed | variable | expiring
         day_of_month: Day bill is due (1-31, None if not tied to a specific day)
         start_ym: First month this bill appears (YYYY-MM)
