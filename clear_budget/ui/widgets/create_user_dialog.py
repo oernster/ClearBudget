@@ -225,7 +225,7 @@ class RecoveryCodeDialog(QDialog):
         )
         layout.addWidget(self._code_box)
 
-        copy_btn = QPushButton("📋  Copy code to clipboard")
+        copy_btn = QPushButton("⧉  Copy code to clipboard")
         copy_btn.setStyleSheet(
             ui_scale.style(
                 "QPushButton { font-size: 13px; padding: 4px 10px; }"
