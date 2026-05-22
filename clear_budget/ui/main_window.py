@@ -30,6 +30,8 @@ class MainWindow(QMainWindow):
 
     # Emitted when the user requests logout (lock screen) or switch user.
     logout_requested = Signal()
+    # Emitted after a database import — signals main to reload without restart.
+    database_replaced = Signal()
 
     def __init__(
         self,
@@ -73,6 +75,7 @@ class MainWindow(QMainWindow):
 
         archive_view = ArchiveView(self.month_view_model.budget_service)
         self.tabs.addTab(self._scrollable(archive_view), "Archive")
+        archive_view.database_replaced.connect(self.database_replaced)
 
         layout.addWidget(self.tabs)
         central_widget.setLayout(layout)

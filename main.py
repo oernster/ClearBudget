@@ -140,6 +140,35 @@ def main() -> int:
 
     _active_database: list[Database] = []
 
+    def _show_window(user: "User", window: "MainWindow") -> None:
+        """Apply icon, geometry, signals, and show window."""
+        if icon_path:
+            icon = QIcon(str(icon_path))
+            if not icon.isNull():
+                window.setWindowIcon(icon)
+        _restore_w = int(_avail_w * 0.88)
+        _restore_h = int(_avail_h * 0.88)
+        _restore_x = _avail.x() + (_avail_w - _restore_w) // 2
+        _restore_y = _avail.y() + (_avail_h - _restore_h) // 2
+        window.setGeometry(_restore_x, _restore_y, _restore_w, _restore_h)
+        window.showMaximized()
+        window.logout_requested.connect(_session_loop)
+        window.database_replaced.connect(
+            lambda: _reload_database(user, window)
+        )
+
+    def _reload_database(user: "User", old_window: "MainWindow") -> None:
+        """Reload the database in-place after an import — no re-login needed."""
+        old_window.hide()
+        if _active_database:
+            _active_database[0].close()
+            _active_database.clear()
+        database = _open_user_database(user.username)
+        _active_database.append(database)
+        window = _build_main_window(database, user, user_store)
+        _show_window(user, window)
+        old_window.deleteLater()
+
     def _session_loop() -> None:
         """Run login → main window → (optional) re-login cycle."""
         user = _run_login_flow(user_store)
@@ -155,21 +184,7 @@ def main() -> int:
         _active_database.append(database)
 
         window = _build_main_window(database, user, user_store)
-
-        if icon_path:
-            icon = QIcon(str(icon_path))
-            if not icon.isNull():
-                window.setWindowIcon(icon)
-
-        _restore_w = int(_avail_w * 0.88)
-        _restore_h = int(_avail_h * 0.88)
-        _restore_x = _avail.x() + (_avail_w - _restore_w) // 2
-        _restore_y = _avail.y() + (_avail_h - _restore_h) // 2
-        window.setGeometry(_restore_x, _restore_y, _restore_w, _restore_h)
-        window.showMaximized()
-
-        # When logout is requested, re-enter the session loop.
-        window.logout_requested.connect(_session_loop)
+        _show_window(user, window)
 
     _session_loop()
 

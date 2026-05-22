@@ -9,6 +9,7 @@ from PySide6.QtGui import QColor
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+
 _PROJECTION_MONTHS = 6
 
 

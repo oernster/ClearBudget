@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -25,6 +25,8 @@ from clear_budget.shared.config import Config
 
 class ArchiveView(QWidget):
     """Displays historical month summaries and solvency trends."""
+
+    database_replaced = Signal()
 
     def __init__(self, budget_service: BudgetService) -> None:
         """Initialize archive view widget."""
@@ -277,12 +279,7 @@ class ArchiveView(QWidget):
 
         try:
             shutil.copy2(src_path, db_path)
-            QMessageBox.information(
-                self,
-                "Import Successful",
-                "Database imported successfully.\n\n"
-                "Please restart ClearBudget to load the new data.",
-            )
+            self.database_replaced.emit()
         except OSError as exc:
             QMessageBox.critical(self, "Import Failed", str(exc))
 
