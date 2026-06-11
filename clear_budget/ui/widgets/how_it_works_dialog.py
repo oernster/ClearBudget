@@ -60,7 +60,9 @@ each day even before the bill is paid in full - not just the
   <li><b>Skip</b> checkbox (bills/income) - tick to leave this item out of
       this month only, without changing it for future months.</li>
   <li><b>Paid</b> checkbox (bills) - tick once you have actually paid this
-      bill this month.</li>
+      bill this month. Removes it from "still due" and your projected
+      balance for the rest of the month, since the money has already left
+      your account.</li>
   <li><b>Add Income</b> - opens a form to create a new income source.</li>
   <li><b>Delete Income</b> - removes the selected income source (asks for confirmation).</li>
   <li><b>Reliable</b> checkbox (income) - tick if this income is dependable
@@ -106,9 +108,10 @@ each day even before the bill is paid in full - not just the
   <li><b>Committed this month</b> - bills already due and paid (or passed)
       so far this month.</li>
   <li><b>Still due (bank)</b> - bank bills left to pay this month, with
-      no-fixed-day bills pro-rated as described above.</li>
+      no-fixed-day bills pro-rated as described above. Bills marked
+      <b>Paid</b> are excluded.</li>
   <li><b>Still due (cards)</b> - credit card bills left to pay this month,
-      pro-rated the same way.</li>
+      pro-rated the same way. Bills marked <b>Paid</b> are excluded.</li>
   <li><b>Discretionary buffer</b> - the amount you'd like to keep spare for
       day-to-day spending; defaults to 20% of your balance (minimum &pound;20)
       until you set your own value. Saves automatically when you press Enter

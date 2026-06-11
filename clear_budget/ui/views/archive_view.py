@@ -92,7 +92,7 @@ class ArchiveView(QWidget):
 
     def on_load_history(self) -> None:
         """Load recorded months from database and initialise year navigation."""
-        recorded_months = self.budget_service.get_recorded_months()
+        recorded_months = self._past_recorded_months()
         self.available_years = sorted({m.year for m in recorded_months})
         if self.available_years:
             if self.current_year not in self.available_years:
@@ -101,10 +101,15 @@ class ArchiveView(QWidget):
             self.current_year = 0
         self._refresh_year_view(recorded_months)
 
+    def _past_recorded_months(self) -> list[YearMonth]:
+        """Recorded months that are fully complete (excludes current/future)."""
+        current = YearMonth.today()
+        return [m for m in self.budget_service.get_recorded_months() if m < current]
+
     def _refresh_year_view(self, all_months: list[YearMonth] | None = None) -> None:
         """Filter table to current_year and update nav state."""
         if all_months is None:
-            all_months = self.budget_service.get_recorded_months()
+            all_months = self._past_recorded_months()
         year_months = [m for m in all_months if m.year == self.current_year]
         self.year_label.setText(str(self.current_year) if self.current_year else "")
         idx = (

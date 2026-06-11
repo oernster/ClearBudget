@@ -22,7 +22,8 @@ class Bill:
         start_ym: First month this bill appears (YYYY-MM)
         end_ym: Last month this bill appears (None = perpetual)
         active: Whether this template is currently in use
-        paid_for_month: Whether marked paid for the queried month
+        paid_for_month: Whether marked paid for the queried month - excludes
+            this bill from "still due" / projected balance totals once set
     """
 
     id: int

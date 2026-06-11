@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QLabel,
     QHeaderView,
+    QSizePolicy,
 )
 from PySide6.QtCore import Qt
 
@@ -17,6 +18,8 @@ from clear_budget.ui.utils.format_helpers import (
     fmt,
 )
 from clear_budget.ui import ui_scale
+
+INCOME_VISIBLE_ROWS = 5
 
 
 class MonthViewBuilderMixin:
@@ -122,7 +125,10 @@ class MonthViewBuilderMixin:
         bills_btn_layout.addWidget(self.delete_bill_btn)
         bills_layout.addLayout(bills_btn_layout)
         bills_group.setLayout(bills_layout)
-        layout.addWidget(bills_group)
+        bills_group.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
+        )
+        layout.addWidget(bills_group, 1)
 
     def _build_income_section(self, layout: QVBoxLayout) -> None:
         income_group = QGroupBox("Income")
@@ -165,7 +171,17 @@ class MonthViewBuilderMixin:
         income_btn_layout.addWidget(self.delete_income_btn)
         income_layout.addLayout(income_btn_layout)
         income_group.setLayout(income_layout)
-        layout.addWidget(income_group)
+
+        _row_height = self.income_table.verticalHeader().defaultSectionSize()
+        _header_height = self.income_table.horizontalHeader().sizeHint().height()
+        _frame = self.income_table.frameWidth() * 2
+        self.income_table.setMaximumHeight(
+            _header_height + _row_height * INCOME_VISIBLE_ROWS + _frame
+        )
+        income_group.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum
+        )
+        layout.addWidget(income_group, 0)
 
     def _connect_button_signals(
         self, prev_btn: QPushButton, next_btn: QPushButton

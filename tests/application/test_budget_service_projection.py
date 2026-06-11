@@ -130,6 +130,85 @@ class TestGetProjectedMonthEndBalance:
         assert result == (200000 - prorated_bill) + 100000 + 100000
 
 
+class TestPaidForMonthExclusion:
+    """A bill marked paid_for_month is excluded from current-month bank bills."""
+
+    def test_paid_bill_excluded_from_current_month_bank_bills(self) -> None:
+        svc, bill_repo, income_repo = _make_service()
+        today = date.today()
+        today_ym = YearMonth(today.year, today.month)
+
+        bill_repo.add(
+            bill=Bill(
+                id=1,
+                name="Food",
+                amount=Amount(pence=100000),
+                payment_method_id=1,
+                category="discretionary",
+                bill_type="variable",
+                day_of_month=None,
+                start_ym=YearMonth(today_ym.year, 1),
+                end_ym=None,
+                paid_for_month=True,
+            )
+        )
+        income_repo.add(
+            income=IncomeSource(
+                id=1,
+                name="UC",
+                amount=Amount(pence=200000),
+                is_reliable=True,
+                day_of_month=None,
+            )
+        )
+
+        summary = svc.get_month_summary(year_month=today_ym)
+        result = svc.get_projected_month_end_balance_pence(
+            year_month=today_ym, summary=summary
+        )
+
+        # Food (no fixed day, paid) excluded entirely - no proration applied.
+        assert result == 200000
+
+    def test_paid_bill_excluded_from_current_month_solvency_filter(self) -> None:
+        svc, bill_repo, income_repo = _make_service()
+        today = date.today()
+        today_ym = YearMonth(today.year, today.month)
+        total_days = days_in_month(today_ym.year, today_ym.month)
+
+        bill_repo.add(
+            bill=Bill(
+                id=1,
+                name="Rent",
+                amount=Amount(pence=100000),
+                payment_method_id=1,
+                category="housing",
+                bill_type="fixed",
+                day_of_month=total_days,
+                start_ym=YearMonth(today_ym.year, 1),
+                end_ym=None,
+                paid_for_month=True,
+            )
+        )
+        income_repo.add(
+            income=IncomeSource(
+                id=1,
+                name="UC",
+                amount=Amount(pence=200000),
+                is_reliable=True,
+                day_of_month=None,
+            )
+        )
+
+        summary = svc.get_month_summary(year_month=today_ym)
+        report = svc.calculate_solvency_from_summary(
+            year_month=today_ym, month_summary=summary
+        )
+
+        # Rent (still due by date, but marked paid) excluded from solvency calc.
+        assert report.balance_pence == 200000
+
+
 class TestBalanceDayFiltering:
     """Tests for balance_day > 0 income filtering (the income-not-in-bank-yet logic)."""
 

@@ -151,6 +151,7 @@ class SolvencyPanelDisplayMixin:
                     for b in summary.bills
                     if (not b.day_of_month or b.day_of_month >= today.day)
                     and b.payment_method_id == 1
+                    and not b.paid_for_month
                 )
                 remaining_card = sum(
                     (
@@ -161,6 +162,7 @@ class SolvencyPanelDisplayMixin:
                     for b in summary.bills
                     if (not b.day_of_month or b.day_of_month >= today.day)
                     and b.payment_method_id != 1
+                    and not b.paid_for_month
                 )
                 self.committed_label.setText(f"Committed this month: {fmt(committed)}")
                 self.remaining_bank_label.setStyleSheet(

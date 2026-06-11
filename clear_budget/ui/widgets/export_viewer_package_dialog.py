@@ -10,12 +10,18 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
+    QSpacerItem,
     QVBoxLayout,
 )
 
 from clear_budget.auth.viewer_package import export_viewer_package
 from clear_budget.ui import ui_scale
 from clear_budget.ui.widgets.login_dialog import LoginDialog
+
+# Fixed-width mask shown in place of the password until "Reveal" is clicked.
+# Fixed length so the mask itself doesn't leak the real password's length.
+_PASSWORD_MASK = "*" * 8
 
 
 class ExportViewerPackageDialog(QDialog):
@@ -121,17 +127,74 @@ class ExportViewerPackageDialog(QDialog):
             QMessageBox.critical(self, "Export Failed", str(exc))
             return
 
-        QMessageBox.information(
-            self,
-            "Export Successful",
-            f"Viewer package exported to:\n{dest_path}\n\n"
-            "Give this file and the credentials below to the viewer - they\n"
-            'should use "Import Viewer Package" on the sign-in screen of\n'
-            "their own ClearBudget install:\n\n"
-            f"Username: {username}\nPassword: {password}",
-        )
+        _ExportSuccessDialog(dest_path, username, password, parent=self).exec()
         self.accept()
 
     def _show_error(self, msg: str) -> None:
         self.error_label.setText(msg)
         self.error_label.setVisible(True)
+
+
+class _ExportSuccessDialog(QDialog):
+    """Confirmation dialog shown after a viewer package is exported.
+
+    The password is masked behind a fixed-length placeholder until the
+    viewer clicks "Reveal", so it isn't visible by default (e.g. on a
+    shared screen) but can still be read off and copied.
+    """
+
+    def __init__(
+        self, dest_path: Path, username: str, password: str, parent=None
+    ) -> None:
+        super().__init__(parent)
+        self._password = password
+        self._revealed = False
+        self.setWindowTitle("Export Successful")
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(
+            ui_scale.px(24), ui_scale.px(20), ui_scale.px(24), ui_scale.px(20)
+        )
+        layout.setSpacing(ui_scale.px(8))
+
+        info = QLabel(
+            f"Viewer package exported to:\n{dest_path}\n\n"
+            "Give this file and the credentials below to the viewer - they "
+            'should use "Import Viewer Package" on the sign-in screen of '
+            "their own ClearBudget install:"
+        )
+        info.setWordWrap(True)
+        layout.addWidget(info)
+
+        layout.addWidget(QLabel(f"Username: {username}"))
+
+        password_row = QHBoxLayout()
+        self._password_label = QLabel(f"Password: {_PASSWORD_MASK}")
+        password_row.addWidget(self._password_label)
+        password_row.addStretch()
+        self._reveal_btn = QPushButton("Reveal")
+        self._reveal_btn.clicked.connect(self._toggle_reveal)
+        password_row.addWidget(self._reveal_btn)
+        layout.addLayout(password_row)
+
+        spacer = QSpacerItem(
+            ui_scale.px(500), 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
+        )
+        layout.addItem(spacer)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        ok_btn = QPushButton("OK")
+        ok_btn.setDefault(True)
+        ok_btn.clicked.connect(self.accept)
+        btn_layout.addWidget(ok_btn)
+        layout.addLayout(btn_layout)
+
+    def _toggle_reveal(self) -> None:
+        self._revealed = not self._revealed
+        if self._revealed:
+            self._password_label.setText(f"Password: {self._password}")
+            self._reveal_btn.setText("Hide")
+        else:
+            self._password_label.setText(f"Password: {_PASSWORD_MASK}")
+            self._reveal_btn.setText("Reveal")

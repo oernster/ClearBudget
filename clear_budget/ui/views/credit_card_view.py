@@ -1,23 +1,21 @@
 """Credit card view widget - displays credit card status and exhaustion warnings."""
 
-import dataclasses
-
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
-    QTableWidget,
     QPushButton,
     QHeaderView,
     QGroupBox,
+    QScrollArea,
+    QTableWidget,
+    QMessageBox,
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 
-from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
-from clear_budget.shared.currency import get_symbol
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 from clear_budget.ui import ui_scale
 from clear_budget.ui.utils.format_helpers import build_nav_month_widget
@@ -71,65 +69,28 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         self._refresh_month_label()
 
         cards_group = QGroupBox("Credit Cards")
-        cards_layout = QVBoxLayout()
+        cards_outer_layout = QVBoxLayout()
 
-        self.cards_table = QTableWidget()
-        self.cards_table.setColumnCount(15)
-        self.cards_table.setHorizontalHeaderLabels(
-            [
-                "Card Name",
-                "Limit",
-                "Used",
-                "Available",
-                "Util %",
-                "Due Day",
-                "Interest %",
-                f"Fixed Min ({get_symbol()})",
-                "Expiry",
-                "Status",
-                "Active",
-                "Month Charges",
-                "Payment Received",
-                "Month Interest",
-                "Min Payment Due",
-            ]
-        )
-        self.cards_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.cards_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
-        self.cards_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
-        self.cards_table.itemChanged.connect(self._on_card_item_changed)
-        _ch = self.cards_table.horizontalHeader()
-        _ch.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        _ch.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        _ch.setStretchLastSection(False)
-        self.cards_table.setStyleSheet(
-            "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
-            "border-radius:3px;background:transparent;}"
-            "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
-            "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
-        )
-        self.cards_table.verticalHeader().setStyleSheet(
-            "QHeaderView::section { color: #34d399; }"
-        )
-        self.cards_table.verticalHeader().sectionClicked.connect(
-            self._on_card_row_header_click
-        )
-        self.cards_table.cellClicked.connect(self._on_card_cell_clicked)
-        cards_layout.addWidget(self.cards_table)
+        self.cards_container = QWidget()
+        self.cards_layout = QVBoxLayout(self.cards_container)
+        self.cards_layout.setContentsMargins(0, 0, 0, 0)
+        self.cards_layout.setSpacing(ui_scale.px(8))
 
-        # Buttons below table
+        self.cards_scroll = QScrollArea()
+        self.cards_scroll.setWidgetResizable(True)
+        self.cards_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        self.cards_scroll.setWidget(self.cards_container)
+        cards_outer_layout.addWidget(self.cards_scroll)
+
+        # Buttons below the card list
         btn_layout = QHBoxLayout()
         self.add_btn = QPushButton("Add Card")
-        self.edit_btn = QPushButton("Edit Card")
-        self.delete_btn = QPushButton("Delete Card")
-        self.delete_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         btn_layout.addWidget(self.add_btn)
-        btn_layout.addWidget(self.edit_btn)
-        btn_layout.addWidget(self.delete_btn)
-        cards_layout.addLayout(btn_layout)
+        btn_layout.addStretch()
+        cards_outer_layout.addLayout(btn_layout)
 
-        cards_group.setLayout(cards_layout)
-        layout.addWidget(cards_group)
+        cards_group.setLayout(cards_outer_layout)
+        layout.addWidget(cards_group, 1)
 
         proj_group = QGroupBox(f"{_PROJECTION_MONTHS}-Month Balance Projection")
         proj_layout = QVBoxLayout()
@@ -145,46 +106,10 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
 
         self.setLayout(layout)
 
-        # Connect buttons
         self.add_btn.clicked.connect(self.on_add_card)
-        self.edit_btn.clicked.connect(self.on_edit_card)
-        self.delete_btn.clicked.connect(self.on_delete_card)
 
         if self.read_only:
             self.add_btn.setEnabled(False)
-            self.edit_btn.setEnabled(False)
-            self.delete_btn.setEnabled(False)
-
-    def _on_card_cell_clicked(self, row: int, col: int) -> None:
-        if col != 10:
-            return
-        from PySide6.QtWidgets import QApplication
-
-        mods = QApplication.keyboardModifiers()
-        item = self.cards_table.item(row, 10)
-        if not item:
-            return
-        card_id = item.data(Qt.ItemDataRole.UserRole)
-        if self.read_only or mods & (
-            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
-        ):
-            self.cards_table.blockSignals(True)
-            cursor = self.budget_service.payment_method_repo.conn.cursor()
-            cursor.execute("SELECT active FROM credit_cards WHERE id=?", (card_id,))
-            r = cursor.fetchone()
-            if r:
-                item.setCheckState(
-                    Qt.CheckState.Checked
-                    if r["active"] == 1
-                    else Qt.CheckState.Unchecked
-                )
-            self.cards_table.blockSignals(False)
-            return
-        active = item.checkState() == Qt.CheckState.Checked
-        self.budget_service.payment_method_repo.set_card_active(
-            card_id=card_id, active=active
-        )
-        self.load_cards()
 
     def set_month(self, year_month: YearMonth) -> None:
         """Update displayed month and refresh."""
@@ -215,17 +140,6 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
             return QColor("#fbbf24")  # Yellow
         return QColor("#34d399")  # Green
 
-    def _on_card_row_header_click(self, row: int) -> None:
-        """Handle pencil icon click on card row header."""
-        if self.read_only:
-            return
-        self.cards_table.selectRow(row)
-        self.on_edit_card()
-
-    def _card_id_from_row(self, row: int) -> int | None:
-        item = self.cards_table.item(row, 0)
-        return item.data(Qt.ItemDataRole.UserRole) if item else None
-
     def on_add_card(self) -> None:
         dialog = CreditCardDialog(self)
         if dialog.exec():
@@ -233,8 +147,6 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
             if card:
                 existing = self.budget_service.get_credit_cards(include_inactive=True)
                 if any(c.name.lower() == card.name.lower() for c in existing):
-                    from PySide6.QtWidgets import QMessageBox
-
                     QMessageBox.warning(
                         self,
                         "Duplicate Card",
@@ -244,13 +156,7 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
                 self.budget_service.payment_method_repo.add_credit_card(card=card)
                 self.load_cards()
 
-    def on_edit_card(self) -> None:
-        row = self.cards_table.currentRow()
-        if row < 0:
-            return
-        card_id = self._card_id_from_row(row)
-        if card_id is None:
-            return
+    def on_edit_card(self, card_id: int) -> None:
         card = self.budget_service.payment_method_repo.get_credit_card_by_id(
             card_id=card_id
         )
@@ -265,95 +171,23 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
                 )
                 self.load_cards()
 
-    _EDITABLE_COLS = {0, 1, 2, 5, 6, 7, 8}
-
-    def _on_card_item_changed(self, item) -> None:
-        if item.column() not in self._EDITABLE_COLS:
-            QTimer.singleShot(0, self.load_cards)
-            return
-        card_id = self._card_id_from_row(item.row())
-        if card_id is None:
-            return
-        card = self.budget_service.payment_method_repo.get_credit_card_by_id(
-            card_id=card_id
+    def on_delete_card(self, card_id: int, name: str) -> None:
+        reply = QMessageBox.question(
+            self,
+            "Delete Card",
+            f"Delete '{name}'? This cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
-        if card is None:
+        if reply != QMessageBox.StandardButton.Yes:
             return
-        col, v = item.column(), item.text().strip()
-        try:
-            if col == 0:
-                u, d = dataclasses.replace(card, name=v or card.name), v or card.name
-            elif col == 1:
-                a = Amount.from_pounds(float(v.lstrip(get_symbol())))
-                u, d = dataclasses.replace(card, credit_limit=a), str(a)
-            elif col == 2:
-                a = Amount.from_pounds(float(v.lstrip(get_symbol())))
-                u, d = dataclasses.replace(card, current_balance_used=a), str(a)
-            elif col == 5:
-                u, d = dataclasses.replace(card, payment_due_day=int(v)), str(int(v))
-            elif col == 6:
-                apr = float(v.rstrip("%").strip()) if v != "-" else None
-                u, d = dataclasses.replace(card, interest_rate_apr=apr), (
-                    f"{apr:.2f}%" if apr else " - "
-                )
-            elif col == 7:
-                pence = (
-                    Amount.from_pounds(float(v.lstrip(get_symbol()))).pence
-                    if v != "-"
-                    else None
-                )
-                u, d = dataclasses.replace(card, minimum_payment_pence=pence), (
-                    str(Amount(pence=pence)) if pence is not None else " - "
-                )
-            elif col == 8:
-                if v == "-":
-                    u, d = (
-                        dataclasses.replace(
-                            card, card_expiry_month=None, card_expiry_year=None
-                        ),
-                        " - ",
-                    )
-                else:
-                    m, y2 = int(v.split("/")[0]), int(v.split("/")[1])
-                    u, d = (
-                        dataclasses.replace(
-                            card,
-                            card_expiry_month=m,
-                            card_expiry_year=2000 + y2 if y2 < 100 else y2,
-                        ),
-                        f"{m:02d}/{y2:02d}",
-                    )
-            elif col == 14:
-                pence = (
-                    Amount.from_pounds(float(v.lstrip(get_symbol()))).pence
-                    if v not in ("-", "")
-                    else None
-                )
-                u, d = dataclasses.replace(card, minimum_payment_pence=pence), (
-                    str(Amount(pence=pence)) if pence is not None else " - "
-                )
-            else:
-                return
-            if u == card:
-                return  # nothing changed - editor just opened, don't rebuild
-            self.budget_service.payment_method_repo.update_credit_card(card=u)
-            self.cards_table.blockSignals(True)
-            item.setText(d)
-            self.cards_table.blockSignals(False)
-            QTimer.singleShot(0, self.load_cards)
-        except Exception:
-            QTimer.singleShot(0, self.load_cards)
+        self.budget_service.payment_method_repo.hard_delete_credit_card(card_id=card_id)
+        self.load_cards()
 
-    def on_delete_card(self) -> None:
-        selected_rows = sorted(
-            {idx.row() for idx in self.cards_table.selectedIndexes()}
+    def _on_card_active_toggled(self, card_id: int, checked: bool) -> None:
+        if self.read_only:
+            return
+        self.budget_service.payment_method_repo.set_card_active(
+            card_id=card_id, active=checked
         )
-        card_ids = [
-            cid for row in selected_rows if (cid := self._card_id_from_row(row))
-        ]
-        for card_id in card_ids:
-            self.budget_service.payment_method_repo.hard_delete_credit_card(
-                card_id=card_id
-            )
-        if card_ids:
-            self.load_cards()
+        self.load_cards()

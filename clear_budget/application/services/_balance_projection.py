@@ -32,6 +32,8 @@ def _current_month_bank_bills_pence(summary: MonthSummary, today_day: int) -> in
     for b in summary.bills:
         if b.payment_method_id != 1:
             continue
+        if b.paid_for_month:
+            continue
         if b.day_of_month is None:
             total += prorate_remaining_pence(b.amount.pence, today_day, total_days)
         elif b.day_of_month >= today_day:

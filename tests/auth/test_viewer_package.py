@@ -7,6 +7,7 @@ import pytest
 
 from clear_budget.auth.user_store import UserStore
 from clear_budget.auth.viewer_package import (
+    UsernameClashError,
     export_viewer_package,
     import_viewer_package,
 )
@@ -98,11 +99,33 @@ class TestImportViewerPackage:
 
         package2 = tmp_path / "package2.zip"
         export_viewer_package(source_db, package2, "dad", "secondpass")
-        second = import_viewer_package(package2, store, config=config)
+        second = import_viewer_package(package2, store, config=config, refresh=True)
 
         assert second.id == first.id
         assert store.verify_password("dad", "firstpass") is None
         assert store.verify_password("dad", "secondpass") is not None
+
+    def test_reimport_existing_viewer_account_without_refresh_clashes(
+        self, source_db, store, tmp_path
+    ) -> None:
+        """Re-importing an already-installed viewer username prompts rather
+        than silently overwriting it, unless refresh=True is passed."""
+        package = tmp_path / "package.zip"
+        export_viewer_package(source_db, package, "dad", "firstpass")
+        config = Config(
+            db_path=tmp_path / "installed" / "budget_dad.db",
+            log_dir=tmp_path / "installed" / "logs",
+        )
+        import_viewer_package(package, store, config=config)
+
+        package2 = tmp_path / "package2.zip"
+        export_viewer_package(source_db, package2, "dad", "secondpass")
+        with pytest.raises(UsernameClashError) as excinfo:
+            import_viewer_package(package2, store, config=config)
+
+        assert excinfo.value.username == "dad"
+        assert excinfo.value.existing_is_viewer is True
+        assert store.verify_password("dad", "firstpass") is not None
 
     def test_rejects_package_missing_account_entry(self, tmp_path, store) -> None:
         package = tmp_path / "bad.zip"
@@ -135,6 +158,65 @@ class TestImportViewerPackage:
         assert user.username == "viewer_default_cfg"
         installed = fake_home / ".clearbudget" / "budget_viewer_default_cfg.db"
         assert installed.exists()
+
+    def test_rejects_username_clash_with_existing_real_account(
+        self, source_db, store, tmp_path
+    ) -> None:
+        """Importing must not overwrite a pre-existing non-viewer account."""
+        store.create_user("dad", "realpassword123")
+
+        package = tmp_path / "package.zip"
+        export_viewer_package(source_db, package, "dad", "viewerpass")
+
+        config = Config(
+            db_path=tmp_path / "installed" / "budget_dad.db",
+            log_dir=tmp_path / "installed" / "logs",
+        )
+        with pytest.raises(UsernameClashError) as excinfo:
+            import_viewer_package(package, store, config=config)
+
+        assert excinfo.value.username == "dad"
+        assert excinfo.value.existing_is_viewer is False
+        assert store.verify_password("dad", "realpassword123") is not None
+        assert not config.db_path.exists()
+
+    def test_username_override_resolves_clash(self, source_db, store, tmp_path) -> None:
+        store.create_user("dad", "realpassword123")
+
+        package = tmp_path / "package.zip"
+        export_viewer_package(source_db, package, "dad", "viewerpass")
+
+        config = Config(
+            db_path=tmp_path / "installed" / "budget_dad2.db",
+            log_dir=tmp_path / "installed" / "logs",
+        )
+        user = import_viewer_package(
+            package, store, config=config, username_override="dad2"
+        )
+
+        assert user.username == "dad2"
+        assert user.is_read_only is True
+        assert store.verify_password("dad2", "viewerpass") is not None
+        assert store.verify_password("dad", "realpassword123") is not None
+        assert config.db_path.exists()
+
+    def test_username_override_can_also_clash(self, source_db, store, tmp_path) -> None:
+        store.create_user("dad", "realpassword123")
+        store.create_user("dad2", "anotherpassword123")
+
+        package = tmp_path / "package.zip"
+        export_viewer_package(source_db, package, "dad", "viewerpass")
+
+        config = Config(
+            db_path=tmp_path / "installed" / "budget_dad2.db",
+            log_dir=tmp_path / "installed" / "logs",
+        )
+        with pytest.raises(UsernameClashError) as excinfo:
+            import_viewer_package(
+                package, store, config=config, username_override="dad2"
+            )
+
+        assert excinfo.value.username == "dad2"
 
     def test_rejects_invalid_database(self, tmp_path, store) -> None:
         import json

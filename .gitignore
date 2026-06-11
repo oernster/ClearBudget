@@ -248,3 +248,6 @@ installer/payload/
 *.db-journal
 *.sqlite
 *.sqlite3
+
+# Local release-notes scratchpad (not for version control)
+NOTES.md

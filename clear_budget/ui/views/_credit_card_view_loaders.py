@@ -1,32 +1,47 @@
-"""Loader mixin for CreditCardView - load_cards and projection strip extracted."""
+"""Loader mixin for CreditCardView - load_cards, card frames and projection strip."""
 
 from datetime import date as _date
 
-from PySide6.QtWidgets import QTableWidgetItem
+from PySide6.QtWidgets import (
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QVBoxLayout,
+    QWidget,
+    QLabel,
+    QCheckBox,
+    QPushButton,
+    QTableWidgetItem,
+    QSizePolicy,
+)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.ui import ui_scale
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 
 _PROJECTION_MONTHS = 6
 
 
 class CreditCardViewLoaderMixin:
-    """load_cards and _build_projection_strip for CreditCardView."""
+    """load_cards, _build_card_frame and _build_projection_strip for CreditCardView."""
 
     def load_cards(self) -> None:
-        self.cards_table.blockSignals(True)
-        self.cards_table.setRowCount(0)
-        self.cards_table.blockSignals(False)
+        while self.cards_layout.count():
+            taken = self.cards_layout.takeAt(0)
+            widget = taken.widget()
+            if widget is not None:
+                widget.deleteLater()
 
         cards = self.budget_service.get_credit_cards(include_inactive=True)
         if not cards:
-            empty_item = QTableWidgetItem("No credit cards configured")
-            empty_item.setForeground(Qt.GlobalColor.gray)
-            self.cards_table.insertRow(0)
-            self.cards_table.setItem(0, 0, empty_item)
+            empty_label = QLabel("No credit cards configured")
+            empty_label.setStyleSheet("color: #6b7280;")
+            self.cards_layout.addWidget(empty_label)
+            self.cards_layout.addStretch(1)
+            self._build_projection_strip()
             return
 
         monthly_states = {
@@ -38,27 +53,12 @@ class CreditCardViewLoaderMixin:
 
         _today = _date.today()
         _today_ym = YearMonth(_today.year, _today.month)
-        self.cards_table.blockSignals(True)
         for card in cards:
-            row = self.cards_table.rowCount()
-            self.cards_table.insertRow(row)
-            self.cards_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
-
-            _editable = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-            if not self.read_only:
-                _editable |= Qt.ItemFlag.ItemIsEditable
-            name_item = QTableWidgetItem(card.name)
-            name_item.setData(Qt.ItemDataRole.UserRole, card.id)
-            name_item.setFlags(_editable)
-            self.cards_table.setItem(row, 0, name_item)
-            limit_item = QTableWidgetItem(str(card.credit_limit))
-            limit_item.setFlags(_editable)
-            self.cards_table.setItem(row, 1, limit_item)
-            state_snapshot = monthly_states.get(card.id)
-            if state_snapshot and self.current_month > _today_ym:
-                display_used = state_snapshot.closing_balance
+            state = monthly_states.get(card.id)
+            if state and self.current_month > _today_ym:
+                display_used = state.closing_balance
                 display_util = (
-                    state_snapshot.closing_balance.pence / card.credit_limit.pence * 100
+                    state.closing_balance.pence / card.credit_limit.pence * 100
                     if card.credit_limit.pence
                     else 0.0
                 )
@@ -76,91 +76,174 @@ class CreditCardViewLoaderMixin:
                 pence=max(0, card.credit_limit.pence - display_used.pence)
             )
 
-            used_item = QTableWidgetItem(str(display_used))
-            used_item.setFlags(_editable)
-            self.cards_table.setItem(row, 2, used_item)
-            self.cards_table.setItem(row, 3, QTableWidgetItem(str(display_available)))
-
-            util_item = QTableWidgetItem(f"{display_util:.1f}%")
-            self.cards_table.setItem(row, 4, util_item)
-
-            due_item = QTableWidgetItem(str(card.payment_due_day))
-            due_item.setFlags(_editable)
+            due_color = None
             if self.current_month == _today_ym:
                 d, t = card.payment_due_day, _today.day
                 if d < t:
-                    due_item.setForeground(QColor("#9ca3af"))
+                    due_color = "#9ca3af"
                 elif d == t:
-                    due_item.setForeground(QColor("#f87171"))
+                    due_color = "#f87171"
                 else:
-                    due_item.setForeground(QColor("#34d399"))
-            self.cards_table.setItem(row, 5, due_item)
-
-            interest_str = (
-                f"{card.interest_rate_apr:.2f}%" if card.interest_rate_apr else " - "
-            )
-            interest_item = QTableWidgetItem(interest_str)
-            interest_item.setFlags(_editable)
-            self.cards_table.setItem(row, 6, interest_item)
-
-            if card.minimum_payment_pence is not None:
-                min_pmt_str = str(Amount(pence=card.minimum_payment_pence))
-            else:
-                min_pmt_str = " - "
-            min_item = QTableWidgetItem(min_pmt_str)
-            min_item.setFlags(_editable)
-            self.cards_table.setItem(row, 7, min_item)
-
-            if card.card_expiry_month and card.card_expiry_year:
-                expiry_str = (
-                    f"{card.card_expiry_month:02d}/{card.card_expiry_year % 100:02d}"
-                )
-            else:
-                expiry_str = " - "
-            expiry_item = QTableWidgetItem(expiry_str)
-            expiry_item.setFlags(_editable)
-            self.cards_table.setItem(row, 8, expiry_item)
+                    due_color = "#34d399"
 
             status = self._get_status_text(display_util)
-            status_item = QTableWidgetItem(status)
             status_color = self._get_status_color(status)
-            status_item.setForeground(Qt.GlobalColor.white)
-            status_item.setBackground(status_color)
-            self.cards_table.setItem(row, 9, status_item)
 
-            active_item = QTableWidgetItem()
-            active_item.setFlags(
-                Qt.ItemFlag.ItemIsEnabled
-                | Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsUserCheckable
+            frame = self._build_card_frame(
+                card=card,
+                state=state,
+                display_used=display_used,
+                display_available=display_available,
+                display_util=display_util,
+                due_color=due_color,
+                status=status,
+                status_color=status_color,
             )
-            active_item.setCheckState(
-                Qt.CheckState.Checked if card.active == 1 else Qt.CheckState.Unchecked
-            )
-            active_item.setData(Qt.ItemDataRole.UserRole, card.id)
-            self.cards_table.setItem(row, 10, active_item)
+            self.cards_layout.addWidget(frame)
 
-            state = monthly_states.get(card.id)
-            if state:
-                pdate = (
-                    f" (paid day {state.payment_date})" if state.payment_date else ""
-                )
-                self.cards_table.setItem(row, 11, QTableWidgetItem(str(state.charges)))
-                self.cards_table.setItem(
-                    row, 12, QTableWidgetItem(f"{state.payment_received}{pdate}")
-                )
-                self.cards_table.setItem(
-                    row, 13, QTableWidgetItem(str(state.monthly_interest))
-                )
-                min_due_item = QTableWidgetItem(str(state.minimum_payment))
-                min_due_item.setFlags(_editable)
-                self.cards_table.setItem(row, 14, min_due_item)
-            else:
-                for col in (11, 12, 13, 14):
-                    self.cards_table.setItem(row, col, QTableWidgetItem("-"))
-
-        self.cards_table.blockSignals(False)
+        self.cards_layout.addStretch(1)
         self._build_projection_strip()
+
+    def _field_widget(
+        self, label: str, value: str, color: str | None = None
+    ) -> QWidget:
+        container = QWidget()
+        col = QVBoxLayout(container)
+        col.setContentsMargins(0, 0, 0, 0)
+        col.setSpacing(0)
+        label_widget = QLabel(label)
+        label_widget.setStyleSheet(ui_scale.style("font-size: 13px; color: #9ca3af;"))
+        value_widget = QLabel(value)
+        value_style = "font-size: 16px; font-weight: 600;"
+        if color:
+            value_style += f" color: {color};"
+        value_widget.setStyleSheet(ui_scale.style(value_style))
+        col.addWidget(label_widget)
+        col.addWidget(value_widget)
+        return container
+
+    def _build_card_frame(
+        self,
+        *,
+        card,
+        state,
+        display_used: Amount,
+        display_available: Amount,
+        display_util: float,
+        due_color: str | None,
+        status: str,
+        status_color: QColor,
+    ) -> QFrame:
+        frame = QFrame()
+        frame.setStyleSheet(
+            "QFrame { background-color: #242938; border: 1px solid #3a4156;"
+            " border-radius: 8px; }"
+        )
+        outer = QVBoxLayout(frame)
+
+        header = QHBoxLayout()
+        active_cb = QCheckBox()
+        active_cb.setToolTip("Active")
+        active_cb.setChecked(card.active == 1)
+        active_cb.setEnabled(not self.read_only)
+        active_cb.toggled.connect(
+            lambda checked, cid=card.id: self._on_card_active_toggled(cid, checked)
+        )
+        header.addWidget(active_cb)
+
+        name_label = QLabel(card.name)
+        name_label.setStyleSheet(ui_scale.style("font-size: 16px; font-weight: 700;"))
+        header.addWidget(name_label)
+        header.addStretch(1)
+
+        status_label = QLabel(status)
+        status_label.setStyleSheet(
+            ui_scale.style(
+                f"background-color: {status_color.name()}; color: white;"
+                " padding: 2px 10px; border-radius: 4px; font-weight: 600;"
+                " font-size: 12px;"
+            )
+        )
+        header.addWidget(status_label)
+
+        edit_btn = QPushButton("Edit")
+        edit_btn.setEnabled(not self.read_only)
+        edit_btn.clicked.connect(
+            lambda _checked=False, cid=card.id: self.on_edit_card(cid)
+        )
+        header.addWidget(edit_btn)
+
+        delete_btn = QPushButton("Delete")
+        delete_btn.setEnabled(not self.read_only)
+        delete_btn.setObjectName("DangerButton")
+        delete_btn.clicked.connect(
+            lambda _checked=False, cid=card.id, name=card.name: self.on_delete_card(
+                cid, name
+            )
+        )
+        header.addWidget(delete_btn)
+
+        outer.addLayout(header)
+
+        if card.interest_rate_apr:
+            interest_str = f"{card.interest_rate_apr:.2f}%"
+        else:
+            interest_str = " - "
+
+        if card.minimum_payment_pence is not None:
+            fixed_min_str = str(Amount(pence=card.minimum_payment_pence))
+        else:
+            fixed_min_str = " - "
+
+        if card.card_expiry_month and card.card_expiry_year:
+            expiry_str = (
+                f"{card.card_expiry_month:02d}/{card.card_expiry_year % 100:02d}"
+            )
+        else:
+            expiry_str = " - "
+
+        overview_grid = QGridLayout()
+        overview_grid.setHorizontalSpacing(ui_scale.px(24))
+        overview_fields = [
+            ("Limit", str(card.credit_limit), None),
+            ("Used", str(display_used), None),
+            ("Available", str(display_available), None),
+            ("Util %", f"{display_util:.1f}%", None),
+            ("Due Day", str(card.payment_due_day), due_color),
+            ("Interest %", interest_str, None),
+            ("Fixed Min", fixed_min_str, None),
+            ("Expiry", expiry_str, None),
+        ]
+        for idx, (label, value, color) in enumerate(overview_fields):
+            overview_grid.addWidget(self._field_widget(label, value, color), 0, idx)
+        overview_grid.setColumnStretch(len(overview_fields), 1)
+        outer.addLayout(overview_grid)
+
+        if state:
+            pdate = f" (paid day {state.payment_date})" if state.payment_date else ""
+            month_fields = [
+                ("Month Charges", str(state.charges)),
+                ("Payment Received", f"{state.payment_received}{pdate}"),
+                ("Month Interest", str(state.monthly_interest)),
+                ("Min Payment Due", str(state.minimum_payment)),
+            ]
+        else:
+            month_fields = [
+                ("Month Charges", "-"),
+                ("Payment Received", "-"),
+                ("Month Interest", "-"),
+                ("Min Payment Due", "-"),
+            ]
+
+        month_grid = QGridLayout()
+        month_grid.setHorizontalSpacing(ui_scale.px(24))
+        for idx, (label, value) in enumerate(month_fields):
+            month_grid.addWidget(self._field_widget(label, value), 0, idx)
+        month_grid.setColumnStretch(len(month_fields), 1)
+        outer.addLayout(month_grid)
+
+        frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        return frame
 
     def _build_projection_strip(self) -> None:
         _today = _date.today()

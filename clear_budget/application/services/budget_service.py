@@ -142,7 +142,8 @@ class BudgetService(BillOperationsMixin, IncomeOperationsMixin):
                 else b
             )
             for b in bills
-            if b.day_of_month is None or b.day_of_month >= today_day
+            if not b.paid_for_month
+            and (b.day_of_month is None or b.day_of_month >= today_day)
         )
         if balance_day > 0:
             filtered_income = tuple(

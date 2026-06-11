@@ -3,6 +3,7 @@
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
+    QInputDialog,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
@@ -17,7 +18,7 @@ from pathlib import Path
 
 from clear_budget.auth.user_store import UserStore
 from clear_budget.auth.models import User
-from clear_budget.auth.viewer_package import import_viewer_package
+from clear_budget.auth.viewer_package import import_viewer_package, UsernameClashError
 from clear_budget.ui import ui_scale
 
 
@@ -180,11 +181,63 @@ class LoginDialog(QDialog):
         )
         if not src:
             return
-        try:
-            user = import_viewer_package(Path(src), self.user_store)
-        except (ValueError, OSError) as exc:
-            QMessageBox.critical(self, "Import Failed", str(exc))
-            return
+
+        username_override: str | None = None
+        refresh = False
+        while True:
+            try:
+                user = import_viewer_package(
+                    Path(src),
+                    self.user_store,
+                    username_override=username_override,
+                    refresh=refresh,
+                )
+                break
+            except UsernameClashError as exc:
+                refresh = False
+                if exc.existing_is_viewer:
+                    box = QMessageBox(self)
+                    box.setIcon(QMessageBox.Icon.Question)
+                    box.setWindowTitle("Username Already In Use")
+                    box.setText(
+                        f"A viewer account '{exc.username}' is already installed "
+                        "on this machine.\n\n"
+                        "Refresh it with this package's data, or choose a "
+                        "different username for a new account?"
+                    )
+                    refresh_btn = box.addButton(
+                        "Refresh", QMessageBox.ButtonRole.AcceptRole
+                    )
+                    choose_btn = box.addButton(
+                        "Choose New Username", QMessageBox.ButtonRole.ActionRole
+                    )
+                    box.addButton(QMessageBox.StandardButton.Cancel)
+                    box.setDefaultButton(refresh_btn)
+                    box.exec()
+                    clicked = box.clickedButton()
+                    if clicked is refresh_btn:
+                        refresh = True
+                        username_override = None
+                        continue
+                    if clicked is not choose_btn:
+                        return
+                    # else fall through to choose a new username below
+
+                new_username, ok = QInputDialog.getText(
+                    self,
+                    "Choose a Username",
+                    f"The username '{exc.username}' is already in use on this "
+                    "machine.\n\nChoose a different username for this account.\n"
+                    "You can export your full database later if you want to "
+                    "share an exact copy with someone else.",
+                )
+                if not ok or not new_username.strip():
+                    return
+                username_override = new_username.strip()
+            except (ValueError, OSError) as exc:
+                QMessageBox.critical(self, "Import Failed", str(exc))
+                return
+
         self.username_edit.setText(user.username)
         self.password_edit.clear()
         self.password_edit.setFocus()

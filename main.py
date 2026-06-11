@@ -163,12 +163,12 @@ def main() -> int:
             icon = QIcon(str(icon_path))
             if not icon.isNull():
                 window.setWindowIcon(icon)
-        _restore_w = int(_avail_w * 0.88)
+        _restore_w = int(_avail_w * 0.33)
         _restore_h = int(_avail_h * 0.88)
         _restore_x = _avail.x() + (_avail_w - _restore_w) // 2
         _restore_y = _avail.y() + (_avail_h - _restore_h) // 2
         window.setGeometry(_restore_x, _restore_y, _restore_w, _restore_h)
-        window.showMaximized()
+        window.show()
         window.logout_requested.connect(_session_loop)
         window.database_replaced.connect(lambda: _reload_database(user, window))
 
