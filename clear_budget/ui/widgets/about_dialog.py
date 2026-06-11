@@ -144,19 +144,13 @@ class AboutDialog(QDialog):
         layout.addWidget(body)
 
         btn_row = QHBoxLayout()
-        licence_btn = QPushButton("View Licence (LGPL-3.0)")
         close_btn = QPushButton("Close")
-        btn_row.addWidget(licence_btn)
         btn_row.addStretch()
         btn_row.addWidget(close_btn)
         layout.addLayout(btn_row)
 
         self.setLayout(layout)
-        licence_btn.clicked.connect(self._open_licence)
         close_btn.clicked.connect(self.accept)
-
-    def _open_licence(self) -> None:
-        LicenceDialog(self).exec()
 
 
 class LicenceDialog(QDialog):
