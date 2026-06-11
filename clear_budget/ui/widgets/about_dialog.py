@@ -11,8 +11,7 @@ from PySide6.QtWidgets import (
     QTextBrowser,
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap, QDesktopServices
-from PySide6.QtCore import QUrl
+from PySide6.QtGui import QPixmap
 
 from clear_budget.ui import ui_scale
 from clear_budget.version import __version__ as _APP_VERSION
@@ -169,17 +168,10 @@ class LicenceDialog(QDialog):
         layout.addWidget(browser)
 
         btn_row = QHBoxLayout()
-        full_text_btn = QPushButton("Open Full Licence Text (gnu.org)")
         close_btn = QPushButton("Close")
-        btn_row.addWidget(full_text_btn)
         btn_row.addStretch()
         btn_row.addWidget(close_btn)
         layout.addLayout(btn_row)
 
         self.setLayout(layout)
-        full_text_btn.clicked.connect(
-            lambda: QDesktopServices.openUrl(
-                QUrl("https://www.gnu.org/licenses/lgpl-3.0.html")
-            )
-        )
         close_btn.clicked.connect(self.accept)
