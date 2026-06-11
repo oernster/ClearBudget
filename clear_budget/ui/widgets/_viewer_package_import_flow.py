@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QWidget
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
 from clear_budget.auth.viewer_package import import_viewer_package, UsernameClashError
+from clear_budget.ui.ui_paths import default_downloads_dir
 
 
 def run_import_viewer_package_flow(
@@ -20,7 +21,7 @@ def run_import_viewer_package_flow(
     src, _ = QFileDialog.getOpenFileName(
         parent,
         "Import Viewer Package",
-        str(Path.home()),
+        str(default_downloads_dir()),
         "ClearBudget Viewer Package (*.zip)",
     )
     if not src:

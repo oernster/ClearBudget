@@ -5,6 +5,7 @@ import pytest
 from clear_budget.domain.services.bank_cashflow import (
     BankCashflowService,
     DailyCashflowEvent,
+    MonthCashflowProjection,
 )
 
 
@@ -146,3 +147,129 @@ class TestBankCashflowAnalysis:
         )
         # Day 5: 100000 - 200000 = -100000 (negative!)
         assert result == 5
+
+
+class TestProjectMonth:
+    """Test BankCashflowService.project_month."""
+
+    def test_never_negative(self) -> None:
+        """Balance stays positive throughout."""
+        events = [
+            DailyCashflowEvent(day_of_month=1, amount_pence=200000),
+            DailyCashflowEvent(day_of_month=15, amount_pence=-50000),
+        ]
+        result = BankCashflowService.project_month(
+            starting_balance_pence=100000,
+            events=events,
+        )
+        assert result.opening_balance_pence == 100000
+        assert result.closing_balance_pence == 250000
+        assert result.min_balance_pence == 100000
+        assert result.min_balance_day is None
+        assert result.first_negative_day is None
+        assert result.overdraft_exceeded_day is None
+
+    def test_dips_negative_then_recovers(self) -> None:
+        """Balance dips below zero mid-month but ends positive."""
+        events = [
+            DailyCashflowEvent(day_of_month=5, amount_pence=-150000),
+            DailyCashflowEvent(day_of_month=20, amount_pence=200000),
+        ]
+        result = BankCashflowService.project_month(
+            starting_balance_pence=100000,
+            events=events,
+        )
+        # Day 5: 100000 - 150000 = -50000 (new min)
+        # Day 20: -50000 + 200000 = 150000
+        assert result.min_balance_pence == -50000
+        assert result.min_balance_day == 5
+        assert result.first_negative_day == 5
+        assert result.closing_balance_pence == 150000
+        assert result.overdraft_exceeded_day == 5  # default limit 0
+
+    def test_overdraft_facility_covers_dip(self) -> None:
+        """Dip stays within the overdraft facility."""
+        events = [
+            DailyCashflowEvent(day_of_month=5, amount_pence=-150000),
+            DailyCashflowEvent(day_of_month=20, amount_pence=200000),
+        ]
+        result = BankCashflowService.project_month(
+            starting_balance_pence=100000,
+            events=events,
+            overdraft_limit_pence=100000,  # £1000 facility, dip is -£500
+        )
+        assert result.min_balance_pence == -50000
+        assert result.first_negative_day == 5
+        assert result.overdraft_exceeded_day is None
+
+    def test_overdraft_facility_exceeded(self) -> None:
+        """Dip goes beyond the overdraft facility."""
+        events = [
+            DailyCashflowEvent(day_of_month=5, amount_pence=-300000),
+        ]
+        result = BankCashflowService.project_month(
+            starting_balance_pence=100000,
+            events=events,
+            overdraft_limit_pence=100000,  # £1000 facility, dip is -£2000
+        )
+        assert result.min_balance_pence == -200000
+        assert result.first_negative_day == 5
+        assert result.overdraft_exceeded_day == 5
+
+    def test_unsorted_events_processed_in_day_order(self) -> None:
+        """Events are sorted by day before simulation."""
+        events = [
+            DailyCashflowEvent(day_of_month=15, amount_pence=-200000),
+            DailyCashflowEvent(day_of_month=1, amount_pence=300000),
+        ]
+        result = BankCashflowService.project_month(
+            starting_balance_pence=100000,
+            events=events,
+        )
+        assert result.closing_balance_pence == 200000
+        assert result.first_negative_day is None
+
+
+class TestOverdraftSeverity:
+    """Test MonthCashflowProjection.overdraft_severity."""
+
+    def _projection(self, min_balance_pence: int) -> MonthCashflowProjection:
+        return MonthCashflowProjection(
+            opening_balance_pence=0,
+            closing_balance_pence=0,
+            min_balance_pence=min_balance_pence,
+            min_balance_day=1,
+            first_negative_day=1 if min_balance_pence < 0 else None,
+            overdraft_exceeded_day=None,
+        )
+
+    def test_none_when_never_negative(self) -> None:
+        assert self._projection(0).overdraft_severity(0) == "none"
+
+    def test_red_when_negative_with_no_facility(self) -> None:
+        assert self._projection(-100).overdraft_severity(0) == "red"
+
+    def test_amber_when_within_facility(self) -> None:
+        assert self._projection(-100).overdraft_severity(50000) == "amber"
+
+    def test_red_when_exceeds_facility(self) -> None:
+        assert self._projection(-100000).overdraft_severity(50000) == "red"
+
+
+class TestEstimateDailyOverdraftInterest:
+    """Test BankCashflowService.estimate_daily_overdraft_interest_pence."""
+
+    def test_zero_when_not_overdrawn(self) -> None:
+        assert BankCashflowService.estimate_daily_overdraft_interest_pence(0, 3990) == 0
+
+    def test_zero_when_no_apr(self) -> None:
+        assert (
+            BankCashflowService.estimate_daily_overdraft_interest_pence(100000, 0) == 0
+        )
+
+    def test_estimates_daily_interest(self) -> None:
+        # £1000 overdrawn at 36.5% APR -> ~£1/day
+        result = BankCashflowService.estimate_daily_overdraft_interest_pence(
+            100000, 3650
+        )
+        assert result == 100

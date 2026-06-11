@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import ui_scale
+from clear_budget.ui.ui_paths import default_downloads_dir
 from clear_budget.shared.db_validation import validate_db
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
@@ -153,20 +154,24 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        export_action = file_menu.addAction("&Export Database…")
+        import_export_menu = file_menu.addMenu("Import / &Export")
+
+        export_action = import_export_menu.addAction("&Export Database…")
         export_action.triggered.connect(self._on_export_database)
 
-        import_action = file_menu.addAction("&Import Database…")
+        import_action = import_export_menu.addAction("&Import Database…")
         import_action.triggered.connect(self._on_import_database)
         import_action.setEnabled(not self.read_only)
 
         if self.current_user.is_admin:
-            export_viewer_action = file_menu.addAction(
+            import_export_menu.addSeparator()
+
+            export_viewer_action = import_export_menu.addAction(
                 "Export &Read-Only Viewer Package…"
             )
             export_viewer_action.triggered.connect(self._on_export_viewer_package)
 
-            import_viewer_action = file_menu.addAction(
+            import_viewer_action = import_export_menu.addAction(
                 "&Import Read-Only Viewer Package…"
             )
             import_viewer_action.triggered.connect(self._on_import_viewer_package)
@@ -176,6 +181,10 @@ class MainWindow(QMainWindow):
         prefs_action = file_menu.addAction("&Preferences…")
         prefs_action.triggered.connect(self._on_preferences)
         prefs_action.setEnabled(not self.read_only)
+
+        bank_action = file_menu.addAction("&Bank Account Settings…")
+        bank_action.triggered.connect(self._on_bank_account_settings)
+        bank_action.setEnabled(not self.read_only)
 
         file_menu.addSeparator()
 
@@ -233,26 +242,20 @@ class MainWindow(QMainWindow):
 
     def _on_preferences(self) -> None:
         """Open currency preferences dialog; rebuild window on change."""
-        from clear_budget.ui.widgets.currency_dialog import CurrencyDialog
-        from clear_budget.shared.currency import set_currency
+        from clear_budget.ui.widgets._preferences_flow import run_preferences_flow
 
         conn = self.month_view_model.budget_service.bill_repo.conn
-        row = conn.execute(
-            "SELECT value FROM settings WHERE key = 'currency'"
-        ).fetchone()
-        current_code = row["value"] if row else "GBP"
-        dlg = CurrencyDialog(current_code, parent=self)
-        if dlg.exec() == CurrencyDialog.DialogCode.Accepted:
-            new_code = dlg.selected_code
-            if new_code != current_code:
-                conn.execute(
-                    "INSERT OR REPLACE INTO settings (key, value)"
-                    " VALUES ('currency', ?)",
-                    (new_code,),
-                )
-                conn.commit()
-                set_currency(new_code)
-                self.database_replaced.emit()
+        if run_preferences_flow(self, conn):
+            self.database_replaced.emit()
+
+    def _on_bank_account_settings(self) -> None:
+        """Open the overdraft facility settings dialog."""
+        from clear_budget.ui.widgets._bank_account_settings_flow import (
+            run_bank_account_settings_flow,
+        )
+
+        run_bank_account_settings_flow(self, self.month_view_model.budget_service)
+        self.month_view_model.refresh_month_summary()
 
     def _on_logout(self) -> None:
         """Return to login to switch user."""
@@ -304,7 +307,7 @@ class MainWindow(QMainWindow):
         dest, _ = QFileDialog.getSaveFileName(
             self,
             "Export Database",
-            str(Path.home() / "clearbudget_backup.db"),
+            str(default_downloads_dir() / "clearbudget_backup.db"),
             "ClearBudget Database (*.db)",
         )
         if not dest:
@@ -314,11 +317,13 @@ class MainWindow(QMainWindow):
             dest_path = dest_path.with_suffix(".db")
         try:
             shutil.copy2(self.db_path, dest_path)
-            QMessageBox.information(
-                self,
-                "Export Successful",
-                f"Database exported to:\n{dest_path}",
-            )
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Information)
+            box.setWindowTitle("Export Successful")
+            box.setText(f"Database exported to:\n{dest_path}")
+            label_w = ui_scale.px(460)
+            box.setStyleSheet(f"QLabel#qt_msgbox_label {{ min-width: {label_w}px; }}")
+            box.exec()
         except OSError as exc:
             QMessageBox.critical(self, "Export Failed", str(exc))
 
@@ -336,7 +341,7 @@ class MainWindow(QMainWindow):
         src, _ = QFileDialog.getOpenFileName(
             self,
             "Import Database",
-            str(Path.home()),
+            str(default_downloads_dir()),
             "ClearBudget Database (*.db)",
         )
         if not src:

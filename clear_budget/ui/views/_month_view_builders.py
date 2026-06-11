@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QHeaderView,
     QSizePolicy,
+    QWidget,
 )
 from PySide6.QtCore import Qt
 
@@ -39,11 +40,35 @@ class MonthViewBuilderMixin:
             prev_btn=self.prev_btn,
             next_btn=next_btn,
         )
+        _left_spacer = QWidget()
+        _left_spacer.setFixedWidth(self.archive_btn.sizeHint().width())
+        nav_layout.addWidget(_left_spacer)
         nav_layout.addStretch(1)
         nav_layout.addWidget(_nav_center, 0)
         nav_layout.addStretch(1)
         nav_layout.addWidget(self.archive_btn)
         header_layout.addLayout(nav_layout)
+
+        self.solvency_hint_label = QLabel(
+            "See the Solvency tab for full balance projections."
+        )
+        self.solvency_hint_label.setStyleSheet(
+            ui_scale.style(
+                "font-size: 12px; font-style: italic; color: #2dd4bf;"
+                " padding: 0px 5px;"
+            )
+        )
+        self.solvency_hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(self.solvency_hint_label)
+
+        self.overdraft_warning_label = QLabel("")
+        self.overdraft_warning_label.setStyleSheet(
+            ui_scale.style("font-size: 12px; font-weight: bold; padding: 0px 5px;")
+        )
+        self.overdraft_warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.overdraft_warning_label.setWordWrap(True)
+        self.overdraft_warning_label.setVisible(False)
+        header_layout.addWidget(self.overdraft_warning_label)
 
         summary_layout = QHBoxLayout()
         self.income_label = QLabel(f"Income: {fmt(0)}")

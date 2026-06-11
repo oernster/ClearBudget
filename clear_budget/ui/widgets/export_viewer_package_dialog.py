@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from clear_budget.auth.viewer_package import export_viewer_package
 from clear_budget.ui import ui_scale
+from clear_budget.ui.ui_paths import default_downloads_dir
 from clear_budget.ui.widgets.login_dialog import LoginDialog
 
 # Fixed-width mask shown in place of the password until "Reveal" is clicked.
@@ -112,7 +113,7 @@ class ExportViewerPackageDialog(QDialog):
         dest, _ = QFileDialog.getSaveFileName(
             self,
             "Export Viewer Package",
-            str(Path.home() / f"clearbudget_viewer_{username}.zip"),
+            str(default_downloads_dir() / f"clearbudget_viewer_{username}.zip"),
             "ClearBudget Viewer Package (*.zip)",
         )
         if not dest:
@@ -150,6 +151,7 @@ class _ExportSuccessDialog(QDialog):
         self._password = password
         self._revealed = False
         self.setWindowTitle("Export Successful")
+        self.setMinimumWidth(ui_scale.px(440))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(

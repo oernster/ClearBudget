@@ -1,4 +1,4 @@
-"""CreateUserDialog - new account creation (first-run wizard and admin add-user)."""
+"""CreateUserDialog - new account creation (first-run wizard, login screen, add-user)."""
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -103,12 +103,6 @@ class CreateUserDialog(QDialog):
         self.confirm_edit.returnPressed.connect(self._on_create)
         layout.addWidget(self.confirm_edit)
 
-        if not self.is_first_user:
-            self.admin_check = QCheckBox("Grant admin privileges")
-            layout.addWidget(self.admin_check)
-        else:
-            self.admin_check = None
-
         self.error_label = QLabel("")
         self.error_label.setStyleSheet("color: #f87171; font-size: 12px;")
         self.error_label.setVisible(False)
@@ -150,11 +144,8 @@ class CreateUserDialog(QDialog):
             self._show_error(f"Username '{username}' is already taken.")
             return
 
-        is_admin = self.is_first_user or (
-            self.admin_check is not None and self.admin_check.isChecked()
-        )
         user, recovery_code = self.user_store.create_user(
-            username, password, is_admin=is_admin
+            username, password, is_admin=self.is_first_user
         )
         self.created_user = user
         self.recovery_code = recovery_code

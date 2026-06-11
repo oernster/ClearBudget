@@ -223,7 +223,7 @@ class SolvencyPanelDisplayMixin:
         else:
             self.month_breakdown_label.setText("")
 
-        # Compute M1/M2 forward data early — needed for freedom calc and projections.
+        # Compute M1/M2 forward data needed for projections.
         m1 = report.year_month.next_month()
         m2 = m1.next_month()
         m1_name = MONTH_NAMES[m1.month]
@@ -239,33 +239,6 @@ class SolvencyPanelDisplayMixin:
         m1_drain = m1_bank - m1_summary.total_income.pence
         m2_drain = m2_bank - m2_summary.total_income.pence
         m1_end_pence = report.balance_pence + m1_summary.total_income.pence - m1_bank
-        m1_min_balance = self._compute_month_min_balance(
-            report.balance_pence, m1_summary
-        )
-
-        if summary:
-            budget_service = self.view_model.budget_service
-            disc_buffer = budget_service.get_discretionary_buffer(
-                balance_pence=report.balance_pence
-            )
-            if not budget_service.has_custom_discretionary_buffer():
-                self.discretionary_buffer_edit.setText(f"{disc_buffer / 100:.2f}")
-            freedom_pence = max(0, m1_min_balance - disc_buffer)
-            if freedom_pence > 0:
-                self.freedom_label.setText(f"Freedom to spend: {fmt(freedom_pence)}")
-                self.freedom_label.setStyleSheet(
-                    ui_scale.style(
-                        "font-size: 20px; font-weight: bold;"
-                        " padding: 5px; color: #34d399;"
-                    )
-                )
-            else:
-                self.freedom_label.setText("No discretionary budget this month")
-                self.freedom_label.setStyleSheet(
-                    ui_scale.style("font-size: 18px; padding: 5px; color: #9ca3af;")
-                )
-        else:
-            self.freedom_label.setText("")
 
         self._rebuild_card_bars(report)
 

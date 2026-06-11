@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
+from clear_budget.domain.services.bank_cashflow import BankCashflowService
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.widgets.bill_dialog import BillDialog
@@ -162,6 +163,53 @@ class MonthView(
                     f" color: {color}; padding: 5px;"
                 )
             )
+            self._update_overdraft_warning(summary)
+
+    def _update_overdraft_warning(self, summary) -> None:
+        svc = self.view_model.budget_service
+        projection = svc.get_month_cashflow_projection(
+            year_month=self.view_model.current_month, summary=summary
+        )
+        overdraft_limit_pence = svc.get_overdraft_limit().pence
+        severity = projection.overdraft_severity(overdraft_limit_pence)
+        if severity == "none":
+            self.overdraft_warning_label.setVisible(False)
+            return
+
+        low = fmt(abs(projection.min_balance_pence))
+        day = projection.min_balance_day
+        if severity == "amber":
+            text = (
+                f"⚠ Balance dips to -{low} around day {day} (covered by your overdraft)"
+            )
+            daily_interest = (
+                BankCashflowService.estimate_daily_overdraft_interest_pence(
+                    abs(projection.min_balance_pence),
+                    svc.get_overdraft_apr_basis_points(),
+                )
+            )
+            if daily_interest > 0:
+                text += f" - ~{fmt(daily_interest)}/day interest"
+            color = "#fbbf24"
+        elif overdraft_limit_pence > 0:
+            text = (
+                f"⚠ Balance may EXCEED your overdraft limit (-{low} around day {day})"
+            )
+            color = "#f87171"
+        else:
+            text = (
+                f"⚠ Balance may go OVERDRAWN to -{low} around day {day}"
+                " - no overdraft facility set"
+            )
+            color = "#f87171"
+
+        self.overdraft_warning_label.setText(text)
+        self.overdraft_warning_label.setStyleSheet(
+            ui_scale.style(
+                f"font-size: 12px; font-weight: bold; padding: 0px 5px; color: {color};"
+            )
+        )
+        self.overdraft_warning_label.setVisible(True)
 
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")

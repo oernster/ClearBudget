@@ -52,10 +52,15 @@ An additional Auth layer sits alongside the main layers for user identity and cr
   - `start_ym`, `end_ym` (expiring bills)
   - `skipped_for_month: bool` - per-month skip flag (joined from `bill_month_skips`)
   - `has_month_override: bool` - per-month override flag (joined from `bill_month_overrides`)
+  - `paid_for_month: bool` - per-month paid flag; excludes the bill from "still due"
+    totals and the projected balance for the rest of that month
   - `is_active_in_month(year_month)` - checks date range
 
 - `IncomeSource` - Recurring income (salary, benefits)
   - `name`, `amount`, `is_reliable` (for forward projections)
+  - `is_month_only: bool` - one-off "this month only" entry not tied to a template
+  - `skipped_for_month` / `has_month_override` / `received_for_month` - same
+    per-month machinery as `Bill`
 
 - `CreditCard` - Credit card tracking
   - `id`, `name`, `credit_limit`, `current_balance_used`
@@ -63,6 +68,8 @@ An additional Auth layer sits alongside the main layers for user identity and cr
   - `card_expiry_month` (1-12, nullable), `card_expiry_year` (nullable)
   - `minimum_payment_pence` (nullable), `minimum_payment_percent` (nullable)
   - `active` (soft-delete flag, 1 or 0)
+  - `balance_applied_year` / `balance_applied_month` - last month folded into
+    `current_balance_used`, preventing double-counting on month rollover
   - Properties: `available`, `utilization_percent`
 
 - `MonthBill` - Bill instantiated for a specific month
@@ -77,18 +84,38 @@ An additional Auth layer sits alongside the main layers for user identity and cr
 **Domain Services**:
 - `SolvencyCalculatorService.calculate()` - Computes balance, deficit, forward shortfall
 - `CardExhaustionService.analyse()` - Months until card maxes out
-- `BankCashflowService.find_first_negative_day()` - Detects overdraft date
+- `BankCashflowService`:
+  - `find_first_negative_day()` - Detects overdraft date
+  - `project_month(starting_balance_pence, events, overdraft_limit_pence)` -
+    day-by-day simulation returning `MonthCashflowProjection`
+    (opening/closing/min balance, day of min balance, first negative day,
+    overdraft-exceeded day)
+  - `MonthCashflowProjection.overdraft_severity(overdraft_limit_pence)` ->
+    `"none" | "amber" | "red"`
+  - `estimate_daily_overdraft_interest_pence(overdrawn_pence, apr_basis_points)` -
+    daily interest estimate from APR stored in basis points
 - `WorkingDayCalculatorService.adjust_to_working_day()` - Adjusts payment dates
 - `CardMonthlyCalculator.calculate_card_monthly_state()` - Per-card monthly cashflow
   - Inputs: card, opening balance pence, bills list
   - Computes charges, payment received, interest, closing balance, minimum payment
   - Returns `CardMonthlyState` frozen dataclass
+- `_card_live_projection.py` - live pro-rated balance: undated bills accrue evenly
+  across the elapsed days of the month (rounded up), dated bills count fully once
+  their due day has passed
 
 ### Application Layer
 
 **Orchestration** - Coordinates domain layer, defines cross-boundary DTOs.
 
-**BudgetService** (main orchestrator):
+**BudgetService** (main orchestrator) - frozen dataclass (`slots=True`) composed of
+focused mixins to stay under the 400-LOC-per-file limit:
+- `BillOperationsMixin` (`_bill_operations.py`) - bill CRUD, per-month skip/override/paid
+- `IncomeOperationsMixin` (`_income_operations.py`) - income CRUD, per-month
+  skip/override/received, "this month only" extras
+- `OverdraftOperationsMixin` (`_overdraft_operations.py`) - overdraft facility
+  settings and `get_month_cashflow_projection()`
+
+Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
 - `calculate_solvency(year_month)` → `SolvencyReport`
 - `calculate_solvency_from_summary(year_month, month_summary)` → `SolvencyReport`
@@ -98,8 +125,11 @@ An additional Auth layer sits alongside the main layers for user identity and cr
 - `delete_bill_month_override(bill_id, year_month)`
 - `get_projected_month_end_balance_pence(year_month)` → `int` (signed)
 - `get_bank_balance()` / `set_bank_balance(amount)`
-- `get_discretionary_buffer()` → `int` (pence, default 5000 = £50)
-- `set_discretionary_buffer(pence)` - persists user-chosen freedom-to-spend buffer
+- `get_overdraft_limit()` / `set_overdraft_limit(amount)` - overdraft facility limit
+- `get_overdraft_apr_basis_points()` / `set_overdraft_apr_basis_points(basis_points)` -
+  overdraft APR, stored as basis points (1bp = 0.01%)
+- `get_month_cashflow_projection(year_month, summary)` → `MonthCashflowProjection` -
+  drives the Monthly Budget mid-month overdraft warning
 - `reset_all_data()` - wipes all user budget data (New Budget feature)
 
 **DTOs**:
@@ -118,7 +148,8 @@ An additional Auth layer sits alongside the main layers for user identity and cr
   5. `month_bills`
   6. `month_income`
   7. `credit_cards` - includes `minimum_payment_percent` (migration)
-  8. `settings` - key/value store (`bank_balance`, `bank_balance_day`, `currency`, `discretionary_buffer`)
+  8. `settings` - key/value store (`bank_balance`, `bank_balance_day`, `currency`,
+     `overdraft_limit`, `overdraft_apr_bp`)
   9. `bill_month_overrides` - includes `day_of_month` (migration)
   10. `bill_month_skips` - per-month bill exclusion (bill_id, year, month)
   11. `sqlite_sequence`
@@ -145,14 +176,19 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `find_user(username)` → `User | None`
 - `verify_password(username, password)` → `User | None`
 - `verify_recovery_code(username, code)` → `bool`
-- `create_user(username, password, is_admin)` → `User` - hashes password and recovery code with bcrypt
+- `create_user(username, password, is_admin)` → `(User, recovery_code)` - hashes
+  password and recovery code with bcrypt. Only the first-ever user is created with
+  `is_admin=True`; all subsequent accounts (login screen "Create Account..." or
+  admin "Add User") are non-admin
+- `import_viewer_account(...)` - creates or refreshes a read-only (`is_read_only=True`)
+  account from an imported viewer package
 - `change_password(username, new_password)`
 - `delete_user(user_id)`
 - `get_all_users()` → `list[User]`
 - `close()`
 
 **`User`** model (`clear_budget/auth/models.py`):
-- `id`, `username`, `is_admin`
+- `id`, `username`, `is_admin`, `is_read_only` (default `False`)
 
 ### Shared Layer
 
@@ -175,6 +211,11 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `fmt(pounds: float)` → `"{symbol}{pounds:.2f}"`
 - Used throughout UI for all inline currency formatting not going through `Amount.__str__`
 
+**`ui_paths.default_downloads_dir()`** (`clear_budget/ui/ui_paths.py`):
+- Cross-platform Downloads folder via `QStandardPaths.DownloadLocation`, falling
+  back to `Path.home()`. Used as the default directory for all file dialogs
+  (Export/Import Database, Export/Import Viewer Package).
+
 ### UI Layer
 
 **ViewModels**:
@@ -185,41 +226,73 @@ Separate from budget infrastructure. Manages user identity and credentials.
 
 **Views**:
 - `MonthView` - bill/income tables with inline editing; balance display adapts to current vs future month
-- `SolvencyPanel` - overdraft alert, mid-month alert, freedom-to-spend (next-month low-point minus configurable buffer), card bars, forward projection; includes inline discretionary buffer editor
+- `SolvencyPanel` - overdraft alert, mid-month alert, card bars, forward projection
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
 
 **Widgets**:
-- `LoginDialog` - username/password form; "Forgot password?" link opens `ResetPasswordDialog`
+- `LoginDialog` - username/password form; grid layout with "Forgot password?"
+  (opens `ResetPasswordDialog`) and Sign In on one row, "Import Viewer Package..."
+  (opens the viewer-package import flow) and "Create Account..." (opens
+  `CreateUserDialog`, non-admin) on the row below
 - `ResetPasswordDialog` - username + recovery code + new password; distinct error for unknown username vs wrong code
-- `CreateUserDialog` - new user form (first-run wizard or admin add-user); includes `RecoveryCodeDialog` on success
+- `CreateUserDialog` - new user form (first-run wizard, login screen, or admin
+  "Add User"); `is_first_user=True` is the only path that creates an admin account;
+  includes `RecoveryCodeDialog` on success
 - `RecoveryCodeDialog` - displays one-time recovery code; X button disabled; clipboard copy button; checkbox gate before OK activates
-- `UserManagementDialog` - admin-only; lists users; Delete Selected disabled when own row selected
+- `UserManagementDialog` - admin-only; lists users, Add User, Delete Selected
+  (disabled when own row selected); deleting a user always deletes their budget
+  data file too (double confirmation)
 - `CurrencyDialog` - combobox of 25 currencies; opened via File > Preferences
-- `BillDialog` - add/edit bill; month-only scope toggle
+- `BankAccountSettingsDialog` - configure overdraft facility limit and APR; opened
+  via File > Bank Account Settings
+- `ExportViewerPackageDialog` - admin: bundle a snapshot of the budget DB into a zip
+  for a read-only viewer account
+- `_viewer_package_import_flow.py` - shared import flow used by both the login
+  screen and File > Import Read-Only Viewer Package; raises `UsernameClashError`
+  (with `existing_is_viewer`) if the package's username collides with a real account
+- `BillDialog` - add/edit bill; month-only scope toggle, paid checkbox
 - `CreditCardDialog` - add/edit credit card
-- `IncomeDialog` - add/edit income source
+- `IncomeDialog` - add/edit income source; "this month only" checkbox with
+  contextual status text
 - `BalanceDialog` - edit current bank balance
 - `ArchiveDetailDialog` - drill-down for a single archived month
+- `HowItWorksDialog` - Help menu explanation of pro-rating, balances, archiving
 - `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text
 - `ScrollableTab` - wraps any view in `QScrollArea` with scroll indicator buttons
+- `_preferences_flow.py` / `_bank_account_settings_flow.py` - dialog-orchestration
+  helpers extracted from `MainWindow` to stay under the LOC limit
+- `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
+  for the Credit Cards tab
 
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
-  - File menu: New Budget, Export Database, Import Database, Preferences, Switch User, Exit
-  - Users menu (admin only): Manage Users
-  - Help menu: About, View Licence
+  - File menu: New Budget, then "Import / Export" submenu (Export/Import Database,
+    and Read-Only Viewer Package export/import, admin only), Preferences, Bank
+    Account Settings, Switch User, Exit
+  - Users menu (admin only): Manage Users (list, Add User, Delete Selected)
+  - Help menu: How It Works, About, View Licence
+  - Read-only accounts: window title shows "(Read-only)"; destructive/edit actions
+    disabled across all views
 - `main.py` - composition root; manages full session lifecycle:
   - `_session_loop()` → login → open DB → load currency → build window → show
   - `_reload_database()` → triggered by `database_replaced`; closes old DB, reopens, loads currency, rebuilds window
   - Single-instance mutex prevents duplicate launches
   - UI scale capped at 1.5x for 4K monitors
+  - Default window size: 33% of screen width x 88% of screen height, centred (not
+    maximised)
 
 **Theme** (`dark_theme.py`):
 - Applied at `QApplication` level - covers all windows and dialogs
-- `QPushButton` hover/press: orange `#f59e0b` 2px border
-- `QTabBar::tab` hover: orange `#f59e0b`; selected: purple `#a78bfa`
-- `QMenuBar` / `QMenu` hover: orange `#f59e0b`
+- App background near-black `#0a0a0d`, panels/trays `#242938`, borders `#3a4156`
+- Buttons royal blue `#3b5bdb` (hover `#4a68d6`, pressed `#2f4bb8`)
+- `QPushButton` hover/selection, `QTabBar::tab` hover/selected, menu hover, and
+  focus borders: teal `#2dd4bf` (formerly orange `#f59e0b`/mauve `#a78bfa`)
+- Table selection background: deep blue `#1e3a5f`
+- Disabled/read-only widgets show a red `#f87171` border instead of the
+  hover/selection border, so read-only mode is visually distinct
+- Amber/red semantic warning colours (card balance thresholds, overdraft warnings)
+  are unchanged by the colour rework
 
 ## Application Startup Flow
 
@@ -232,8 +305,10 @@ main()
   └── app.exec()
   └── _session_loop()                        # fires on first event loop tick
         └── _run_login_flow()
-              └── first run? → CreateUserDialog → RecoveryCodeDialog
+              └── first run? → CreateUserDialog(is_first_user=True) → RecoveryCodeDialog
               └── else       → LoginDialog
+                    └── Create Account...     → CreateUserDialog(is_first_user=False)
+                    └── Import Viewer Package → viewer-package import flow
               └── X button   → app.quit() → process exits
         └── _open_user_database(username)       # budget_<username>.db
         └── _load_currency(database)            # set_currency() from settings

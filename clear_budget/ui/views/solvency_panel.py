@@ -5,7 +5,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QProgressBar,
     QPushButton,
 )
@@ -83,46 +82,6 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
         )
         layout.addWidget(health_label)
 
-        self.freedom_label = QLabel("")
-        self.freedom_label.setStyleSheet(
-            ui_scale.style(
-                "font-size: 20px; font-weight: bold; padding: 5px; color: #34d399;"
-            )
-        )
-        layout.addWidget(self.freedom_label)
-
-        disc_row = QHBoxLayout()
-        disc_lbl = QLabel("Discretionary buffer: £")
-        disc_lbl.setStyleSheet(ui_scale.style("font-size: 12px; color: #6b7280;"))
-        self.discretionary_buffer_edit = QLineEdit()
-        self.discretionary_buffer_edit.setMaximumWidth(ui_scale.px(70))
-        self.discretionary_buffer_edit.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.discretionary_buffer_edit.setStyleSheet(
-            ui_scale.style(
-                "QLineEdit { background: #0d1b2a; color: #9ca3af; border: 1px solid #1e3a5f;"
-                " border-radius: 3px; padding: 2px 4px; font-size: 12px; }"
-                "QLineEdit:focus { border-color: #00d4ff; color: #e2e8f0; }"
-            )
-        )
-        report = self.view_model.solvency_report
-        balance_pence = report.balance_pence if report else 0
-        buf_pence = self.view_model.budget_service.get_discretionary_buffer(
-            balance_pence=balance_pence
-        )
-        self.discretionary_buffer_edit.setText(f"{buf_pence / 100:.2f}")
-        self.discretionary_buffer_edit.returnPressed.connect(
-            self._save_discretionary_buffer
-        )
-        self.discretionary_buffer_edit.editingFinished.connect(
-            self._save_discretionary_buffer
-        )
-        if self.read_only:
-            self.discretionary_buffer_edit.setReadOnly(True)
-        disc_row.addWidget(disc_lbl)
-        disc_row.addWidget(self.discretionary_buffer_edit)
-        disc_row.addStretch()
-        layout.addLayout(disc_row)
-
         self.balance_label = QLabel(f"Bank Balance: {fmt(0)}")
         self.balance_label.setStyleSheet(
             ui_scale.style("font-size: 20px; padding: 5px;")
@@ -194,16 +153,6 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
     def connect_signals(self) -> None:
         """Connect ViewModel signals to view updates."""
         self.view_model.solvency_updated.connect(self.update_display)
-
-    def _save_discretionary_buffer(self) -> None:
-        """Persist the discretionary buffer value from the edit field."""
-        text = self.discretionary_buffer_edit.text().strip().lstrip("£")
-        try:
-            pence = int(round(float(text) * 100))
-            self.view_model.budget_service.set_discretionary_buffer(pence=pence)
-            self.view_model.refresh_solvency()
-        except ValueError:
-            pass
 
     def _simulate_runway(self, starting_balance_pence: int, from_month) -> tuple:
         """Step forward month by month until balance goes negative.

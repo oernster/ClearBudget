@@ -112,10 +112,6 @@ each day even before the bill is paid in full - not just the
       <b>Paid</b> are excluded.</li>
   <li><b>Still due (cards)</b> - credit card bills left to pay this month,
       pro-rated the same way. Bills marked <b>Paid</b> are excluded.</li>
-  <li><b>Discretionary buffer</b> - the amount you'd like to keep spare for
-      day-to-day spending; defaults to 20% of your balance (minimum &pound;20)
-      until you set your own value. Saves automatically when you press Enter
-      or click away.</li>
   <li><b>Forward Projection</b> - a look-ahead at your balance over the next
       couple of months.</li>
 </ul>

@@ -21,37 +21,6 @@ def get_bank_balance_day(conn) -> int:  # pragma: no cover
     return int(row["value"]) if row else 0
 
 
-DISCRETIONARY_BUFFER_DEFAULT_PERCENT = 20
-DISCRETIONARY_BUFFER_MINIMUM_PENCE = 2000
-
-
-def compute_discretionary_buffer_default(balance_pence: int) -> int:
-    """Default discretionary buffer: 20% of balance, or £20, whichever is higher."""
-    percent_pence = balance_pence * DISCRETIONARY_BUFFER_DEFAULT_PERCENT // 100
-    return max(percent_pence, DISCRETIONARY_BUFFER_MINIMUM_PENCE)
-
-
-def get_discretionary_buffer_pence(conn) -> int | None:  # pragma: no cover
-    """Return the user-set discretionary buffer in pence, or None if unset."""
-    if conn is None:
-        return None
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT value FROM settings WHERE key = ?", ("discretionary_buffer",)
-    )
-    row = cursor.fetchone()
-    return int(row["value"]) if row else None
-
-
-def set_discretionary_buffer_pence(conn, pence: int) -> None:  # pragma: no cover
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-        ("discretionary_buffer", str(pence)),
-    )
-    conn.commit()
-
-
 def set_bank_balance_pence(conn, pence: int) -> None:  # pragma: no cover
     cursor = conn.cursor()
     cursor.execute(
@@ -61,5 +30,41 @@ def set_bank_balance_pence(conn, pence: int) -> None:  # pragma: no cover
     cursor.execute(
         "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
         ("bank_balance_day", str(_date.today().day)),
+    )
+    conn.commit()
+
+
+def get_overdraft_limit_pence(conn) -> int:  # pragma: no cover
+    if conn is None:
+        return 0
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = ?", ("overdraft_limit",))
+    row = cursor.fetchone()
+    return int(row["value"]) if row else 0
+
+
+def set_overdraft_limit_pence(conn, pence: int) -> None:  # pragma: no cover
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+        ("overdraft_limit", str(pence)),
+    )
+    conn.commit()
+
+
+def get_overdraft_apr_basis_points(conn) -> int:  # pragma: no cover
+    if conn is None:
+        return 0
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = ?", ("overdraft_apr_bp",))
+    row = cursor.fetchone()
+    return int(row["value"]) if row else 0
+
+
+def set_overdraft_apr_basis_points(conn, basis_points: int) -> None:  # pragma: no cover
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+        ("overdraft_apr_bp", str(basis_points)),
     )
     conn.commit()

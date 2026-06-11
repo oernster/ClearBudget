@@ -10,6 +10,9 @@ from clear_budget.application.services._bill_operations import BillOperationsMix
 from clear_budget.application.services._income_operations import (
     IncomeOperationsMixin,
 )
+from clear_budget.application.services._overdraft_operations import (
+    OverdraftOperationsMixin,
+)
 from clear_budget.application.services._month_mappers import (
     bills_to_month_bills as _bills_to_month_bills,
     income_to_month_income as _income_to_month_income,
@@ -33,7 +36,9 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 
 
 @dataclass(frozen=True, slots=True)
-class BudgetService(BillOperationsMixin, IncomeOperationsMixin):
+class BudgetService(
+    BillOperationsMixin, IncomeOperationsMixin, OverdraftOperationsMixin
+):
     bill_repo: BillRepository
     income_repo: IncomeSourceRepository
     payment_method_repo: PaymentMethodRepository
@@ -333,43 +338,6 @@ class BudgetService(BillOperationsMixin, IncomeOperationsMixin):
         from clear_budget.application.services._budget_reset import reset_budget_data
 
         reset_budget_data(self.bill_repo.conn)
-
-    def get_discretionary_buffer(
-        self, *, balance_pence: int = 0
-    ) -> int:  # pragma: no cover
-        """Return discretionary buffer in pence.
-
-        Returns the user-set value if one exists, otherwise defaults to
-        20% of ``balance_pence`` (or £20, whichever is higher).
-        """
-        from clear_budget.application.services._settings_operations import (
-            compute_discretionary_buffer_default,
-            get_discretionary_buffer_pence,
-        )
-
-        stored = get_discretionary_buffer_pence(getattr(self.bill_repo, "conn", None))
-        if stored is not None:
-            return stored
-        return compute_discretionary_buffer_default(balance_pence)
-
-    def has_custom_discretionary_buffer(self) -> bool:  # pragma: no cover
-        """True if the user has explicitly set a discretionary buffer."""
-        from clear_budget.application.services._settings_operations import (
-            get_discretionary_buffer_pence,
-        )
-
-        return (
-            get_discretionary_buffer_pence(getattr(self.bill_repo, "conn", None))
-            is not None
-        )
-
-    def set_discretionary_buffer(self, *, pence: int) -> None:  # pragma: no cover
-        """Save discretionary buffer in pence."""
-        from clear_budget.application.services._settings_operations import (
-            set_discretionary_buffer_pence,
-        )
-
-        set_discretionary_buffer_pence(self.bill_repo.conn, pence)
 
     def set_bank_balance(self, *, amount: Amount) -> None:  # pragma: no cover
         from clear_budget.application.services._settings_operations import (

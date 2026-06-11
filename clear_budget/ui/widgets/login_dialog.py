@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
+    QGridLayout,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -103,43 +104,43 @@ class LoginDialog(QDialog):
 
         layout.addSpacing(ui_scale.px(4))
 
-        # Buttons row
-        btn_layout = QHBoxLayout()
+        # Buttons grid: links on the left, action buttons on the right
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(ui_scale.px(12))
+        grid.setVerticalSpacing(ui_scale.px(8))
+
         self.forgot_btn = QPushButton("Forgot password?")
         self.forgot_btn.setFlat(True)
-        self.forgot_btn.setStyleSheet(
-            ui_scale.style(
-                "QPushButton { color: #60a5fa; font-size: 12px;"
-                " border: none; background: transparent; }"
-                "QPushButton:hover { color: #93c5fd; text-decoration: underline; }"
-            )
-        )
+        self.forgot_btn.setStyleSheet(self._link_style())
         self.forgot_btn.clicked.connect(self._on_forgot_password)
-        btn_layout.addWidget(self.forgot_btn)
-        btn_layout.addStretch()
+        grid.addWidget(self.forgot_btn, 0, 0, Qt.AlignmentFlag.AlignLeft)
 
         self.login_btn = QPushButton("Sign In")
         self.login_btn.setDefault(True)
         self.login_btn.setMinimumWidth(ui_scale.px(90))
         self.login_btn.clicked.connect(self._on_login)
-        btn_layout.addWidget(self.login_btn)
-        layout.addLayout(btn_layout)
+        grid.addWidget(self.login_btn, 0, 1)
 
-        # Import viewer package row
-        import_layout = QHBoxLayout()
         self.import_viewer_btn = QPushButton("Import Viewer Package…")
         self.import_viewer_btn.setFlat(True)
-        self.import_viewer_btn.setStyleSheet(
-            ui_scale.style(
-                "QPushButton { color: #60a5fa; font-size: 12px;"
-                " border: none; background: transparent; }"
-                "QPushButton:hover { color: #93c5fd; text-decoration: underline; }"
-            )
-        )
+        self.import_viewer_btn.setStyleSheet(self._link_style())
         self.import_viewer_btn.clicked.connect(self._on_import_viewer_package)
-        import_layout.addWidget(self.import_viewer_btn)
-        import_layout.addStretch()
-        layout.addLayout(import_layout)
+        grid.addWidget(self.import_viewer_btn, 1, 0, Qt.AlignmentFlag.AlignLeft)
+
+        self.create_account_btn = QPushButton("Create Account")
+        self.create_account_btn.clicked.connect(self._on_create_account)
+        grid.addWidget(self.create_account_btn, 1, 1)
+
+        grid.setColumnStretch(0, 1)
+        layout.addLayout(grid)
+
+    @staticmethod
+    def _link_style() -> str:
+        return ui_scale.style(
+            "QPushButton { color: #60a5fa; font-size: 12px;"
+            " border: none; background: transparent; padding: 0; margin: 0; }"
+            "QPushButton:hover { color: #93c5fd; text-decoration: underline; }"
+        )
 
     @staticmethod
     def _input_style() -> str:
@@ -185,6 +186,26 @@ class LoginDialog(QDialog):
             "Import Successful",
             f"Viewer account '{user.username}' is ready.\n\n"
             "Enter the password you were given and sign in.",
+        )
+
+    def _on_create_account(self) -> None:
+        from clear_budget.ui.widgets.create_user_dialog import CreateUserDialog
+
+        dlg = CreateUserDialog(self.user_store, is_first_user=False, parent=self)
+        if (
+            dlg.exec() != CreateUserDialog.DialogCode.Accepted
+            or dlg.created_user is None
+        ):
+            return
+
+        self.username_edit.setText(dlg.created_user.username)
+        self.password_edit.clear()
+        self.password_edit.setFocus()
+        QMessageBox.information(
+            self,
+            "Account Created",
+            f"Account '{dlg.created_user.username}' has been created.\n\n"
+            "Enter your password and sign in.",
         )
 
     def _on_forgot_password(self) -> None:

@@ -197,12 +197,13 @@ QScrollBar:vertical {{
 }}
 
 QScrollBar::handle:vertical {{
-    background-color: #3a4156;
+    background-color: #9aa3c2;
     border-radius: 4px;
+    min-height: 20px;
 }}
 
 QScrollBar::handle:vertical:hover {{
-    background-color: #454b6b;
+    background-color: #c4cae0;
 }}
 
 QStatusBar {{

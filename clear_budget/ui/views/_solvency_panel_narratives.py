@@ -26,24 +26,6 @@ class SolvencyPanelNarrativeMixin:
             return "#34d399"
         return "#fbbf24"
 
-    @staticmethod
-    def _compute_month_min_balance(opening_pence: int, summary) -> int:
-        """Return the minimum bank balance at any point during the month (pence)."""
-        events = []
-        for inc in summary.income_sources:
-            events.append((inc.day_of_month or 1, inc.amount.pence))
-        for bill in summary.bills:
-            if bill.payment_method_id == 1:
-                events.append((bill.day_of_month or 28, -bill.amount.pence))
-        events.sort(key=lambda e: (e[0], -e[1]))
-        balance = opening_pence
-        min_balance = opening_pence
-        for _day, delta in events:
-            balance += delta
-            if balance < min_balance:
-                min_balance = balance
-        return min_balance
-
     def _build_month_cashflow_summary(
         self, opening_pence: int, summary, monthly_drain_pence: int
     ) -> tuple[str, str]:

@@ -11,29 +11,42 @@ detailed solvency analysis. Supports multiple user accounts with secure authenti
 ## Features
 
 - Multi-user login with bcrypt password hashing and recovery codes
+- Create an account from the sign-in screen at any time, not just on first
+  launch (only the very first account ever created is an admin)
+- Read-only viewer accounts: export a snapshot of a budget as a "viewer
+  package" for someone else to import and browse without editing
 - Per-user isolated budget databases
 - Month-by-month budget tracking with income and bill templates
 - Per-bill monthly skip (exclude a bill from one month without deleting it)
 - Per-bill monthly overrides (amount and due day overrides for a specific month)
+- Per-bill "paid" flag - excludes a paid bill from "still due" totals and the
+  projected balance for the rest of the month
+- Per-month income flexibility: per-month overrides, per-month skips, a
+  "received" flag, and "this month only" one-off income entries
 - Solvency analysis with forward cashflow projections (next 2 months)
 - Mid-month overdraft detection (accounts for bills clustering before late income)
+- Configurable bank overdraft facility (limit + APR) with a Monthly Budget
+  warning when the projected balance dips below zero mid-month, even if the
+  month ends positive
 - Credit card management: limits, interest rates, payment due dates, utilisation tracking
 - Per-card monthly cashflow breakdown (charges, payment, interest, minimum due, projected closing balance)
+- Live pro-rated credit card balance projection between months
 - 6-month rolling balance projection per card (colour-coded by available headroom)
 - Dynamic payment methods: assign bills to bank account or specific credit cards
 - Database export and validated import (File menu)
 - Display currency selection - 25 currencies covering English-speaking countries (File > Preferences)
 - Dark theme UI with scrollable tabs and scroll position indicators
+- Built-in "How It Works" help screen explaining pro-rating, balances and archiving
 - SQLite storage: per-user budget database + shared users database
 
 ---
 
 ## Application Tabs
 
-- **Monthly Budget** - View and manage bills for the selected month; toggle active/skip per bill; view balance or projected end-of-month figure
+- **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
 - **Solvency** - Financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months
-- **Credit Cards** - Add, edit, delete cards; month-navigation shows projected closing balances for future months; 6-month projection strip
-- **Archive** - Historical month summaries by year with navigation; drill down into individual months
+- **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
+- **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown)
 
 ---
 
@@ -42,24 +55,40 @@ detailed solvency analysis. Supports multiple user accounts with secure authenti
 | Action | Description |
 |--------|-------------|
 | New Budget... | Wipe all budget data and start fresh (double confirmation required) |
-| Export Database... | Copy active database to a chosen location |
-| Import Database... | Replace active database from a backup file (validated before write) |
+| Import / Export > Export Database... | Copy active database to a chosen location |
+| Import / Export > Import Database... | Replace active database from a backup file (validated before write) |
+| Import / Export > Export Read-Only Viewer Package... (admin only) | Bundle a snapshot of the budget into a zip for a viewer account |
+| Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
 | Preferences... | Choose display currency |
+| Bank Account Settings... | Configure an overdraft facility (limit and APR) |
 | Switch User | Return to login screen |
 | Exit | Close application |
+
+Read-only viewer accounts have most of these actions disabled, and the window title
+shows "(Read-only)".
 
 ---
 
 ## User Accounts
 
-On first launch, a setup wizard creates an admin account. A one-time recovery code is
-displayed and must be acknowledged before the wizard completes.
+On first launch, a setup wizard creates an admin account - the only account that is
+ever an admin. A one-time recovery code is displayed and must be acknowledged before
+the wizard completes.
 
-Subsequent launches show a login screen. The "Forgot password?" link allows password
-reset using the recovery code.
+Subsequent launches show a login screen with username/password fields plus:
+- **Forgot password?** - reset using the recovery code
+- **Import Viewer Package...** - import a read-only viewer account from a package file
+- **Create Account...** - create a new (non-admin) account at any time, without
+  needing an admin
 
-Admin users have access to a **Users** menu for adding and removing accounts. Admins
-cannot delete their own account. Non-admin users do not see the Users menu.
+Admin users have access to a **Users** menu for adding and removing accounts (added
+accounts are also non-admin). Admins cannot delete their own account. Deleting a user
+account always permanently deletes that user's budget data too (two confirmations
+required) - there is no way to keep an orphaned data file after the account's
+credentials are destroyed. Non-admin users do not see the Users menu.
+
+A **read-only viewer account** can sign in to browse a snapshot of someone else's
+budget but cannot edit anything.
 
 ---
 
@@ -98,11 +127,17 @@ Each bill is assigned to either:
 ## Credit Card Tracking
 
 For each card:
-- Credit limit and current balance used
+- Credit limit and current balance used (live pro-rated between months)
 - Interest rate (APR) or minimum payment percentage (per-card calibrated)
 - Payment due day
 - Card expiry date
 - Active/inactive status
+
+The Credit Cards tab shows each card as its own panel: active checkbox, name, status
+badge, an overview row (limit/used/available/utilisation/due day/interest/minimum
+payment/expiry), and a this-month row (charges/payment received/interest/minimum
+payment due). Edits go through the Edit Card dialog; cards are deleted individually
+with confirmation.
 
 Utilisation thresholds in projection views:
 - Green: available headroom > 250 (in active currency)
@@ -117,13 +152,20 @@ Bills can be skipped or overridden for a single month without affecting other mo
 or the bill template:
 - **Skip**: bill excluded from that month's totals; shown greyed with "(skipped this month)"
 - **Override**: amount and/or due day changed for one month; shown with blue `(*)` indicator
+- **Paid**: bill marked as paid for the month is excluded from "still due" totals and
+  the projected balance for the rest of that month, since the money has already left
+  the account
+
+Income sources have the same per-month flexibility (overrides, skips, and a "received"
+flag), plus "this month only" one-off entries for ad-hoc income not tied to a
+recurring template.
 
 ---
 
 ## Database Import / Export
 
-- **Export** (File > Export Database...): Save As dialog, `.db` extension enforced, copies active database
-- **Import** (File > Import Database...): file validated as SQLite and verified to contain all required ClearBudget tables and columns before any write; confirmation required if active database has data; window reloads automatically after import - no restart needed
+- **Export** (File > Import / Export > Export Database...): Save As dialog, `.db` extension enforced, copies active database
+- **Import** (File > Import / Export > Import Database...): file validated as SQLite and verified to contain all required ClearBudget tables and columns before any write; confirmation required if active database has data; window reloads automatically after import - no restart needed
 
 ---
 
@@ -131,9 +173,31 @@ or the bill template:
 
 - **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected balance
 - **Mid-month alert**: detects temporary overdraft when bills cluster before the last income payment of the month
-- **Freedom to spend**: discretionary headroom calculated as the next month's lowest projected bank balance minus a configurable buffer (default £50). Represents money genuinely safe to spend without the account dipping below the buffer at any point in the coming month. Editable buffer field shown directly on the panel.
 - **Credit Card Status**: one progress bar per card showing current balance vs limit; projected month-end closing balance, charges, payment, interest, minimum due, and net direction all shown inline
 - **Forward Projection**: day-by-day cashflow narrative for the next two months including card state
+
+The Monthly Budget tab also links here via "See the Solvency tab for full balance
+projections."
+
+---
+
+## Bank Account Settings
+
+File > Bank Account Settings opens a dialog to record an overdraft facility: a limit
+(in the active currency) and an APR. With a facility recorded, the Monthly Budget tab
+shows:
+- An amber warning if the projected balance dips below zero but stays within the
+  facility, including an estimated daily interest cost
+- A red warning if the dip would exceed the facility, or if no facility is set at all
+
+---
+
+## Help Menu
+
+- **How It Works** - plain-English explanation of pro-rating, balances, archiving and
+  tab behaviour, kept in sync with the calculation logic
+- **About ClearBudget**
+- **View Licence (LGPL-3.0)**
 
 ---
 
