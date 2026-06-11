@@ -20,7 +20,7 @@ class BalanceDialog(QDialog):
         self.current_balance = current_balance or Amount(pence=0)
         self.setWindowTitle("Set Bank Balance")
         self.setModal(True)
-        self.setGeometry(200, 200, 300, 150)
+        self.resize(300, 150)
         self.new_balance: Amount | None = None
         self.init_ui()
 
