@@ -103,6 +103,7 @@ class MonthViewTableMixin:
         self.income_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
         name_item = _ei(income.name, self.read_only)
         name_item.setData(Qt.ItemDataRole.UserRole, income.id)
+        name_item.setData(Qt.ItemDataRole.UserRole + 1, income.is_month_only)
         self.income_table.setItem(row, 0, name_item)
         self.income_table.setItem(row, 1, _ei(str(income.amount), self.read_only))
         self.income_table.setItem(row, 2, _checkbox_item(income.is_reliable))

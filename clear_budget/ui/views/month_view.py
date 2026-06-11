@@ -263,11 +263,12 @@ class MonthView(
         if item is None:
             return None
         iid = item.data(Qt.ItemDataRole.UserRole)
+        is_month_only = item.data(Qt.ItemDataRole.UserRole + 1)
         return next(
             (
                 i
                 for i in self.view_model.month_summary.all_income_sources
-                if i.id == iid
+                if i.id == iid and i.is_month_only == is_month_only
             ),
             None,
         )
