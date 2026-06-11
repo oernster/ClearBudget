@@ -166,6 +166,11 @@ class MainWindow(QMainWindow):
             )
             export_viewer_action.triggered.connect(self._on_export_viewer_package)
 
+            import_viewer_action = file_menu.addAction(
+                "&Import Read-Only Viewer Package…"
+            )
+            import_viewer_action.triggered.connect(self._on_import_viewer_package)
+
         file_menu.addSeparator()
 
         prefs_action = file_menu.addAction("&Preferences…")
@@ -259,6 +264,21 @@ class MainWindow(QMainWindow):
 
         dlg = UserManagementDialog(self.user_store, self.current_user, parent=self)
         dlg.exec()
+
+    def _on_import_viewer_package(self) -> None:
+        from clear_budget.ui.widgets._viewer_package_import_flow import (
+            run_import_viewer_package_flow,
+        )
+
+        user = run_import_viewer_package_flow(self, self.user_store)
+        if user is None:
+            return
+        QMessageBox.information(
+            self,
+            "Import Successful",
+            f"Viewer account '{user.username}' is ready.\n\n"
+            "They can sign in with the password from the export.",
+        )
 
     def _on_how_it_works(self) -> None:
         from clear_budget.ui.widgets.how_it_works_dialog import HowItWorksDialog

@@ -1,5 +1,7 @@
 """UserManagementDialog - admin screen to view and manage user accounts."""
 
+from pathlib import Path
+
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -15,6 +17,7 @@ from PySide6.QtCore import Qt
 
 from clear_budget.auth.user_store import UserStore
 from clear_budget.auth.models import User
+from clear_budget.shared.config import Config
 from clear_budget.ui import ui_scale
 
 
@@ -119,23 +122,47 @@ class UserManagementDialog(QDialog):
         if item is None:
             return
         uid = item.data(Qt.ItemDataRole.UserRole)
+        username = item.text()
         if uid == self.current_user.id:
             QMessageBox.warning(
                 self, "Delete User", "You cannot delete your own account."
             )
             return
-        msg = (
-            "Permanently delete user account?\n\n"
-            "Their budget database file will NOT be deleted - "
-            "it can be recovered by recreating the username."
-        )
-        reply = QMessageBox.question(
+
+        confirm = QMessageBox.warning(
             self,
             "Delete User",
-            msg,
+            f"Permanently delete user account '{username}' and all of"
+            f" their budget data?\n\nThis cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-        if reply == QMessageBox.StandardButton.Yes:
-            self.user_store.delete_user(uid)
-            self._refresh()
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        confirm = QMessageBox.warning(
+            self,
+            "Delete User",
+            f"Are you sure? '{username}' and all of their budget data will"
+            f" be permanently and irreversibly deleted.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        self.user_store.delete_user(uid)
+        self._delete_user_data(username)
+        self._refresh()
+
+    @classmethod
+    def _delete_user_data(cls, username: str) -> None:
+        """Delete the per-user budget database file and its sidecar files."""
+        cls._delete_db_files(Config.for_user(username).db_path)
+
+    @staticmethod
+    def _delete_db_files(db_path: Path) -> None:
+        for suffix in ("", "-wal", "-shm", "-journal"):
+            path = db_path.with_name(db_path.name + suffix)
+            if path.exists():
+                path.unlink()
