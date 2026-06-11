@@ -53,6 +53,11 @@ each day even before the bill is paid in full - not just the
       Archive tab. Only available for months that have fully ended -
       disabled for the current and future months.</li>
   <li><b>&#128221; (pencil icon)</b> - set your current bank account balance.</li>
+  <li><b>Overdraft warning</b> - if your projected balance dips below zero at
+      any point this month, a warning appears under the nav row: amber if the
+      dip stays within your overdraft facility (with an estimated daily
+      interest cost), red if it would exceed your facility or you have none
+      set. Configure your facility via File &gt; Bank Account Settings.</li>
   <li><b>Add Bill</b> - opens a form to create a new bill.</li>
   <li><b>Delete Bill</b> - removes the selected bill (asks for confirmation).</li>
   <li><b>Active</b> checkbox (bills/income) - tick to include this item in
@@ -104,6 +109,9 @@ each day even before the bill is paid in full - not just the
   <li><b>&larr; Previous / Next &rarr;</b> - move between months.</li>
   <li><b>Overdraft Status</b> - a quick traffic-light style summary of how
       safe your money is this month.</li>
+  <li><b>Mid-month alert</b> - warns if a temporary dip below zero is expected
+      during the month even though it ends positive, e.g. when bills cluster
+      before your last income payment arrives.</li>
   <li><b>Bank Balance</b> - your current account balance.</li>
   <li><b>Committed this month</b> - bills already due and paid (or passed)
       so far this month.</li>
@@ -155,14 +163,24 @@ each day even before the bill is paid in full - not just the
 <ul>
   <li><b>New Budget</b> - permanently wipes all your data and starts fresh
       (asks twice to confirm).</li>
-  <li><b>Export Database</b> - saves a backup copy of your data to a file.</li>
-  <li><b>Import Database</b> - replaces your data with a backup file.</li>
-  <li><b>Export Read-Only Viewer Package</b> (admin only) - choose a username
-      and password for someone you want to give read-only access to your
-      data, e.g. a family member. This bundles a snapshot of your database
-      and those credentials into a single file you can hand over (USB,
-      email, etc).</li>
+  <li><b>Import / Export</b> - submenu containing:
+    <ul>
+      <li><b>Export Database</b> - saves a backup copy of your data to a file.</li>
+      <li><b>Import Database</b> - replaces your data with a backup file.</li>
+      <li><b>Export Read-Only Viewer Package</b> (admin only) - choose a
+          username and password for someone you want to give read-only
+          access to your data, e.g. a family member. This bundles a snapshot
+          of your database and those credentials into a single file you can
+          hand over (USB, email, etc).</li>
+      <li><b>Import Read-Only Viewer Package</b> (admin only) - import a
+          viewer package on this computer, creating or refreshing a
+          read-only account.</li>
+    </ul>
+  </li>
   <li><b>Preferences</b> - change the display currency.</li>
+  <li><b>Bank Account Settings</b> - record an overdraft facility (limit and
+      APR) so the Monthly Budget tab can warn you accurately about mid-month
+      dips below zero.</li>
   <li><b>Switch User</b> - log out and return to the login screen.</li>
   <li><b>Exit</b> - close ClearBudget.</li>
 </ul>
