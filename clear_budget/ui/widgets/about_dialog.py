@@ -40,18 +40,20 @@ _ABOUT_TEXT = f"""\
 <p>ClearBudget is built on the shoulders of the following open source projects
 and their communities:</p>
 <ul>
-  <li><b>Python</b> &mdash; Copyright &copy; 2001&ndash;2025 Python Software Foundation.
+  <li><b>Python</b> - Copyright &copy; 2001&ndash;2025 Python Software Foundation.
       Licensed under the PSF Licence.</li>
-  <li><b>PySide6 (Qt for Python)</b> &mdash; Copyright &copy; The Qt Company Ltd.
+  <li><b>PySide6 (Qt for Python)</b> - Copyright &copy; The Qt Company Ltd.
       Licensed under LGPL-3.0.</li>
-  <li><b>SQLite</b> &mdash; Dedicated to the public domain by D. Richard Hipp and contributors.</li>  # noqa: E501
-  <li><b>pytest</b> &mdash; Copyright &copy; 2004&ndash;2025 Holger Krekel and pytest contributors.  # noqa: E501
+  <li><b>SQLite</b> - Dedicated to the public domain by D. Richard Hipp and contributors.</li>  # noqa: E501
+  <li><b>bcrypt</b> - Copyright &copy; Nate Lawson, Perry Metzger and contributors.  # noqa: E501
+      Licensed under the Apache Licence 2.0.</li>
+  <li><b>pytest</b> - Copyright &copy; 2004&ndash;2025 Holger Krekel and pytest contributors.  # noqa: E501
       Licensed under the MIT Licence.</li>
-  <li><b>black</b> &mdash; Copyright &copy; 2018&ndash;2025 Łukasz Langa and contributors.  # noqa: E501
+  <li><b>black</b> - Copyright &copy; 2018&ndash;2025 Łukasz Langa and contributors.  # noqa: E501
       Licensed under the MIT Licence.</li>
-  <li><b>pywin32</b> &mdash; Copyright &copy; Mark Hammond. Licensed under the PSF Licence.</li>  # noqa: E501
-  <li><b>PyInstaller</b> &mdash; Copyright &copy; 2010&ndash;2025 PyInstaller contributors.  # noqa: E501
-      Licensed under GPL-2.0 with a classpath exception for bundled applications.</li>
+  <li><b>pywin32</b> - Copyright &copy; Mark Hammond. Licensed under the PSF Licence.</li>  # noqa: E501
+  <li><b>PyInstaller</b> - Copyright &copy; 2010&ndash;2025 PyInstaller contributors.  # noqa: E501
+      Licensed under GPL-2.0 with a bootloader exception for bundled applications.</li>
 </ul>
 <p>My thanks to the Python community for providing an outstanding ecosystem
 that makes projects like this possible.</p>
@@ -94,6 +96,9 @@ _LGPL3_NOTICE = (
     "\n"
     "SQLite - Public Domain\n"
     "  https://www.sqlite.org/copyright.html\n"
+    "\n"
+    "bcrypt - Apache Licence 2.0\n"
+    "  https://www.apache.org/licenses/LICENSE-2.0\n"
     "\n"
     "pytest - MIT Licence\n"
     "  https://opensource.org/licenses/MIT\n"

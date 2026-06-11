@@ -99,7 +99,7 @@ def _select_range(view, first_row, last_row):
 
 
 # ---------------------------------------------------------------------------
-# ViewModel layer — delete_bills batch logic
+# ViewModel layer: delete_bills batch logic
 # ---------------------------------------------------------------------------
 
 
@@ -142,7 +142,7 @@ def test_delete_bills_all_bills(app, service):
 
 
 # ---------------------------------------------------------------------------
-# UI layer — on_delete_bill with simulated selections
+# UI layer: on_delete_bill with simulated selections
 # ---------------------------------------------------------------------------
 
 

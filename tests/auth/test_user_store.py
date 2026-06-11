@@ -1,4 +1,4 @@
-"""Tests for UserStore — authentication and user management."""
+"""Tests for UserStore: authentication and user management."""
 
 import pytest
 

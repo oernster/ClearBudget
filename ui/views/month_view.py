@@ -117,7 +117,7 @@ class MonthView(QWidget):
         for row, inc in enumerate(month_data["income"]):
             self.income_table.setItem(row, 0, QTableWidgetItem(inc["name"]))
             self.income_table.setItem(row, 1, QTableWidgetItem(f"£{inc['amount']:.2f}"))
-            day = inc["day_of_month"] or "—"
+            day = inc["day_of_month"] or "-"
             self.income_table.setItem(row, 2, QTableWidgetItem(str(day)))
             total_income += inc["amount"]
 
@@ -127,7 +127,7 @@ class MonthView(QWidget):
         for row, bill in enumerate(month_data["bills"]):
             self.bills_table.setItem(row, 0, QTableWidgetItem(bill["name"]))
             self.bills_table.setItem(row, 1, QTableWidgetItem(f"£{bill['amount']:.2f}"))
-            day = bill["day_of_month"] or "—"
+            day = bill["day_of_month"] or "-"
             self.bills_table.setItem(row, 2, QTableWidgetItem(str(day)))
 
             # Get payment method name

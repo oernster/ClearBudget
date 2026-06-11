@@ -98,7 +98,7 @@ def _select_income_range(view, first_row, last_row):
 
 
 # ---------------------------------------------------------------------------
-# ViewModel layer — delete_incomes batch logic
+# ViewModel layer: delete_incomes batch logic
 # ---------------------------------------------------------------------------
 
 
@@ -141,7 +141,7 @@ def test_delete_incomes_all_incomes(app, service):
 
 
 # ---------------------------------------------------------------------------
-# UI layer — on_delete_income with simulated selections
+# UI layer: on_delete_income with simulated selections
 # ---------------------------------------------------------------------------
 
 

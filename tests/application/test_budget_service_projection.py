@@ -29,7 +29,7 @@ def _make_service():
 
 
 class TestGetProjectedMonthEndBalance:
-    """Test get_projected_month_end_balance_pence — both the current-month and future-month branches."""
+    """Test get_projected_month_end_balance_pence: both the current-month and future-month branches."""
 
     def test_current_month_branch(self) -> None:
         """year_month == today_ym branch: filters income/bills with day_of_month=None (always included)."""

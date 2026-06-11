@@ -140,7 +140,7 @@ Key methods:
 
 **Per-user database** (`~/.clearbudget/budget_<username>.db`):
 - `Database(db_path)` - SQLite connection and schema management
-- Schema — 11 tables:
+- Schema - 11 tables:
   1. `payment_methods` - id=1 is "Bank Account"
   2. `bills` - templates; includes `target_card_id` (migration)
   3. `income_sources`
@@ -301,7 +301,7 @@ main()
   └── QApplication created
   └── app.setStyleSheet(get_dark_qss())        # theme applied globally
   └── UserStore opened (users.db)
-  └── QTimer.singleShot(0, _session_loop)   # deferred — app.exec() must be live first
+  └── QTimer.singleShot(0, _session_loop)   # deferred; app.exec() must be live first
   └── app.exec()
   └── _session_loop()                        # fires on first event loop tick
         └── _run_login_flow()

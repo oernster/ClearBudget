@@ -132,4 +132,4 @@ class TestUserModelImmutability:
             user.username = "bob"  # type: ignore[misc]
             raise AssertionError("User should be immutable (frozen dataclass)")
         except (dataclasses.FrozenInstanceError, AttributeError):
-            pass  # Expected — frozen dataclass raises FrozenInstanceError
+            pass  # Expected: frozen dataclass raises FrozenInstanceError
