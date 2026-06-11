@@ -15,13 +15,13 @@ class MonthViewEditMixin:
     _EDITABLE_INCOME_COLS = {0, 1, 3}
 
     def _on_bill_cell_clicked(self, row: int, col: int) -> None:
-        if col not in (5, 6):
+        if col not in (5, 6, 7):
             return
         from PySide6.QtWidgets import QApplication
 
         mods = QApplication.keyboardModifiers()
         bill = self._get_bill_from_row(row)
-        if mods & (
+        if self.read_only or mods & (
             Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
         ):
             item = self.bills_table.item(row, col)
@@ -33,10 +33,16 @@ class MonthViewEditMixin:
                         if bill.active
                         else Qt.CheckState.Unchecked
                     )
-                else:
+                elif col == 6:
                     item.setCheckState(
                         Qt.CheckState.Checked
                         if bill.skipped_for_month
+                        else Qt.CheckState.Unchecked
+                    )
+                else:
+                    item.setCheckState(
+                        Qt.CheckState.Checked
+                        if bill.paid_for_month
                         else Qt.CheckState.Unchecked
                     )
                 self.bills_table.blockSignals(False)
@@ -45,15 +51,20 @@ class MonthViewEditMixin:
             return
         if col == 5:
             self.view_model.set_bill_active(bill_id=bill.id, active=not bill.active)
-        else:
+        elif col == 6:
             if bill.skipped_for_month:
                 self.view_model.unskip_bill_for_month(bill_id=bill.id)
             else:
                 self.view_model.skip_bill_for_month(bill_id=bill.id)
+        else:
+            if bill.paid_for_month:
+                self.view_model.unmark_bill_paid_for_month(bill_id=bill.id)
+            else:
+                self.view_model.mark_bill_paid_for_month(bill_id=bill.id)
 
     def _on_bill_item_changed(self, item) -> None:
         if item.column() not in self._EDITABLE_BILL_COLS:
-            if item.column() != 6:
+            if item.column() not in (6, 7):
                 QTimer.singleShot(0, self.view_model.refresh_month_summary)
             return
         bill = self._get_bill_from_row(item.row())
@@ -80,7 +91,7 @@ class MonthViewEditMixin:
             QTimer.singleShot(0, self.view_model.refresh_month_summary)
 
     def _on_income_item_changed(self, item) -> None:
-        if item.column() in (2, 4):
+        if item.column() in (2, 4, 5, 6):
             return
         if item.column() not in self._EDITABLE_INCOME_COLS:
             QTimer.singleShot(0, self.view_model.refresh_month_summary)
@@ -104,34 +115,87 @@ class MonthViewEditMixin:
                 return
             if u == inc:
                 return
-            QTimer.singleShot(0, lambda: self.view_model.update_income(income=u))
+            if inc.is_month_only:
+                QTimer.singleShot(
+                    0, lambda: self.view_model.update_income_month_extra(income=u)
+                )
+            else:
+                QTimer.singleShot(0, lambda: self.view_model.update_income(income=u))
         except (ValueError, AttributeError):
             QTimer.singleShot(0, self.view_model.refresh_month_summary)
 
     def _on_income_cell_clicked(self, row: int, col: int) -> None:
-        if col not in (2, 4):
+        if col not in (2, 4, 5, 6):
             return
         from PySide6.QtWidgets import QApplication
 
         mods = QApplication.keyboardModifiers()
-        if mods & (
+        inc = self._get_income_from_row(row)
+        if col in (5, 6):
+            self._on_income_skip_received_clicked(row, col, inc, mods)
+            return
+        if self.read_only or mods & (
             Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
         ):
             return
-        inc = self._get_income_from_row(row)
         if inc is None:
             return
         if col == 2:
-            QTimer.singleShot(
-                0,
-                lambda: self.view_model.update_income(
-                    income=dataclasses.replace(inc, is_reliable=not inc.is_reliable)
-                ),
-            )
-        else:
+            updated = dataclasses.replace(inc, is_reliable=not inc.is_reliable)
+            if inc.is_month_only:
+                QTimer.singleShot(
+                    0,
+                    lambda: self.view_model.update_income_month_extra(income=updated),
+                )
+            else:
+                QTimer.singleShot(
+                    0, lambda: self.view_model.update_income(income=updated)
+                )
+        elif not inc.is_month_only:
             QTimer.singleShot(
                 0,
                 lambda: self.view_model.update_income(
                     income=dataclasses.replace(inc, active=not inc.active)
                 ),
             )
+
+    def _on_income_skip_received_clicked(self, row: int, col: int, inc, mods) -> None:
+        if self.read_only or mods & (
+            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+        ):
+            item = self.income_table.item(row, col)
+            if item and inc:
+                self.income_table.blockSignals(True)
+                if col == 5:
+                    item.setCheckState(
+                        Qt.CheckState.Checked
+                        if inc.skipped_for_month
+                        else Qt.CheckState.Unchecked
+                    )
+                else:
+                    item.setCheckState(
+                        Qt.CheckState.Checked
+                        if inc.received_for_month
+                        else Qt.CheckState.Unchecked
+                    )
+                self.income_table.blockSignals(False)
+            return
+        if inc is None:
+            return
+        if col == 5:
+            if inc.is_month_only:
+                return
+            if inc.skipped_for_month:
+                self.view_model.unskip_income_for_month(income_id=inc.id)
+            else:
+                self.view_model.skip_income_for_month(income_id=inc.id)
+        elif inc.is_month_only:
+            if inc.received_for_month:
+                self.view_model.unmark_income_extra_received(extra_id=inc.id)
+            else:
+                self.view_model.mark_income_extra_received(extra_id=inc.id)
+        else:
+            if inc.received_for_month:
+                self.view_model.unmark_income_received_for_month(income_id=inc.id)
+            else:
+                self.view_model.mark_income_received_for_month(income_id=inc.id)

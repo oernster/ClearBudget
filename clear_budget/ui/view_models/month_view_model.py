@@ -17,14 +17,14 @@ class MonthViewModel(QObject):
     def __init__(
         self,
         budget_service: BudgetService,
-        current_month: YearMonth = YearMonth(2026, 5),
+        current_month: YearMonth | None = None,
     ) -> None:
         """Initialize month view model."""
         from datetime import datetime
 
         super().__init__()
         self.budget_service = budget_service
-        self.current_month = current_month
+        self.current_month = current_month or YearMonth.today()
         self.base_month = YearMonth(datetime.now().year, datetime.now().month)
         self.today = datetime.now().date()
         self.month_summary: MonthSummary | None = None
@@ -106,6 +106,20 @@ class MonthViewModel(QObject):
         )
         self.refresh_month_summary()
 
+    def mark_bill_paid_for_month(self, *, bill_id: int) -> None:
+        """Mark a bill as paid for the current month and refresh summary."""
+        self.budget_service.mark_bill_paid_for_month(
+            bill_id=bill_id, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
+    def unmark_bill_paid_for_month(self, *, bill_id: int) -> None:
+        """Unmark a bill as paid for the current month and refresh summary."""
+        self.budget_service.unmark_bill_paid_for_month(
+            bill_id=bill_id, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
     def add_income(self, *, income) -> None:
         """Create a new income source and refresh summary."""
         self.budget_service.add_income(income=income)
@@ -125,4 +139,75 @@ class MonthViewModel(QObject):
         """Delete multiple income sources in one batch then refresh once."""
         for income_id in income_ids:
             self.budget_service.delete_income(income_id=income_id)
+        self.refresh_month_summary()
+
+    def add_income_month_extra(self, *, income) -> None:
+        """Create a one-off income entry for the current month and refresh."""
+        self.budget_service.add_income_month_extra(
+            income=income, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
+    def update_income_month_extra(self, *, income) -> None:
+        """Update a one-off income entry for the current month and refresh."""
+        self.budget_service.update_income_month_extra(
+            income=income, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
+    def delete_income_month_extra(self, *, extra_id: int) -> None:
+        """Delete a one-off income entry and refresh summary."""
+        self.budget_service.delete_income_month_extra(extra_id=extra_id)
+        self.refresh_month_summary()
+
+    def update_income_for_month(self, *, income) -> None:
+        """Store per-month override for an income source and refresh summary."""
+        self.budget_service.update_income_for_month(
+            income=income, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
+    def delete_income_month_override(self, *, income_id: int) -> None:
+        """Remove the month-only override for an income source, reverting to template."""
+        self.budget_service.delete_income_month_override(
+            income_id=income_id, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
+    def skip_income_for_month(self, *, income_id: int) -> None:
+        """Exclude an income source from the current month's calculations only."""
+        self.budget_service.skip_income_for_month(
+            income_id=income_id, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
+    def unskip_income_for_month(self, *, income_id: int) -> None:
+        """Restore an income source to the current month's calculations."""
+        self.budget_service.unskip_income_for_month(
+            income_id=income_id, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
+    def mark_income_received_for_month(self, *, income_id: int) -> None:
+        """Mark an income source as received for the current month and refresh."""
+        self.budget_service.mark_income_received_for_month(
+            income_id=income_id, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
+    def unmark_income_received_for_month(self, *, income_id: int) -> None:
+        """Unmark an income source as received for the current month and refresh."""
+        self.budget_service.unmark_income_received_for_month(
+            income_id=income_id, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+
+    def mark_income_extra_received(self, *, extra_id: int) -> None:
+        """Mark a one-off income entry as received and refresh summary."""
+        self.budget_service.mark_income_extra_received(extra_id=extra_id)
+        self.refresh_month_summary()
+
+    def unmark_income_extra_received(self, *, extra_id: int) -> None:
+        """Unmark a one-off income entry as received and refresh summary."""
+        self.budget_service.unmark_income_extra_received(extra_id=extra_id)
         self.refresh_month_summary()

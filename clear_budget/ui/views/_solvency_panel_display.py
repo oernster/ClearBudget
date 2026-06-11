@@ -5,6 +5,10 @@ from datetime import date as _date
 from clear_budget.domain.services.card_monthly_calculator import (
     calculate_card_monthly_state,
 )
+from clear_budget.domain.services._prorating import (
+    days_in_month,
+    prorate_remaining_pence,
+)
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES, fmt
 from clear_budget.ui import ui_scale
 
@@ -137,14 +141,23 @@ class SolvencyPanelDisplayMixin:
                     for b in summary.bills
                     if b.day_of_month and b.day_of_month < today.day
                 )
+                total_days = days_in_month(today.year, today.month)
                 remaining_bank = sum(
-                    b.amount.pence
+                    (
+                        prorate_remaining_pence(b.amount.pence, today.day, total_days)
+                        if not b.day_of_month
+                        else b.amount.pence
+                    )
                     for b in summary.bills
                     if (not b.day_of_month or b.day_of_month >= today.day)
                     and b.payment_method_id == 1
                 )
                 remaining_card = sum(
-                    b.amount.pence
+                    (
+                        prorate_remaining_pence(b.amount.pence, today.day, total_days)
+                        if not b.day_of_month
+                        else b.amount.pence
+                    )
                     for b in summary.bills
                     if (not b.day_of_month or b.day_of_month >= today.day)
                     and b.payment_method_id != 1
@@ -188,6 +201,26 @@ class SolvencyPanelDisplayMixin:
             self.remaining_bank_label.setText("Still due this month (bank): -")
             self.remaining_card_label.setText("Still due this month (cards): -")
 
+        if summary and summary.income_sources:
+            opening_pence = (
+                self.view_model.budget_service.get_projected_starting_balance_pence(
+                    year_month=report.year_month
+                )
+            )
+            remaining_bills, remaining_income = (
+                self.view_model.budget_service.get_remaining_month_items(
+                    year_month=report.year_month, summary=summary
+                )
+            )
+            timeline_lines = self._build_income_timeline(
+                opening_pence, remaining_income, remaining_bills
+            )
+            self.month_breakdown_label.setText(
+                f"{month_name} balance breakdown:\n" + "\n".join(timeline_lines)
+            )
+        else:
+            self.month_breakdown_label.setText("")
+
         # Compute M1/M2 forward data early — needed for freedom calc and projections.
         m1 = report.year_month.next_month()
         m2 = m1.next_month()
@@ -204,10 +237,17 @@ class SolvencyPanelDisplayMixin:
         m1_drain = m1_bank - m1_summary.total_income.pence
         m2_drain = m2_bank - m2_summary.total_income.pence
         m1_end_pence = report.balance_pence + m1_summary.total_income.pence - m1_bank
-        m1_min_balance = self._compute_month_min_balance(report.balance_pence, m1_summary)
+        m1_min_balance = self._compute_month_min_balance(
+            report.balance_pence, m1_summary
+        )
 
         if summary:
-            disc_buffer = self.view_model.budget_service.get_discretionary_buffer()
+            budget_service = self.view_model.budget_service
+            disc_buffer = budget_service.get_discretionary_buffer(
+                balance_pence=report.balance_pence
+            )
+            if not budget_service.has_custom_discretionary_buffer():
+                self.discretionary_buffer_edit.setText(f"{disc_buffer / 100:.2f}")
             freedom_pence = max(0, m1_min_balance - disc_buffer)
             if freedom_pence > 0:
                 self.freedom_label.setText(f"Freedom to spend: {fmt(freedom_pence)}")

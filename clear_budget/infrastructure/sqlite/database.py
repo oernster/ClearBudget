@@ -216,6 +216,22 @@ class Database:
         except Exception:
             pass
 
+        # Track the last month folded into current_balance_used_pence
+        try:
+            cursor.execute(
+                "ALTER TABLE credit_cards"
+                " ADD COLUMN balance_applied_year INTEGER DEFAULT NULL"
+            )
+        except Exception:
+            pass
+        try:
+            cursor.execute(
+                "ALTER TABLE credit_cards"
+                " ADD COLUMN balance_applied_month INTEGER DEFAULT NULL"
+            )
+        except Exception:
+            pass
+
         # Per-month bill skips (excludes a bill from one month without deleting it)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS bill_month_skips (
@@ -224,6 +240,75 @@ class Database:
                 month INTEGER NOT NULL,
                 PRIMARY KEY (bill_id, year, month),
                 FOREIGN KEY (bill_id) REFERENCES bills(id)
+            )
+            """)
+
+        # Per-month one-off (ad-hoc) income, not tied to an income_sources template
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS income_month_extras (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                amount_pence INTEGER NOT NULL,
+                day_of_month INTEGER,
+                is_reliable INTEGER NOT NULL
+            )
+            """)
+
+        # Add "received" flag directly to income_month_extras (independent rows)
+        try:
+            cursor.execute(
+                "ALTER TABLE income_month_extras"
+                " ADD COLUMN received INTEGER NOT NULL DEFAULT 0"
+            )
+        except Exception:
+            pass
+
+        # Per-month income overrides (mirrors bill_month_overrides)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS income_month_overrides (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                income_id INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                amount_pence INTEGER NOT NULL,
+                day_of_month INTEGER,
+                UNIQUE(income_id, year, month),
+                FOREIGN KEY (income_id) REFERENCES income_sources(id)
+            )
+            """)
+
+        # Per-month income skips (mirrors bill_month_skips)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS income_month_skips (
+                income_id INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                PRIMARY KEY (income_id, year, month),
+                FOREIGN KEY (income_id) REFERENCES income_sources(id)
+            )
+            """)
+
+        # Per-month "bill paid" flags (visual only, doesn't affect totals)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bill_month_paid (
+                bill_id INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                PRIMARY KEY (bill_id, year, month),
+                FOREIGN KEY (bill_id) REFERENCES bills(id)
+            )
+            """)
+
+        # Per-month "income received" flags (visual only, doesn't affect totals)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS income_month_received (
+                income_id INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                PRIMARY KEY (income_id, year, month),
+                FOREIGN KEY (income_id) REFERENCES income_sources(id)
             )
             """)
 

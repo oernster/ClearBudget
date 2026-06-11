@@ -11,23 +11,24 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from clear_budget.domain.services.card_monthly_calculator import (
-    calculate_card_monthly_state,
-)
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.utils.format_helpers import build_nav_month_widget, fmt
 from clear_budget.ui.dark_theme import SCROLLBAR_WIDTH_PX
 from clear_budget.ui import ui_scale
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
+from clear_budget.ui.views._solvency_panel_narratives import (
+    SolvencyPanelNarrativeMixin,
+)
 
 
-class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
+class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWidget):
     """Displays account solvency status with three critical sections."""
 
-    def __init__(self, view_model: SolvencyViewModel) -> None:
+    def __init__(self, view_model: SolvencyViewModel, read_only: bool = False) -> None:
         """Initialize solvency panel widget."""
         super().__init__()
         self.view_model = view_model
+        self.read_only = read_only
         self.init_ui()
         self.connect_signals()
 
@@ -40,21 +41,13 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.next_btn = QPushButton("Next →")
         self.next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        _nav_center, self.month_label = build_nav_month_widget("May 2026")
-        left_group = QWidget()
-        left_lo = QHBoxLayout(left_group)
-        left_lo.setContentsMargins(0, 0, 0, 0)
-        left_lo.addWidget(self.prev_btn)
-        left_lo.addStretch()
-        right_group = QWidget()
-        right_lo = QHBoxLayout(right_group)
-        right_lo.setContentsMargins(0, 0, 0, 0)
-        right_lo.addStretch()
-        right_lo.addWidget(self.next_btn)
+        _nav_center, self.month_label = build_nav_month_widget(
+            "May 2026", prev_btn=self.prev_btn, next_btn=self.next_btn
+        )
         nav_layout.addSpacing(SCROLLBAR_WIDTH_PX)
-        nav_layout.addWidget(left_group, 1)
+        nav_layout.addStretch(1)
         nav_layout.addWidget(_nav_center, 0)
-        nav_layout.addWidget(right_group, 1)
+        nav_layout.addStretch(1)
         layout.addLayout(nav_layout)
 
         # SECTION 1: OVERDRAFT ALERT (Top - Prominent)
@@ -111,7 +104,11 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
                 "QLineEdit:focus { border-color: #00d4ff; color: #e2e8f0; }"
             )
         )
-        buf_pence = self.view_model.budget_service.get_discretionary_buffer()
+        report = self.view_model.solvency_report
+        balance_pence = report.balance_pence if report else 0
+        buf_pence = self.view_model.budget_service.get_discretionary_buffer(
+            balance_pence=balance_pence
+        )
         self.discretionary_buffer_edit.setText(f"{buf_pence / 100:.2f}")
         self.discretionary_buffer_edit.returnPressed.connect(
             self._save_discretionary_buffer
@@ -119,6 +116,8 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
         self.discretionary_buffer_edit.editingFinished.connect(
             self._save_discretionary_buffer
         )
+        if self.read_only:
+            self.discretionary_buffer_edit.setReadOnly(True)
         disc_row.addWidget(disc_lbl)
         disc_row.addWidget(self.discretionary_buffer_edit)
         disc_row.addStretch()
@@ -148,6 +147,13 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
             ui_scale.style("font-size: 18px; padding: 5px; color: #f59e0b;")
         )
         layout.addWidget(self.remaining_card_label)
+
+        self.month_breakdown_label = QLabel("")
+        self.month_breakdown_label.setWordWrap(True)
+        self.month_breakdown_label.setStyleSheet(
+            ui_scale.style("font-size: 15px; padding: 5px; color: #9ca3af;")
+        )
+        layout.addWidget(self.month_breakdown_label)
 
         cards_header = QLabel("Credit Card Status")
         cards_header.setStyleSheet(
@@ -198,145 +204,6 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, QWidget):
             self.view_model.refresh_solvency()
         except ValueError:
             pass
-
-    @staticmethod
-    def _health_color(balance_pence: int, monthly_drain_pence: int) -> str:
-        """Return traffic-light color based on balance vs monthly drain coverage.
-
-        Red only for actual overdraft (< 0).
-        Amber for positive but less than 2 months coverage - tight but surviving.
-        Green for 2+ months coverage.
-        monthly_drain_pence: bills − income for a future month (positive = deficit).
-        """
-        if balance_pence < 0:
-            return "#f87171"
-        if monthly_drain_pence <= 0:
-            return "#34d399"
-        if balance_pence >= 2 * monthly_drain_pence:
-            return "#34d399"
-        return "#fbbf24"
-
-    @staticmethod
-    def _compute_month_min_balance(opening_pence: int, summary) -> int:
-        """Return the minimum bank balance at any point during the month (pence)."""
-        events = []
-        for inc in summary.income_sources:
-            events.append((inc.day_of_month or 1, inc.amount.pence))
-        for bill in summary.bills:
-            if bill.payment_method_id == 1:
-                events.append((bill.day_of_month or 28, -bill.amount.pence))
-        events.sort(key=lambda e: (e[0], -e[1]))
-        balance = opening_pence
-        min_balance = opening_pence
-        for _day, delta in events:
-            balance += delta
-            if balance < min_balance:
-                min_balance = balance
-        return min_balance
-
-    def _build_month_cashflow_summary(
-        self, opening_pence: int, summary, monthly_drain_pence: int
-    ) -> tuple[str, str]:
-        """Build cashflow risk narrative for one month.
-
-        Simulates events in day order. Returns (display_text, color).
-        monthly_drain_pence used for amber/red thresholds.
-        """
-        events = []
-        for inc in summary.income_sources:
-            events.append((inc.day_of_month or 1, inc.amount.pence, inc.name))
-        for bill in summary.bills:
-            if bill.payment_method_id == 1:
-                events.append((bill.day_of_month or 28, -bill.amount.pence, bill.name))
-        # Income before bills on same day (positive delta sorts first)
-        events.sort(key=lambda e: (e[0], -e[1]))
-
-        balance = opening_pence
-        min_balance = opening_pence
-        min_day = 0
-        first_negative_day = None
-        rescue_event = None
-
-        for day, delta, name in events:
-            balance += delta
-            if balance < min_balance:
-                min_balance = balance
-                min_day = day
-            if balance < 0 and first_negative_day is None:
-                first_negative_day = day
-            if (
-                first_negative_day is not None
-                and rescue_event is None
-                and delta > 0
-                and balance >= 0
-            ):
-                rescue_event = (day, delta, name)
-
-        closing_pence = balance
-        lines = [f"Opens: {fmt(opening_pence)}"]
-
-        if first_negative_day is not None:
-            lines.append(
-                f"OVERDRAWN by day {first_negative_day}  "
-                f"(low: -{fmt(abs(min_balance))})"
-            )
-            if rescue_event:
-                rday, ramt, rname = rescue_event
-                lines.append(f"Rescued day {rday}: {rname} +{fmt(ramt)}")
-            else:
-                lines.append("No rescue income - remains overdrawn")
-        elif min_day and min_balance < monthly_drain_pence:
-            lines.append(f"Low point: {fmt(min_balance)} on day {min_day}")
-
-        if closing_pence >= 0:
-            lines.append(f"Closes: {fmt(closing_pence)}")
-        else:
-            lines.append(f"Closes: -{fmt(abs(closing_pence))}  (still overdrawn)")
-
-        color = self._health_color(min_balance, monthly_drain_pence)
-        return "\n".join(lines), color
-
-    @staticmethod
-    def _build_card_state_text(cards, bills, opening_balances: dict) -> str:
-        """Build per-card balance projection for one month.
-
-        opening_balances: {card_id: pence} - balance at start of this month.
-        Returns multi-line text block, empty string if no active cards.
-        """
-        if not cards:
-            return ""
-        lines = ["Cards:"]
-        for card in cards:
-            opening_pence = opening_balances.get(
-                card.id, card.current_balance_used.pence
-            )
-            state = calculate_card_monthly_state(
-                card=card, opening_balance_pence=opening_pence, bills=list(bills)
-            )
-            interest_str = (
-                f" +{fmt(state.monthly_interest.pence)} int"
-                if state.monthly_interest.pence > 0
-                else ""
-            )
-            paid_p = state.payment_received.pence
-            min_p = state.minimum_payment.pence
-            if paid_p < min_p:
-                shortfall_p = min_p - paid_p
-                payment_str = (
-                    f"paid {fmt(paid_p)} - "
-                    f"min {fmt(min_p)} - "
-                    f"SHORTFALL {fmt(shortfall_p)}"
-                )
-            elif paid_p == 0:
-                payment_str = f"no payment set (min {fmt(min_p)})"
-            else:
-                payment_str = f"paid {fmt(paid_p)} (min {fmt(min_p)}) ✓"
-            lines.append(
-                f"  {card.name}: {fmt(state.opening_balance.pence)}"
-                f"{interest_str} | {payment_str}"
-                f" | closes {fmt(state.closing_balance.pence)}"
-            )
-        return "\n".join(lines)
 
     def _simulate_runway(self, starting_balance_pence: int, from_month) -> tuple:
         """Step forward month by month until balance goes negative.

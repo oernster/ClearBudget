@@ -63,3 +63,26 @@ class TestIncomeSourceCreation:
             day_of_month=None,
         )
         assert str(inc) == "Freelance £500.00 [variable]"
+
+    def test_is_month_only_defaults_false(self) -> None:
+        """Test that is_month_only defaults to False for normal sources."""
+        inc = IncomeSource(
+            id=1,
+            name="Universal Credit",
+            amount=Amount(pence=120000),
+            is_reliable=True,
+            day_of_month=21,
+        )
+        assert inc.is_month_only is False
+
+    def test_is_month_only_can_be_set(self) -> None:
+        """Test that is_month_only can be set for one-off entries."""
+        inc = IncomeSource(
+            id=1,
+            name="Tax Refund",
+            amount=Amount(pence=30000),
+            is_reliable=False,
+            day_of_month=10,
+            is_month_only=True,
+        )
+        assert inc.is_month_only is True

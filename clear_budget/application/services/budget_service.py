@@ -1,22 +1,29 @@
 """BudgetService  -  main application orchestrator."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import date
 
 from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.application.dto.solvency_report import SolvencyReport
 from clear_budget.application.services.month_generator import MonthGenerator
+from clear_budget.application.services._bill_operations import BillOperationsMixin
+from clear_budget.application.services._income_operations import (
+    IncomeOperationsMixin,
+)
 from clear_budget.application.services._month_mappers import (
     bills_to_month_bills as _bills_to_month_bills,
     income_to_month_income as _income_to_month_income,
 )
-from clear_budget.domain.entities.bill import Bill
-from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.interfaces.bill_repository import BillRepository
 from clear_budget.domain.interfaces.income_source_repository import (
     IncomeSourceRepository,
 )
 from clear_budget.domain.interfaces.payment_method_repository import (
     PaymentMethodRepository,
+)
+from clear_budget.domain.services._prorating import (
+    days_in_month,
+    prorate_remaining_pence,
 )
 from clear_budget.domain.services.solvency_calculator import (
     SolvencyCalculatorService,
@@ -26,7 +33,7 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 
 
 @dataclass(frozen=True, slots=True)
-class BudgetService:
+class BudgetService(BillOperationsMixin, IncomeOperationsMixin):
     bill_repo: BillRepository
     income_repo: IncomeSourceRepository
     payment_method_repo: PaymentMethodRepository
@@ -37,8 +44,14 @@ class BudgetService:
         all_bills = self.bill_repo.list_active_for_month(
             year_month=year_month, include_inactive=True
         )
-        income = self.income_repo.list_active()
-        all_income = self.income_repo.list_all()
+        extras = self.income_repo.list_extras_for_month(year_month=year_month)
+        income = self.income_repo.list_active_for_month(year_month=year_month) + extras
+        all_income = (
+            self.income_repo.list_active_for_month(
+                year_month=year_month, include_inactive=True
+            )
+            + extras
+        )
 
         total_bills_pence = sum(bill.amount.pence for bill in active_bills)
         bank_bills_pence = sum(
@@ -93,14 +106,43 @@ class BudgetService:
         )
         return self._build_solvency_report(month_bills, month_income, year_month)
 
+    def get_remaining_month_items(
+        self, *, year_month: YearMonth, summary: MonthSummary
+    ) -> tuple[tuple, tuple]:
+        """Return (bills, income) still outstanding for year_month.
+
+        For the current month this excludes items already due before today
+        (matching the filtering used for the solvency balance projection).
+        For other months, returns all bills/income unchanged.
+        """
+        today = date.today()
+        today_ym = YearMonth(today.year, today.month)
+        return self._apply_current_month_filters(
+            summary.bills, summary.income_sources, year_month, today_ym, today.day
+        )
+
     def _apply_current_month_filters(
         self, bills, income, year_month, today_ym, today_day: int
     ):
         if year_month != today_ym:
             return tuple(bills), tuple(income)
         balance_day = self._get_bank_balance_day()
+        total_days = days_in_month(year_month.year, year_month.month)
         filtered_bills = tuple(
-            b for b in bills if b.day_of_month is None or b.day_of_month >= today_day
+            (
+                replace(
+                    b,
+                    amount=Amount(
+                        pence=prorate_remaining_pence(
+                            b.amount.pence, today_day, total_days
+                        )
+                    ),
+                )
+                if b.day_of_month is None
+                else b
+            )
+            for b in bills
+            if b.day_of_month is None or b.day_of_month >= today_day
         )
         if balance_day > 0:
             filtered_income = tuple(
@@ -149,105 +191,25 @@ class BudgetService:
             first_negative_day=None,
         )
 
-    def add_bill(self, *, bill: Bill) -> Bill:  # pragma: no cover
-        return self.bill_repo.add(bill=bill)
-
-    def update_bill(self, *, bill: Bill) -> Bill:  # pragma: no cover
-        return self.bill_repo.update(bill=bill)
-
-    def update_bill_for_month(
-        self, *, bill: Bill, year_month: YearMonth
-    ) -> None:  # pragma: no cover
-        cursor = self.bill_repo.conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO bill_month_overrides (
-                bill_id, year, month, amount_pence, payment_method_id, day_of_month
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(bill_id, year, month) DO UPDATE SET
-                amount_pence = excluded.amount_pence,
-                payment_method_id = excluded.payment_method_id,
-                day_of_month = excluded.day_of_month
-            """,
-            (
-                bill.id,
-                year_month.year,
-                year_month.month,
-                bill.amount.pence,
-                bill.payment_method_id,
-                bill.day_of_month,
-            ),
-        )
-        self.bill_repo.conn.commit()
-
-    def delete_bill(self, *, bill_id: int) -> None:  # pragma: no cover
-        self.bill_repo.hard_delete(bill_id=bill_id)
-
-    def set_bill_active(
-        self, *, bill_id: int, active: bool
-    ) -> None:  # pragma: no cover
-        self.bill_repo.set_active(bill_id=bill_id, active=active)
-
-    def delete_bill_month_override(
-        self, *, bill_id: int, year_month: YearMonth
-    ) -> None:  # pragma: no cover
-        cursor = self.bill_repo.conn.cursor()
-        cursor.execute(
-            "DELETE FROM bill_month_overrides"
-            " WHERE bill_id = ? AND year = ? AND month = ?",
-            (bill_id, year_month.year, year_month.month),
-        )
-        self.bill_repo.conn.commit()
-
-    def skip_bill_for_month(
-        self, *, bill_id: int, year_month: YearMonth
-    ) -> None:  # pragma: no cover
-        self.bill_repo.skip_for_month(bill_id=bill_id, year_month=year_month)
-
-    def unskip_bill_for_month(
-        self, *, bill_id: int, year_month: YearMonth
-    ) -> None:  # pragma: no cover
-        self.bill_repo.unskip_for_month(bill_id=bill_id, year_month=year_month)
-
     def get_projected_month_end_balance_pence(
         self, *, year_month: YearMonth, summary: "MonthSummary"
     ) -> int:
-        """Projected bank balance pence at end of year_month.
-
-        Signed - can be negative.
-        """
+        """Projected bank balance pence at end of year_month. Signed."""
         from datetime import date as _date
+        from clear_budget.application.services._balance_projection import (
+            projected_month_end_balance_pence,
+        )
 
         today = _date.today()
-        today_ym = YearMonth(today.year, today.month)
-        starting = self._projected_starting_balance_pence(year_month)
-        if year_month == today_ym:
-            balance_day = self._get_bank_balance_day()
-            if balance_day > 0:
-                income = sum(
-                    i.amount.pence
-                    for i in summary.income_sources
-                    if i.day_of_month is None or i.day_of_month > balance_day
-                )
-            else:
-                income = sum(
-                    i.amount.pence
-                    for i in summary.income_sources
-                    if i.day_of_month is None or i.day_of_month >= today.day
-                )
-            bills = sum(
-                b.amount.pence
-                for b in summary.bills
-                if b.payment_method_id == 1
-                and (b.day_of_month is None or b.day_of_month >= today.day)
-            )
-        else:
-            income = sum(i.amount.pence for i in summary.income_sources)
-            bills = sum(
-                b.amount.pence for b in summary.bills if b.payment_method_id == 1
-            )
-        return starting + income - bills
+        return projected_month_end_balance_pence(
+            get_month_summary=self.get_month_summary,
+            get_bank_balance_pence=lambda: self.get_bank_balance().pence,
+            get_bank_balance_day=self._get_bank_balance_day,
+            today_ym=YearMonth(today.year, today.month),
+            today_day=today.day,
+            year_month=year_month,
+            summary=summary,
+        )
 
     def get_card_monthly_states(
         self, *, year_month: YearMonth
@@ -273,22 +235,40 @@ class BudgetService:
             n_months=n_months,
         )
 
-    def add_income(self, *, income: IncomeSource) -> IncomeSource:  # pragma: no cover
-        return self.income_repo.add(income=income)
-
-    def update_income(
-        self, *, income: IncomeSource
-    ) -> IncomeSource:  # pragma: no cover
-        return self.income_repo.update(income=income)
-
-    def delete_income(self, *, income_id: int) -> None:  # pragma: no cover
-        self.income_repo.hard_delete(income_id=income_id)
-
     def get_credit_cards(
         self, include_inactive: bool = False
     ) -> list:  # pragma: no cover
         return self.payment_method_repo.get_all_credit_cards(
             include_inactive=include_inactive
+        )
+
+    def get_live_card_balance(self, *, card) -> Amount:
+        """Return the card's live (pro-rated) balance for the current day."""
+        from datetime import date as _date
+        from clear_budget.application.services._card_balance_updates import (
+            get_live_card_balance as _impl,
+        )
+
+        return _impl(
+            self.payment_method_repo,
+            self.get_month_summary,
+            card=card,
+            today=_date.today(),
+        )
+
+    def update_card_balances_for_elapsed_dates(
+        self, *, today: date | None = None
+    ) -> None:
+        """Fold each card's closing balance once its payment date has passed."""
+        from datetime import date as _date
+        from clear_budget.application.services._card_balance_updates import (
+            update_card_balances_for_elapsed_dates as _impl,
+        )
+
+        _impl(
+            self.payment_method_repo,
+            self.get_month_summary,
+            today=today or _date.today(),
         )
 
     def get_recorded_months(self) -> list[YearMonth]:  # pragma: no cover
@@ -311,59 +291,41 @@ class BudgetService:
         if prev_month not in recorded:
             self.archive_month(year_month=prev_month)
 
+    def get_projected_starting_balance_pence(self, *, year_month: YearMonth) -> int:
+        """Public wrapper: projected bank balance pence at start of year_month."""
+        return self._projected_starting_balance_pence(year_month)
+
     def _projected_starting_balance_pence(self, year_month: YearMonth) -> int:
         from datetime import date as _date
+        from clear_budget.application.services._balance_projection import (
+            projected_starting_balance_pence,
+        )
 
         today = _date.today()
-        today_ym = YearMonth(today.year, today.month)
-        pence = self.get_bank_balance().pence
-        cursor = today_ym
-        while cursor < year_month:
-            s = self.get_month_summary(year_month=cursor)
-            if cursor == today_ym:
-                balance_day = self._get_bank_balance_day()
-                if balance_day > 0:
-                    income = sum(
-                        i.amount.pence
-                        for i in s.income_sources
-                        if i.day_of_month is None or i.day_of_month > balance_day
-                    )
-                else:
-                    income = sum(
-                        i.amount.pence
-                        for i in s.income_sources
-                        if i.day_of_month is None or i.day_of_month >= today.day
-                    )
-                bills = sum(
-                    b.amount.pence
-                    for b in s.bills
-                    if b.payment_method_id == 1
-                    and (b.day_of_month is None or b.day_of_month >= today.day)
-                )
-            else:
-                income = sum(i.amount.pence for i in s.income_sources)
-                bills = sum(b.amount.pence for b in s.bills if b.payment_method_id == 1)
-            pence += income - bills
-            cursor = cursor.next_month()
-        return pence
+        return projected_starting_balance_pence(
+            get_month_summary=self.get_month_summary,
+            get_bank_balance_pence=lambda: self.get_bank_balance().pence,
+            get_bank_balance_day=self._get_bank_balance_day,
+            today_ym=YearMonth(today.year, today.month),
+            today_day=today.day,
+            year_month=year_month,
+        )
 
     def get_bank_balance(self) -> Amount:  # pragma: no cover
-        if not hasattr(self.bill_repo, "conn"):
-            return Amount.zero()
-        cursor = self.bill_repo.conn.cursor()
-        cursor.execute("SELECT value FROM settings WHERE key = ?", ("bank_balance",))
-        row = cursor.fetchone()
-        return Amount(pence=int(row["value"]) if row else 0)
+        from clear_budget.application.services._settings_operations import (
+            get_bank_balance_pence,
+        )
+
+        return Amount(
+            pence=get_bank_balance_pence(getattr(self.bill_repo, "conn", None))
+        )
 
     def _get_bank_balance_day(self) -> int:  # pragma: no cover
-        if not hasattr(self.bill_repo, "conn"):
-            return 0
-        cursor = self.bill_repo.conn.cursor()
-        cursor.execute(
-            "SELECT value FROM settings WHERE key = ?", ("bank_balance_day",)
+        from clear_budget.application.services._settings_operations import (
+            get_bank_balance_day,
         )
-        row = cursor.fetchone()
-        return int(row["value"]) if row else 0
+
+        return get_bank_balance_day(getattr(self.bill_repo, "conn", None))
 
     def reset_all_data(self) -> None:
         """Wipe all user data, preserving the Bank Account payment method."""
@@ -371,36 +333,46 @@ class BudgetService:
 
         reset_budget_data(self.bill_repo.conn)
 
-    def get_discretionary_buffer(self) -> int:  # pragma: no cover
-        """Return discretionary buffer in pence (default 5000 = £50)."""
-        if not hasattr(self.bill_repo, "conn"):
-            return 5000
-        cursor = self.bill_repo.conn.cursor()
-        cursor.execute(
-            "SELECT value FROM settings WHERE key = ?", ("discretionary_buffer",)
+    def get_discretionary_buffer(
+        self, *, balance_pence: int = 0
+    ) -> int:  # pragma: no cover
+        """Return discretionary buffer in pence.
+
+        Returns the user-set value if one exists, otherwise defaults to
+        20% of ``balance_pence`` (or £20, whichever is higher).
+        """
+        from clear_budget.application.services._settings_operations import (
+            compute_discretionary_buffer_default,
+            get_discretionary_buffer_pence,
         )
-        row = cursor.fetchone()
-        return int(row["value"]) if row else 5000
+
+        stored = get_discretionary_buffer_pence(getattr(self.bill_repo, "conn", None))
+        if stored is not None:
+            return stored
+        return compute_discretionary_buffer_default(balance_pence)
+
+    def has_custom_discretionary_buffer(self) -> bool:  # pragma: no cover
+        """True if the user has explicitly set a discretionary buffer."""
+        from clear_budget.application.services._settings_operations import (
+            get_discretionary_buffer_pence,
+        )
+
+        return (
+            get_discretionary_buffer_pence(getattr(self.bill_repo, "conn", None))
+            is not None
+        )
 
     def set_discretionary_buffer(self, *, pence: int) -> None:  # pragma: no cover
         """Save discretionary buffer in pence."""
-        cursor = self.bill_repo.conn.cursor()
-        cursor.execute(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-            ("discretionary_buffer", str(pence)),
+        from clear_budget.application.services._settings_operations import (
+            set_discretionary_buffer_pence,
         )
-        self.bill_repo.conn.commit()
+
+        set_discretionary_buffer_pence(self.bill_repo.conn, pence)
 
     def set_bank_balance(self, *, amount: Amount) -> None:  # pragma: no cover
-        from datetime import date as _date
+        from clear_budget.application.services._settings_operations import (
+            set_bank_balance_pence,
+        )
 
-        cursor = self.bill_repo.conn.cursor()
-        cursor.execute(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-            ("bank_balance", str(amount.pence)),
-        )
-        cursor.execute(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-            ("bank_balance_day", str(_date.today().day)),
-        )
-        self.bill_repo.conn.commit()
+        set_bank_balance_pence(self.bill_repo.conn, amount.pence)

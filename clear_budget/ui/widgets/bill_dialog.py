@@ -52,7 +52,7 @@ class BillDialog(QDialog):
         super().__init__(parent)
         self.bill = bill
         self.payment_method_repo = payment_method_repo
-        self.current_month = current_month or YearMonth(2026, 1)
+        self.current_month = current_month or YearMonth.today()
         self.setWindowTitle("Add Bill" if bill is None else "Edit Bill")
         self.setModal(True)
         self.setGeometry(100, 100, 400, 300)

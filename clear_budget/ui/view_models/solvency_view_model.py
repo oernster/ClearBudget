@@ -17,12 +17,12 @@ class SolvencyViewModel(QObject):
     def __init__(
         self,
         budget_service: BudgetService,
-        current_month: YearMonth = YearMonth(2026, 5),
+        current_month: YearMonth | None = None,
     ) -> None:
         """Initialize solvency view model."""
         super().__init__()
         self.budget_service = budget_service
-        self.current_month = current_month
+        self.current_month = current_month or YearMonth.today()
         self.current_summary: MonthSummary | None = None
         self.solvency_report: SolvencyReport | None = None
         self.refresh_solvency()

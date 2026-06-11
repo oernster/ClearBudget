@@ -44,11 +44,9 @@ class CreditCardViewLoaderMixin:
             self.cards_table.insertRow(row)
             self.cards_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
 
-            _editable = (
-                Qt.ItemFlag.ItemIsEnabled
-                | Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsEditable
-            )
+            _editable = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            if not self.read_only:
+                _editable |= Qt.ItemFlag.ItemIsEditable
             name_item = QTableWidgetItem(card.name)
             name_item.setData(Qt.ItemDataRole.UserRole, card.id)
             name_item.setFlags(_editable)
@@ -61,6 +59,13 @@ class CreditCardViewLoaderMixin:
                 display_used = state_snapshot.closing_balance
                 display_util = (
                     state_snapshot.closing_balance.pence / card.credit_limit.pence * 100
+                    if card.credit_limit.pence
+                    else 0.0
+                )
+            elif self.current_month == _today_ym:
+                display_used = self.budget_service.get_live_card_balance(card=card)
+                display_util = (
+                    display_used.pence / card.credit_limit.pence * 100
                     if card.credit_limit.pence
                     else 0.0
                 )

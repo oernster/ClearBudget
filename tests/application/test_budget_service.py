@@ -145,3 +145,121 @@ class TestBudgetServiceMonthSummary:
         assert summary.bank_bills.pence == 100000
         # Balance only deducts bank bills
         assert summary.balance.pence == 100000
+
+
+class TestBudgetServiceIncomeMonthExtras:
+    """Test per-month one-off (ad-hoc) income entries."""
+
+    def _make_service(self) -> BudgetService:
+        bill_repo = FakeBillRepository()
+        income_repo = FakeIncomeSourceRepository()
+        payment_method_repo = FakePaymentMethodRepository()
+        generator = MonthGenerator(bill_repo, income_repo)
+        return BudgetService(bill_repo, income_repo, payment_method_repo, generator)
+
+    def test_get_month_summary_includes_extra_income(self) -> None:
+        """One-off income for the month is included in totals and lists."""
+        service = self._make_service()
+        ym = YearMonth(2026, 6)
+        service.income_repo.add(
+            income=IncomeSource(
+                id=1,
+                name="UC",
+                amount=Amount(pence=200000),
+                is_reliable=True,
+                day_of_month=1,
+            )
+        )
+        service.add_income_month_extra(
+            income=IncomeSource(
+                id=0,
+                name="Tax Refund",
+                amount=Amount(pence=30000),
+                is_reliable=False,
+                day_of_month=10,
+            ),
+            year_month=ym,
+        )
+
+        summary = service.get_month_summary(year_month=ym)
+
+        assert summary.total_income.pence == 230000
+        assert any(
+            i.name == "Tax Refund" and i.is_month_only for i in summary.income_sources
+        )
+        assert any(
+            i.name == "Tax Refund" and i.is_month_only
+            for i in summary.all_income_sources
+        )
+
+    def test_get_month_summary_extra_only_in_its_month(self) -> None:
+        """One-off income only appears in the month it was added for."""
+        service = self._make_service()
+        ym = YearMonth(2026, 6)
+        other_ym = YearMonth(2026, 7)
+        service.add_income_month_extra(
+            income=IncomeSource(
+                id=0,
+                name="Tax Refund",
+                amount=Amount(pence=30000),
+                is_reliable=False,
+                day_of_month=10,
+            ),
+            year_month=ym,
+        )
+
+        other_summary = service.get_month_summary(year_month=other_ym)
+
+        assert not any(i.name == "Tax Refund" for i in other_summary.income_sources)
+
+    def test_update_income_month_extra(self) -> None:
+        """Updating a one-off income entry changes its values for that month."""
+        service = self._make_service()
+        ym = YearMonth(2026, 6)
+        added = service.add_income_month_extra(
+            income=IncomeSource(
+                id=0,
+                name="Tax Refund",
+                amount=Amount(pence=30000),
+                is_reliable=False,
+                day_of_month=10,
+            ),
+            year_month=ym,
+        )
+
+        service.update_income_month_extra(
+            income=IncomeSource(
+                id=added.id,
+                name="Tax Refund (Updated)",
+                amount=Amount(pence=40000),
+                is_reliable=False,
+                day_of_month=12,
+                is_month_only=True,
+            ),
+            year_month=ym,
+        )
+
+        summary = service.get_month_summary(year_month=ym)
+        extra = next(i for i in summary.income_sources if i.is_month_only)
+        assert extra.name == "Tax Refund (Updated)"
+        assert extra.amount.pence == 40000
+
+    def test_delete_income_month_extra(self) -> None:
+        """Deleting a one-off income entry removes it from the month summary."""
+        service = self._make_service()
+        ym = YearMonth(2026, 6)
+        added = service.add_income_month_extra(
+            income=IncomeSource(
+                id=0,
+                name="Tax Refund",
+                amount=Amount(pence=30000),
+                is_reliable=False,
+                day_of_month=10,
+            ),
+            year_month=ym,
+        )
+
+        service.delete_income_month_extra(extra_id=added.id)
+
+        summary = service.get_month_summary(year_month=ym)
+        assert not any(i.is_month_only for i in summary.income_sources)

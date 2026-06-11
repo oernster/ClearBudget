@@ -306,3 +306,54 @@ class TestSQLiteBillRepositorySetActive:
 
         active = repo.list_active_for_month(year_month=YearMonth(2026, 5))
         assert any(b.id == bill.id for b in active)
+
+
+class TestSQLiteBillRepositoryPaidForMonth:
+    """Test mark_paid_for_month and unmark_paid_for_month."""
+
+    def test_mark_paid_for_month(self, db) -> None:
+        repo = SQLiteBillRepository(db.conn)
+        bill = repo.add(
+            bill=Bill(
+                id=0,
+                name="Rent",
+                amount=Amount(pence=1000),
+                payment_method_id=1,
+                category="housing",
+                bill_type="fixed",
+                day_of_month=1,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
+        ym = YearMonth(2026, 6)
+
+        repo.mark_paid_for_month(bill_id=bill.id, year_month=ym)
+
+        active = repo.list_active_for_month(year_month=ym)
+        marked = next(b for b in active if b.id == bill.id)
+        assert marked.paid_for_month is True
+
+    def test_unmark_paid_for_month(self, db) -> None:
+        repo = SQLiteBillRepository(db.conn)
+        bill = repo.add(
+            bill=Bill(
+                id=0,
+                name="Rent",
+                amount=Amount(pence=1000),
+                payment_method_id=1,
+                category="housing",
+                bill_type="fixed",
+                day_of_month=1,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
+        ym = YearMonth(2026, 6)
+
+        repo.mark_paid_for_month(bill_id=bill.id, year_month=ym)
+        repo.unmark_paid_for_month(bill_id=bill.id, year_month=ym)
+
+        active = repo.list_active_for_month(year_month=ym)
+        marked = next(b for b in active if b.id == bill.id)
+        assert marked.paid_for_month is False

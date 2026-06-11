@@ -31,8 +31,12 @@ def _resolve_app_icon() -> Path | None:
 _APP_ICON_PATH: Path | None = _resolve_app_icon()
 
 
-def build_nav_month_widget(initial_text: str):
-    """Return (QWidget, QLabel) - centered icon + month label for nav rows."""
+def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
+    """Return (QWidget, QLabel) - centered icon + month label for nav rows.
+
+    If `prev_btn`/`next_btn` are given, they are placed either side of the
+    month label so the navigation buttons flank the title.
+    """
     from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel
     from PySide6.QtGui import QPixmap
     from PySide6.QtCore import Qt
@@ -43,11 +47,15 @@ def build_nav_month_widget(initial_text: str):
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(8)
 
+    if prev_btn is not None:
+        layout.addWidget(prev_btn)
+
     if _APP_ICON_PATH is not None:
+        icon_height = prev_btn.sizeHint().height() if prev_btn is not None else 24
         icon_lbl = QLabel()
         icon_lbl.setPixmap(
             QPixmap(str(_APP_ICON_PATH)).scaledToHeight(
-                24, Qt.TransformationMode.SmoothTransformation
+                icon_height, Qt.TransformationMode.SmoothTransformation
             )
         )
         layout.addWidget(icon_lbl)
@@ -60,6 +68,9 @@ def build_nav_month_widget(initial_text: str):
     )
     month_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
     layout.addWidget(month_lbl)
+
+    if next_btn is not None:
+        layout.addWidget(next_btn)
 
     return container, month_lbl
 

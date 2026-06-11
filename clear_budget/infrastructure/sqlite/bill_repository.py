@@ -43,12 +43,15 @@ class SQLiteBillRepository:
                 b.end_month,
                 b.active,
                 CASE WHEN s.bill_id IS NOT NULL THEN 1 ELSE 0 END AS skipped_for_month,
-                CASE WHEN o.bill_id IS NOT NULL THEN 1 ELSE 0 END AS has_month_override
+                CASE WHEN o.bill_id IS NOT NULL THEN 1 ELSE 0 END AS has_month_override,
+                CASE WHEN p.bill_id IS NOT NULL THEN 1 ELSE 0 END AS paid_for_month
             FROM bills b
             LEFT JOIN bill_month_overrides o
                 ON o.bill_id = b.id AND o.year = ? AND o.month = ?
             LEFT JOIN bill_month_skips s
                 ON s.bill_id = b.id AND s.year = ? AND s.month = ?
+            LEFT JOIN bill_month_paid p
+                ON p.bill_id = b.id AND p.year = ? AND p.month = ?
             WHERE (b.start_year < ? OR (b.start_year = ? AND b.start_month <= ?))
               AND (b.end_year IS NULL OR b.end_year > ? OR
                    (b.end_year = ? AND b.end_month >= ?))
@@ -56,6 +59,8 @@ class SQLiteBillRepository:
               {skip_filter}
             """,
             (
+                year_month.year,
+                year_month.month,
                 year_month.year,
                 year_month.month,
                 year_month.year,
@@ -89,6 +94,7 @@ class SQLiteBillRepository:
                 target_card_id=row["target_card_id"],
                 skipped_for_month=bool(row["skipped_for_month"]),
                 has_month_override=bool(row["has_month_override"]),
+                paid_for_month=bool(row["paid_for_month"]),
             )
             bills.append(bill)
 
@@ -109,6 +115,25 @@ class SQLiteBillRepository:
         cursor = self.conn.cursor()
         cursor.execute(
             "DELETE FROM bill_month_skips WHERE bill_id = ? AND year = ? AND month = ?",
+            (bill_id, year_month.year, year_month.month),
+        )
+        self.conn.commit()
+
+    def mark_paid_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:
+        """Mark a bill as paid for one specific month (visual only)."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "INSERT OR IGNORE INTO bill_month_paid"
+            " (bill_id, year, month) VALUES (?, ?, ?)",
+            (bill_id, year_month.year, year_month.month),
+        )
+        self.conn.commit()
+
+    def unmark_paid_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:
+        """Remove the paid flag for a bill in one specific month."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "DELETE FROM bill_month_paid WHERE bill_id = ? AND year = ? AND month = ?",
             (bill_id, year_month.year, year_month.month),
         )
         self.conn.commit()
@@ -240,5 +265,6 @@ class SQLiteBillRepository:
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM bill_month_overrides WHERE bill_id = ?", (bill_id,))
         cursor.execute("DELETE FROM bill_month_skips WHERE bill_id = ?", (bill_id,))
+        cursor.execute("DELETE FROM bill_month_paid WHERE bill_id = ?", (bill_id,))
         cursor.execute("DELETE FROM bills WHERE id = ?", (bill_id,))
         self.conn.commit()

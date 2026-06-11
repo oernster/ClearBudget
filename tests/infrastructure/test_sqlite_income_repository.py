@@ -2,6 +2,7 @@
 
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.income_source_repository import (
     SQLiteIncomeSourceRepository,
 )

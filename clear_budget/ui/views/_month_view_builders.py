@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QLabel,
     QHeaderView,
-    QWidget,
 )
 from PySide6.QtCore import Qt
 
@@ -33,22 +32,14 @@ class MonthViewBuilderMixin:
         self.archive_btn = QPushButton("Archive Month")
         _ym = self.view_model.current_month
         _nav_center, self.month_label = build_nav_month_widget(
-            f"{MONTH_NAMES[_ym.month]} {_ym.year}"
+            f"{MONTH_NAMES[_ym.month]} {_ym.year}",
+            prev_btn=self.prev_btn,
+            next_btn=next_btn,
         )
-        left_group = QWidget()
-        left_lo = QHBoxLayout(left_group)
-        left_lo.setContentsMargins(0, 0, 0, 0)
-        left_lo.addWidget(self.prev_btn)
-        left_lo.addStretch()
-        right_group = QWidget()
-        right_lo = QHBoxLayout(right_group)
-        right_lo.setContentsMargins(0, 0, 0, 0)
-        right_lo.addStretch()
-        right_lo.addWidget(self.archive_btn)
-        right_lo.addWidget(next_btn)
-        nav_layout.addWidget(left_group, 1)
+        nav_layout.addStretch(1)
         nav_layout.addWidget(_nav_center, 0)
-        nav_layout.addWidget(right_group, 1)
+        nav_layout.addStretch(1)
+        nav_layout.addWidget(self.archive_btn)
         header_layout.addLayout(nav_layout)
 
         summary_layout = QHBoxLayout()
@@ -87,9 +78,18 @@ class MonthViewBuilderMixin:
         bills_group = QGroupBox("Bills")
         bills_layout = QVBoxLayout()
         self.bills_table = QTableWidget()
-        self.bills_table.setColumnCount(7)
+        self.bills_table.setColumnCount(8)
         self.bills_table.setHorizontalHeaderLabels(
-            ["Name", "Amount", "Category", "Payment Method", "Due", "Active", "Skip"]
+            [
+                "Name",
+                "Amount",
+                "Category",
+                "Payment Method",
+                "Due",
+                "Active",
+                "Skip",
+                "Paid",
+            ]
         )
         self.bills_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.bills_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
@@ -128,9 +128,9 @@ class MonthViewBuilderMixin:
         income_group = QGroupBox("Income")
         income_layout = QVBoxLayout()
         self.income_table = QTableWidget()
-        self.income_table.setColumnCount(5)
+        self.income_table.setColumnCount(7)
         self.income_table.setHorizontalHeaderLabels(
-            ["Name", "Amount", "Reliable", "Due Day", "Active"]
+            ["Name", "Amount", "Reliable", "Due Day", "Active", "Skip", "Received"]
         )
         self.income_table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
@@ -178,3 +178,16 @@ class MonthViewBuilderMixin:
         self.delete_bill_btn.clicked.connect(self.on_delete_bill)
         self.add_income_btn.clicked.connect(self.on_add_income)
         self.delete_income_btn.clicked.connect(self.on_delete_income)
+
+    def _apply_read_only_state(self) -> None:
+        if not self.read_only:
+            return
+        for btn in (
+            self.archive_btn,
+            self.edit_balance_btn,
+            self.add_bill_btn,
+            self.delete_bill_btn,
+            self.add_income_btn,
+            self.delete_income_btn,
+        ):
+            btn.setEnabled(False)

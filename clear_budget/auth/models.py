@@ -10,3 +10,4 @@ class User:
     id: int
     username: str
     is_admin: bool
+    is_read_only: bool = False

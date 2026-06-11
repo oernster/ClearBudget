@@ -115,6 +115,7 @@ def _build_main_window(
         payment_method_repo=payment_method_repo,
         month_generator=month_generator,
     )
+    budget_service.update_card_balances_for_elapsed_dates()
     month_view_model = MonthViewModel(budget_service=budget_service)
     solvency_view_model = SolvencyViewModel(budget_service=budget_service)
     return MainWindow(

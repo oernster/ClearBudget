@@ -33,12 +33,14 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
     def __init__(
         self,
         budget_service: BudgetService,
-        current_month: YearMonth = YearMonth(2026, 5),
+        current_month: YearMonth | None = None,
+        read_only: bool = False,
     ) -> None:
         """Initialize credit card view widget."""
         super().__init__()
         self.budget_service = budget_service
-        self.current_month = current_month
+        self.current_month = current_month or YearMonth.today()
+        self.read_only = read_only
         self.init_ui()
         self.load_cards()
 
@@ -148,6 +150,11 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         self.edit_btn.clicked.connect(self.on_edit_card)
         self.delete_btn.clicked.connect(self.on_delete_card)
 
+        if self.read_only:
+            self.add_btn.setEnabled(False)
+            self.edit_btn.setEnabled(False)
+            self.delete_btn.setEnabled(False)
+
     def _on_card_cell_clicked(self, row: int, col: int) -> None:
         if col != 10:
             return
@@ -158,7 +165,7 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         if not item:
             return
         card_id = item.data(Qt.ItemDataRole.UserRole)
-        if mods & (
+        if self.read_only or mods & (
             Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
         ):
             self.cards_table.blockSignals(True)
@@ -210,6 +217,8 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
 
     def _on_card_row_header_click(self, row: int) -> None:
         """Handle pencil icon click on card row header."""
+        if self.read_only:
+            return
         self.cards_table.selectRow(row)
         self.on_edit_card()
 

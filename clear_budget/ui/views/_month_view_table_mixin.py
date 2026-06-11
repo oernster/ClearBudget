@@ -12,12 +12,13 @@ _EDITABLE = (
     | Qt.ItemFlag.ItemIsSelectable
     | Qt.ItemFlag.ItemIsEditable
 )
+_READ_ONLY = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
 
-def _ei(text: str) -> QTableWidgetItem:
-    """Return an editable QTableWidgetItem."""
+def _ei(text: str, read_only: bool = False) -> QTableWidgetItem:
+    """Return a QTableWidgetItem, editable unless read_only."""
     item = QTableWidgetItem(text)
-    item.setFlags(_EDITABLE)
+    item.setFlags(_READ_ONLY if read_only else _EDITABLE)
     return item
 
 
@@ -63,16 +64,21 @@ class MonthViewTableMixin:
     def _add_bill_row(self, row: int, bill, card_map: dict) -> None:
         self.bills_table.insertRow(row)
         self.bills_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
-        name_item = _ei(bill.name)
+        name_item = _ei(bill.name, self.read_only)
         name_item.setData(Qt.ItemDataRole.UserRole, bill.id)
         self.bills_table.setItem(row, 0, name_item)
-        self.bills_table.setItem(row, 1, _ei(str(bill.amount)))
-        self.bills_table.setItem(row, 2, _ei(format_category(bill.category)))
+        self.bills_table.setItem(row, 1, _ei(str(bill.amount), self.read_only))
+        self.bills_table.setItem(
+            row, 2, _ei(format_category(bill.category), self.read_only)
+        )
         pm_label = self._get_payment_method_label(bill.payment_method_id, card_map)
         self.bills_table.setItem(row, 3, QTableWidgetItem(pm_label))
-        self.bills_table.setItem(row, 4, _ei(str(bill.day_of_month or "N/A")))
+        self.bills_table.setItem(
+            row, 4, _ei(str(bill.day_of_month or "N/A"), self.read_only)
+        )
         self.bills_table.setItem(row, 5, _checkbox_item(bill.active))
         self.bills_table.setItem(row, 6, _checkbox_item(bill.skipped_for_month))
+        self.bills_table.setItem(row, 7, _checkbox_item(bill.paid_for_month))
         self._apply_bill_row_style(row, bill, name_item)
 
     def _apply_bill_row_style(self, row: int, bill, name_item) -> None:
@@ -95,16 +101,39 @@ class MonthViewTableMixin:
     def _add_income_row(self, row: int, income) -> None:
         self.income_table.insertRow(row)
         self.income_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
-        name_item = _ei(income.name)
+        name_item = _ei(income.name, self.read_only)
         name_item.setData(Qt.ItemDataRole.UserRole, income.id)
         self.income_table.setItem(row, 0, name_item)
-        self.income_table.setItem(row, 1, _ei(str(income.amount)))
+        self.income_table.setItem(row, 1, _ei(str(income.amount), self.read_only))
         self.income_table.setItem(row, 2, _checkbox_item(income.is_reliable))
         self.income_table.setItem(
-            row, 3, _ei(str(income.day_of_month) if income.day_of_month else "~")
+            row,
+            3,
+            _ei(
+                str(income.day_of_month) if income.day_of_month else "~",
+                self.read_only,
+            ),
         )
         self.income_table.setItem(row, 4, _checkbox_item(income.active))
-        if (
+        self.income_table.setItem(row, 5, _checkbox_item(income.skipped_for_month))
+        self.income_table.setItem(row, 6, _checkbox_item(income.received_for_month))
+        self._apply_income_row_style(row, income, name_item)
+
+    def _apply_income_row_style(self, row: int, income, name_item) -> None:
+        if income.is_month_only:
+            name_item.setText(f"{income.name} (one-off)")
+            name_item.setForeground(QColor("#60a5fa"))
+        elif income.skipped_for_month:
+            skip_color = QColor("#6b7280")
+            for c in range(self.income_table.columnCount()):
+                it = self.income_table.item(row, c)
+                if it:
+                    it.setForeground(skip_color)
+            name_item.setText(f"{income.name} (skipped this month)")
+        elif income.has_month_override:
+            name_item.setText(f"{income.name} (*)")
+            name_item.setForeground(QColor("#60a5fa"))
+        elif (
             self.view_model.current_month == self.view_model.base_month
             and income.day_of_month
         ):

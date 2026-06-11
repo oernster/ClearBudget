@@ -73,10 +73,20 @@ class FakeIncomeSourceRepository:
     """Fake IncomeSourceRepository for testing."""
 
     _sources: list[IncomeSource] = field(default_factory=list)
+    _extras: dict[YearMonth, list[IncomeSource]] = field(default_factory=dict)
+    _next_extra_id: int = 1000
 
     def list_active(self) -> list[IncomeSource]:
         """List active income sources."""
         return [s for s in self._sources if s.active]
+
+    def list_active_for_month(
+        self, *, year_month: YearMonth, include_inactive: bool = False
+    ) -> list[IncomeSource]:
+        """List income sources for a given month."""
+        if include_inactive:
+            return list(self._sources)
+        return [s for s in self._sources if s.active and not s.skipped_for_month]
 
     def list_reliable(self) -> list[IncomeSource]:
         """List reliable income sources."""
@@ -115,6 +125,34 @@ class FakeIncomeSourceRepository:
     def hard_delete(self, *, income_id: int) -> None:
         """Permanently remove an income source."""
         self._sources = [s for s in self._sources if s.id != income_id]
+
+    def list_extras_for_month(self, *, year_month: YearMonth) -> list[IncomeSource]:
+        """List one-off income entries for a given month."""
+        return list(self._extras.get(year_month, []))
+
+    def add_month_extra(
+        self, *, year_month: YearMonth, income: IncomeSource
+    ) -> IncomeSource:
+        """Add a one-off income entry for a given month."""
+        added = replace(income, id=self._next_extra_id, is_month_only=True)
+        self._next_extra_id += 1
+        self._extras.setdefault(year_month, []).append(added)
+        return added
+
+    def update_month_extra(
+        self, *, year_month: YearMonth, income: IncomeSource
+    ) -> IncomeSource:
+        """Update a one-off income entry for a given month."""
+        for i, extra in enumerate(self._extras.get(year_month, [])):
+            if extra.id == income.id:
+                self._extras[year_month][i] = income
+                return income
+        return income
+
+    def delete_month_extra(self, *, extra_id: int) -> None:
+        """Permanently remove a one-off income entry."""
+        for year_month, extras in self._extras.items():
+            self._extras[year_month] = [e for e in extras if e.id != extra_id]
 
 
 @dataclass
@@ -163,4 +201,12 @@ class FakePaymentMethodRepository:
             if c.id == card_id:
                 self._cards[i] = replace(
                     c, current_balance_used=Amount(pence=balance_used)
+                )
+
+    def set_balance_applied(self, *, card_id: int, year: int, month: int) -> None:
+        """Stamp the month whose closing state was folded into the balance."""
+        for i, c in enumerate(self._cards):
+            if c.id == card_id:
+                self._cards[i] = replace(
+                    c, balance_applied_year=year, balance_applied_month=month
                 )

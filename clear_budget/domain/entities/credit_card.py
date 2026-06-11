@@ -20,6 +20,10 @@ class CreditCard:
         card_expiry_year: Expiry year (optional)
         minimum_payment_pence: Minimum payment amount in pence (optional)
         active: 1=active, 0=inactive/closed
+        balance_applied_year: Year of the last month folded into
+            current_balance_used (optional)
+        balance_applied_month: Month of the last month folded into
+            current_balance_used (optional)
     """
 
     id: int
@@ -33,6 +37,8 @@ class CreditCard:
     minimum_payment_pence: int | None = None
     minimum_payment_percent: float | None = None
     active: int = 1
+    balance_applied_year: int | None = None
+    balance_applied_month: int | None = None
 
     @property
     def available(self) -> Amount:

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import ui_scale
+from clear_budget.shared.db_validation import validate_db
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.views.archive_view import ArchiveView
@@ -50,7 +51,11 @@ class MainWindow(QMainWindow):
         self.current_user = current_user
         self.user_store = user_store
         self.db_path = db_path
-        self.setWindowTitle(f"ClearBudget - {current_user.username}")
+        self.read_only = current_user.is_read_only
+        title = f"ClearBudget - {current_user.username}"
+        if self.read_only:
+            title += " (Read-only)"
+        self.setWindowTitle(title)
         self.setMinimumSize(ui_scale.px(900), ui_scale.px(580))
         self.init_ui()
         self.apply_theme()
@@ -65,15 +70,18 @@ class MainWindow(QMainWindow):
         self.tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
         self.tabs.tabBar().setExpanding(False)
 
-        month_view = MonthView(self.month_view_model)
+        month_view = MonthView(self.month_view_model, read_only=self.read_only)
         self.tabs.addTab(self._scrollable(month_view), "Monthly Budget")
 
-        solvency_panel = SolvencyPanel(self.solvency_view_model)
+        solvency_panel = SolvencyPanel(
+            self.solvency_view_model, read_only=self.read_only
+        )
         self.tabs.addTab(self._scrollable(solvency_panel), "Solvency")
 
         credit_card_view = CreditCardView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
+            read_only=self.read_only,
         )
         self.tabs.addTab(self._scrollable(credit_card_view), "Credit Cards")
 
@@ -141,6 +149,7 @@ class MainWindow(QMainWindow):
 
         new_budget_action = file_menu.addAction("&New Budget…")
         new_budget_action.triggered.connect(self._on_new_budget)
+        new_budget_action.setEnabled(not self.read_only)
 
         file_menu.addSeparator()
 
@@ -149,11 +158,19 @@ class MainWindow(QMainWindow):
 
         import_action = file_menu.addAction("&Import Database…")
         import_action.triggered.connect(self._on_import_database)
+        import_action.setEnabled(not self.read_only)
+
+        if self.current_user.is_admin:
+            export_viewer_action = file_menu.addAction(
+                "Export &Read-Only Viewer Package…"
+            )
+            export_viewer_action.triggered.connect(self._on_export_viewer_package)
 
         file_menu.addSeparator()
 
         prefs_action = file_menu.addAction("&Preferences…")
         prefs_action.triggered.connect(self._on_preferences)
+        prefs_action.setEnabled(not self.read_only)
 
         file_menu.addSeparator()
 
@@ -173,8 +190,10 @@ class MainWindow(QMainWindow):
 
         # Help menu
         help_menu = self.menuBar().addMenu("&Help")
+        how_it_works_action = help_menu.addAction("How It Works")
         about_action = help_menu.addAction("&About ClearBudget")
         licence_action = help_menu.addAction("View Licence (LGPL-3.0)")
+        how_it_works_action.triggered.connect(self._on_how_it_works)
         about_action.triggered.connect(self._on_about)
         licence_action.triggered.connect(self._on_licence)
 
@@ -241,6 +260,11 @@ class MainWindow(QMainWindow):
         dlg = UserManagementDialog(self.user_store, self.current_user, parent=self)
         dlg.exec()
 
+    def _on_how_it_works(self) -> None:
+        from clear_budget.ui.widgets.how_it_works_dialog import HowItWorksDialog
+
+        HowItWorksDialog(self).exec()
+
     def _on_about(self) -> None:
         from clear_budget.ui.widgets.about_dialog import AboutDialog
 
@@ -251,62 +275,9 @@ class MainWindow(QMainWindow):
 
         LicenceDialog(self).exec()
 
-    _REQUIRED_SCHEMA: dict[str, set[str]] = {
-        "bills": {
-            "amount_pence",
-            "payment_method_id",
-            "category",
-            "bill_type",
-            "active",
-        },
-        "income_sources": {"amount_pence", "is_reliable", "day_of_month", "active"},
-        "credit_cards": {
-            "credit_limit_pence",
-            "current_balance_used_pence",
-            "payment_due_day",
-            "active",
-        },
-        "payment_methods": {"name", "type"},
-        "settings": {"key", "value"},
-        "bill_month_overrides": {"bill_id", "year", "month", "amount_pence"},
-        "bill_month_skips": {"bill_id", "year", "month"},
-    }
-
     def _validate_db(self, path: Path) -> str | None:
         """Return an error string if path is not a valid ClearBudget db, else None."""
-        import sqlite3
-
-        try:
-            conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            tables = {r["name"] for r in cursor.fetchall()}
-
-            missing_tables = set(self._REQUIRED_SCHEMA) - tables
-            if missing_tables:
-                conn.close()
-                missing = ", ".join(sorted(missing_tables))
-                return f"Not a ClearBudget database - missing tables: {missing}"
-
-            for table, required_cols in self._REQUIRED_SCHEMA.items():
-                cursor.execute(f"PRAGMA table_info({table})")
-                present_cols = {r["name"] for r in cursor.fetchall()}
-                missing_cols = required_cols - present_cols
-                if missing_cols:
-                    conn.close()
-                    return (
-                        f"Not a ClearBudget database - table '{table}' "
-                        f"missing columns: "
-                        f"{', '.join(sorted(missing_cols))}"
-                    )
-
-            conn.close()
-        except sqlite3.DatabaseError as exc:
-            return f"Not a valid SQLite database: {exc}"
-        except Exception as exc:
-            return f"Could not open file: {exc}"
-        return None
+        return validate_db(path)
 
     def _on_export_database(self) -> None:
         """Copy the active database to a user-chosen backup location."""
@@ -330,6 +301,15 @@ class MainWindow(QMainWindow):
             )
         except OSError as exc:
             QMessageBox.critical(self, "Export Failed", str(exc))
+
+    def _on_export_viewer_package(self) -> None:
+        """Open the dialog to export a read-only viewer package."""
+        from clear_budget.ui.widgets.export_viewer_package_dialog import (
+            ExportViewerPackageDialog,
+        )
+
+        dlg = ExportViewerPackageDialog(self.db_path, parent=self)
+        dlg.exec()
 
     def _on_import_database(self) -> None:
         """Replace the active database with a user-chosen backup file."""

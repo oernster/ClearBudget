@@ -22,6 +22,7 @@ class Bill:
         start_ym: First month this bill appears (YYYY-MM)
         end_ym: Last month this bill appears (None = perpetual)
         active: Whether this template is currently in use
+        paid_for_month: Whether marked paid for the queried month
     """
 
     id: int
@@ -37,6 +38,7 @@ class Bill:
     target_card_id: int | None = None
     skipped_for_month: bool = False
     has_month_override: bool = False
+    paid_for_month: bool = False
 
     def is_active_in_month(self, year_month: YearMonth) -> bool:
         """Check if this bill is active in the given month."""

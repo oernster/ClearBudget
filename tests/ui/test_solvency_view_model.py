@@ -32,7 +32,7 @@ def mock_budget_service():
 def test_solvency_view_model_initialization(mock_budget_service, qapplication):
     """Test ViewModel initializes correctly."""
     vm = SolvencyViewModel(budget_service=mock_budget_service)
-    assert vm.current_month == YearMonth(2026, 5)
+    assert vm.current_month == YearMonth.today()
     # refresh_solvency() is called in __init__, so report is populated
     assert vm.solvency_report is not None
     assert vm.solvency_report.is_solvent

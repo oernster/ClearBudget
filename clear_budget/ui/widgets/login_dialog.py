@@ -2,6 +2,7 @@
 
 from PySide6.QtWidgets import (
     QDialog,
+    QFileDialog,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
@@ -16,6 +17,7 @@ from pathlib import Path
 
 from clear_budget.auth.user_store import UserStore
 from clear_budget.auth.models import User
+from clear_budget.auth.viewer_package import import_viewer_package
 from clear_budget.ui import ui_scale
 
 
@@ -122,6 +124,22 @@ class LoginDialog(QDialog):
         btn_layout.addWidget(self.login_btn)
         layout.addLayout(btn_layout)
 
+        # Import viewer package row
+        import_layout = QHBoxLayout()
+        self.import_viewer_btn = QPushButton("Import Viewer Package…")
+        self.import_viewer_btn.setFlat(True)
+        self.import_viewer_btn.setStyleSheet(
+            ui_scale.style(
+                "QPushButton { color: #60a5fa; font-size: 12px;"
+                " border: none; background: transparent; }"
+                "QPushButton:hover { color: #93c5fd; text-decoration: underline; }"
+            )
+        )
+        self.import_viewer_btn.clicked.connect(self._on_import_viewer_package)
+        import_layout.addWidget(self.import_viewer_btn)
+        import_layout.addStretch()
+        layout.addLayout(import_layout)
+
     @staticmethod
     def _input_style() -> str:
         return ui_scale.style(
@@ -152,6 +170,30 @@ class LoginDialog(QDialog):
             return
         self.authenticated_user = user
         self.accept()
+
+    def _on_import_viewer_package(self) -> None:
+        src, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Viewer Package",
+            str(Path.home()),
+            "ClearBudget Viewer Package (*.zip)",
+        )
+        if not src:
+            return
+        try:
+            user = import_viewer_package(Path(src), self.user_store)
+        except (ValueError, OSError) as exc:
+            QMessageBox.critical(self, "Import Failed", str(exc))
+            return
+        self.username_edit.setText(user.username)
+        self.password_edit.clear()
+        self.password_edit.setFocus()
+        QMessageBox.information(
+            self,
+            "Import Successful",
+            f"Viewer account '{user.username}' is ready.\n\n"
+            "Enter the password you were given and sign in.",
+        )
 
     def _on_forgot_password(self) -> None:
         dlg = ResetPasswordDialog(self.user_store, parent=self)

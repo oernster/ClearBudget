@@ -23,7 +23,8 @@ class SQLitePaymentMethodRepository:
                    credit_limit_pence, current_balance_used_pence,
                    interest_rate_apr, payment_due_day,
                    card_expiry_month, card_expiry_year,
-                   minimum_payment_pence, minimum_payment_percent, active
+                   minimum_payment_pence, minimum_payment_percent, active,
+                   balance_applied_year, balance_applied_month
             FROM credit_cards {where_clause}""")
         return [
             CreditCard(
@@ -38,6 +39,8 @@ class SQLitePaymentMethodRepository:
                 minimum_payment_pence=row["minimum_payment_pence"],
                 minimum_payment_percent=row["minimum_payment_percent"],
                 active=row["active"],
+                balance_applied_year=row["balance_applied_year"],
+                balance_applied_month=row["balance_applied_month"],
             )
             for row in cursor.fetchall()
         ]
@@ -52,7 +55,8 @@ class SQLitePaymentMethodRepository:
                    credit_limit_pence, current_balance_used_pence,
                    interest_rate_apr, payment_due_day,
                    card_expiry_month, card_expiry_year,
-                   minimum_payment_pence, minimum_payment_percent, active
+                   minimum_payment_pence, minimum_payment_percent, active,
+                   balance_applied_year, balance_applied_month
             FROM credit_cards WHERE id = ?""",
             (card_id,),
         )
@@ -71,6 +75,8 @@ class SQLitePaymentMethodRepository:
             minimum_payment_pence=row["minimum_payment_pence"],
             minimum_payment_percent=row["minimum_payment_percent"],
             active=row["active"],
+            balance_applied_year=row["balance_applied_year"],
+            balance_applied_month=row["balance_applied_month"],
         )
 
     def update_credit_card_balance(  # pragma: no cover
@@ -81,6 +87,19 @@ class SQLitePaymentMethodRepository:
         cursor.execute(
             "UPDATE credit_cards SET current_balance_used_pence = ? WHERE id = ?",
             (balance_used, card_id),
+        )
+        self.conn.commit()
+
+    def set_balance_applied(  # pragma: no cover
+        self, *, card_id: int, year: int, month: int
+    ) -> None:
+        """Stamp the month whose closing state was folded into the balance."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "UPDATE credit_cards"
+            " SET balance_applied_year = ?, balance_applied_month = ?"
+            " WHERE id = ?",
+            (year, month, card_id),
         )
         self.conn.commit()
 
