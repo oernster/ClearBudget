@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
         self.user_store = user_store
         self.db_path = db_path
         self.read_only = current_user.is_read_only
-        title = f"ClearBudget - {current_user.username}"
+        title = f"Clear Budget - {current_user.username}"
         if self.read_only:
             title += " (Read-only)"
         self.setWindowTitle(title)
@@ -205,7 +205,7 @@ class MainWindow(QMainWindow):
         # Help menu
         help_menu = self.menuBar().addMenu("&Help")
         how_it_works_action = help_menu.addAction("How It Works")
-        about_action = help_menu.addAction("&About ClearBudget")
+        about_action = help_menu.addAction("&About Clear Budget")
         licence_action = help_menu.addAction("View Licence (LGPL-3.0)")
         how_it_works_action.triggered.connect(self._on_how_it_works)
         about_action.triggered.connect(self._on_about)
@@ -308,7 +308,7 @@ class MainWindow(QMainWindow):
             self,
             "Export Database",
             str(default_downloads_dir() / "clearbudget_backup.db"),
-            "ClearBudget Database (*.db)",
+            "Clear Budget Database (*.db)",
         )
         if not dest:
             return
@@ -342,7 +342,7 @@ class MainWindow(QMainWindow):
             self,
             "Import Database",
             str(default_downloads_dir()),
-            "ClearBudget Database (*.db)",
+            "Clear Budget Database (*.db)",
         )
         if not src:
             return
@@ -384,7 +384,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 self,
                 "Invalid Database",
-                f"Cannot import - invalid ClearBudget database.\n\n{validation_error}",
+                f"Cannot import - invalid Clear Budget database.\n\n{validation_error}",
             )
             return
 

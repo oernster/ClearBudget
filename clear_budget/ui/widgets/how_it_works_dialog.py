@@ -11,12 +11,12 @@ from PySide6.QtWidgets import (
 from clear_budget.ui import ui_scale
 
 _HOW_IT_WORKS_TEXT = """\
-<h2>How ClearBudget Works</h2>
+<h2>How Clear Budget Works</h2>
 
 <h3>Pro-rated bills (no fixed due date)</h3>
 <p>Some bills have no fixed day of the month - for example "Food",
 where you spend a bit every day rather than paying it all at once.
-For these bills, ClearBudget assumes the cost is spread evenly across
+For these bills, Clear Budget assumes the cost is spread evenly across
 the month, and only counts the part that is still ahead of you.</p>
 <p><b>Equation:</b></p>
 <ul>
@@ -182,7 +182,7 @@ each day even before the bill is paid in full - not just the
       APR) so the Monthly Budget tab can warn you accurately about mid-month
       dips below zero.</li>
   <li><b>Switch User</b> - log out and return to the login screen.</li>
-  <li><b>Exit</b> - close ClearBudget.</li>
+  <li><b>Exit</b> - close Clear Budget.</li>
 </ul>
 
 <h3>Read-only viewer accounts</h3>

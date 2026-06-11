@@ -42,12 +42,12 @@ def repair(
 
     entry = read_uninstall_entry(identity.uninstall_key)
     if entry is None or not entry.install_location.exists():
-        raise InstallerOperationError("ClearBudget is not installed")
+        raise InstallerOperationError("Clear Budget is not installed")
 
     install_dir = entry.install_location.resolve()
     exe = install_dir / "ClearBudget.exe"
     if exe.exists() and is_app_running(exe):
-        raise AppRunningError("ClearBudget is currently running")
+        raise AppRunningError("Clear Budget is currently running")
 
     manifest = load_manifest()
     with zipfile.ZipFile(payload_zip_path(), "r") as zf:

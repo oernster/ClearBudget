@@ -1,4 +1,4 @@
-# <img width="64" height="64" alt="clearbudget_64" src="https://github.com/user-attachments/assets/4e8c5620-7890-4527-9eb6-14adad1ebea8" /> ClearBudget
+# <img width="64" height="64" alt="clearbudget_64" src="https://github.com/user-attachments/assets/4e8c5620-7890-4527-9eb6-14adad1ebea8" /> Clear Budget
 
 A personal budget planning application for managing income, bills, and credit cards with
 detailed solvency analysis. Supports multiple user accounts with secure authentication.
@@ -165,7 +165,7 @@ recurring template.
 ## Database Import / Export
 
 - **Export** (File > Import / Export > Export Database...): Save As dialog, `.db` extension enforced, copies active database
-- **Import** (File > Import / Export > Import Database...): file validated as SQLite and verified to contain all required ClearBudget tables and columns before any write; confirmation required if active database has data; window reloads automatically after import - no restart needed
+- **Import** (File > Import / Export > Import Database...): file validated as SQLite and verified to contain all required Clear Budget tables and columns before any write; confirmation required if active database has data; window reloads automatically after import - no restart needed
 
 ---
 
@@ -196,7 +196,7 @@ shows:
 
 - **How It Works** - plain-English explanation of pro-rating, balances, archiving and
   tab behaviour, kept in sync with the calculation logic
-- **About ClearBudget**
+- **About Clear Budget**
 - **View Licence (LGPL-3.0)**
 
 ---

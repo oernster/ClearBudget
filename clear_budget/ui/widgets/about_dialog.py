@@ -29,14 +29,14 @@ def _resolve_about_icon() -> Path | None:
 _ICON_PATH: Path | None = _resolve_about_icon()
 
 _ABOUT_TEXT = f"""\
-<h2>ClearBudget</h2>
+<h2>Clear Budget</h2>
 <p><b>Personal Budget Planner</b></p>
 <p><b>Version:</b> {_APP_VERSION}</p>
 <p><b>Author:</b> Oliver Ernster</p>
 <p>Distributed under the GNU Lesser General Public Licence v3.0 (LGPL-3.0).</p>
 <hr>
 <h3>Open Source Credits</h3>
-<p>ClearBudget is built on the shoulders of the following open source projects
+<p>Clear Budget is built on the shoulders of the following open source projects
 and their communities:</p>
 <ul>
   <li><b>Python</b> - Copyright &copy; 2001&ndash;2025 Python Software Foundation.
@@ -62,7 +62,7 @@ _LGPL3_NOTICE = (
     "GNU LESSER GENERAL PUBLIC LICENCE\n"
     "Version 3, 29 June 2007\n"
     "\n"
-    "ClearBudget - Personal Budget Planner\n"
+    "Clear Budget - Personal Budget Planner\n"
     "Copyright (C) 2025 Oliver Ernster\n"
     "\n"
     "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"  # noqa: E501
@@ -118,7 +118,7 @@ class AboutDialog(QDialog):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("About ClearBudget")
+        self.setWindowTitle("About Clear Budget")
         self.setMinimumWidth(ui_scale.px(540))
         layout = QVBoxLayout()
         layout.setSpacing(ui_scale.px(8))

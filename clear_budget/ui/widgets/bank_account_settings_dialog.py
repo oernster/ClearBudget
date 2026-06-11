@@ -49,7 +49,7 @@ class BankAccountSettingsDialog(QDialog):
 
         info = QLabel(
             "If your bank account has an agreed overdraft, enter the limit and"
-            " APR here. ClearBudget will use this to judge whether a mid-month"
+            " APR here. Clear Budget will use this to judge whether a mid-month"
             " dip below zero is covered by your facility."
         )
         info.setWordWrap(True)

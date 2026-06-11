@@ -23,7 +23,7 @@ from clear_budget.version import APP_NAME, __version__
 
 def main(argv: list[str] | None = None) -> int:
     if os.name != "nt":
-        print("ClearBudget installer is Windows-only")
+        print("Clear Budget installer is Windows-only")
         return 2
 
     log_path = setup_installer_logging()

@@ -6,7 +6,11 @@ packaging metadata stay consistent.
 
 from pathlib import Path
 
-APP_NAME: str = "ClearBudget"
+APP_NAME: str = "Clear Budget"
+
+# Previous APP_NAME, used to migrate per-user installer data (preferences,
+# cache) created by older installs that used the old display name.
+LEGACY_APP_NAME: str = "ClearBudget"
 APP_AUTHOR: str = "Oliver Ernster"
 APP_COPYRIGHT: str = "© 2026 Oliver Ernster"
 

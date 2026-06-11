@@ -1,4 +1,4 @@
-# ClearBudget Architecture
+# Clear Budget Architecture
 
 A clean architecture implementation with 4 isolated layers: Domain, Application, Infrastructure, and UI.
 An additional Auth layer sits alongside the main layers for user identity and credential management.

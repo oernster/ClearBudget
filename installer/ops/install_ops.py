@@ -14,7 +14,7 @@ from typing import Callable
 
 import logging
 
-from platformdirs import user_data_dir
+from platformdirs import user_cache_dir, user_data_dir
 
 from installer.constants import InstallerIdentity
 from installer.ops.errors import AppRunningError, InstallerOperationError
@@ -23,7 +23,7 @@ from installer.ops.running_app import is_app_running
 from installer.ops.shortcuts import create_shortcut, get_shortcut_paths
 from installer.state.registry import write_uninstall_entry
 from clear_budget.shared.resources import find_app_icon_path
-from clear_budget.version import APP_NAME, APP_AUTHOR, __version__
+from clear_budget.version import APP_NAME, APP_AUTHOR, LEGACY_APP_NAME, __version__
 
 logger = logging.getLogger("installer.install")
 
@@ -200,6 +200,25 @@ def _deploy_runtime_icon_assets(*, install_dir: Path) -> None:
             pass
 
 
+def _migrate_legacy_appdata_dirs() -> None:
+    """Move per-user data/cache dirs from the old "ClearBudget" app name.
+
+    Older installs stored installer preferences/cache under the previous
+    display name. If the new-named dir doesn't exist yet but the old one
+    does, move it so existing settings carry over.
+    """
+    for dir_func in (user_data_dir, user_cache_dir):
+        try:
+            old_dir = Path(dir_func(LEGACY_APP_NAME, APP_AUTHOR)).resolve()
+            new_dir = Path(dir_func(APP_NAME, APP_AUTHOR)).resolve()
+            if old_dir.exists() and not new_dir.exists():
+                new_dir.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(old_dir), str(new_dir))
+        except Exception:
+            # Best-effort: the app can still run with fresh defaults.
+            logger.exception("Failed migrating legacy app data dir")
+
+
 def _seed_user_preferences_defaults(*, volume_multiplier: float) -> None:
     """Seed per-user preferences.json with installer defaults.
 
@@ -236,6 +255,8 @@ def install_new(
     cancel_event=None,
 ) -> None:  # noqa: ANN001
     target_dir = opts.target_dir.resolve()
+
+    _migrate_legacy_appdata_dirs()
 
     # Stage in the target's parent directory so we can do an atomic rename when
     # target lives on a non-system drive.
@@ -291,9 +312,11 @@ def upgrade_or_reinstall(
     current_install_dir = current_install_dir.resolve()
     target_dir = opts.target_dir.resolve()
 
+    _migrate_legacy_appdata_dirs()
+
     exe = current_install_dir / "ClearBudget.exe"
     if exe.exists() and is_app_running(exe):
-        raise AppRunningError("ClearBudget is currently running")
+        raise AppRunningError("Clear Budget is currently running")
 
     logger.info(
         "Upgrade/reinstall: current=%s target=%s", current_install_dir, target_dir

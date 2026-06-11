@@ -52,7 +52,7 @@ def validate_db(path: Path) -> str | None:
         if missing_tables:
             conn.close()
             missing = ", ".join(sorted(missing_tables))
-            return f"Not a ClearBudget database - missing tables: {missing}"
+            return f"Not a Clear Budget database - missing tables: {missing}"
 
         for table, required_cols in REQUIRED_SCHEMA.items():
             cursor.execute(f"PRAGMA table_info({table})")
@@ -61,7 +61,7 @@ def validate_db(path: Path) -> str | None:
             if missing_cols:
                 conn.close()
                 return (
-                    f"Not a ClearBudget database - table '{table}' "
+                    f"Not a Clear Budget database - table '{table}' "
                     f"missing columns: "
                     f"{', '.join(sorted(missing_cols))}"
                 )

@@ -22,7 +22,7 @@ def run_import_viewer_package_flow(
         parent,
         "Import Viewer Package",
         str(default_downloads_dir()),
-        "ClearBudget Viewer Package (*.zip)",
+        "Clear Budget Viewer Package (*.zip)",
     )
     if not src:
         return None

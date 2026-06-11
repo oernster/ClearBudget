@@ -33,7 +33,7 @@ class LoginDialog(QDialog):
         super().__init__(parent)
         self.user_store = user_store
         self.authenticated_user: User | None = None
-        self.setWindowTitle("ClearBudget - Sign In")
+        self.setWindowTitle("Clear Budget - Sign In")
         self.setMinimumWidth(ui_scale.px(380))
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowCloseButtonHint)
         self._build_ui()
@@ -58,7 +58,7 @@ class LoginDialog(QDialog):
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(lbl)
 
-        title = QLabel("ClearBudget")
+        title = QLabel("Clear Budget")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet(
             ui_scale.style(

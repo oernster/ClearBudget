@@ -46,7 +46,7 @@ class CreateUserDialog(QDialog):
         self.created_user: User | None = None
         self.recovery_code: str = ""
         title = (
-            "Welcome to ClearBudget - Create Your Account"
+            "Welcome to Clear Budget - Create Your Account"
             if is_first_user
             else "Add User"
         )

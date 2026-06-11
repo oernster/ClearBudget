@@ -18,7 +18,7 @@ from installer.state.registry import (
     read_uninstall_entry,
     try_read_install_location,
 )
-from clear_budget.version import APP_AUTHOR, APP_NAME
+from clear_budget.version import APP_AUTHOR, APP_NAME, LEGACY_APP_NAME
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,13 +39,13 @@ def uninstall(identity, opts: UninstallOptions) -> None:  # noqa: ANN001 (identi
 
     if install_dir is None:
         raise InstallerOperationError(
-            "ClearBudget is not detected as installed for this user"
+            "Clear Budget is not detected as installed for this user"
         )
 
     install_dir = install_dir.resolve()
     exe = install_dir / "ClearBudget.exe"
     if exe.exists() and is_app_running(exe):
-        raise AppRunningError("ClearBudget is currently running")
+        raise AppRunningError("Clear Budget is currently running")
 
     # Remove shortcuts.
     sp = get_shortcut_paths(identity)
@@ -61,12 +61,11 @@ def uninstall(identity, opts: UninstallOptions) -> None:  # noqa: ANN001 (identi
     except Exception:
         pass
 
-    # Remove user data.
+    # Remove user data (current and legacy app-name dirs).
     if opts.remove_user_data:
-        data_root = Path(user_data_dir(APP_NAME, APP_AUTHOR))
-        cache_root = Path(user_cache_dir(APP_NAME, APP_AUTHOR))
-        shutil.rmtree(data_root, ignore_errors=True)
-        shutil.rmtree(cache_root, ignore_errors=True)
+        for name in (APP_NAME, LEGACY_APP_NAME):
+            shutil.rmtree(user_data_dir(name, APP_AUTHOR), ignore_errors=True)
+            shutil.rmtree(user_cache_dir(name, APP_AUTHOR), ignore_errors=True)
 
     # Remove install directory.
     _schedule_delete_after_exit(install_dir)

@@ -114,7 +114,7 @@ class ExportViewerPackageDialog(QDialog):
             self,
             "Export Viewer Package",
             str(default_downloads_dir() / f"clearbudget_viewer_{username}.zip"),
-            "ClearBudget Viewer Package (*.zip)",
+            "Clear Budget Viewer Package (*.zip)",
         )
         if not dest:
             return
@@ -163,7 +163,7 @@ class _ExportSuccessDialog(QDialog):
             f"Viewer package exported to:\n{dest_path}\n\n"
             "Give this file and the credentials below to the viewer - they "
             'should use "Import Viewer Package" on the sign-in screen of '
-            "their own ClearBudget install:"
+            "their own Clear Budget install:"
         )
         info.setWordWrap(True)
         layout.addWidget(info)

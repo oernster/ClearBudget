@@ -15,7 +15,7 @@ def confirm_and_run_uninstall(window: InstallerMainWindow) -> None:
     box.setIcon(QMessageBox.Warning)
     box.setWindowTitle("Confirm uninstall")
     box.setText(
-        "This will uninstall ClearBudget for the current user and remove user data "
+        "This will uninstall Clear Budget for the current user and remove user data "
         "(voices/cache/temp_books)."
     )
     uninstall_btn = box.addButton("Uninstall", QMessageBox.AcceptRole)
