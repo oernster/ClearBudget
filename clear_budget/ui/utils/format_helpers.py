@@ -106,6 +106,9 @@ def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
                 icon_height, Qt.TransformationMode.SmoothTransformation
             )
         )
+        # Match the month label's own 10px padding, so the gap before the
+        # icon equals the gap after the year (before the next/prev buttons).
+        icon_lbl.setContentsMargins(10, 0, 0, 0)
         layout.addWidget(icon_lbl)
 
     month_lbl = QLabel(initial_text)
