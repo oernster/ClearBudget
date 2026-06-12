@@ -16,7 +16,8 @@ psutil==7.2.2
 pycodestyle==2.14.0
 pyflakes==3.4.0
 Pygments==2.20.0
-pyinstaller==6.10.0
+pyinstaller==6.10.0; python_version < "3.14"
+pyinstaller>=6.15.0; python_version >= "3.14"
 pyinstaller-hooks-contrib==2026.5
 PySide6==6.11.1
 PySide6_Addons==6.11.1

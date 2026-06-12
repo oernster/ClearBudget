@@ -263,3 +263,12 @@ cb-admin.txt
 *.dmg
 _dmg_staging/
 _clearbudget_rw.dmg
+
+# Flatpak build outputs (build_flatpak.sh) - all generated, never committed
+.flatpak-build/
+.flatpak-repo/
+.flatpak-builder/
+.flatpak-wheels/
+packaging/
+*.flatpak
+com.oliverernster.clearbudget.yml
