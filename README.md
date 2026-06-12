@@ -215,6 +215,14 @@ python main.py
 
 ---
 
+## Building from source
+
+To set up a development environment or build an installable package on Linux
+(Flatpak), macOS (.dmg) or Windows (installer), see
+[DEVELOPMENT-README.md](DEVELOPMENT-README.md).
+
+---
+
 ## Licence
 
 Distributed under the GNU Lesser General Public Licence v3.0.  
