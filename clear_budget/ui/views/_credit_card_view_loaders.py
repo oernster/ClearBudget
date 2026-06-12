@@ -24,6 +24,16 @@ from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 
 _PROJECTION_MONTHS = 6
 
+# The native Windows 11 style draws a rounded frame around any styled QLabel; on the
+# dark card those frame corners show through as ugly "black notches". A stylesheet set
+# on the *parent* container outranks the app-global stylesheet, so cascading these
+# declarations down from the field container reliably suppresses the frame on its
+# labels (a global QLabel rule does not). The card-name label sits directly on the
+# card, so it carries the declarations itself.
+_FLAT_DECLS = "background: transparent; border: none;"
+_FLAT_LABEL = " " + _FLAT_DECLS  # append to a label's own style
+_FLAT_CONTAINER = "QWidget { " + _FLAT_DECLS + " }"  # cascades to child labels
+
 
 class CreditCardViewLoaderMixin:
     """load_cards, _build_card_frame and _build_projection_strip for CreditCardView."""
@@ -38,7 +48,7 @@ class CreditCardViewLoaderMixin:
         cards = self.budget_service.get_credit_cards(include_inactive=True)
         if not cards:
             empty_label = QLabel("No credit cards configured")
-            empty_label.setStyleSheet("color: #6b7280;")
+            empty_label.setStyleSheet("color: #6b7280;" + _FLAT_LABEL)
             self.cards_layout.addWidget(empty_label)
             self.cards_layout.addStretch(1)
             self._build_projection_strip()
@@ -108,6 +118,7 @@ class CreditCardViewLoaderMixin:
         self, label: str, value: str, color: str | None = None
     ) -> QWidget:
         container = QWidget()
+        container.setStyleSheet(_FLAT_CONTAINER)
         col = QVBoxLayout(container)
         col.setContentsMargins(0, 0, 0, 0)
         col.setSpacing(0)
@@ -152,7 +163,9 @@ class CreditCardViewLoaderMixin:
         header.addWidget(active_cb)
 
         name_label = QLabel(card.name)
-        name_label.setStyleSheet(ui_scale.style("font-size: 16px; font-weight: 700;"))
+        name_label.setStyleSheet(
+            ui_scale.style("font-size: 16px; font-weight: 700;" + _FLAT_LABEL)
+        )
         header.addWidget(name_label)
         header.addStretch(1)
 
