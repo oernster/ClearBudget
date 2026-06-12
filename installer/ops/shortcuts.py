@@ -34,6 +34,7 @@ def _default_icon_location_for(target_exe: Path) -> str:
 class ShortcutPaths:
     desktop_lnk: Path
     start_menu_lnk: Path
+    taskbar_lnk: Path
 
 
 def _require_windows() -> None:
@@ -53,9 +54,20 @@ def get_shortcut_paths(identity: InstallerIdentity) -> ShortcutPaths:
 
     start_menu_folder = programs_dir / identity.start_menu_folder
 
+    # Per-user taskbar pin, in the "User Pinned" TaskBar folder Windows manages.
+    taskbar_dir = (
+        Path(appdata)
+        / "Microsoft"
+        / "Internet Explorer"
+        / "Quick Launch"
+        / "User Pinned"
+        / "TaskBar"
+    )
+
     return ShortcutPaths(
         desktop_lnk=desktop_dir / f"{identity.shortcut_name}.lnk",
         start_menu_lnk=start_menu_folder / f"{identity.shortcut_name}.lnk",
+        taskbar_lnk=taskbar_dir / f"{identity.shortcut_name}.lnk",
     )
 
 
@@ -135,4 +147,20 @@ def remove_shortcut(shortcut_path: Path) -> None:
         if shortcut_path.parent.exists() and not any(shortcut_path.parent.iterdir()):
             shortcut_path.parent.rmdir()
     except Exception:
+        return
+
+
+def remove_taskbar_pin(shortcut_path: Path) -> None:
+    """Remove a taskbar pin shortcut file (best effort).
+
+    Only the .lnk is deleted; the shared "User Pinned\\TaskBar" folder is left in
+    place because Windows manages it. The live taskbar icon may persist until
+    Explorer restarts or the user next signs in, but it no longer launches the
+    removed app.
+    """
+
+    try:
+        shortcut_path.unlink(missing_ok=True)
+    except Exception:
+        # Best effort.
         return

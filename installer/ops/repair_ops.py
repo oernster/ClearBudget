@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from installer.ops.errors import AppRunningError, InstallerOperationError
+from installer.ops.legacy import cleanup_orphaned_legacy_install
 from installer.ops.payload import iter_manifest_entries, load_manifest, payload_zip_path
 from installer.ops.running_app import is_app_running
 from installer.ops.shortcuts import create_shortcut, get_shortcut_paths
@@ -103,3 +104,9 @@ def repair(
         shortcut_start_menu=opts.restore_start_menu_shortcut,
         installer_path=entry.installer_path or "",
     )
+
+    # Remove the pre-rename orphan install dir (a no-op once it is gone), so a
+    # repair leaves the machine as clean as a fresh install or upgrade does.
+    if progress:
+        progress("Cleaning up legacy install...")
+    cleanup_orphaned_legacy_install(install_dir)
