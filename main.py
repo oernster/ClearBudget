@@ -71,6 +71,15 @@ _WINDOW_HEIGHT_FRACTION = 0.92
 _MIN_WINDOW_WIDTH_PT = 860
 _MIN_WINDOW_HEIGHT_PT = 780
 
+# Reference available-screen height (logical points) that maps to a 1.0x UI scale.
+# Taller screens scale the UI up to the cap below; shorter screens scale it down,
+# so the layout stays proportionate from a 13in laptop to a 4K display.
+_UI_SCALE_REFERENCE_HEIGHT_PT = 1260.0
+
+# Upper bound on the UI scale factor.  Caps growth on tall/4K displays; the lower
+# bound (0.5x) is enforced inside ui_scale.init().
+_MAX_UI_SCALE_FACTOR = 1.5
+
 
 def _acquire_single_instance_lock():
     """Acquire a single-instance lock for this process.
@@ -184,7 +193,7 @@ def main() -> int:
     _avail = _screen.availableGeometry()
     _avail_h = _avail.height()
     _avail_w = _avail.width()
-    ui_scale.init(min(_avail_h / 1260.0, 1.5))
+    ui_scale.init(min(_avail_h / _UI_SCALE_REFERENCE_HEIGHT_PT, _MAX_UI_SCALE_FACTOR))
 
     icon_path = _find_runtime_icon()
     if icon_path:

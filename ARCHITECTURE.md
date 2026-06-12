@@ -94,7 +94,8 @@ An additional Auth layer sits alongside the main layers for user identity and cr
     `"none" | "amber" | "red"`
   - `estimate_daily_overdraft_interest_pence(overdrawn_pence, apr_basis_points)` -
     daily interest estimate from APR stored in basis points
-- `WorkingDayCalculatorService.adjust_to_working_day()` - Adjusts payment dates
+- `_prorating.py` - shared pro-rating helpers (`days_in_month`,
+  `prorate_remaining_pence`) used by live card projection and balance projection
 - `CardMonthlyCalculator.calculate_card_monthly_state()` - Per-card monthly cashflow
   - Inputs: card, opening balance pence, bills list
   - Computes charges, payment received, interest, closing balance, minimum payment
@@ -140,7 +141,7 @@ Key methods:
 
 **Per-user database** (`~/.clearbudget/budget_<username>.db`):
 - `Database(db_path)` - SQLite connection and schema management
-- Schema - 11 tables:
+- Schema - 15 application tables (plus SQLite's internal `sqlite_sequence`):
   1. `payment_methods` - id=1 is "Bank Account"
   2. `bills` - templates; includes `target_card_id` (migration)
   3. `income_sources`
@@ -150,9 +151,13 @@ Key methods:
   7. `credit_cards` - includes `minimum_payment_percent` (migration)
   8. `settings` - key/value store (`bank_balance`, `bank_balance_day`, `currency`,
      `overdraft_limit`, `overdraft_apr_bp`)
-  9. `bill_month_overrides` - includes `day_of_month` (migration)
-  10. `bill_month_skips` - per-month bill exclusion (bill_id, year, month)
-  11. `sqlite_sequence`
+  9. `bill_month_overrides` - per-month bill amount/day override (`day_of_month` is a migration)
+  10. `bill_month_skips` - per-month bill exclusion
+  11. `bill_month_paid` - per-month bill "paid" flag (excludes it from "still due")
+  12. `income_month_overrides` - per-month income amount override
+  13. `income_month_skips` - per-month income exclusion
+  14. `income_month_received` - per-month income "received" flag
+  15. `income_month_extras` - "this month only" one-off income, not tied to a template
 
 **Repositories**:
 - `SQLiteBillRepository`
@@ -221,6 +226,18 @@ Separate from budget infrastructure. Manages user identity and credentials.
   back to `Path.home()`. Used as the default directory for all file dialogs
   (Export/Import Database, Export/Import Viewer Package).
 
+**`db_validation`** (`clear_budget/shared/db_validation.py`):
+- `REQUIRED_SCHEMA` + `validate_db(path)` - confirms an imported file is a genuine
+  ClearBudget database (all required tables and columns present) before any
+  Import Database write touches the active database.
+
+**`resources`** (`clear_budget/shared/resources.py`):
+- Runtime asset discovery for packaged builds: locates the app icon, the Qt
+  window/taskbar icon, and the splash image across PyInstaller onefile
+  (`sys._MEIPASS`), onedir (`_internal/`), beside-the-executable, dev repo layout,
+  and the working directory, with `.ico` preferred and `.png` fallbacks. Keeps
+  icon and splash loading robust however the app was packaged.
+
 ### UI Layer
 
 **ViewModels**:
@@ -285,10 +302,17 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `main.py` - composition root; manages full session lifecycle:
   - `_session_loop()` → login → open DB → load currency → build window → show
   - `_reload_database()` → triggered by `database_replaced`; closes old DB, reopens, loads currency, rebuilds window
-  - Single-instance mutex prevents duplicate launches
-  - UI scale capped at 1.5x for 4K monitors
-  - Default window size: 33% of screen width x 88% of screen height, centred (not
-    maximised)
+  - `_build_main_window()` calls `update_card_balances_for_elapsed_dates()` so any
+    fully-elapsed months are folded into card balances at session start
+  - Cross-platform single-instance lock: a named kernel mutex on Windows, an
+    exclusive `fcntl` advisory lock on a file in `~/.clearbudget/` on macOS and Linux
+  - Screen-aware UI scale (`ui_scale.init`): factor = available screen height / 1260,
+    capped at 1.5x on tall/4K displays and floored at 0.5x, so the UI scales *down*
+    on short displays such as a 13in MacBook
+  - Default window geometry: 33% of available width x 92% of available height,
+    centred, with absolute minimum floors (860 x 780 logical points, capped to the
+    available screen) so the multi-column Bills/Income tables stay readable on small
+    laptops
 
 **Theme** (`dark_theme.py`):
 - Applied at `QApplication` level - covers all windows and dialogs
@@ -377,6 +401,38 @@ module-level symbol in `shared.currency`. `Amount.__str__` and `fmt()` both call
 without any additional wiring. On currency change (File > Preferences), the new code is
 saved to the DB, `set_currency()` is called, and `database_replaced` is emitted to
 rebuild the window with updated labels.
+
+## Cross-Platform Support and Packaging
+
+Clear Budget is a single PySide6 codebase that ships as a native package on
+Windows, macOS and Linux. The application layers carry no OS-specific logic;
+platform differences are isolated to a few well-defined seams:
+
+- **Single-instance lock**: per-OS implementation in `main.py` (named kernel mutex
+  on Windows, `fcntl` advisory file lock on macOS and Linux).
+- **Data directory**: `Config.app_dir()` is `~/.clearbudget/` on every platform;
+  all databases and the lock file live there.
+- **File-dialog defaults**: `ui_paths` uses Qt `QStandardPaths`, so dialogs open
+  in the correct per-OS location.
+- **Runtime assets**: `shared/resources.py` discovers icons and the splash image
+  across frozen (PyInstaller) and source layouts.
+- **Display scaling**: `ui_scale` adapts the UI to the screen, scaling down on
+  small laptops and capping growth on 4K.
+- **Conditional dependencies**: Windows-only packages (`pywin32`) are guarded by
+  environment markers in the requirements files.
+
+Each platform produces one distributable artefact from this shared codebase:
+
+| Platform | Built by | Produces |
+|----------|----------|----------|
+| Windows | `buildexe.py` (PyInstaller) then `buildinstaller.py` | `ClearBudgetSetup.exe`, a single-file per-user installer |
+| macOS | `builddmg.py` | `clearbudget.dmg` (signed and notarized when Apple credentials are configured) |
+| Linux | `build_flatpak.sh` (+ `cleanup_flatpak.sh`) | `clearbudget.flatpak`, on the Freedesktop runtime |
+
+The Windows installer is itself a small PySide6 application under `installer/`
+(with its own `cli`, `ops`, `state`, `ui`, and payload-builder modules). It wraps
+the PyInstaller bundle into the per-user setup executable and is a build and
+distribution tool, kept separate from the runtime application described above.
 
 ## Testing Strategy
 
