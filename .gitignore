@@ -251,3 +251,15 @@ installer/payload/
 
 # Local release-notes scratchpad (not for version control)
 NOTES.md
+
+# macOS Finder metadata
+.DS_Store
+**/.DS_Store
+
+# Local admin scratchpad (not for version control)
+cb-admin.txt
+
+# macOS DMG build outputs (builddmg.py)
+*.dmg
+_dmg_staging/
+_clearbudget_rw.dmg

@@ -50,15 +50,57 @@ def _find_runtime_icon() -> Path | None:
 
 
 _MUTEX_NAME = "Global\\ClearBudget_SingleInstance"
+_LOCK_FILENAME = "clearbudget.lock"
+
+# Win32 GetLastError code returned by CreateMutexW when the named mutex already
+# exists (i.e. another instance is running).
+_WIN_ERROR_ALREADY_EXISTS = 183
+
+# Default main-window geometry, expressed as a fraction of the available screen
+# area.  The fractions keep the window compact on large monitors (e.g. a 34in
+# widescreen); the minimum floors below guarantee the multi-column Bills/Income
+# tables stay readable on small displays such as a 13in MacBook.
+_WINDOW_WIDTH_FRACTION = 0.33
+_WINDOW_HEIGHT_FRACTION = 0.92
+
+# Absolute floors in logical screen points (device-independent, so NOT scaled by
+# the UI factor).  These bind only on small screens where the fractional size
+# would clip table columns; on large screens the fractions already exceed them
+# and the window keeps its compact proportions.  Both are always capped to the
+# available screen area so the window never exceeds the display.
+_MIN_WINDOW_WIDTH_PT = 860
+_MIN_WINDOW_HEIGHT_PT = 780
 
 
-def _acquire_single_instance_mutex():
-    """Return a Windows mutex handle, or None if another instance is running."""
-    handle = ctypes.windll.kernel32.CreateMutexW(None, True, _MUTEX_NAME)
-    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
-        ctypes.windll.kernel32.CloseHandle(handle)
+def _acquire_single_instance_lock():
+    """Acquire a single-instance lock for this process.
+
+    Returns an opaque handle that the caller must keep alive for the lifetime
+    of the application; the lock is released automatically when the process
+    exits or the handle is dropped.  Returns None if another instance already
+    holds the lock.
+
+    Windows uses a named kernel mutex.  POSIX platforms (macOS, Linux) use an
+    exclusive advisory lock on a file in the application directory, since
+    ctypes.windll exists only on Windows.
+    """
+    if sys.platform == "win32":
+        handle = ctypes.windll.kernel32.CreateMutexW(None, True, _MUTEX_NAME)
+        if ctypes.windll.kernel32.GetLastError() == _WIN_ERROR_ALREADY_EXISTS:
+            ctypes.windll.kernel32.CloseHandle(handle)
+            return None
+        return handle
+
+    import fcntl
+
+    Config.app_dir().mkdir(parents=True, exist_ok=True)
+    lock_file = open(Config.app_dir() / _LOCK_FILENAME, "w")
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        lock_file.close()
         return None
-    return handle
+    return lock_file
 
 
 def _run_login_flow(user_store: UserStore) -> User | None:
@@ -131,8 +173,8 @@ def main() -> int:
     """Initialize application and start event loop."""
     app = QApplication([])
 
-    _mutex = _acquire_single_instance_mutex()
-    if _mutex is None:
+    _instance_lock = _acquire_single_instance_lock()
+    if _instance_lock is None:
         QMessageBox.warning(None, "ClearBudget", "ClearBudget is already running.")
         return 1
 
@@ -163,8 +205,14 @@ def main() -> int:
             icon = QIcon(str(icon_path))
             if not icon.isNull():
                 window.setWindowIcon(icon)
-        _restore_w = int(_avail_w * 0.33)
-        _restore_h = int(_avail_h * 0.88)
+        _restore_w = min(
+            max(int(_avail_w * _WINDOW_WIDTH_FRACTION), _MIN_WINDOW_WIDTH_PT),
+            _avail_w,
+        )
+        _restore_h = min(
+            max(int(_avail_h * _WINDOW_HEIGHT_FRACTION), _MIN_WINDOW_HEIGHT_PT),
+            _avail_h,
+        )
         _restore_x = _avail.x() + (_avail_w - _restore_w) // 2
         _restore_y = _avail.y() + (_avail_h - _restore_h) // 2
         window.setGeometry(_restore_x, _restore_y, _restore_w, _restore_h)

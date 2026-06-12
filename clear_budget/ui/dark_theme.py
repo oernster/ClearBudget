@@ -2,18 +2,38 @@
 
 from __future__ import annotations
 
+from PySide6.QtGui import QFontDatabase
+
 from clear_budget.ui import ui_scale
 
 SCROLLBAR_WIDTH_PX = 8
 
+# Generic CSS family used as a final backstop if the platform reports no
+# resolvable UI font name.
+_FALLBACK_FONT_FAMILY = "sans-serif"
+
+
+def _ui_font_family() -> str:
+    """Return the native UI font family for the current platform.
+
+    Uses Qt's resolved system UI font so the app matches each desktop instead
+    of hardcoding a Windows-only face: Segoe UI on Windows, the San Francisco
+    system font on macOS, and the desktop default (e.g. Ubuntu, Noto Sans,
+    DejaVu Sans) on Debian/Ubuntu Linux.  Requires a running QApplication,
+    which the composition root creates before applying this stylesheet.
+    """
+    family = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont).family()
+    return family or _FALLBACK_FONT_FAMILY
+
 
 def get_dark_qss() -> str:
     base_pt = round(14 * ui_scale.factor())
+    font_family = _ui_font_family()
     return f"""
 QWidget {{
     background-color: #0a0a0d;
     color: #e5e7eb;
-    font-family: 'Segoe UI';
+    font-family: '{font_family}', {_FALLBACK_FONT_FAMILY};
     font-size: {base_pt}pt;
 }}
 

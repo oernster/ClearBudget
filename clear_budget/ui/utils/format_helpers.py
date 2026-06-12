@@ -177,12 +177,14 @@ def build_centered_nav_header(
     The nav cluster lives inside a bordered "navTray" widget that is inset from
     the tab edges and floats with a gap above and below. The tray pads itself
     symmetrically top and bottom so the cluster stays vertically centred inside
-    the border. `trailing_widget`, if given, is placed at the right edge on the
-    same line as the nav cluster (so their buttons align vertically); a balancing
-    spacer of equal width is added on the left so the nav cluster stays centred
-    within the tray instead of being pushed off-centre by it.
+    the border. The cluster is laid out in the centre column of a three-column
+    grid whose outer columns carry equal stretch, so it sits at the exact tray
+    midpoint on every tab. `trailing_widget`, if given, is placed in the right
+    column (so its button aligns vertically with the nav cluster) without moving
+    the cluster, since the centre column's position depends only on the equal
+    outer-column stretch, not on the trailing widget's width.
     """
-    from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
+    from PySide6.QtWidgets import QWidget, QGridLayout, QVBoxLayout
     from PySide6.QtCore import Qt
     from clear_budget.ui import ui_scale
 
@@ -200,19 +202,30 @@ def build_centered_nav_header(
         f"#navTray {{ border: 1px solid {NAV_TRAY_BORDER_COLOR};"
         f" border-radius: {NAV_TRAY_BORDER_RADIUS_PX}px; }}"
     )
-    row = QHBoxLayout(tray)
+    # Three-column grid: the outer columns carry equal stretch, so the centre
+    # column (the nav cluster) is always positioned at the exact midpoint of the
+    # tray regardless of whether a trailing widget is present. This keeps the
+    # cluster in the identical horizontal position on every tab; the previous
+    # stretch-plus-spacer approach drifted by a pixel or two between the tab
+    # with a trailing button and those without it.
+    row = QGridLayout(tray)
     edge = ui_scale.px(NAV_HEADER_EDGE_PADDING)
     vpad = ui_scale.px(NAV_HEADER_V_PADDING)
     row.setContentsMargins(edge, vpad, edge, vpad)
+    row.setHorizontalSpacing(0)
+    row.setColumnStretch(0, 1)
+    row.setColumnStretch(1, 0)
+    row.setColumnStretch(2, 1)
+    align_v = Qt.AlignmentFlag.AlignVCenter
+    row.addWidget(nav_center, 0, 1, Qt.AlignmentFlag.AlignHCenter | align_v)
     if trailing_widget is not None:
+        # A left balance of equal width keeps both outer columns matched even
+        # when space is tight, so the centre column never gets squeezed off
+        # the midpoint.
         left_balance = QWidget()
         left_balance.setFixedWidth(trailing_widget.sizeHint().width())
-        row.addWidget(left_balance, 0)
-    row.addStretch(1)
-    row.addWidget(nav_center, 0)
-    row.addStretch(1)
-    if trailing_widget is not None:
-        row.addWidget(trailing_widget, 0)
+        row.addWidget(left_balance, 0, 0, Qt.AlignmentFlag.AlignLeft | align_v)
+        row.addWidget(trailing_widget, 0, 2, Qt.AlignmentFlag.AlignRight | align_v)
 
     # Full-width header that insets the tray from the tab edges and lets it float
     # with a symmetric gap above and below, keeping the cluster centred in the

@@ -1,5 +1,6 @@
 """About and Licence dialogs for ClearBudget."""
 
+import sys
 from pathlib import Path
 
 from PySide6.QtWidgets import (
@@ -28,6 +29,40 @@ def _resolve_about_icon() -> Path | None:
 
 _ICON_PATH: Path | None = _resolve_about_icon()
 
+# True only on Windows, where pywin32 is an actual runtime dependency. On macOS
+# and Linux it is neither bundled nor used, so its attribution is omitted there.
+_IS_WINDOWS = sys.platform == "win32"
+
+# Open source credits as discrete HTML <li> items so platform-specific entries
+# (pywin32) can be filtered, and so no stray source comments leak into the
+# rendered dialog text.
+_CREDITS: list[str] = [
+    "<li><b>Python</b> - Copyright &copy; 2001&ndash;2025 Python Software "
+    "Foundation. Licensed under the PSF Licence.</li>",
+    "<li><b>PySide6 (Qt for Python)</b> - Copyright &copy; The Qt Company "
+    "Ltd. Licensed under LGPL-3.0.</li>",
+    "<li><b>SQLite</b> - Dedicated to the public domain by D. Richard Hipp "
+    "and contributors.</li>",
+    "<li><b>bcrypt</b> - Copyright &copy; Nate Lawson, Perry Metzger and "
+    "contributors. Licensed under the Apache Licence 2.0.</li>",
+    "<li><b>pytest</b> - Copyright &copy; 2004&ndash;2025 Holger Krekel and "
+    "pytest contributors. Licensed under the MIT Licence.</li>",
+    "<li><b>black</b> - Copyright &copy; 2018&ndash;2025 Łukasz Langa and "
+    "contributors. Licensed under the MIT Licence.</li>",
+]
+if _IS_WINDOWS:
+    _CREDITS.append(
+        "<li><b>pywin32</b> - Copyright &copy; Mark Hammond. Licensed under "
+        "the PSF Licence.</li>"
+    )
+_CREDITS.append(
+    "<li><b>PyInstaller</b> - Copyright &copy; 2010&ndash;2025 PyInstaller "
+    "contributors. Licensed under GPL-2.0 with a bootloader exception for "
+    "bundled applications.</li>"
+)
+
+_CREDITS_HTML = "\n".join(_CREDITS)
+
 _ABOUT_TEXT = f"""\
 <h2>Clear Budget</h2>
 <p><b>Personal Budget Planner</b></p>
@@ -39,26 +74,13 @@ _ABOUT_TEXT = f"""\
 <p>Clear Budget is built on the shoulders of the following open source projects
 and their communities:</p>
 <ul>
-  <li><b>Python</b> - Copyright &copy; 2001&ndash;2025 Python Software Foundation.
-      Licensed under the PSF Licence.</li>
-  <li><b>PySide6 (Qt for Python)</b> - Copyright &copy; The Qt Company Ltd.
-      Licensed under LGPL-3.0.</li>
-  <li><b>SQLite</b> - Dedicated to the public domain by D. Richard Hipp and contributors.</li>  # noqa: E501
-  <li><b>bcrypt</b> - Copyright &copy; Nate Lawson, Perry Metzger and contributors.  # noqa: E501
-      Licensed under the Apache Licence 2.0.</li>
-  <li><b>pytest</b> - Copyright &copy; 2004&ndash;2025 Holger Krekel and pytest contributors.  # noqa: E501
-      Licensed under the MIT Licence.</li>
-  <li><b>black</b> - Copyright &copy; 2018&ndash;2025 Łukasz Langa and contributors.  # noqa: E501
-      Licensed under the MIT Licence.</li>
-  <li><b>pywin32</b> - Copyright &copy; Mark Hammond. Licensed under the PSF Licence.</li>  # noqa: E501
-  <li><b>PyInstaller</b> - Copyright &copy; 2010&ndash;2025 PyInstaller contributors.  # noqa: E501
-      Licensed under GPL-2.0 with a bootloader exception for bundled applications.</li>
+{_CREDITS_HTML}
 </ul>
 <p>My thanks to the Python community for providing an outstanding ecosystem
 that makes projects like this possible.</p>
 """
 
-_LGPL3_NOTICE = (
+_LGPL3_NOTICE_HEAD = (
     "GNU LESSER GENERAL PUBLIC LICENCE\n"
     "Version 3, 29 June 2007\n"
     "\n"
@@ -87,30 +109,31 @@ _LGPL3_NOTICE = (
     "\n"
     "THIRD-PARTY LIBRARY LICENCES\n"
     "\n"
+)
+
+# Third-party licence blocks, joined by a blank line. pywin32 is included only
+# on Windows so the notice matches what is actually shipped on each platform.
+_THIRD_PARTY_LICENCES: list[str] = [
     "PySide6 (Qt for Python) - LGPL-3.0\n"
-    "  https://www.gnu.org/licenses/lgpl-3.0.html\n"
-    "\n"
+    "  https://www.gnu.org/licenses/lgpl-3.0.html\n",
     "Python Standard Library - PSF Licence\n"
-    "  https://docs.python.org/3/license.html\n"
-    "\n"
-    "SQLite - Public Domain\n"
-    "  https://www.sqlite.org/copyright.html\n"
-    "\n"
-    "bcrypt - Apache Licence 2.0\n"
-    "  https://www.apache.org/licenses/LICENSE-2.0\n"
-    "\n"
-    "pytest - MIT Licence\n"
-    "  https://opensource.org/licenses/MIT\n"
-    "\n"
-    "black - MIT Licence\n"
-    "  https://opensource.org/licenses/MIT\n"
-    "\n"
-    "pywin32 - PSF Licence\n"
-    "  https://github.com/mhammond/pywin32/blob/main/LICENCE.txt\n"
-    "\n"
+    "  https://docs.python.org/3/license.html\n",
+    "SQLite - Public Domain\n  https://www.sqlite.org/copyright.html\n",
+    "bcrypt - Apache Licence 2.0\n  https://www.apache.org/licenses/LICENSE-2.0\n",
+    "pytest - MIT Licence\n  https://opensource.org/licenses/MIT\n",
+    "black - MIT Licence\n  https://opensource.org/licenses/MIT\n",
+]
+if _IS_WINDOWS:
+    _THIRD_PARTY_LICENCES.append(
+        "pywin32 - PSF Licence\n"
+        "  https://github.com/mhammond/pywin32/blob/main/LICENCE.txt\n"
+    )
+_THIRD_PARTY_LICENCES.append(
     "PyInstaller - GPL-2.0 with bootloader exception\n"
     "  https://pyinstaller.org/en/stable/license.html\n"
 )
+
+_LGPL3_NOTICE = _LGPL3_NOTICE_HEAD + "\n".join(_THIRD_PARTY_LICENCES)
 
 
 class AboutDialog(QDialog):
