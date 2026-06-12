@@ -9,13 +9,12 @@ from PySide6.QtWidgets import (
     QLabel,
     QHeaderView,
     QSizePolicy,
-    QWidget,
 )
 from PySide6.QtCore import Qt
 
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
-    build_nav_month_widget,
+    build_centered_nav_header,
     fmt,
 )
 from clear_budget.ui import ui_scale
@@ -28,26 +27,18 @@ class MonthViewBuilderMixin:
 
     def _build_header_section(self, layout: QVBoxLayout) -> tuple:
         header_layout = QVBoxLayout()
-        nav_layout = QHBoxLayout()
         self.prev_btn = QPushButton("← Previous")
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         next_btn = QPushButton("Next →")
         next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.archive_btn = QPushButton("Archive Month")
         _ym = self.view_model.current_month
-        _nav_center, self.month_label = build_nav_month_widget(
+        self.nav_header, self.month_label = build_centered_nav_header(
             f"{MONTH_NAMES[_ym.month]} {_ym.year}",
             prev_btn=self.prev_btn,
             next_btn=next_btn,
+            trailing_widget=self.archive_btn,
         )
-        _left_spacer = QWidget()
-        _left_spacer.setFixedWidth(self.archive_btn.sizeHint().width())
-        nav_layout.addWidget(_left_spacer)
-        nav_layout.addStretch(1)
-        nav_layout.addWidget(_nav_center, 0)
-        nav_layout.addStretch(1)
-        nav_layout.addWidget(self.archive_btn)
-        header_layout.addLayout(nav_layout)
 
         self.solvency_hint_label = QLabel(
             "See the Solvency tab for full balance projections."

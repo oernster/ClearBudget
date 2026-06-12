@@ -9,7 +9,11 @@ from clear_budget.domain.services._prorating import (
     days_in_month,
     prorate_remaining_pence,
 )
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES, fmt
+from clear_budget.ui.utils.format_helpers import (
+    MONTH_NAMES,
+    apply_nav_label_color,
+    fmt,
+)
 from clear_budget.ui import ui_scale
 
 
@@ -287,9 +291,7 @@ class SolvencyPanelDisplayMixin:
         )
 
         current_month_color = self._health_color(report.balance_pence, m1_drain)
-        self.month_label.setStyleSheet(
-            ui_scale.style(
-                f"font-size: 20px; font-weight: bold;"
-                f" padding: 10px; color: {current_month_color};"
-            )
-        )
+        apply_nav_label_color(self.month_label, current_month_color)
+        # Solvency is the single source of truth for the nav label colour;
+        # broadcast it so the other tabs' month/year labels match.
+        self.month_label_color_changed.emit(current_month_color)

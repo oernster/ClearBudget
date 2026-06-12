@@ -18,7 +18,10 @@ from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 from clear_budget.ui import ui_scale
-from clear_budget.ui.utils.format_helpers import build_nav_month_widget
+from clear_budget.ui.utils.format_helpers import (
+    apply_nav_label_color,
+    build_centered_nav_header,
+)
 from clear_budget.ui.views._credit_card_view_loaders import (
     CreditCardViewLoaderMixin,
     _PROJECTION_MONTHS,
@@ -46,26 +49,13 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         """Build credit card view layout."""
         layout = QVBoxLayout()
 
-        nav_layout = QHBoxLayout()
         self.prev_btn = QPushButton("← Previous")
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.next_btn = QPushButton("Next →")
         self.next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        _nav_center, self.month_label = build_nav_month_widget("")
-        left_group = QWidget()
-        left_lo = QHBoxLayout(left_group)
-        left_lo.setContentsMargins(0, 0, 0, 0)
-        left_lo.addWidget(self.prev_btn)
-        left_lo.addStretch()
-        right_group = QWidget()
-        right_lo = QHBoxLayout(right_group)
-        right_lo.setContentsMargins(0, 0, 0, 0)
-        right_lo.addStretch()
-        right_lo.addWidget(self.next_btn)
-        nav_layout.addWidget(left_group, 1)
-        nav_layout.addWidget(_nav_center, 0)
-        nav_layout.addWidget(right_group, 1)
-        layout.addLayout(nav_layout)
+        self.nav_header, self.month_label = build_centered_nav_header(
+            "", prev_btn=self.prev_btn, next_btn=self.next_btn
+        )
         self._refresh_month_label()
 
         cards_group = QGroupBox("Credit Cards")
@@ -123,6 +113,10 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         self.month_label.setText(
             f"{MONTH_NAMES[self.current_month.month]} {self.current_month.year}"
         )
+
+    def set_nav_label_color(self, color: str) -> None:
+        """Recolour the nav month label to match the Solvency tab."""
+        apply_nav_label_color(self.month_label, color)
 
     def _get_status_text(self, utilization: float) -> str:
         """Get status text based on card utilization."""

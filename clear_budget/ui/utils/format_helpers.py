@@ -79,6 +79,30 @@ def _load_cropped_icon_pixmap():
     return _ICON_PIXMAP_CACHE
 
 
+# Neutral colour for a nav month/year label before any solvency-driven colour
+# is applied. The Solvency tab overrides this with a health colour and
+# broadcasts it so every tab's nav label stays consistent.
+NAV_LABEL_DEFAULT_COLOR = "#9ca3af"
+
+
+def _nav_label_style(color: str) -> str:
+    """Return the standard nav month/year label stylesheet in `color`.
+
+    The base style (size/weight/padding) is fixed; only the colour varies, so
+    a label can be recoloured without dropping its other properties.
+    """
+    from clear_budget.ui import ui_scale
+
+    return ui_scale.style(
+        f"font-size: 20px; font-weight: bold; padding: 10px; color: {color};"
+    )
+
+
+def apply_nav_label_color(label, color: str) -> None:
+    """Recolour a nav month/year label, preserving its base style."""
+    label.setStyleSheet(_nav_label_style(color))
+
+
 def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
     """Return (QWidget, QLabel) - centered icon + month label for nav rows.
 
@@ -87,7 +111,6 @@ def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
     """
     from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel
     from PySide6.QtCore import Qt
-    from clear_budget.ui import ui_scale
 
     container = QWidget()
     layout = QHBoxLayout(container)
@@ -112,11 +135,7 @@ def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
         layout.addWidget(icon_lbl)
 
     month_lbl = QLabel(initial_text)
-    month_lbl.setStyleSheet(
-        ui_scale.style(
-            "font-size: 20px; font-weight: bold; padding: 10px; color: #9ca3af;"
-        )
-    )
+    month_lbl.setStyleSheet(_nav_label_style(NAV_LABEL_DEFAULT_COLOR))
     month_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
     layout.addWidget(month_lbl)
 
@@ -124,6 +143,87 @@ def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
         layout.addWidget(next_btn)
 
     return container, month_lbl
+
+
+# Symmetric vertical padding (unscaled px) above and below the nav row, so the
+# prev/next buttons and the month/year label sit vertically centred in the tray
+# rather than jammed against the top edge of each tab.
+NAV_HEADER_V_PADDING = 14
+# Left/right inset so an optional trailing button (e.g. Archive Month) does not
+# sit flush against the tab edge. Applied symmetrically to keep centring intact.
+NAV_HEADER_EDGE_PADDING = 10
+
+# Subtle bordered "tray" around the nav cluster, matching the dark_theme group
+# boxes (same colour and corner radius). The border width/radius stay unscaled
+# so the tray matches those group boxes at every UI scale; the layout insets
+# below are scaled via ui_scale.px like the rest of the nav header.
+NAV_TRAY_BORDER_COLOR = "#3a4156"
+NAV_TRAY_BORDER_RADIUS_PX = 6
+# Inset the tray from the tab edges so its sides line up with the content margin.
+NAV_TRAY_EDGE_INSET = 11
+# Gap above and below the tray so it floats between the tabs and the content.
+NAV_TRAY_FLOAT_MARGIN = 8
+
+
+def build_centered_nav_header(
+    initial_text: str, prev_btn=None, next_btn=None, trailing_widget=None
+):
+    """Return (QWidget, QLabel): the nav cluster centred within a full-width row.
+
+    The returned widget is meant to be placed OUTSIDE the scroll area (see
+    ScrollableTab), so it spans the full tab width and centres identically on
+    every tab, unaffected by that tab's scrollbar gutter or content overflow.
+
+    The nav cluster lives inside a bordered "navTray" widget that is inset from
+    the tab edges and floats with a gap above and below. The tray pads itself
+    symmetrically top and bottom so the cluster stays vertically centred inside
+    the border. `trailing_widget`, if given, is placed at the right edge on the
+    same line as the nav cluster (so their buttons align vertically); a balancing
+    spacer of equal width is added on the left so the nav cluster stays centred
+    within the tray instead of being pushed off-centre by it.
+    """
+    from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
+    from PySide6.QtCore import Qt
+    from clear_budget.ui import ui_scale
+
+    nav_center, month_lbl = build_nav_month_widget(
+        initial_text, prev_btn=prev_btn, next_btn=next_btn
+    )
+
+    # Bordered tray. WA_StyledBackground is required for a plain QWidget to paint
+    # a stylesheet border; the #navTray id selector keeps the border off the
+    # child widgets.
+    tray = QWidget()
+    tray.setObjectName("navTray")
+    tray.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+    tray.setStyleSheet(
+        f"#navTray {{ border: 1px solid {NAV_TRAY_BORDER_COLOR};"
+        f" border-radius: {NAV_TRAY_BORDER_RADIUS_PX}px; }}"
+    )
+    row = QHBoxLayout(tray)
+    edge = ui_scale.px(NAV_HEADER_EDGE_PADDING)
+    vpad = ui_scale.px(NAV_HEADER_V_PADDING)
+    row.setContentsMargins(edge, vpad, edge, vpad)
+    if trailing_widget is not None:
+        left_balance = QWidget()
+        left_balance.setFixedWidth(trailing_widget.sizeHint().width())
+        row.addWidget(left_balance, 0)
+    row.addStretch(1)
+    row.addWidget(nav_center, 0)
+    row.addStretch(1)
+    if trailing_widget is not None:
+        row.addWidget(trailing_widget, 0)
+
+    # Full-width header that insets the tray from the tab edges and lets it float
+    # with a symmetric gap above and below, keeping the cluster centred in the
+    # region between the tabs and the first content line.
+    header = QWidget()
+    outer = QVBoxLayout(header)
+    inset = ui_scale.px(NAV_TRAY_EDGE_INSET)
+    floatm = ui_scale.px(NAV_TRAY_FLOAT_MARGIN)
+    outer.setContentsMargins(inset, floatm, inset, floatm)
+    outer.addWidget(tray)
+    return header, month_lbl
 
 
 def fmt(amount: "int | float") -> str:

@@ -3,7 +3,6 @@
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -14,7 +13,10 @@ from PySide6.QtCore import Qt
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
-from clear_budget.ui.utils.format_helpers import build_nav_month_widget
+from clear_budget.ui.utils.format_helpers import (
+    apply_nav_label_color,
+    build_centered_nav_header,
+)
 
 
 class ArchiveView(QWidget):
@@ -34,29 +36,13 @@ class ArchiveView(QWidget):
         """Build archive view layout."""
         layout = QVBoxLayout()
 
-        nav_layout = QHBoxLayout()
         self.prev_year_btn = QPushButton("← Previous")
         self.prev_year_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.next_year_btn = QPushButton("Next →")
         self.next_year_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._nav_center, self.year_label = build_nav_month_widget("")
-
-        left_group = QWidget()
-        left_lo = QHBoxLayout(left_group)
-        left_lo.setContentsMargins(0, 0, 0, 0)
-        left_lo.addWidget(self.prev_year_btn)
-        left_lo.addStretch()
-
-        right_group = QWidget()
-        right_lo = QHBoxLayout(right_group)
-        right_lo.setContentsMargins(0, 0, 0, 0)
-        right_lo.addStretch()
-        right_lo.addWidget(self.next_year_btn)
-
-        nav_layout.addWidget(left_group, 1)
-        nav_layout.addWidget(self._nav_center, 0)
-        nav_layout.addWidget(right_group, 1)
-        layout.addLayout(nav_layout)
+        self.nav_header, self.year_label = build_centered_nav_header(
+            "", prev_btn=self.prev_year_btn, next_btn=self.next_year_btn
+        )
 
         self.archive_table = QTableWidget()
         self.archive_table.setColumnCount(5)
@@ -120,6 +106,10 @@ class ArchiveView(QWidget):
         self.prev_year_btn.setEnabled(idx > 0)
         self.next_year_btn.setEnabled(0 <= idx < len(self.available_years) - 1)
         self.load_history(year_months)
+
+    def set_nav_label_color(self, color: str) -> None:
+        """Recolour the nav year label to match the Solvency tab."""
+        apply_nav_label_color(self.year_label, color)
 
     def _on_prev_year(self) -> None:
         idx = self.available_years.index(self.current_year)

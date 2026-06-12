@@ -3,16 +3,14 @@
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
     QLabel,
     QProgressBar,
     QPushButton,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
-from clear_budget.ui.utils.format_helpers import build_nav_month_widget, fmt
-from clear_budget.ui.dark_theme import SCROLLBAR_WIDTH_PX
+from clear_budget.ui.utils.format_helpers import build_centered_nav_header, fmt
 from clear_budget.ui import ui_scale
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
 from clear_budget.ui.views._solvency_panel_narratives import (
@@ -22,6 +20,10 @@ from clear_budget.ui.views._solvency_panel_narratives import (
 
 class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWidget):
     """Displays account solvency status with three critical sections."""
+
+    # Broadcasts the health colour applied to the month label so the other tabs'
+    # nav labels can match it (Solvency is the single source of truth).
+    month_label_color_changed = Signal(str)
 
     def __init__(self, view_model: SolvencyViewModel, read_only: bool = False) -> None:
         """Initialize solvency panel widget."""
@@ -35,24 +37,18 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
         """Build solvency panel layout with three sections."""
         layout = QVBoxLayout()
 
-        nav_layout = QHBoxLayout()
         self.prev_btn = QPushButton("← Previous")
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.next_btn = QPushButton("Next →")
         self.next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        _nav_center, self.month_label = build_nav_month_widget(
+        self.nav_header, self.month_label = build_centered_nav_header(
             "May 2026", prev_btn=self.prev_btn, next_btn=self.next_btn
         )
-        nav_layout.addSpacing(SCROLLBAR_WIDTH_PX)
-        nav_layout.addStretch(1)
-        nav_layout.addWidget(_nav_center, 0)
-        nav_layout.addStretch(1)
-        layout.addLayout(nav_layout)
 
         # SECTION 1: OVERDRAFT ALERT (Top - Prominent)
         alert_label = QLabel("Overdraft Status")
         alert_label.setStyleSheet(
-            ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 10px;")
+            ui_scale.style("font-weight: bold; font-size: 17px;")
         )
         layout.addWidget(alert_label)
 

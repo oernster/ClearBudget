@@ -42,6 +42,26 @@ class ScrollableTab(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
 
+        # A content view may expose a `nav_header` widget (the month/year
+        # navigation row). Hoist it ABOVE the scroll area so it spans the full
+        # tab width and centres identically on every tab, unaffected by this
+        # tab's vertical/horizontal scrollbar gutter or content overflow.
+        nav_header = getattr(content, "nav_header", None)
+        if nav_header is not None:
+            outer.addWidget(nav_header)
+            # The nav header owns the vertical gap above the content: zero the
+            # content layout's TOP margin so the nav header's symmetric padding
+            # is the ONLY space between the line below the tabs and the first
+            # content line. That leaves the nav cluster vertically centred in
+            # that tray (region = vpad + cluster + vpad, so the cluster centre
+            # sits at half the region regardless of the padding value).
+            content_layout = content.layout()
+            if content_layout is not None:
+                cm = content_layout.contentsMargins()
+                content_layout.setContentsMargins(
+                    cm.left(), 0, cm.right(), cm.bottom()
+                )
+
         self._scroll = QScrollArea()
         self._scroll.setWidget(content)
         self._scroll.setWidgetResizable(True)

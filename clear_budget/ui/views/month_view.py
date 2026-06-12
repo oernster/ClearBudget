@@ -13,7 +13,11 @@ from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.widgets.bill_dialog import BillDialog
 from clear_budget.ui.widgets.income_dialog import IncomeDialog
 from clear_budget.ui.widgets.balance_dialog import BalanceDialog
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES, fmt
+from clear_budget.ui.utils.format_helpers import (
+    MONTH_NAMES,
+    apply_nav_label_color,
+    fmt,
+)
 from clear_budget.ui import ui_scale
 from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
 from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
@@ -92,6 +96,10 @@ class MonthView(
     def _update_month_label(self, year_month) -> None:
         self.month_label.setText(f"{MONTH_NAMES[year_month.month]} {year_month.year}")
         self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def set_nav_label_color(self, color: str) -> None:
+        """Recolour the nav month label to match the Solvency tab."""
+        apply_nav_label_color(self.month_label, color)
 
     def _toggle_sort(self, current_col: int, current_asc: bool, new_col: int) -> tuple:
         return (new_col, not current_asc) if current_col == new_col else (new_col, True)

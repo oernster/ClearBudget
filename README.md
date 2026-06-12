@@ -35,7 +35,7 @@ detailed solvency analysis. Supports multiple user accounts with secure authenti
 - Dynamic payment methods: assign bills to bank account or specific credit cards
 - Database export and validated import (File menu)
 - Display currency selection - 25 currencies covering English-speaking countries (File > Preferences)
-- Dark theme UI with scrollable tabs and scroll position indicators
+- Dark theme UI with scrollable tabs and scroll position indicators; a consistent, centred month/year navigation tray on every tab, with the date colour-coded by financial health (green/amber/red)
 - Built-in "How It Works" help screen explaining pro-rating, balances and archiving
 - SQLite storage: per-user budget database + shared users database
 

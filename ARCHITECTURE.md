@@ -210,6 +210,11 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `fmt(pence: int)` → `"{symbol}{pence/100:.2f}"`
 - `fmt(pounds: float)` → `"{symbol}{pounds:.2f}"`
 - Used throughout UI for all inline currency formatting not going through `Amount.__str__`
+- `build_centered_nav_header(...)` - the shared month/year navigation tray used
+  by all four tabs (bordered, centred, hoisted above the scroll area by
+  `ScrollableTab`). `apply_nav_label_color` / `_nav_label_style` recolour the
+  label; the colour is sourced from the Solvency panel's health state and
+  broadcast to every tab via `SolvencyPanel.month_label_color_changed`
 
 **`ui_paths.default_downloads_dir()`** (`clear_budget/ui/ui_paths.py`):
 - Cross-platform Downloads folder via `QStandardPaths.DownloadLocation`, falling
@@ -259,7 +264,10 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `ArchiveDetailDialog` - drill-down for a single archived month
 - `HowItWorksDialog` - Help menu explanation of pro-rating, balances, archiving
 - `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text
-- `ScrollableTab` - wraps any view in `QScrollArea` with scroll indicator buttons
+- `ScrollableTab` - wraps any view in `QScrollArea` with scroll indicator
+  buttons; also hoists the view's `nav_header` (the shared, centred month/year
+  navigation tray) above the scroll area and zeroes the content's top margin so
+  the tray stays full-width and centred on every tab
 - `_preferences_flow.py` / `_bank_account_settings_flow.py` - dialog-orchestration
   helpers extracted from `MainWindow` to stay under the LOC limit
 - `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)

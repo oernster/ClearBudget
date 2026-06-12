@@ -104,22 +104,22 @@ class MainWindow(QMainWindow):
         credit_card_view.prev_btn.clicked.connect(self.month_view_model.previous_month)
         credit_card_view.next_btn.clicked.connect(self.month_view_model.next_month)
 
-        self.month_view_model.month_changed.connect(
-            lambda ym: solvency_panel.prev_btn.setEnabled(
-                ym > self.month_view_model.base_month
+        for _nav in (solvency_panel, credit_card_view):
+            self.month_view_model.month_changed.connect(
+                lambda ym, b=_nav.prev_btn: b.setEnabled(
+                    ym > self.month_view_model.base_month
+                )
             )
-        )
-        self.month_view_model.month_changed.connect(
-            lambda ym: credit_card_view.prev_btn.setEnabled(
-                ym > self.month_view_model.base_month
-            )
-        )
 
         at_base = (
             self.month_view_model.current_month <= self.month_view_model.base_month
         )
         solvency_panel.prev_btn.setEnabled(not at_base)
         credit_card_view.prev_btn.setEnabled(not at_base)
+
+        # Solvency owns the nav-label health colour; mirror it onto every tab.
+        for _view in (month_view, credit_card_view, archive_view):
+            solvency_panel.month_label_color_changed.connect(_view.set_nav_label_color)
 
         if self.month_view_model.month_summary:
             self.solvency_view_model.update_month_summary(
