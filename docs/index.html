@@ -1,31 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
     <meta charset="utf-8">
-    <link rel="icon" href="favicon-64.png">
-
-    <title>Clear Budget - Forward-looking desktop budget planner | Runs offline</title>
-
-    <meta name="description" content="A private desktop budget planner that models forward solvency, bill timing and credit card pressure before problems arrive. Local-first, multi-user, cross-platform. No cloud.">
-    <meta name="keywords" content="budget planner, personal finance app, solvency analysis, overdraft warning, credit card tracker, offline budgeting, local budget software, cashflow projection, desktop budgeting app">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Clear Budget - Free forward-looking desktop budget planner | Offline, cross-platform</title>
+    <meta name="description" content="A free, private desktop budget planner that projects forward solvency and warns about mid-month overdrafts before they happen. Offline, multi-user, Windows, macOS and Linux.">
+    <meta name="keywords" content="budget planner, personal finance app, solvency analysis, overdraft warning, mid-month overdraft, credit card tracker, cashflow projection, offline budgeting, local budget software, free budgeting app, open source budget planner, desktop budget app, Windows macOS Linux budgeting">
     <meta name="author" content="Oliver Ernster">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="googlebot" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="https://oernster.github.io/ClearBudget/">
 
+    <!-- Theme / app identity -->
+    <meta name="theme-color" content="#0a0a0d">
+    <meta name="color-scheme" content="dark">
+    <meta name="application-name" content="Clear Budget">
+    <meta name="apple-mobile-web-app-title" content="Clear Budget">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+
+    <!-- Icons / manifest -->
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+    <link rel="sitemap" type="application/xml" href="sitemap.xml">
+
     <!-- Open Graph -->
-    <meta property="og:title" content="Clear Budget - Forward-looking desktop budget planner">
-    <meta property="og:description" content="Will the month survive? Clear Budget models forward solvency, bill timing and credit card pressure before problems arrive. Local-first and cross-platform.">
+    <meta property="og:title" content="Clear Budget - Free forward-looking desktop budget planner">
+    <meta property="og:description" content="Will the month survive? Clear Budget projects forward solvency and warns about mid-month overdrafts before they happen. Offline, cross-platform, free and open source.">
     <meta property="og:image" content="https://oernster.github.io/ClearBudget/clearbudget-512.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="Clear Budget app icon">
     <meta property="og:url" content="https://oernster.github.io/ClearBudget/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Clear Budget">
+    <meta property="og:locale" content="en_GB">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Clear Budget - Forward-looking desktop budget planner">
-    <meta name="twitter:description" content="Will the month survive? Clear Budget models forward solvency, bill timing and credit card pressure before problems arrive.">
+    <meta name="twitter:title" content="Clear Budget - Free forward-looking desktop budget planner">
+    <meta name="twitter:description" content="Will the month survive? Clear Budget projects forward solvency and warns about mid-month overdrafts before they happen. Offline and cross-platform.">
     <meta name="twitter:image" content="https://oernster.github.io/ClearBudget/clearbudget-512.png">
+    <meta name="twitter:image:alt" content="Clear Budget app icon">
 
     <style>
         :root {
@@ -178,11 +200,9 @@
             color: var(--muted);
         }
 
-        .card .tab-num {
+        #features .card h3,
+        #tabs .card h3 {
             color: var(--teal);
-            font-weight: 700;
-            font-size: 13px;
-            letter-spacing: 0.06em;
         }
 
         .arch {
@@ -208,6 +228,23 @@
 
         .prose p { color: var(--muted); margin: 0 0 14px; }
         .prose strong { color: var(--text); }
+
+        .faq {
+            max-width: 760px;
+            margin: 28px auto 0;
+            text-align: left;
+        }
+
+        .faq-item {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+        }
+
+        .faq-item h3 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+        .faq-item p { margin: 0; font-size: 14px; color: var(--muted); }
 
         footer {
             margin-top: 96px;
@@ -238,146 +275,182 @@
 
 <div class="container">
 
-    <img src="clearbudget-512.png" class="hero-icon" alt="Clear Budget app icon">
+    <header class="hero">
+        <img src="clearbudget-512.png" class="hero-icon" width="176" height="176"
+             alt="Clear Budget app icon" fetchpriority="high" decoding="async">
 
-    <div class="badge"><span class="badge-dot"></span> Windows · macOS · Linux</div>
+        <div class="badge"><span class="badge-dot"></span> Windows · macOS · Linux</div>
 
-    <h1>Clear Budget</h1>
+        <h1>Clear Budget</h1>
 
-    <div class="subtitle">
-        A private desktop budget planner built around a question, not a ledger:
-        <strong style="color:var(--text)">will the month survive?</strong>
-        It models forward solvency, bill timing and credit card pressure before problems arrive.
-    </div>
+        <p class="subtitle">
+            A private desktop budget planner built around a question, not a ledger:
+            <strong style="color:var(--text)">will the month survive?</strong>
+            It models forward solvency, bill timing and credit card pressure before problems arrive.
+        </p>
 
-    <div class="actions">
-        <a class="primary" href="https://github.com/oernster/ClearBudget/releases">Download</a>
-        <a class="secondary" href="https://github.com/oernster/ClearBudget">View source</a>
-    </div>
-
-    <div class="minor-detail">
-        Local-first. Multi-user. Your finances never leave your machine.
-    </div>
-
-    <!-- What it does -->
-    <div class="section">
-        <h2>What Clear Budget does</h2>
-        <p class="lead">Most budgeting software is retrospective. Clear Budget looks forward instead.</p>
-
-        <div class="grid">
-            <div class="card">
-                <h3>Forward solvency</h3>
-                <p>Projects the next two months and answers the only operational question that matters: will the balance hold?</p>
-            </div>
-            <div class="card">
-                <h3>Mid-month overdraft alerts</h3>
-                <p>Catches the dip when bills cluster before payday, even when the month still ends positive.</p>
-            </div>
-            <div class="card">
-                <h3>Credit card pressure</h3>
-                <p>Per-card utilisation, interest and a six-month balance projection, colour-coded by available headroom.</p>
-            </div>
-            <div class="card">
-                <h3>Bill and income timing</h3>
-                <p>Per-month skips, amount and due-day overrides, paid and received flags, and one-off entries, without touching templates.</p>
-            </div>
-            <div class="card">
-                <h3>Private by design</h3>
-                <p>Per-user isolated databases with a bcrypt sign-in and read-only viewer packages. No cloud, no account servers.</p>
-            </div>
-            <div class="card">
-                <h3>25 currencies</h3>
-                <p>Choose your currency once and every figure follows it. Defaults to GBP.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- The four tabs -->
-    <div class="section">
-        <h2>Four views, one question</h2>
-        <p class="lead">Each tab is a different angle on whether the month, and the months ahead, hold together.</p>
-
-        <div class="grid">
-            <div class="card">
-                <span class="tab-num">TAB 01</span>
-                <h3>Monthly Budget</h3>
-                <p>Bills and income for the month, with the running balance or projected month-end figure and a mid-month overdraft warning.</p>
-            </div>
-            <div class="card">
-                <span class="tab-num">TAB 02</span>
-                <h3>Solvency</h3>
-                <p>Overdraft status, a day-by-day forward projection for the next two months, and per-card utilisation bars.</p>
-            </div>
-            <div class="card">
-                <span class="tab-num">TAB 03</span>
-                <h3>Credit Cards</h3>
-                <p>One panel per card with live pro-rated balances, and a six-month projection strip across every card.</p>
-            </div>
-            <div class="card">
-                <span class="tab-num">TAB 04</span>
-                <h3>Archive</h3>
-                <p>Completed months summarised by year, with drill-down into any individual month.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Architecture -->
-    <div class="section">
-        <h2>Built like the apps I trust</h2>
-        <p class="lead">A clean, four-layer architecture with every dependency pointing inward to a pure domain. Boundaries are enforced by AST tests, 100% coverage, a 400-line file limit and a no-magic-numbers rule.</p>
-        <div class="arch">
-            <img src="architecture.svg" alt="Clear Budget clean architecture: UI, Application, Domain, Infrastructure, with dependencies pointing inward to a pure Domain, plus cross-cutting Auth and Shared layers">
-        </div>
-    </div>
-
-    <!-- Why it exists -->
-    <div class="section">
-        <h2>Why it exists</h2>
-        <div class="prose">
-            <p>
-                Most tools treat money as a flat number and answer one question after the fact:
-                <strong>where did the money go?</strong> That is the wrong question to act on.
-                The useful model is the one that surfaces a failure mode early enough to do something about it.
-            </p>
-            <p>
-                So Clear Budget tracks solvency rather than accounting. It models the operational shape of a month,
-                when income lands and when bills fall, and tells you whether the balance survives the gaps.
-            </p>
-            <p>
-                It is dogfood, in the full sense of the word: the application I open to decide whether my own month
-                holds together. The features exist because I needed them, not because they demonstrated well.
-            </p>
-        </div>
-    </div>
-
-    <!-- Runs everywhere -->
-    <div class="section">
-        <h2>Runs everywhere, stores nothing remotely</h2>
-        <p class="lead">One PySide6 codebase, native packages on all three platforms. Each build ships everything it needs.</p>
-
-        <div class="grid small">
-            <div class="card"><h3>Windows</h3><p>Per-user installer</p></div>
-            <div class="card"><h3>macOS</h3><p>Signed .dmg, tested on Sequoia</p></div>
-            <div class="card"><h3>Linux</h3><p>Flatpak</p></div>
+        <div class="actions">
+            <a class="primary" href="https://github.com/oernster/ClearBudget/releases">Download</a>
+            <a class="secondary" href="https://github.com/oernster/ClearBudget">View source</a>
         </div>
 
-        <div class="actions" style="margin-top:28px;">
-            <a class="primary" href="https://github.com/oernster/ClearBudget/releases">Get the latest release</a>
-        </div>
-    </div>
+        <p class="minor-detail">
+            Free and open source. Local-first. Multi-user. Your finances never leave your machine.
+        </p>
+    </header>
 
-    <div class="sr-only">
-        Clear Budget is a private, local-first desktop budget planner for Windows, macOS and Linux. It models
+    <main>
+
+        <!-- What it does -->
+        <section class="section" id="features" aria-labelledby="features-h">
+            <h2 id="features-h">What Clear Budget does</h2>
+            <p class="lead">Most budgeting software is retrospective. Clear Budget looks forward instead.</p>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Forward solvency</h3>
+                    <p>Projects the next two months and answers the only operational question that matters: will the balance hold?</p>
+                </div>
+                <div class="card">
+                    <h3>Mid-month overdraft alerts</h3>
+                    <p>Catches the dip when bills cluster before payday, even when the month still ends positive.</p>
+                </div>
+                <div class="card">
+                    <h3>Credit card pressure</h3>
+                    <p>Per-card utilisation, interest and a six-month balance projection, colour-coded by available headroom.</p>
+                </div>
+                <div class="card">
+                    <h3>Bill and income timing</h3>
+                    <p>Per-month skips, amount and due-day overrides, paid and received flags, and one-off entries, without touching templates.</p>
+                </div>
+                <div class="card">
+                    <h3>Private by design</h3>
+                    <p>Per-user isolated databases with a bcrypt sign-in and read-only viewer packages. No cloud, no account servers.</p>
+                </div>
+                <div class="card">
+                    <h3>25 currencies</h3>
+                    <p>Choose your currency once and every figure follows it. Defaults to GBP.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- The four tabs -->
+        <section class="section" id="tabs" aria-labelledby="tabs-h">
+            <h2 id="tabs-h">Four views, one question</h2>
+            <p class="lead">Each tab is a different angle on whether the month, and the months ahead, hold together.</p>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Monthly Budget</h3>
+                    <p>Bills and income for the month, with the running balance or projected month-end figure and a mid-month overdraft warning.</p>
+                </div>
+                <div class="card">
+                    <h3>Solvency</h3>
+                    <p>Overdraft status, a day-by-day forward projection for the next two months, and per-card utilisation bars.</p>
+                </div>
+                <div class="card">
+                    <h3>Credit Cards</h3>
+                    <p>One panel per card with live pro-rated balances, and a six-month projection strip across every card.</p>
+                </div>
+                <div class="card">
+                    <h3>Archive</h3>
+                    <p>Completed months summarised by year, with drill-down into any individual month.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture -->
+        <section class="section" id="architecture" aria-labelledby="architecture-h">
+            <h2 id="architecture-h">Built like the apps I trust</h2>
+            <p class="lead">A clean, four-layer architecture with every dependency pointing inward to a pure domain. Boundaries are enforced by AST tests, 100% coverage, a 400-line file limit and a no-magic-numbers rule.</p>
+            <div class="arch">
+                <img src="architecture.svg" width="920" height="396" loading="lazy" decoding="async"
+                     alt="Clear Budget clean architecture diagram: UI, Application, Domain and Infrastructure layers with dependencies pointing inward to a pure Domain, plus cross-cutting Auth and Shared layers">
+            </div>
+        </section>
+
+        <!-- Why it exists -->
+        <section class="section" id="why" aria-labelledby="why-h">
+            <h2 id="why-h">Why it exists</h2>
+            <div class="prose">
+                <p>
+                    Most tools treat money as a flat number and answer one question after the fact:
+                    where did the money go? <strong><em>That is the wrong question to act on</em></strong>.
+                    The useful model is the one that surfaces a failure mode early enough to do something about it.
+                </p>
+                <p>
+                    So Clear Budget tracks solvency rather than accounting. It models the operational shape of a month,
+                    when income lands and when bills fall, and tells you whether the balance survives the gaps.
+                </p>
+                <p>
+                    It is dogfood, in the full sense of the word: the application I open to decide whether my own month
+                    holds together. The features exist because I needed them, not because they demonstrated well.
+                </p>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="section" id="faq" aria-labelledby="faq-h">
+            <h2 id="faq-h">Frequently asked questions</h2>
+            <div class="faq">
+                <div class="faq-item">
+                    <h3>Is Clear Budget free?</h3>
+                    <p>Yes. Clear Budget is free and open source, released under the GNU LGPL-3.0 licence.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Does Clear Budget work offline?</h3>
+                    <p>Yes. Clear Budget is local-first and runs entirely offline. It has no cloud dependency and never sends your financial data anywhere.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Which platforms does Clear Budget run on?</h3>
+                    <p>Windows, macOS and Linux, from a single PySide6 codebase. Windows ships as an installer, macOS as a signed .dmg, and Linux as a Flatpak.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Is my financial data private?</h3>
+                    <p>Yes. Data is stored locally in isolated per-user databases on your own machine, protected by a bcrypt sign-in, and is never transmitted to any server.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>How is Clear Budget different from other budgeting apps?</h3>
+                    <p>Most budgeting apps are retrospective ledgers that tell you where the money went. Clear Budget is forward-looking: it projects solvency for the months ahead and warns about mid-month overdrafts before they happen.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Does Clear Budget support multiple users and currencies?</h3>
+                    <p>Yes. It supports multiple users with separate, isolated databases and read-only viewer packages, and 25 currencies covering English-speaking countries, defaulting to GBP.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Runs everywhere -->
+        <section class="section" id="platforms" aria-labelledby="platforms-h">
+            <h2 id="platforms-h">Runs everywhere, stores nothing remotely</h2>
+            <p class="lead">One PySide6 codebase, native packages on all three platforms. Each build ships everything it needs.</p>
+
+            <div class="grid small">
+                <div class="card"><h3>Windows</h3><p>Per-user installer</p></div>
+                <div class="card"><h3>macOS</h3><p>Signed .dmg, tested on Sequoia</p></div>
+                <div class="card"><h3>Linux</h3><p>Flatpak</p></div>
+            </div>
+
+            <div class="actions" style="margin-top:28px;">
+                <a class="primary" href="https://github.com/oernster/ClearBudget/releases">Get the latest release</a>
+            </div>
+        </section>
+
+    </main>
+
+    <p class="sr-only">
+        Clear Budget is a free, private, local-first desktop budget planner for Windows, macOS and Linux. It models
         forward solvency for the next two months, detects mid-month overdrafts when bills cluster before income,
         tracks credit card utilisation and interest with a six-month balance projection, and supports multiple
         users with bcrypt sign-in and isolated per-user databases. Built with Python and PySide6, it runs entirely
-        offline with no cloud dependency.
-    </div>
+        offline with no cloud dependency, and is open source under the LGPL-3.0 licence.
+    </p>
 
     <footer>
         Created by Oliver Ernster &nbsp;·&nbsp; Python and PySide6 &nbsp;·&nbsp;
         <a href="https://github.com/oernster/ClearBudget/blob/main/LICENSE">LGPL-3.0</a> &nbsp;·&nbsp;
-        <a href="https://github.com/oernster/ClearBudget">Source on GitHub</a>
+        <a href="https://github.com/oernster/ClearBudget">Source on GitHub</a> &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget/releases">Releases</a>
     </footer>
 
 </div>
@@ -385,24 +458,100 @@
 <script type="application/ld+json">
 {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Clear Budget",
-    "applicationCategory": "FinanceApplication",
-    "operatingSystem": "Windows, macOS, Linux",
-    "description": "A private, local-first desktop budget planner that models forward solvency, bill timing and credit card pressure before problems arrive. Multi-user with bcrypt sign-in and isolated per-user databases.",
-    "url": "https://oernster.github.io/ClearBudget/",
-    "image": "https://oernster.github.io/ClearBudget/clearbudget-512.png",
-    "author": {
-        "@type": "Person",
-        "name": "Oliver Ernster"
-    },
-    "license": "https://www.gnu.org/licenses/lgpl-3.0.html",
-    "downloadUrl": "https://github.com/oernster/ClearBudget/releases",
-    "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "GBP"
-    }
+    "@graph": [
+        {
+            "@type": "WebSite",
+            "@id": "https://oernster.github.io/ClearBudget/#website",
+            "url": "https://oernster.github.io/ClearBudget/",
+            "name": "Clear Budget",
+            "description": "A free, private, local-first desktop budget planner that projects forward solvency and warns about mid-month overdrafts before they happen.",
+            "inLanguage": "en-GB",
+            "publisher": { "@id": "https://oernster.github.io/ClearBudget/#oliver" }
+        },
+        {
+            "@type": "Person",
+            "@id": "https://oernster.github.io/ClearBudget/#oliver",
+            "name": "Oliver Ernster",
+            "url": "https://www.crankthecode.com",
+            "sameAs": [
+                "https://github.com/oernster",
+                "https://www.crankthecode.com",
+                "https://www.narratex.co.uk"
+            ]
+        },
+        {
+            "@type": "SoftwareApplication",
+            "@id": "https://oernster.github.io/ClearBudget/#app",
+            "name": "Clear Budget",
+            "alternateName": "ClearBudget",
+            "applicationCategory": "FinanceApplication",
+            "applicationSubCategory": "Personal budgeting and cashflow planning",
+            "operatingSystem": "Windows, macOS, Linux",
+            "description": "A free, private, local-first desktop budget planner that models forward solvency, bill timing and credit card pressure before problems arrive. Multi-user with bcrypt sign-in and isolated per-user databases.",
+            "url": "https://oernster.github.io/ClearBudget/",
+            "downloadUrl": "https://github.com/oernster/ClearBudget/releases",
+            "installUrl": "https://github.com/oernster/ClearBudget/releases",
+            "releaseNotes": "https://github.com/oernster/ClearBudget/releases",
+            "softwareHelp": "https://github.com/oernster/ClearBudget#readme",
+            "softwareVersion": "2.5.0",
+            "datePublished": "2026-05-02",
+            "dateModified": "2026-06-12",
+            "inLanguage": "en-GB",
+            "image": "https://oernster.github.io/ClearBudget/clearbudget-512.png",
+            "isAccessibleForFree": true,
+            "license": "https://www.gnu.org/licenses/lgpl-3.0.html",
+            "author": { "@id": "https://oernster.github.io/ClearBudget/#oliver" },
+            "creator": { "@id": "https://oernster.github.io/ClearBudget/#oliver" },
+            "publisher": { "@id": "https://oernster.github.io/ClearBudget/#oliver" },
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" },
+            "featureList": [
+                "Forward solvency projection for the next two months",
+                "Mid-month overdraft detection",
+                "Credit card utilisation, interest and six-month balance projection",
+                "Per-month bill and income overrides, skips and one-off entries",
+                "Multiple users with bcrypt sign-in and isolated per-user databases",
+                "Read-only viewer packages",
+                "25 currencies",
+                "Local-first, fully offline, no cloud dependency"
+            ]
+        },
+        {
+            "@type": "FAQPage",
+            "@id": "https://oernster.github.io/ClearBudget/#faq",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": "Is Clear Budget free?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "Yes. Clear Budget is free and open source, released under the GNU LGPL-3.0 licence." }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Does Clear Budget work offline?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "Yes. Clear Budget is local-first and runs entirely offline. It has no cloud dependency and never sends your financial data anywhere." }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Which platforms does Clear Budget run on?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "Windows, macOS and Linux, from a single PySide6 codebase. Windows ships as an installer, macOS as a signed .dmg, and Linux as a Flatpak." }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Is my financial data private?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "Yes. Data is stored locally in isolated per-user databases on your own machine, protected by a bcrypt sign-in, and is never transmitted to any server." }
+                },
+                {
+                    "@type": "Question",
+                    "name": "How is Clear Budget different from other budgeting apps?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "Most budgeting apps are retrospective ledgers that tell you where the money went. Clear Budget is forward-looking: it projects solvency for the months ahead and warns about mid-month overdrafts before they happen." }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Does Clear Budget support multiple users and currencies?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "Yes. It supports multiple users with separate, isolated databases and read-only viewer packages, and 25 currencies covering English-speaking countries, defaulting to GBP." }
+                }
+            ]
+        }
+    ]
 }
 </script>
 
