@@ -60,10 +60,11 @@
         }
 
         .hero-icon {
+            display: block;
             width: 176px;
             height: 176px;
             border-radius: 38px;
-            margin-bottom: 26px;
+            margin: 0 auto 26px;
             box-shadow: 0 26px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
         }
 
@@ -75,7 +76,8 @@
         }
 
         .badge {
-            display: inline-flex;
+            display: flex;
+            width: fit-content;
             align-items: center;
             gap: 8px;
             font-size: 12.5px;
@@ -86,7 +88,7 @@
             border: 1px solid var(--border);
             border-radius: 999px;
             padding: 6px 14px;
-            margin-bottom: 22px;
+            margin: 0 auto 22px;
         }
 
         .badge-dot {
