@@ -8,6 +8,19 @@ detailed solvency analysis. Supports multiple user accounts with secure authenti
 
 ---
 
+## Architecture
+
+<p align="center">
+  <img src="docs/architecture.svg" alt="Clear Budget clean architecture: UI, Application, Domain, Infrastructure, with dependencies pointing inward to a pure Domain" width="860">
+</p>
+
+Clear Budget uses a clean, four-layer architecture with every dependency
+pointing inward to a pure Domain that has no I/O and no framework. Layer
+boundaries are enforced automatically by AST structural tests at every test
+run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
+
+---
+
 ## Features
 
 - Multi-user login with bcrypt password hashing and recovery codes
@@ -89,6 +102,33 @@ credentials are destroyed. Non-admin users do not see the Users menu.
 
 A **read-only viewer account** can sign in to browse a snapshot of someone else's
 budget but cannot edit anything.
+
+---
+
+## Data Storage and Security
+
+Clear Budget is a local-first desktop application. All data lives on your own
+machine under `~/.clearbudget/`:
+
+- `users.db` - account records. Passwords and recovery codes are stored only as
+  bcrypt hashes, never in plain text.
+- `budget_<username>.db` - one separate database per user. Accounts cannot read
+  each other's budget data through the application.
+
+**What the login protects, and what it does not.** The username/password sign-in
+is an access-control gate for the application: it stops another person who shares
+your computer from opening the app and casually reading or editing your budget.
+That is the threat it is designed to stop, and the only one.
+
+The database files themselves are **not encrypted at rest**. A technically
+capable person with read access to your user folder can open
+`budget_<username>.db` directly with any SQLite tool and read its contents
+without going through Clear Budget at all. The bcrypt login does not prevent
+this, and is not intended to. For the common case - keeping a housemate, family
+member, or colleague from idly browsing your finances inside the app - this is
+the right level of protection. If your threat model includes a determined local
+attacker, protect the files at rest with your operating system's own encryption
+(BitLocker on Windows, FileVault on macOS, LUKS on Linux).
 
 ---
 

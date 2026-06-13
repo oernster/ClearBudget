@@ -1,0 +1,61 @@
+<svg viewBox="0 0 920 396" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Clear Budget clean architecture</title>
+<desc>Four layers left to right: UI, Application, Domain, Infrastructure, with arrows pointing inward to the pure Domain. Auth and Shared are cross-cutting bands. Boundaries are enforced by AST tests, 100 percent coverage, a 400 line file limit and a no magic numbers rule.</desc>
+<defs>
+<marker id="cb-ah" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7,3 L0,6 Z" fill="#5f6b7a"/></marker>
+<style>
+text{font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.h1{font-size:20px;font-weight:700;fill:#e8eaed}
+.cap{font-size:12px;fill:#8a93a3}
+.h2{font-size:13px;font-weight:500;fill:#2dd4bf;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.box{fill:#242938;stroke:#3a4156;stroke-width:1.5}
+.core{fill:#16302d;stroke:#2dd4bf;stroke-width:2}
+.ttl{font-size:15px;font-weight:600;fill:#e8eaed}
+.sub{font-size:11.5px;fill:#9aa3b2}
+.acc{font-size:11px;font-weight:600;fill:#2dd4bf}
+.lbl{font-size:10px;font-weight:600;fill:#7b8694;letter-spacing:.06em}
+.band{fill:#1a1f2e;stroke:#2a3142;stroke-width:1}
+.bandtx{font-size:11.5px;font-weight:500;fill:#9aa3b2}
+.foot{fill:#14302e;stroke:#2dd4bf;stroke-opacity:.45;stroke-width:1}
+.foottx{font-size:11.5px;font-weight:600;fill:#2dd4bf}
+.arrow{stroke:#5f6b7a;stroke-width:2;fill:none}
+</style>
+</defs>
+<rect x="2" y="2" width="916" height="392" rx="14" fill="#0a0a0d" stroke="#1f2433"/>
+<text class="h1" x="45" y="40">Clear Budget</text>
+<text class="cap" x="182" y="40">Clean Architecture · Python · PySide6</text>
+<text class="h2" x="45" y="62">UI  →  Application  →  Domain  ←  Infrastructure</text>
+<rect class="box" x="45" y="92" width="170" height="116" rx="10"/>
+<text class="ttl" x="130" y="118" text-anchor="middle">UI · PySide6</text>
+<text class="sub" x="130" y="146" text-anchor="middle">MainWindow · ViewModels</text>
+<text class="sub" x="130" y="166" text-anchor="middle">Monthly · Solvency</text>
+<text class="sub" x="130" y="186" text-anchor="middle">Cards · Archive</text>
+<rect class="box" x="265" y="92" width="170" height="116" rx="10"/>
+<text class="ttl" x="350" y="118" text-anchor="middle">Application</text>
+<text class="sub" x="350" y="146" text-anchor="middle">BudgetService</text>
+<text class="sub" x="350" y="166" text-anchor="middle">MonthGenerator</text>
+<text class="sub" x="350" y="186" text-anchor="middle">DTOs at boundary</text>
+<rect class="core" x="485" y="92" width="170" height="116" rx="10"/>
+<text class="ttl" x="570" y="118" text-anchor="middle">Domain</text>
+<text class="acc" x="570" y="140" text-anchor="middle">pure · no I/O</text>
+<text class="sub" x="570" y="163" text-anchor="middle">Bill · CreditCard</text>
+<text class="sub" x="570" y="183" text-anchor="middle">Solvency · Cashflow</text>
+<rect class="box" x="705" y="92" width="170" height="116" rx="10"/>
+<text class="ttl" x="790" y="118" text-anchor="middle">Infrastructure</text>
+<text class="sub" x="790" y="146" text-anchor="middle">SQLite repositories</text>
+<text class="sub" x="790" y="166" text-anchor="middle">per-user database</text>
+<text class="sub" x="790" y="186" text-anchor="middle">schema + migrations</text>
+<text class="lbl" x="240" y="144" text-anchor="middle">DTOs</text>
+<line class="arrow" x1="220" y1="150" x2="258" y2="150" marker-end="url(#cb-ah)"/>
+<text class="lbl" x="460" y="144" text-anchor="middle">CALLS</text>
+<line class="arrow" x1="440" y1="150" x2="478" y2="150" marker-end="url(#cb-ah)"/>
+<text class="lbl" x="680" y="144" text-anchor="middle">IMPLEMENTS</text>
+<line class="arrow" x1="700" y1="150" x2="662" y2="150" marker-end="url(#cb-ah)"/>
+<rect class="band" x="45" y="224" width="830" height="32" rx="8"/>
+<text class="bandtx" x="460" y="244" text-anchor="middle">Auth (cross-cutting) · users.db · bcrypt hashes · recovery codes · per-user isolation</text>
+<rect class="band" x="45" y="264" width="830" height="32" rx="8"/>
+<text class="bandtx" x="460" y="284" text-anchor="middle">Shared · Config · Currency (25) · Errors · DB validation</text>
+<rect class="foot" x="45" y="312" width="830" height="36" rx="8"/>
+<text class="foottx" x="460" y="334" text-anchor="middle">Enforced every test run:   AST boundary tests   ·   100% coverage   ·   &#8804;400 LOC / file   ·   no magic numbers</text>
+<text class="cap" x="460" y="372" text-anchor="middle">Arrows show dependency direction. Every layer points inward to the pure Domain, which has no I/O and no framework.</text>
+</svg>
