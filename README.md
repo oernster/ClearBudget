@@ -2,6 +2,8 @@
 
 # Clear Budget
 
+> **Most budgeting apps are retrospective ledgers that tell you where the money went. Clear Budget is forward-looking: it projects solvency for the months ahead and warns about mid-month overdrafts before they happen.**
+
 A personal budget planning application for managing income, bills, and credit cards with
 detailed solvency analysis. Supports multiple user accounts with secure authentication.
 

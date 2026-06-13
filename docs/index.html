@@ -150,7 +150,28 @@
             color: var(--faint);
         }
 
-        .section { margin-top: 84px; }
+        .pitch {
+            max-width: 860px;
+            margin: 28px auto 0;
+            padding: 30px 30px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--teal);
+            border-radius: 14px;
+            text-align: left;
+        }
+
+        .pitch p {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.5;
+            color: var(--text);
+        }
+
+        .pitch strong { color: var(--teal); }
+        .pitch em { color: var(--muted); font-style: italic; }
+
+        .section { margin-top: 42px; }
 
         .section h2 {
             font-size: 24px;
@@ -247,7 +268,7 @@
         .faq-item p { margin: 0; font-size: 14px; color: var(--muted); }
 
         footer {
-            margin-top: 96px;
+            margin-top: 48px;
             padding: 28px 20px 8px;
             border-top: 1px solid var(--border);
             color: var(--faint);
@@ -300,6 +321,14 @@
     </header>
 
     <main>
+
+        <section class="pitch" aria-label="What makes Clear Budget different">
+            <p>
+                Most budgeting apps are <em>retrospective ledgers</em> that tell you where the money went.
+                Clear&nbsp;Budget is <strong>forward-looking</strong>: it projects solvency for the months ahead and
+                warns about mid-month overdrafts <strong>before they happen</strong>.
+            </p>
+        </section>
 
         <!-- What it does -->
         <section class="section" id="features" aria-labelledby="features-h">
@@ -408,10 +437,6 @@
                 <div class="faq-item">
                     <h3>Is my financial data private?</h3>
                     <p>Yes. Data is stored locally in isolated per-user databases on your own machine, protected by a bcrypt sign-in, and is never transmitted to any server.</p>
-                </div>
-                <div class="faq-item">
-                    <h3>How is Clear Budget different from other budgeting apps?</h3>
-                    <p>Most budgeting apps are retrospective ledgers that tell you where the money went. Clear Budget is forward-looking: it projects solvency for the months ahead and warns about mid-month overdrafts before they happen.</p>
                 </div>
                 <div class="faq-item">
                     <h3>Does Clear Budget support multiple users and currencies?</h3>
@@ -538,11 +563,6 @@
                     "@type": "Question",
                     "name": "Is my financial data private?",
                     "acceptedAnswer": { "@type": "Answer", "text": "Yes. Data is stored locally in isolated per-user databases on your own machine, protected by a bcrypt sign-in, and is never transmitted to any server." }
-                },
-                {
-                    "@type": "Question",
-                    "name": "How is Clear Budget different from other budgeting apps?",
-                    "acceptedAnswer": { "@type": "Answer", "text": "Most budgeting apps are retrospective ledgers that tell you where the money went. Clear Budget is forward-looking: it projects solvency for the months ahead and warns about mid-month overdrafts before they happen." }
                 },
                 {
                     "@type": "Question",
