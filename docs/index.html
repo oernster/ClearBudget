@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="favicon-64.png">
+
+    <title>Clear Budget - Forward-looking desktop budget planner | Runs offline</title>
+
+    <meta name="description" content="A private desktop budget planner that models forward solvency, bill timing and credit card pressure before problems arrive. Local-first, multi-user, cross-platform. No cloud.">
+    <meta name="keywords" content="budget planner, personal finance app, solvency analysis, overdraft warning, credit card tracker, offline budgeting, local budget software, cashflow projection, desktop budgeting app">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Oliver Ernster">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://oernster.github.io/ClearBudget/">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Clear Budget - Forward-looking desktop budget planner">
+    <meta property="og:description" content="Will the month survive? Clear Budget models forward solvency, bill timing and credit card pressure before problems arrive. Local-first and cross-platform.">
+    <meta property="og:image" content="https://oernster.github.io/ClearBudget/clearbudget-512.png">
+    <meta property="og:url" content="https://oernster.github.io/ClearBudget/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Clear Budget">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Clear Budget - Forward-looking desktop budget planner">
+    <meta name="twitter:description" content="Will the month survive? Clear Budget models forward solvency, bill timing and credit card pressure before problems arrive.">
+    <meta name="twitter:image" content="https://oernster.github.io/ClearBudget/clearbudget-512.png">
+
+    <style>
+        :root {
+            --bg: #0a0a0d;
+            --text: #e8eaed;
+            --muted: #9aa3b2;
+            --faint: #6b7280;
+            --panel: #161922;
+            --panel-2: #1a1f2e;
+            --border: #2a3142;
+            --blue: #3b5bdb;
+            --blue-hover: #4a68d6;
+            --teal: #2dd4bf;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 96px 20px 64px;
+            text-align: center;
+        }
+
+        .hero-icon {
+            width: 176px;
+            height: 176px;
+            border-radius: 38px;
+            margin-bottom: 26px;
+            box-shadow: 0 26px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
+        }
+
+        h1 {
+            font-size: 44px;
+            margin: 0 0 14px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--teal);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 6px 14px;
+            margin-bottom: 22px;
+        }
+
+        .badge-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--teal);
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: var(--muted);
+            margin: 0 auto 28px;
+            max-width: 760px;
+        }
+
+        .actions a {
+            display: inline-block;
+            margin: 8px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+
+        .primary { background: var(--blue); color: #fff; }
+        .primary:hover { background: var(--blue-hover); transform: translateY(-1px); }
+
+        .secondary { border: 1px solid var(--border); color: var(--text); }
+        .secondary:hover { border-color: var(--teal); transform: translateY(-1px); }
+
+        .minor-detail {
+            margin-top: 28px;
+            font-size: 14px;
+            color: var(--faint);
+        }
+
+        .section { margin-top: 84px; }
+
+        .section h2 {
+            font-size: 24px;
+            margin: 0 0 10px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .section .lead {
+            color: var(--muted);
+            max-width: 720px;
+            margin: 0 auto 8px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 28px;
+            text-align: left;
+        }
+
+        .grid.small {
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            text-align: center;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 20px;
+            transition: border-color 0.15s ease, transform 0.15s ease;
+        }
+
+        .card:hover { border-color: var(--teal); transform: translateY(-2px); }
+
+        .card h3 {
+            margin: 0 0 6px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .card p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .card .tab-num {
+            color: var(--teal);
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.06em;
+        }
+
+        .arch {
+            margin-top: 28px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+        }
+
+        .arch img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .prose {
+            max-width: 720px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .prose p { color: var(--muted); margin: 0 0 14px; }
+        .prose strong { color: var(--text); }
+
+        footer {
+            margin-top: 96px;
+            padding: 28px 20px 8px;
+            border-top: 1px solid var(--border);
+            color: var(--faint);
+            font-size: 13px;
+        }
+
+        footer a { color: var(--muted); text-decoration: none; }
+        footer a:hover { color: var(--teal); }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <img src="clearbudget-512.png" class="hero-icon" alt="Clear Budget app icon">
+
+    <div class="badge"><span class="badge-dot"></span> Windows · macOS · Linux</div>
+
+    <h1>Clear Budget</h1>
+
+    <div class="subtitle">
+        A private desktop budget planner built around a question, not a ledger:
+        <strong style="color:var(--text)">will the month survive?</strong>
+        It models forward solvency, bill timing and credit card pressure before problems arrive.
+    </div>
+
+    <div class="actions">
+        <a class="primary" href="https://github.com/oernster/ClearBudget/releases">Download</a>
+        <a class="secondary" href="https://github.com/oernster/ClearBudget">View source</a>
+    </div>
+
+    <div class="minor-detail">
+        Local-first. Multi-user. Your finances never leave your machine.
+    </div>
+
+    <!-- What it does -->
+    <div class="section">
+        <h2>What Clear Budget does</h2>
+        <p class="lead">Most budgeting software is retrospective. Clear Budget looks forward instead.</p>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Forward solvency</h3>
+                <p>Projects the next two months and answers the only operational question that matters: will the balance hold?</p>
+            </div>
+            <div class="card">
+                <h3>Mid-month overdraft alerts</h3>
+                <p>Catches the dip when bills cluster before payday, even when the month still ends positive.</p>
+            </div>
+            <div class="card">
+                <h3>Credit card pressure</h3>
+                <p>Per-card utilisation, interest and a six-month balance projection, colour-coded by available headroom.</p>
+            </div>
+            <div class="card">
+                <h3>Bill and income timing</h3>
+                <p>Per-month skips, amount and due-day overrides, paid and received flags, and one-off entries, without touching templates.</p>
+            </div>
+            <div class="card">
+                <h3>Private by design</h3>
+                <p>Per-user isolated databases with a bcrypt sign-in and read-only viewer packages. No cloud, no account servers.</p>
+            </div>
+            <div class="card">
+                <h3>25 currencies</h3>
+                <p>Choose your currency once and every figure follows it. Defaults to GBP.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- The four tabs -->
+    <div class="section">
+        <h2>Four views, one question</h2>
+        <p class="lead">Each tab is a different angle on whether the month, and the months ahead, hold together.</p>
+
+        <div class="grid">
+            <div class="card">
+                <span class="tab-num">TAB 01</span>
+                <h3>Monthly Budget</h3>
+                <p>Bills and income for the month, with the running balance or projected month-end figure and a mid-month overdraft warning.</p>
+            </div>
+            <div class="card">
+                <span class="tab-num">TAB 02</span>
+                <h3>Solvency</h3>
+                <p>Overdraft status, a day-by-day forward projection for the next two months, and per-card utilisation bars.</p>
+            </div>
+            <div class="card">
+                <span class="tab-num">TAB 03</span>
+                <h3>Credit Cards</h3>
+                <p>One panel per card with live pro-rated balances, and a six-month projection strip across every card.</p>
+            </div>
+            <div class="card">
+                <span class="tab-num">TAB 04</span>
+                <h3>Archive</h3>
+                <p>Completed months summarised by year, with drill-down into any individual month.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Architecture -->
+    <div class="section">
+        <h2>Built like the apps I trust</h2>
+        <p class="lead">A clean, four-layer architecture with every dependency pointing inward to a pure domain. Boundaries are enforced by AST tests, 100% coverage, a 400-line file limit and a no-magic-numbers rule.</p>
+        <div class="arch">
+            <img src="architecture.svg" alt="Clear Budget clean architecture: UI, Application, Domain, Infrastructure, with dependencies pointing inward to a pure Domain, plus cross-cutting Auth and Shared layers">
+        </div>
+    </div>
+
+    <!-- Why it exists -->
+    <div class="section">
+        <h2>Why it exists</h2>
+        <div class="prose">
+            <p>
+                Most tools treat money as a flat number and answer one question after the fact:
+                <strong>where did the money go?</strong> That is the wrong question to act on.
+                The useful model is the one that surfaces a failure mode early enough to do something about it.
+            </p>
+            <p>
+                So Clear Budget tracks solvency rather than accounting. It models the operational shape of a month,
+                when income lands and when bills fall, and tells you whether the balance survives the gaps.
+            </p>
+            <p>
+                It is dogfood, in the full sense of the word: the application I open to decide whether my own month
+                holds together. The features exist because I needed them, not because they demonstrated well.
+            </p>
+        </div>
+    </div>
+
+    <!-- Runs everywhere -->
+    <div class="section">
+        <h2>Runs everywhere, stores nothing remotely</h2>
+        <p class="lead">One PySide6 codebase, native packages on all three platforms. Each build ships everything it needs.</p>
+
+        <div class="grid small">
+            <div class="card"><h3>Windows</h3><p>Per-user installer</p></div>
+            <div class="card"><h3>macOS</h3><p>Signed .dmg, tested on Sequoia</p></div>
+            <div class="card"><h3>Linux</h3><p>Flatpak</p></div>
+        </div>
+
+        <div class="actions" style="margin-top:28px;">
+            <a class="primary" href="https://github.com/oernster/ClearBudget/releases">Get the latest release</a>
+        </div>
+    </div>
+
+    <div class="sr-only">
+        Clear Budget is a private, local-first desktop budget planner for Windows, macOS and Linux. It models
+        forward solvency for the next two months, detects mid-month overdrafts when bills cluster before income,
+        tracks credit card utilisation and interest with a six-month balance projection, and supports multiple
+        users with bcrypt sign-in and isolated per-user databases. Built with Python and PySide6, it runs entirely
+        offline with no cloud dependency.
+    </div>
+
+    <footer>
+        Created by Oliver Ernster &nbsp;·&nbsp; Python and PySide6 &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget/blob/main/LICENSE">LGPL-3.0</a> &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget">Source on GitHub</a>
+    </footer>
+
+</div>
+
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Clear Budget",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Windows, macOS, Linux",
+    "description": "A private, local-first desktop budget planner that models forward solvency, bill timing and credit card pressure before problems arrive. Multi-user with bcrypt sign-in and isolated per-user databases.",
+    "url": "https://oernster.github.io/ClearBudget/",
+    "image": "https://oernster.github.io/ClearBudget/clearbudget-512.png",
+    "author": {
+        "@type": "Person",
+        "name": "Oliver Ernster"
+    },
+    "license": "https://www.gnu.org/licenses/lgpl-3.0.html",
+    "downloadUrl": "https://github.com/oernster/ClearBudget/releases",
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "GBP"
+    }
+}
+</script>
+
+</body>
+</html>
