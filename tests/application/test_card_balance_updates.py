@@ -3,6 +3,10 @@
 from datetime import date
 
 from clear_budget.application.services.budget_service import BudgetService
+from clear_budget.application.services._card_balance_updates import (
+    get_live_card_balance,
+    save_card_with_today_balance,
+)
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.credit_card import CreditCard
@@ -119,3 +123,94 @@ class TestUpdateCardBalancesForElapsedDates:
         today = date.today()
         assert updated.balance_applied_year == today.year
         assert updated.balance_applied_month == today.month
+
+
+def _card_activity_bills() -> list:
+    """61.98 of charges (day 8) and a 130.00 payment (day 11) on card id 2."""
+    return [
+        _bill(payment_method_id=2, amount=Amount(pence=6198), day_of_month=8),
+        _bill(
+            payment_method_id=1,
+            category="credit_payment",
+            target_card_id=2,
+            amount=Amount(pence=13000),
+            day_of_month=11,
+        ),
+    ]
+
+
+class TestSaveCardWithTodayBalance:
+    def test_new_card_stores_entered_balance_verbatim(self) -> None:
+        card = _card(id=0, current_balance_used=Amount(pence=0))
+        _svc, _bill_repo, pm_repo = _make_service(cards=[])
+
+        card_id = save_card_with_today_balance(
+            pm_repo,
+            card=card,
+            today_balance_pence=50000,
+            today=date(2026, 6, 13),
+            is_new=True,
+        )
+
+        stored = pm_repo.get_credit_card_by_id(card_id=card_id)
+        assert stored.current_balance_used.pence == 50000
+        assert stored.balance_applied_year == 2026
+        assert stored.balance_applied_month == 6
+        assert stored.balance_applied_day == 13
+
+    def test_edit_stores_entered_balance_verbatim_with_day_anchor(self) -> None:
+        # The stored figure is exactly what the user typed - no hidden opening.
+        card = _card(id=2)
+        _svc, _bill_repo, pm_repo = _make_service(cards=[card])
+
+        card_id = save_card_with_today_balance(
+            pm_repo,
+            card=card,
+            today_balance_pence=159200,
+            today=date(2026, 6, 13),
+            is_new=False,
+        )
+
+        stored = pm_repo.get_credit_card_by_id(card_id=card_id)
+        assert stored.current_balance_used.pence == 159200
+        assert stored.balance_applied_year == 2026
+        assert stored.balance_applied_month == 6
+        assert stored.balance_applied_day == 13
+
+    def test_saved_balance_reads_back_as_used_on_anchor_day(self) -> None:
+        # End to end: save the figure, then the live balance for that day equals
+        # exactly what was entered. Current Balance == Used.
+        card = _card(id=2, payment_due_day=22)
+        svc, bill_repo, pm_repo = _make_service(cards=[card])
+        for bill in _card_activity_bills():
+            bill_repo.add(bill=bill)
+        today = date(2026, 6, 13)
+
+        save_card_with_today_balance(
+            pm_repo,
+            card=card,
+            today_balance_pence=159200,
+            today=today,
+            is_new=False,
+        )
+
+        updated = pm_repo.get_credit_card_by_id(card_id=2)
+        live = get_live_card_balance(
+            pm_repo, svc.get_month_summary, card=updated, today=today
+        )
+        assert live.pence == 159200
+
+    def test_service_wrapper_persists_entered_balance(self) -> None:
+        card = _card(id=2)
+        svc, _bill_repo, pm_repo = _make_service(cards=[card])
+
+        card_id = svc.save_credit_card_today_balance(
+            card=card,
+            today_balance=Amount(pence=159200),
+            is_new=False,
+            today=date(2026, 6, 13),
+        )
+
+        stored = pm_repo.get_credit_card_by_id(card_id=card_id)
+        assert stored.current_balance_used.pence == 159200
+        assert stored.balance_applied_day == 13

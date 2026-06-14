@@ -17,6 +17,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 
+from clear_budget.domain.services.credit_limit_schedule import (
+    effective_credit_limit_pence,
+    month_end_effective_limit_pence,
+)
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import ui_scale
@@ -67,24 +71,44 @@ class CreditCardViewLoaderMixin:
             state = monthly_states.get(card.id)
             if state and self.current_month > _today_ym:
                 display_used = state.closing_balance
-                display_util = (
-                    state.closing_balance.pence / card.credit_limit.pence * 100
-                    if card.credit_limit.pence
-                    else 0.0
+                # The limit a card carries entering a future month is its
+                # start-of-month effective limit; a mid-month change is flagged
+                # by the pill rather than applied to the whole month.
+                display_limit_pence = effective_credit_limit_pence(
+                    card=card,
+                    as_of=_date(self.current_month.year, self.current_month.month, 1),
                 )
             elif self.current_month == _today_ym:
                 display_used = self.budget_service.get_live_card_balance(card=card)
-                display_util = (
-                    display_used.pence / card.credit_limit.pence * 100
-                    if card.credit_limit.pence
-                    else 0.0
-                )
+                display_limit_pence = card.credit_limit.pence
             else:
                 display_used = card.current_balance_used
-                display_util = card.utilization_percent
-            display_available = Amount(
-                pence=max(0, card.credit_limit.pence - display_used.pence)
+                display_limit_pence = card.credit_limit.pence
+            display_util = (
+                display_used.pence / display_limit_pence * 100
+                if display_limit_pence
+                else 0.0
             )
+            display_available = Amount(
+                pence=max(0, display_limit_pence - display_used.pence)
+            )
+            display_limit = Amount(pence=display_limit_pence)
+
+            # Flag a still-upcoming change on any month it has not yet taken
+            # effect by, measured from today on the live month and from the
+            # first of the month on a future month, so the month it lands on
+            # shows the pill too.
+            upcoming_changes = []
+            if self.current_month == _today_ym:
+                ref_key = (_today.year, _today.month, _today.day)
+                upcoming_changes = [
+                    c for c in card.scheduled_limit_changes if c.sort_key > ref_key
+                ]
+            elif self.current_month > _today_ym:
+                ref_key = (self.current_month.year, self.current_month.month, 1)
+                upcoming_changes = [
+                    c for c in card.scheduled_limit_changes if c.sort_key > ref_key
+                ]
 
             due_color = None
             if self.current_month == _today_ym:
@@ -103,8 +127,10 @@ class CreditCardViewLoaderMixin:
                 card=card,
                 state=state,
                 display_used=display_used,
+                display_limit=display_limit,
                 display_available=display_available,
                 display_util=display_util,
+                upcoming_changes=upcoming_changes,
                 due_color=due_color,
                 status=status,
                 status_color=status_color,
@@ -115,7 +141,11 @@ class CreditCardViewLoaderMixin:
         self._build_projection_strip()
 
     def _field_widget(
-        self, label: str, value: str, color: str | None = None
+        self,
+        label: str,
+        value: str,
+        color: str | None = None,
+        pills: list | None = None,
     ) -> QWidget:
         container = QWidget()
         container.setStyleSheet(_FLAT_CONTAINER)
@@ -131,7 +161,42 @@ class CreditCardViewLoaderMixin:
         value_widget.setStyleSheet(ui_scale.style(value_style))
         col.addWidget(label_widget)
         col.addWidget(value_widget)
+        for pill_text, pill_color in pills or []:
+            pill = QLabel(pill_text)
+            pill.setStyleSheet(
+                ui_scale.style(
+                    "font-size: 11px; font-weight: 600; color: #ffffff;"
+                    f" background-color: {pill_color};"
+                    " border-radius: 4px; padding: 1px 6px;"
+                )
+            )
+            pill.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+            pill_row = QHBoxLayout()
+            pill_row.setContentsMargins(0, 3, 0, 0)
+            pill_row.addWidget(pill)
+            pill_row.addStretch(1)
+            col.addLayout(pill_row)
         return container
+
+    def _limit_change_pills(self, reference_limit_pence, upcoming_changes):
+        """Return a list of (text, color) pills, one per upcoming limit change,
+        each arrow judged against the running limit. Blue for an increase, amber
+        for a decrease."""
+        running = reference_limit_pence
+        pills = []
+        for change in upcoming_changes:
+            increase = change.new_limit.pence >= running
+            arrow = "↑" if increase else "↓"
+            month_abbr = MONTH_NAMES[change.effective_month][:3]
+            pills.append(
+                (
+                    f"{arrow} {change.new_limit} · "
+                    f"{change.effective_day} {month_abbr}",
+                    "#1e3a8a" if increase else "#78350f",
+                )
+            )
+            running = change.new_limit.pence
+        return pills
 
     def _build_card_frame(
         self,
@@ -139,8 +204,10 @@ class CreditCardViewLoaderMixin:
         card,
         state,
         display_used: Amount,
+        display_limit: Amount,
         display_available: Amount,
         display_util: float,
+        upcoming_changes: list,
         due_color: str | None,
         status: str,
         status_color: QColor,
@@ -215,20 +282,24 @@ class CreditCardViewLoaderMixin:
         else:
             expiry_str = " - "
 
+        limit_pills = self._limit_change_pills(display_limit.pence, upcoming_changes)
+
         overview_grid = QGridLayout()
         overview_grid.setHorizontalSpacing(ui_scale.px(24))
         overview_fields = [
-            ("Limit", str(card.credit_limit), None),
-            ("Used", str(display_used), None),
-            ("Available", str(display_available), None),
-            ("Util %", f"{display_util:.1f}%", None),
-            ("Due Day", str(card.payment_due_day), due_color),
-            ("Interest %", interest_str, None),
-            ("Fixed Min", fixed_min_str, None),
-            ("Expiry", expiry_str, None),
+            ("Limit", str(display_limit), None, limit_pills),
+            ("Used", str(display_used), None, None),
+            ("Available", str(display_available), None, None),
+            ("Util %", f"{display_util:.1f}%", None, None),
+            ("Due Day", str(card.payment_due_day), due_color, None),
+            ("Interest %", interest_str, None, None),
+            ("Fixed Min", fixed_min_str, None, None),
+            ("Expiry", expiry_str, None, None),
         ]
-        for idx, (label, value, color) in enumerate(overview_fields):
-            overview_grid.addWidget(self._field_widget(label, value, color), 0, idx)
+        for idx, (label, value, color, pills) in enumerate(overview_fields):
+            overview_grid.addWidget(
+                self._field_widget(label, value, color, pills), 0, idx
+            )
         overview_grid.setColumnStretch(len(overview_fields), 1)
         outer.addLayout(overview_grid)
 
@@ -277,18 +348,33 @@ class CreditCardViewLoaderMixin:
         self.projection_table.setRowCount(_PROJECTION_MONTHS)
 
         month_labels = []
+        row_months = []
         cursor = today_ym
         for _ in range(_PROJECTION_MONTHS):
             month_labels.append(f"{MONTH_NAMES[cursor.month][:3]} {cursor.year}")
+            row_months.append(cursor)
             cursor = cursor.next_month()
         self.projection_table.setVerticalHeaderLabels(month_labels)
+        # Lock the strip to exactly its rows now the columns exist, so the header
+        # height is real. It then shows every month with no scrollbar and stays
+        # compact beneath the card list.
+        _row_h = self.projection_table.verticalHeader().defaultSectionSize()
+        _hdr_h = self.projection_table.horizontalHeader().sizeHint().height()
+        _frame = self.projection_table.frameWidth() * 2
+        self.projection_table.setFixedHeight(
+            _hdr_h + _row_h * _PROJECTION_MONTHS + _frame
+        )
 
         _red_threshold_pence = 10_000
         _amber_threshold_pence = 25_000
         for row_idx, month_states in enumerate(month_states_list):
+            row_ym = row_months[row_idx]
             for col_idx, state in enumerate(month_states):
                 closing = state.closing_balance.pence
-                available = state.card.credit_limit.pence - closing
+                limit_pence = month_end_effective_limit_pence(
+                    card=state.card, year=row_ym.year, month=row_ym.month
+                )
+                available = limit_pence - closing
                 cell = QTableWidgetItem(str(state.closing_balance))
                 cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 if available <= _red_threshold_pence:

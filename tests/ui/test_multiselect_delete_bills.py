@@ -254,3 +254,35 @@ def test_duplicate_names_ctrl_select_deletes_correct_bills(app, service):
         year_month=MONTH, include_inactive=True
     )
     assert len(all_bills) == 1, f"Expected 1 remaining, got {len(all_bills)}"
+
+
+def test_delete_stop_from_viewed_month_preserves_earlier(app, service, monkeypatch):
+    """'Stop from <month>' ends the bill at the prior month, keeping history."""
+    monkeypatch.setattr(MonthView, "_ask_delete_scope", lambda self, *a, **k: "stop")
+    saved = service.bill_repo.add(
+        bill=Bill(
+            id=0,
+            name="Sub",
+            amount=Amount.from_pounds(9),
+            payment_method_id=1,
+            category="subscriptions",
+            bill_type="fixed",
+            day_of_month=1,
+            start_ym=YearMonth(2026, 1),
+            end_ym=None,
+            active=True,
+        )
+    )
+    vm = MonthViewModel(budget_service=service, current_month=MONTH)
+    view = MonthView(vm)
+    _select_rows(view, [0])
+    view.on_delete_bill()
+
+    # MONTH is 2026-05; "stop" sets the end to the prior month (April 2026).
+    bill = service.bill_repo.get_by_id(bill_id=saved.id)
+    assert bill.end_ym == YearMonth(2026, 4)
+    assert "Sub" not in _active_bill_names(service)  # gone from May onward
+    april = service.bill_repo.list_active_for_month(year_month=YearMonth(2026, 4))
+    assert "Sub" in {b.name for b in april}  # earlier months preserved
+    jan = service.bill_repo.list_active_for_month(year_month=YearMonth(2026, 1))
+    assert "Sub" in {b.name for b in jan}

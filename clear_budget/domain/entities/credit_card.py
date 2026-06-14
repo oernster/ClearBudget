@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.credit_limit_change import CreditLimitChange
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +25,13 @@ class CreditCard:
             current_balance_used (optional)
         balance_applied_month: Month of the last month folded into
             current_balance_used (optional)
+        balance_applied_day: Day-of-month the balance was manually set as-of,
+            when current_balance_used came from a mid-month manual entry rather
+            than a month-rollover fold (optional; None means a whole-month
+            opening with no day anchor)
+        scheduled_limit_changes: upcoming dated changes to the credit limit,
+            sorted by effective date; the effective limit for any date is
+            derived from these (see services.credit_limit_schedule)
     """
 
     id: int
@@ -39,6 +47,8 @@ class CreditCard:
     active: int = 1
     balance_applied_year: int | None = None
     balance_applied_month: int | None = None
+    balance_applied_day: int | None = None
+    scheduled_limit_changes: tuple[CreditLimitChange, ...] = ()
 
     @property
     def available(self) -> Amount:

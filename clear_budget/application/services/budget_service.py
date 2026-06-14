@@ -262,6 +262,29 @@ class BudgetService(
             today=_date.today(),
         )
 
+    def save_credit_card_today_balance(
+        self, *, card, today_balance: Amount, is_new: bool, today: date | None = None
+    ) -> int:
+        """Persist a card from its entered live (as-of-today) balance.
+
+        Converts the user-facing "what I owe now" figure into the start-of-month
+        opening the projection layer expects, so the displayed balance matches
+        what was entered and forward projections stay anchored. Returns the
+        persisted card id.
+        """
+        from datetime import date as _date
+        from clear_budget.application.services._card_balance_updates import (
+            save_card_with_today_balance as _impl,
+        )
+
+        return _impl(
+            self.payment_method_repo,
+            card=card,
+            today_balance_pence=today_balance.pence,
+            today=today or _date.today(),
+            is_new=is_new,
+        )
+
     def update_card_balances_for_elapsed_dates(
         self, *, today: date | None = None
     ) -> None:
@@ -275,6 +298,21 @@ class BudgetService(
             self.payment_method_repo,
             self.get_month_summary,
             today=today or _date.today(),
+        )
+
+    def apply_elapsed_limit_changes(self, *, today: date | None = None) -> None:
+        """Fold each card's elapsed scheduled limit changes into its limit."""
+        from datetime import date as _date
+        from clear_budget.application.services._card_limit_updates import (
+            apply_elapsed_limit_changes as _impl,
+        )
+
+        _impl(self.payment_method_repo, today=today or _date.today())
+
+    def set_credit_limit_changes(self, *, card_id: int, changes) -> None:
+        """Replace a card's scheduled credit limit changes."""
+        self.payment_method_repo.set_credit_limit_changes(
+            card_id=card_id, changes=tuple(changes)
         )
 
     def get_recorded_months(self) -> list[YearMonth]:  # pragma: no cover

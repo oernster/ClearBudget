@@ -159,6 +159,20 @@ class Database:
             )
             """)
 
+        # Scheduled (future-dated) credit limit changes, one row per change.
+        # No uniqueness: a card may have any number of changes over time.
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS credit_limit_changes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                card_id INTEGER NOT NULL,
+                effective_year INTEGER NOT NULL,
+                effective_month INTEGER NOT NULL,
+                effective_day INTEGER NOT NULL,
+                new_limit_pence INTEGER NOT NULL,
+                FOREIGN KEY (card_id) REFERENCES credit_cards(id)
+            )
+            """)
+
         # Migrations: add columns to credit_cards if missing (existing databases)
         self._migrate_credit_cards_schema(cursor)
 
@@ -228,6 +242,14 @@ class Database:
             cursor.execute(
                 "ALTER TABLE credit_cards"
                 " ADD COLUMN balance_applied_month INTEGER DEFAULT NULL"
+            )
+        except Exception:
+            pass
+        # Day-of-month a balance was manually set as-of (mid-month anchor)
+        try:
+            cursor.execute(
+                "ALTER TABLE credit_cards"
+                " ADD COLUMN balance_applied_day INTEGER DEFAULT NULL"
             )
         except Exception:
             pass

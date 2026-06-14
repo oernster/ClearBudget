@@ -204,8 +204,8 @@ class MainWindow(QMainWindow):
 
         # Help menu
         help_menu = self.menuBar().addMenu("&Help")
-        how_it_works_action = help_menu.addAction("How It Works")
         about_action = help_menu.addAction("&About Clear Budget")
+        how_it_works_action = help_menu.addAction("How It Works")
         licence_action = help_menu.addAction("View Licence (LGPL-3.0)")
         how_it_works_action.triggered.connect(self._on_how_it_works)
         about_action.triggered.connect(self._on_about)

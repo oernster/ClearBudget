@@ -27,11 +27,17 @@ class SolvencyPanelNarrativeMixin:
         return "#fbbf24"
 
     def _build_month_cashflow_summary(
-        self, opening_pence: int, summary, monthly_drain_pence: int
-    ) -> tuple[str, str]:
+        self,
+        opening_pence: int,
+        summary,
+        monthly_drain_pence: int,
+        overdraft_limit_pence: int = 0,
+    ) -> tuple[str, str, bool]:
         """Build cashflow risk narrative for one month.
 
-        Simulates events in day order. Returns (display_text, color).
+        Simulates events in day order. Returns (display_text, color, clarion).
+        ``clarion`` is True when the month goes overdrawn with no facility or
+        beyond it, so the caller can render it as a stark warning.
         monthly_drain_pence used for amber/red thresholds.
         """
         events = []
@@ -66,6 +72,8 @@ class SolvencyPanelNarrativeMixin:
 
         closing_pence = balance
         lines = [f"Opens: {fmt(opening_pence)}"]
+        color = self._health_color(min_balance, monthly_drain_pence)
+        clarion = False
 
         if first_negative_day is not None:
             lines.append(
@@ -77,6 +85,10 @@ class SolvencyPanelNarrativeMixin:
                 lines.append(f"Rescued day {rday}: {rname} +{fmt(ramt)}")
             else:
                 lines.append("No rescue income - remains overdrawn")
+            note, color, clarion = self._overdraft_facility_outcome(
+                min_balance, overdraft_limit_pence
+            )
+            lines.append(note)
         elif min_day and min_balance < monthly_drain_pence:
             lines.append(f"Low point: {fmt(min_balance)} on day {min_day}")
 
@@ -85,8 +97,32 @@ class SolvencyPanelNarrativeMixin:
         else:
             lines.append(f"Closes: -{fmt(abs(closing_pence))}  (still overdrawn)")
 
-        color = self._health_color(min_balance, monthly_drain_pence)
-        return "\n".join(lines), color
+        return "\n".join(lines), color, clarion
+
+    @staticmethod
+    def _overdraft_facility_outcome(
+        min_balance_pence: int, overdraft_limit_pence: int
+    ) -> tuple[str, str, bool]:
+        """Classify a month's overdraft dip against the agreed facility.
+
+        Returns (note, color, clarion). Within an agreed facility is amber and
+        manageable; going overdrawn with no facility or beyond it is a red
+        clarion: refused payments and fees.
+        """
+        if overdraft_limit_pence > 0 and min_balance_pence >= -overdraft_limit_pence:
+            return (
+                f"Within your {fmt(overdraft_limit_pence)} overdraft facility",
+                "#fbbf24",
+                False,
+            )
+        if overdraft_limit_pence > 0:
+            over = abs(min_balance_pence) - overdraft_limit_pence
+            return (
+                f"EXCEEDS your {fmt(overdraft_limit_pence)} overdraft by {fmt(over)}",
+                "#f87171",
+                True,
+            )
+        return "NO OVERDRAFT FACILITY - payments would be refused", "#f87171", True
 
     @staticmethod
     def _build_income_timeline(opening_pence: int, income_sources, bills) -> list[str]:

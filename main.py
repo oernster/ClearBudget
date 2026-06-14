@@ -167,6 +167,7 @@ def _build_main_window(
         month_generator=month_generator,
     )
     budget_service.update_card_balances_for_elapsed_dates()
+    budget_service.apply_elapsed_limit_changes()
     month_view_model = MonthViewModel(budget_service=budget_service)
     solvency_view_model = SolvencyViewModel(budget_service=budget_service)
     return MainWindow(

@@ -308,17 +308,43 @@ class MonthView(
         ids = [b.id for r in rows if (b := self._get_bill_from_row(r)) is not None]
         if not ids:
             return
-        count = len(ids)
-        noun = "bill" if count == 1 else f"{count} bills"
-        reply = QMessageBox.question(
-            self,
-            "Delete Bill",
-            f"Permanently delete {noun}?\n\nThis cannot be undone.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        viewed = self.view_model.current_month
+        viewed_name = MONTH_NAMES[viewed.month]
+        noun = "bill" if len(ids) == 1 else f"{len(ids)} bills"
+        scope = self._ask_delete_scope(noun, viewed_name)
+        if scope == "stop":
+            self.view_model.end_bills(
+                bill_ids=ids, last_active_month=viewed.previous_month()
+            )
+        elif scope == "wipe":
             self.view_model.delete_bills(bill_ids=ids)
+
+    def _ask_delete_scope(self, noun: str, viewed_name: str) -> str:
+        """Ask how to delete: 'stop' (from viewed month on), 'wipe' (all), 'cancel'."""
+        box = QMessageBox(self)
+        box.setWindowTitle("Delete Bill")
+        box.setText(
+            f"Delete {noun}?\n\n"
+            f"Stop from {viewed_name}: drops it from {viewed_name} onward and "
+            f"keeps every earlier month unchanged.\n"
+            f"Delete entirely: removes it from every month, including history. "
+            f"This cannot be undone."
+        )
+        stop_btn = box.addButton(
+            f"Stop from {viewed_name}", QMessageBox.ButtonRole.AcceptRole
+        )
+        wipe_btn = box.addButton(
+            "Delete entirely", QMessageBox.ButtonRole.DestructiveRole
+        )
+        cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(cancel_btn)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is stop_btn:
+            return "stop"
+        if clicked is wipe_btn:
+            return "wipe"
+        return "cancel"
 
     def on_add_income(self) -> None:
         dialog = IncomeDialog(self, None, current_month=self.view_model.current_month)

@@ -80,6 +80,14 @@ class MonthViewModel(QObject):
             self.budget_service.delete_bill(bill_id=bill_id)
         self.refresh_month_summary()
 
+    def end_bills(self, *, bill_ids: list[int], last_active_month) -> None:
+        """End multiple bills at last_active_month (history-safe delete)."""
+        for bill_id in bill_ids:
+            self.budget_service.end_bill(
+                bill_id=bill_id, last_active_month=last_active_month
+            )
+        self.refresh_month_summary()
+
     def set_bill_active(self, *, bill_id: int, active: bool) -> None:
         """Toggle bill active state and refresh summary."""
         self.budget_service.set_bill_active(bill_id=bill_id, active=active)

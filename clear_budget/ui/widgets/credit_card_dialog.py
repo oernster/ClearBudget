@@ -1,5 +1,6 @@
 """Dialog for adding/editing credit cards."""
 
+from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -8,11 +9,19 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QSpinBox,
     QDoubleSpinBox,
+    QDateEdit,
     QCheckBox,
     QPushButton,
+    QWidget,
 )
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.credit_limit_change import CreditLimitChange
+from clear_budget.shared.errors import InvalidCreditLimitChangeError
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+
+_MAX_SCHEDULE_YEAR = 2050
+_LIMIT_FIELD_MIN_WIDTH_PX = 120
 
 
 class CreditCardDialog(QDialog):
@@ -22,9 +31,11 @@ class CreditCardDialog(QDialog):
         """Initialize credit card dialog."""
         super().__init__(parent)
         self.card = card
+        self._limit_changes: list[CreditLimitChange] = []
         self.setWindowTitle("Add Credit Card" if card is None else "Edit Credit Card")
         self.setModal(True)
-        self.setGeometry(100, 100, 450, 400)
+        # Size only (no fixed position) so the modal centres on its parent.
+        self.resize(560, 660)
         self.init_ui()
         if card is not None:
             self.load_card(card)
@@ -43,6 +54,7 @@ class CreditCardDialog(QDialog):
         _sym = get_symbol()
         layout.addWidget(QLabel(f"Credit Limit ({_sym}):"))
         self.limit_edit = QLineEdit()
+        self.limit_edit.setMinimumWidth(_LIMIT_FIELD_MIN_WIDTH_PX)
         layout.addWidget(self.limit_edit)
 
         layout.addWidget(QLabel(f"Current Balance ({_sym}):"))
@@ -115,6 +127,37 @@ class CreditCardDialog(QDialog):
         self.active_checkbox.setChecked(True)
         layout.addWidget(self.active_checkbox)
 
+        layout.addWidget(QLabel("Scheduled limit changes [optional]:"))
+        self.changes_container = QWidget()
+        self.changes_list_layout = QVBoxLayout(self.changes_container)
+        self.changes_list_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.changes_container)
+
+        add_change_row = QHBoxLayout()
+        add_change_row.addWidget(QLabel("Effective:"))
+        self.change_date_edit = QDateEdit()
+        self.change_date_edit.setCalendarPopup(True)
+        self.change_date_edit.setDisplayFormat("dd MMM yyyy")
+        self.change_date_edit.setMinimumDate(QDate.currentDate())
+        self.change_date_edit.setMaximumDate(QDate(_MAX_SCHEDULE_YEAR, 12, 31))
+        self.change_date_edit.setDate(QDate.currentDate())
+        add_change_row.addWidget(self.change_date_edit)
+        add_change_row.addWidget(QLabel(f"New limit ({_sym}):"))
+        self.change_limit_edit = QLineEdit()
+        self.change_limit_edit.setMinimumWidth(_LIMIT_FIELD_MIN_WIDTH_PX)
+        add_change_row.addWidget(self.change_limit_edit)
+        add_change_btn = QPushButton("Add change")
+        add_change_btn.clicked.connect(self._on_add_change)
+        add_change_row.addWidget(add_change_btn)
+        layout.addLayout(add_change_row)
+
+        self.change_warning_label = QLabel("")
+        self.change_warning_label.setStyleSheet("color: #f59e0b; font-size: 12px;")
+        self.change_warning_label.setWordWrap(True)
+        self.change_warning_label.setVisible(False)
+        layout.addWidget(self.change_warning_label)
+        self._rebuild_changes_list()
+
         btn_layout = QHBoxLayout()
         ok_btn = QPushButton("OK")
         cancel_btn = QPushButton("Cancel")
@@ -147,6 +190,82 @@ class CreditCardDialog(QDialog):
         if card.minimum_payment_percent is not None:
             self.min_pct_spin.setValue(card.minimum_payment_percent)
         self.active_checkbox.setChecked(card.active == 1)
+        self._limit_changes = list(card.scheduled_limit_changes)
+        self._rebuild_changes_list()
+
+    def _rebuild_changes_list(self) -> None:
+        """Redraw the scheduled-changes list from the in-memory model."""
+        while self.changes_list_layout.count():
+            taken = self.changes_list_layout.takeAt(0)
+            widget = taken.widget()
+            if widget is not None:
+                widget.deleteLater()
+        for idx, change in enumerate(self._limit_changes):
+            month_abbr = MONTH_NAMES[change.effective_month][:3]
+            text = (
+                f"{change.effective_day} {month_abbr} {change.effective_year}"
+                f"  →  {change.new_limit}"
+            )
+            row = QHBoxLayout()
+            row.addWidget(QLabel(text))
+            row.addStretch(1)
+            remove_btn = QPushButton("Remove")
+            remove_btn.clicked.connect(
+                lambda _checked=False, i=idx: self._on_remove_change(i)
+            )
+            row.addWidget(remove_btn)
+            row_widget = QWidget()
+            row_widget.setLayout(row)
+            self.changes_list_layout.addWidget(row_widget)
+
+    def _show_change_warning(self, text: str) -> None:
+        self.change_warning_label.setText(text)
+        self.change_warning_label.setVisible(True)
+
+    def _on_add_change(self) -> None:
+        """Validate and append a scheduled change to the in-memory list."""
+        self.change_warning_label.setVisible(False)
+        limit_str = self.change_limit_edit.text().strip()
+        if not limit_str:
+            return
+        qdate = self.change_date_edit.date()
+        try:
+            new_limit = Amount.from_pounds(float(limit_str))
+            change = CreditLimitChange(
+                effective_year=qdate.year(),
+                effective_month=qdate.month(),
+                effective_day=qdate.day(),
+                new_limit=new_limit,
+            )
+        except (ValueError, InvalidCreditLimitChangeError):
+            self._show_change_warning("Enter a valid date and limit.")
+            return
+        self._limit_changes.append(change)
+        self._limit_changes.sort(key=lambda c: c.sort_key)
+        self.change_limit_edit.clear()
+        self._rebuild_changes_list()
+        self._warn_if_below_balance(new_limit)
+
+    def _warn_if_below_balance(self, new_limit: Amount) -> None:
+        """Flag a change that would drop the limit below the current balance."""
+        try:
+            used = Amount.from_pounds(float(self.balance_edit.text().strip() or "0"))
+        except ValueError:
+            return
+        if new_limit.pence < used.pence:
+            self._show_change_warning(
+                f"That limit ({new_limit}) is below the current balance "
+                f"({used}); the card would be over its limit."
+            )
+
+    def _on_remove_change(self, idx: int) -> None:
+        if 0 <= idx < len(self._limit_changes):
+            self._limit_changes.pop(idx)
+            self._rebuild_changes_list()
+
+    def get_limit_changes(self) -> tuple[CreditLimitChange, ...]:
+        """Return the scheduled limit changes entered in the dialog."""
+        return tuple(self._limit_changes)
 
     def get_card(self) -> CreditCard | None:
         """Get card from form (returns None if invalid)."""

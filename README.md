@@ -2,10 +2,13 @@
 
 # Clear Budget
 
+**Personal Budgeting and Solvency Forecasting**
+
 > **Most budgeting apps are retrospective ledgers that tell you where the money went. Clear Budget is forward-looking: it projects solvency for the months ahead and warns about mid-month overdrafts before they happen.**
 
-A personal budget planning application for managing income, bills, and credit cards with
-detailed solvency analysis. Supports multiple user accounts with secure authentication.
+A personal budgeting and solvency forecasting application for managing income, bills
+and credit cards, with forward solvency analysis. Supports multiple user accounts with
+secure authentication.
 
 **Author:** Oliver Ernster  
 **Licence:** GNU Lesser General Public Licence v3.0 (LGPL-3.0)
@@ -35,12 +38,21 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 - Per-user isolated budget databases
 - Month-by-month budget tracking with income and bill templates
 - Per-bill monthly skip (exclude a bill from one month without deleting it)
+- Per-bill end month: give a subscription or credit payment a final month, after
+  which it stops; earlier months are untouched
+- History-safe delete: removing a bill stops it from the viewed month onward and
+  preserves earlier (and archived) months, with a separate "delete entirely"
+  option for bills added by mistake
 - Per-bill monthly overrides (amount and due day overrides for a specific month)
 - Per-bill "paid" flag - excludes a paid bill from "still due" totals and the
   projected balance for the rest of the month
 - Per-month income flexibility: per-month overrides, per-month skips, a
   "received" flag, and "this month only" one-off income entries
 - Solvency analysis with forward cashflow projections (next 2 months)
+- Runway warnings: a deficit month shows how fast savings are falling per month
+  and the first month you would go overdrawn (a mid-month dip counts even when the
+  month closes positive); going overdrawn with no facility is flagged as a stark
+  clarion on the forward projection
 - Mid-month overdraft detection (accounts for bills clustering before late income)
 - Configurable bank overdraft facility (limit + APR) with a Monthly Budget
   warning when the projected balance dips below zero mid-month, even if the
@@ -49,6 +61,9 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 - Per-card monthly cashflow breakdown (charges, payment, interest, minimum due, projected closing balance)
 - Live pro-rated credit card balance projection between months
 - 6-month rolling balance projection per card (colour-coded by available headroom)
+- Scheduled credit-limit changes: record dated future changes to a card's limit;
+  projections look ahead with the right limit and each change folds in
+  automatically once its date passes
 - Dynamic payment methods: assign bills to bank account or specific credit cards
 - Database export and validated import (File menu)
 - Display currency selection - 25 currencies covering English-speaking countries (File > Preferences)
@@ -172,6 +187,7 @@ Each bill is assigned to either:
 
 For each card:
 - Credit limit and current balance used (live pro-rated between months)
+- Scheduled future credit-limit changes (dated; folded in automatically when due)
 - Interest rate (APR) or minimum payment percentage (per-card calibrated)
 - Payment due day
 - Card expiry date
@@ -204,6 +220,12 @@ Income sources have the same per-month flexibility (overrides, skips, and a "rec
 flag), plus "this month only" one-off entries for ad-hoc income not tied to a
 recurring template.
 
+Beyond single-month tweaks, a bill can be given an **end month** so it stops after
+that month; deleting a bill offers two scopes: **stop from the viewed month**
+(the viewed month onward drop it while earlier and archived months keep it) or
+**delete entirely** (removed from every month). The first is the history-safe way
+to end something; the second is for entries added by mistake.
+
 ---
 
 ## Database Import / Export
@@ -215,10 +237,15 @@ recurring template.
 
 ## Solvency Panel
 
-- **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected balance
+- **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected
+  balance; a deficit month names how fast savings are falling per month and the
+  first month you would go overdrawn; it also flags "no overdraft facility" when
+  you have none
 - **Mid-month alert**: detects temporary overdraft when bills cluster before the last income payment of the month
 - **Credit Card Status**: one progress bar per card showing current balance vs limit; projected month-end closing balance, charges, payment, interest, minimum due, and net direction all shown inline
-- **Forward Projection**: day-by-day cashflow narrative for the next two months including card state
+- **Forward Projection**: day-by-day cashflow narrative for the next two months
+  including card state; a dip within an agreed overdraft reads calmly, while going
+  overdrawn with no facility (or beyond it) is rendered as a stark clarion
 
 The Monthly Budget tab also links here via "See the Solvency tab for full balance
 projections."
@@ -238,9 +265,9 @@ shows:
 
 ## Help Menu
 
+- **About Clear Budget**
 - **How It Works** - plain-English explanation of pro-rating, balances, archiving and
   tab behaviour, kept in sync with the calculation logic
-- **About Clear Budget**
 - **View Licence (LGPL-3.0)**
 
 ---

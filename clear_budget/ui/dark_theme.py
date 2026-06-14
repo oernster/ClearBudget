@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtGui import QFontDatabase
 
 from clear_budget.ui import ui_scale
+from clear_budget.ui._dark_theme_controls import control_qss
 
 SCROLLBAR_WIDTH_PX = 8
 
@@ -181,7 +182,7 @@ QSpinBox:disabled, QDoubleSpinBox:disabled {{
     border: 2px solid #f87171;
     color: #6b7280;
 }}
-
+{control_qss()}
 QComboBox {{
     background-color: #242938;
     color: #e5e7eb;

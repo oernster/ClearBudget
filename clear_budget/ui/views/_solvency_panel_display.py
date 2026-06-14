@@ -2,6 +2,9 @@
 
 from datetime import date as _date
 
+from clear_budget.domain.services._card_live_projection import (
+    anchored_month_opening_pence,
+)
 from clear_budget.domain.services.card_monthly_calculator import (
     calculate_card_monthly_state,
 )
@@ -19,6 +22,27 @@ from clear_budget.ui import ui_scale
 
 class SolvencyPanelDisplayMixin:
     """update_display logic for SolvencyPanel."""
+
+    def _deficit_note(
+        self, monthly_deficit_pence: int, overdraft_ym, overdrawn_next_month: bool
+    ) -> str:
+        """Parenthetical runway note for a deficit month.
+
+        States the monthly drain and, when a future overdraft lands further out
+        than next month, the month it first dips into one (a mid-month dip
+        counts even if later income lifts the close back positive). A next-month
+        dip is named by the banner itself, so it is omitted here. Empty when
+        income covers the bills.
+        """
+        if monthly_deficit_pence <= 0:
+            return ""
+        parts = [f"savings falling {fmt(monthly_deficit_pence)}/month"]
+        if overdraft_ym is not None and not overdrawn_next_month:
+            parts.append(
+                f"overdrawn by {MONTH_NAMES[overdraft_ym.month]} "
+                f"{overdraft_ym.year}"
+            )
+        return " (" + ", ".join(parts) + ")"
 
     def update_display(self, report) -> None:
         if not report:
@@ -44,19 +68,30 @@ class SolvencyPanelDisplayMixin:
             )
             monthly_deficit_pence = bank_bills - summary.total_income.pence
 
-        deficit_pounds = monthly_deficit_pence / 100
-        deficit_note = (
-            f" (bills exceed income by {fmt(deficit_pounds)})"
-            if monthly_deficit_pence > 0
-            else ""
+        overdraft_limit_pence = (
+            self.view_model.budget_service.get_overdraft_limit().pence
         )
-        next_month_name = MONTH_NAMES[report.year_month.next_month().month]
-        overdrawn_next_month = (
-            monthly_deficit_pence > 0 and 0 < balance < monthly_deficit_pence / 100
+        facility_alert = (
+            " - NO OVERDRAFT FACILITY" if overdraft_limit_pence == 0 else ""
+        )
+        next_ym = report.year_month.next_month()
+        next_month_name = MONTH_NAMES[next_ym.month]
+        # First future month that dips into the red (a mid-month dip counts),
+        # used both to escalate when it is the very next month and to state the
+        # runway. Same intra-month basis as the forward projection below.
+        overdraft_ym = None
+        if monthly_deficit_pence > 0 and report.balance_pence >= 0:
+            overdraft_ym = self.view_model.budget_service.first_overdrawn_month(
+                from_year_month=report.year_month,
+                from_balance_pence=report.balance_pence,
+            )
+        overdrawn_next_month = overdraft_ym == next_ym
+        deficit_note = self._deficit_note(
+            monthly_deficit_pence, overdraft_ym, overdrawn_next_month
         )
         if balance < 0:
             self.overdraft_alert.setText(
-                f"CRITICAL: {fmt(abs(balance))} overdrawn{deficit_note}"
+                f"CRITICAL: {fmt(abs(balance))} overdrawn{facility_alert}{deficit_note}"
             )
             self.overdraft_alert.setStyleSheet(
                 base_style + "background-color: #f87171; color: white;"
@@ -64,7 +99,7 @@ class SolvencyPanelDisplayMixin:
         elif overdrawn_next_month:
             self.overdraft_alert.setText(
                 f"CRITICAL: overdrawn in {next_month_name} - "
-                f"{fmt(balance)} left in savings{deficit_note}"
+                f"{fmt(balance)} left in savings{facility_alert}{deficit_note}"
             )
             self.overdraft_alert.setStyleSheet(
                 base_style + "background-color: #f87171; color: white;"
@@ -132,7 +167,7 @@ class SolvencyPanelDisplayMixin:
                     self.midmonth_alert.setText(
                         f"CRITICAL: overdrawn {fmt(abs(mid_balance))} "
                         f"before day-{max_income_day} income"
-                        f" - rescued day {max_income_day}"
+                        f" - rescued day {max_income_day}{facility_alert}"
                     )
                     self.midmonth_alert.show()
 
@@ -189,15 +224,18 @@ class SolvencyPanelDisplayMixin:
                 net_pence = all_bank - income_pence
                 self.committed_label.setText("Committed this month: -")
                 net_color = "#f87171" if net_pence > 0 else "#34d399"
+                # The projected end is the bottom line, so colour it by its own
+                # sign (green while still in the black) rather than inheriting the
+                # red from the bills-vs-income deficit that drives the line above.
+                end_color = "#f87171" if report.balance_pence < 0 else "#34d399"
                 self.remaining_bank_label.setText(
-                    f"Bank bills: {fmt(all_bank)}"
-                    f" vs income {fmt(income_pence)}"
-                    f"\n💰 projected end: {fmt(balance)}"
+                    f"<span style='color:{net_color};'>Bank bills: {fmt(all_bank)}"
+                    f" vs income {fmt(income_pence)}</span><br>"
+                    f"<span style='color:{end_color};'>💰 projected end:"
+                    f" {fmt(balance)}</span>"
                 )
                 self.remaining_bank_label.setStyleSheet(
-                    ui_scale.style(
-                        f"font-size: 18px; padding: 5px; color: {net_color};"
-                    )
+                    ui_scale.style("font-size: 18px; padding: 5px;")
                 )
                 self.remaining_card_label.setText(
                     f"All bills this month (cards): {fmt(all_card)}"
@@ -246,15 +284,20 @@ class SolvencyPanelDisplayMixin:
 
         self._rebuild_card_bars(report)
 
-        m1_text, m1_color = self._build_month_cashflow_summary(
-            report.balance_pence, m1_summary, m1_drain
+        m1_text, m1_color, m1_clarion = self._build_month_cashflow_summary(
+            report.balance_pence, m1_summary, m1_drain, overdraft_limit_pence
         )
-        m2_text, m2_color = self._build_month_cashflow_summary(
-            m1_end_pence, m2_summary, m2_drain
+        m2_text, m2_color, m2_clarion = self._build_month_cashflow_summary(
+            m1_end_pence, m2_summary, m2_drain, overdraft_limit_pence
         )
 
         cards = self.view_model.budget_service.get_credit_cards(include_inactive=False)
-        m1_card_opening = {c.id: c.current_balance_used.pence for c in cards}
+        m1_card_opening = {
+            c.id: anchored_month_opening_pence(
+                card=c, bills=list(m1_summary.bills), year=m1.year, month=m1.month
+            )
+            for c in cards
+        }
         m1_card_states = {
             c.id: calculate_card_monthly_state(
                 card=c,
@@ -281,14 +324,16 @@ class SolvencyPanelDisplayMixin:
         if m2_card_text:
             m2_full += f"\n{m2_card_text}"
 
+        m1_style = f"font-size: 17px; padding: 5px; color: {m1_color};"
+        if m1_clarion:
+            m1_style += " font-weight: bold; font-style: italic;"
         self.m1_projection_label.setText(m1_full)
-        self.m1_projection_label.setStyleSheet(
-            ui_scale.style(f"font-size: 17px; padding: 5px; color: {m1_color};")
-        )
+        self.m1_projection_label.setStyleSheet(ui_scale.style(m1_style))
+        m2_style = f"font-size: 17px; padding: 5px; color: {m2_color};"
+        if m2_clarion:
+            m2_style += " font-weight: bold; font-style: italic;"
         self.m2_projection_label.setText(m2_full)
-        self.m2_projection_label.setStyleSheet(
-            ui_scale.style(f"font-size: 17px; padding: 5px; color: {m2_color};")
-        )
+        self.m2_projection_label.setStyleSheet(ui_scale.style(m2_style))
 
         current_month_color = self._health_color(report.balance_pence, m1_drain)
         apply_nav_label_color(self.month_label, current_month_color)

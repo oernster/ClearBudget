@@ -4,9 +4,19 @@ import pytest
 
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.credit_limit_change import CreditLimitChange
 from clear_budget.infrastructure.sqlite.payment_method_repository import (
     SQLitePaymentMethodRepository,
 )
+
+
+def _change(year, month, day, pence):
+    return CreditLimitChange(
+        effective_year=year,
+        effective_month=month,
+        effective_day=day,
+        new_limit=Amount(pence=pence),
+    )
 
 
 def _repo(db):
@@ -140,3 +150,61 @@ class TestInterestRatePersistence:
         aprs = {c.name: c.interest_rate_apr for c in cards}
         assert aprs["Card1"] == pytest.approx(24.9)
         assert aprs["Card2"] == pytest.approx(29.9)
+
+
+class TestCreditLimitChanges:
+    def test_set_and_load_round_trip(self, db) -> None:
+        repo = _repo(db)
+        saved = repo.add_credit_card(card=_card(name="LimitCard"))
+        repo.set_credit_limit_changes(
+            card_id=saved.id,
+            changes=(
+                _change(2026, 6, 15, 100000),
+                _change(2026, 7, 4, 120000),
+            ),
+        )
+        fetched = repo.get_credit_card_by_id(card_id=saved.id)
+        assert len(fetched.scheduled_limit_changes) == 2
+        assert fetched.scheduled_limit_changes[0].sort_key == (2026, 6, 15)
+        assert fetched.scheduled_limit_changes[1].new_limit.pence == 120000
+
+    def test_set_replaces_existing(self, db) -> None:
+        repo = _repo(db)
+        saved = repo.add_credit_card(card=_card(name="ReplaceCard"))
+        repo.set_credit_limit_changes(
+            card_id=saved.id, changes=(_change(2026, 6, 15, 100000),)
+        )
+        repo.set_credit_limit_changes(
+            card_id=saved.id, changes=(_change(2026, 8, 1, 130000),)
+        )
+        fetched = repo.get_credit_card_by_id(card_id=saved.id)
+        assert len(fetched.scheduled_limit_changes) == 1
+        assert fetched.scheduled_limit_changes[0].sort_key == (2026, 8, 1)
+
+    def test_update_credit_card_limit(self, db) -> None:
+        repo = _repo(db)
+        saved = repo.add_credit_card(card=_card(name="BumpCard"))
+        repo.update_credit_card_limit(card_id=saved.id, limit_pence=300000)
+        fetched = repo.get_credit_card_by_id(card_id=saved.id)
+        assert fetched.credit_limit.pence == 300000
+
+    def test_changes_loaded_via_get_all(self, db) -> None:
+        repo = _repo(db)
+        saved = repo.add_credit_card(card=_card(name="AllCard"))
+        repo.set_credit_limit_changes(
+            card_id=saved.id, changes=(_change(2026, 9, 1, 150000),)
+        )
+        cards = repo.get_all_credit_cards(include_inactive=True)
+        match = next(c for c in cards if c.id == saved.id)
+        assert len(match.scheduled_limit_changes) == 1
+
+
+class TestBalanceAppliedDayPersistence:
+    def test_get_by_id_loads_balance_applied_day(self, db) -> None:
+        repo = _repo(db)
+        saved = repo.add_credit_card(card=_card(name="AnchorCard"))
+        repo.set_balance_applied(card_id=saved.id, year=2026, month=6, day=13)
+        fetched = repo.get_credit_card_by_id(card_id=saved.id)
+        assert fetched.balance_applied_year == 2026
+        assert fetched.balance_applied_month == 6
+        assert fetched.balance_applied_day == 13

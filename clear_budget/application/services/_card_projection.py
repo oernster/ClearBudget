@@ -2,6 +2,9 @@
 
 from datetime import datetime
 
+from clear_budget.domain.services._card_live_projection import (
+    anchored_month_opening_pence,
+)
 from clear_budget.domain.services.card_monthly_calculator import (
     calculate_card_monthly_state,
 )
@@ -16,9 +19,12 @@ def get_card_monthly_states(
     summary = get_month_summary(year_month=year_month)
     all_bills = list(summary.all_bills)
     today_ym = YearMonth(datetime.now().year, datetime.now().month)
+    today_bills = list(get_month_summary(year_month=today_ym).all_bills)
     results = []
     for card in cards:
-        balance_pence = card.current_balance_used.pence
+        balance_pence = anchored_month_opening_pence(
+            card=card, bills=today_bills, year=today_ym.year, month=today_ym.month
+        )
         cursor = today_ym
         while cursor < year_month:
             s = get_month_summary(year_month=cursor)
@@ -51,7 +57,13 @@ def get_card_projection_months(
     """
     cards = payment_method_repo.get_all_credit_cards(include_inactive=False)
     today_ym = YearMonth(datetime.now().year, datetime.now().month)
-    balances = {card.id: card.current_balance_used.pence for card in cards}
+    today_bills = list(get_month_summary(year_month=today_ym).all_bills)
+    balances = {
+        card.id: anchored_month_opening_pence(
+            card=card, bills=today_bills, year=today_ym.year, month=today_ym.month
+        )
+        for card in cards
+    }
     cursor = today_ym
     while cursor < start_month:
         s = get_month_summary(year_month=cursor)

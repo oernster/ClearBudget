@@ -9,8 +9,10 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QComboBox,
     QCheckBox,
+    QDateEdit,
     QPushButton,
 )
+from PySide6.QtCore import QDate
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -110,6 +112,22 @@ class BillDialog(QDialog):
                 self.pays_card_combo.addItem(card.name, card.id)
         layout.addWidget(self.pays_card_combo)
 
+        self.ends_check = QCheckBox("This bill ends (set a final month)")
+        self.ends_check.setToolTip(
+            "For subscriptions or credit payments with a final payment. The bill"
+            " stops after the chosen month; earlier months stay unchanged."
+        )
+        layout.addWidget(self.ends_check)
+        self.end_date_edit = QDateEdit()
+        self.end_date_edit.setCalendarPopup(True)
+        self.end_date_edit.setDisplayFormat("MMMM yyyy")
+        self.end_date_edit.setDate(
+            QDate(self.current_month.year, self.current_month.month, 1)
+        )
+        self.end_date_edit.setEnabled(False)
+        layout.addWidget(self.end_date_edit)
+        self.ends_check.toggled.connect(self.end_date_edit.setEnabled)
+
         self.month_only_check = QCheckBox("This month only")
         self.month_only_check.setToolTip(
             "Override amount/date for this month; other months unchanged"
@@ -188,6 +206,9 @@ class BillDialog(QDialog):
                     self.pays_card_combo.setCurrentIndex(i)
                     break
         self._update_pays_card_visibility()
+        if bill.end_ym is not None:
+            self.ends_check.setChecked(True)
+            self.end_date_edit.setDate(QDate(bill.end_ym.year, bill.end_ym.month, 1))
         if bill.has_month_override:
             self.month_only_check.setChecked(True)
 
@@ -220,6 +241,11 @@ class BillDialog(QDialog):
 
             target_card_id = self.pays_card_combo.currentData()
 
+            end_ym = None
+            if self.ends_check.isChecked():
+                end_date = self.end_date_edit.date()
+                end_ym = YearMonth(end_date.year(), end_date.month())
+
             return Bill(
                 id=self.bill.id if self.bill else 0,
                 name=name,
@@ -229,7 +255,7 @@ class BillDialog(QDialog):
                 bill_type=bill_type,
                 day_of_month=day,
                 start_ym=self.bill.start_ym if self.bill else YearMonth(2000, 1),
-                end_ym=self.bill.end_ym if self.bill else None,
+                end_ym=end_ym,
                 active=True,
                 target_card_id=target_card_id,
             )

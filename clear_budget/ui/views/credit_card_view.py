@@ -1,5 +1,7 @@
 """Credit card view widget - displays credit card status and exhaustion warnings."""
 
+from dataclasses import replace
+
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -7,8 +9,8 @@ from PySide6.QtWidgets import (
     QPushButton,
     QHeaderView,
     QGroupBox,
-    QScrollArea,
     QTableWidget,
+    QSizePolicy,
     QMessageBox,
 )
 from PySide6.QtCore import Qt
@@ -61,16 +63,14 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         cards_group = QGroupBox("Credit Cards")
         cards_outer_layout = QVBoxLayout()
 
+        # Cards stack directly in the group. The whole tab already lives inside a
+        # ScrollableTab, so a second inner scroll only stole height and left an
+        # empty gap above the Add Card button whenever few cards were present.
         self.cards_container = QWidget()
         self.cards_layout = QVBoxLayout(self.cards_container)
         self.cards_layout.setContentsMargins(0, 0, 0, 0)
         self.cards_layout.setSpacing(ui_scale.px(8))
-
-        self.cards_scroll = QScrollArea()
-        self.cards_scroll.setWidgetResizable(True)
-        self.cards_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-        self.cards_scroll.setWidget(self.cards_container)
-        cards_outer_layout.addWidget(self.cards_scroll)
+        cards_outer_layout.addWidget(self.cards_container)
 
         # Buttons below the card list
         btn_layout = QHBoxLayout()
@@ -80,7 +80,7 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         cards_outer_layout.addLayout(btn_layout)
 
         cards_group.setLayout(cards_outer_layout)
-        layout.addWidget(cards_group, 1)
+        layout.addWidget(cards_group, 0)
 
         proj_group = QGroupBox(f"{_PROJECTION_MONTHS}-Month Balance Projection")
         proj_layout = QVBoxLayout()
@@ -89,10 +89,25 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         self.projection_table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
         _ph = self.projection_table.horizontalHeader()
         _ph.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        # Columns always stretch to fit, so no horizontal scrollbar is ever
+        # needed; turning it off keeps it from eating into the fixed height and
+        # clipping the final month row.
+        self.projection_table.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         self.projection_table.verticalHeader().setDefaultSectionSize(ui_scale.px(28))
+        # The strip is locked to exactly its rows in _build_projection_strip,
+        # once the columns (and so the real header height) are populated.
         proj_layout.addWidget(self.projection_table)
         proj_group.setLayout(proj_layout)
-        layout.addWidget(proj_group)
+        proj_group.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum
+        )
+        layout.addWidget(proj_group, 0)
+        # With few cards the content is shorter than the tab: let the slack fall
+        # to the bottom so the card list and projection stay compact at the top,
+        # rather than the card list stretching and pushing the projection off.
+        layout.addStretch(1)
 
         self.setLayout(layout)
 
@@ -147,7 +162,12 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
                         f"A card named '{card.name}' already exists.",
                     )
                     return
-                self.budget_service.payment_method_repo.add_credit_card(card=card)
+                new_id = self.budget_service.save_credit_card_today_balance(
+                    card=card, today_balance=card.current_balance_used, is_new=True
+                )
+                self.budget_service.set_credit_limit_changes(
+                    card_id=new_id, changes=dialog.get_limit_changes()
+                )
                 self.load_cards()
 
     def on_edit_card(self, card_id: int) -> None:
@@ -156,12 +176,22 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         )
         if not card:
             return
-        dialog = CreditCardDialog(self, card)
+        # Pre-fill with the live balance shown as "Used" so the field reflects
+        # what the user owes now; the save path re-anchors it to today.
+        live_balance = self.budget_service.get_live_card_balance(card=card)
+        dialog = CreditCardDialog(
+            self, replace(card, current_balance_used=live_balance)
+        )
         if dialog.exec():
             updated_card = dialog.get_card()
             if updated_card:
-                self.budget_service.payment_method_repo.update_credit_card(
-                    card=updated_card
+                self.budget_service.save_credit_card_today_balance(
+                    card=updated_card,
+                    today_balance=updated_card.current_balance_used,
+                    is_new=False,
+                )
+                self.budget_service.set_credit_limit_changes(
+                    card_id=updated_card.id, changes=dialog.get_limit_changes()
                 )
                 self.load_cards()
 

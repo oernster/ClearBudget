@@ -49,7 +49,9 @@ An additional Auth layer sits alongside the main layers for user identity and cr
 **Entities** (frozen dataclasses with `slots=True`):
 - `Bill` - Template for a recurring or one-time expense
   - `name`, `amount`, `category`, `bill_type`, `day_of_month`
-  - `start_ym`, `end_ym` (expiring bills)
+  - `start_ym`, `end_ym` - active month range; `end_ym` is the final month a bill
+    appears (set in the dialog for a subscription's last payment or by the
+    history-safe delete to end a bill from the viewed month onward)
   - `skipped_for_month: bool` - per-month skip flag (joined from `bill_month_skips`)
   - `has_month_override: bool` - per-month override flag (joined from `bill_month_overrides`)
   - `paid_for_month: bool` - per-month paid flag; excludes the bill from "still due"
@@ -68,8 +70,20 @@ An additional Auth layer sits alongside the main layers for user identity and cr
   - `card_expiry_month` (1-12, nullable), `card_expiry_year` (nullable)
   - `minimum_payment_pence` (nullable), `minimum_payment_percent` (nullable)
   - `active` (soft-delete flag, 1 or 0)
-  - `balance_applied_year` / `balance_applied_month` - last month folded into
-    `current_balance_used`, preventing double-counting on month rollover
+  - `balance_applied_year` / `balance_applied_month` / `balance_applied_day` - the
+    date `current_balance_used` is accurate as-of. A `day` marks a mid-month manual
+    entry (balance as-of that day); `day = None` marks a whole-month fold. The
+    same-month stamp also makes the elapsed-date fold skip a freshly entered figure
+    rather than overwrite it
+  - `current_balance_used` is stored verbatim: exactly the figure the user enters,
+    which is their balance as-of `balance_applied_day`. "Current Balance" and "Used"
+    are the same number. The start-of-month opening the projection needs is derived
+    on the fly (see `_card_live_projection.anchored_month_opening_pence`); nothing is
+    transformed at rest
+  - `scheduled_limit_changes` - upcoming dated changes to the credit limit (any
+    number over time, sorted by effective date). The effective limit for any date
+    is derived on the fly (see `services.credit_limit_schedule`); once a change's
+    date passes it folds into `credit_limit` and is dropped
   - Properties: `available`, `utilization_percent`
 
 - `MonthBill` - Bill instantiated for a specific month
@@ -80,6 +94,8 @@ An additional Auth layer sits alongside the main layers for user identity and cr
 - `YearMonth(year, month)` - Date validation with arithmetic
 - `SolvencyResult` - Outcome of solvency calculation
 - `CardExhaustionWarning` - Credit card exhaustion analysis
+- `CreditLimitChange(effective_year, effective_month, effective_day, new_limit)` -
+  one scheduled credit-limit change; validates its date is a real calendar date
 
 **Domain Services**:
 - `SolvencyCalculatorService.calculate()` - Computes balance, deficit, forward shortfall
@@ -103,6 +119,21 @@ An additional Auth layer sits alongside the main layers for user identity and cr
 - `_card_live_projection.py` - live pro-rated balance: undated bills accrue evenly
   across the elapsed days of the month (rounded up), dated bills count fully once
   their due day has passed
+  - `month_to_date_net_pence()` - signed charges-minus-payments accrued so far this
+    month; the shared core of the live balance (live = `max(0, opening + net)`)
+  - `anchored_month_opening_pence()` - the start-of-month opening derived on the fly
+    from a verbatim `current_balance_used` and its `balance_applied_day` anchor. For
+    the anchor month it backs out the pre-anchor net (the part of the entered figure
+    already posted this month); for any other month, or a card with no day anchor, it
+    returns the stored value unchanged. This is what lets "Used" equal exactly what
+    you typed while the projection and solvency stay correctly anchored
+- `credit_limit_schedule.py` - effective credit limit over a card's scheduled
+  changes:
+  - `effective_credit_limit_pence(card, as_of)` - the latest change on or before
+    `as_of`, else the current `credit_limit`; same-day ties resolve to the last
+    entered
+  - `month_end_effective_limit_pence(card, year, month)` - the limit at a month's
+    end, used by the projection strip and the per-month available-headroom colours
 
 ### Application Layer
 
@@ -110,11 +141,15 @@ An additional Auth layer sits alongside the main layers for user identity and cr
 
 **BudgetService** (main orchestrator) - frozen dataclass (`slots=True`) composed of
 focused mixins to stay under the 400-LOC-per-file limit:
-- `BillOperationsMixin` (`_bill_operations.py`) - bill CRUD, per-month skip/override/paid
+- `BillOperationsMixin` (`_bill_operations.py`) - bill CRUD, per-month
+  skip/override/paid and `end_bill` (history-safe delete: sets the bill's end
+  month so earlier and archived months keep it)
 - `IncomeOperationsMixin` (`_income_operations.py`) - income CRUD, per-month
   skip/override/received, "this month only" extras
 - `OverdraftOperationsMixin` (`_overdraft_operations.py`) - overdraft facility
-  settings and `get_month_cashflow_projection()`
+  settings, `get_month_cashflow_projection()` and `first_overdrawn_month()`
+  (the runway: first future month to dip into the red, delegating to
+  `_overdraft_projection.py`)
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
@@ -122,6 +157,17 @@ Key methods:
 - `calculate_solvency_from_summary(year_month, month_summary)` → `SolvencyReport`
 - `get_card_monthly_states(year_month)` → `list[CardMonthlyState]`
 - `get_card_projection_months(start_month, n_months)` → `list[list[CardMonthlyState]]`
+- `save_credit_card_today_balance(card, today_balance, is_new)` → `int` - persists a
+  card from the as-of-today balance the user entered, stored verbatim and stamped with
+  today's date as its `balance_applied` anchor. "Used" therefore equals exactly what
+  was entered; the start-of-month opening is derived on the fly where the projection
+  needs it (`anchored_month_opening_pence`), and the same-month stamp makes the
+  elapsed-date fold skip the freshly entered figure rather than overwrite it
+- `set_credit_limit_changes(card_id, changes)` - replace a card's scheduled limit
+  changes (the dialog manages the list and persists it whole on save)
+- `apply_elapsed_limit_changes(today=None)` - fold each card's elapsed scheduled
+  limit changes into its current limit, keeping only the still-upcoming ones; run at
+  launch alongside `update_card_balances_for_elapsed_dates`
 - `skip_bill_for_month(bill_id, year_month)` / `unskip_bill_for_month(bill_id, year_month)`
 - `delete_bill_month_override(bill_id, year_month)`
 - `get_projected_month_end_balance_pence(year_month)` → `int` (signed)
@@ -131,6 +177,12 @@ Key methods:
   overdraft APR, stored as basis points (1bp = 0.01%)
 - `get_month_cashflow_projection(year_month, summary)` → `MonthCashflowProjection` -
   drives the Monthly Budget mid-month overdraft warning
+- `first_overdrawn_month(from_year_month, from_balance_pence)` → `YearMonth | None` -
+  first future month whose day-by-day projection dips below zero (a mid-month dip
+  counts even when the month closes positive); drives the Solvency runway warning
+  and the "overdrawn in <month>" escalation
+- `end_bill(bill_id, last_active_month)` - history-safe delete: set the bill's end
+  month, leaving every earlier month (and archived snapshots) untouched
 - `reset_all_data()` - wipes all user budget data (New Budget feature)
 
 **DTOs**:
@@ -141,7 +193,7 @@ Key methods:
 
 **Per-user database** (`~/.clearbudget/budget_<username>.db`):
 - `Database(db_path)` - SQLite connection and schema management
-- Schema - 15 application tables (plus SQLite's internal `sqlite_sequence`):
+- Schema - 16 application tables (plus SQLite's internal `sqlite_sequence`):
   1. `payment_methods` - id=1 is "Bank Account"
   2. `bills` - templates; includes `target_card_id` (migration)
   3. `income_sources`
@@ -158,6 +210,8 @@ Key methods:
   13. `income_month_skips` - per-month income exclusion
   14. `income_month_received` - per-month income "received" flag
   15. `income_month_extras` - "this month only" one-off income, not tied to a template
+  16. `credit_limit_changes` - scheduled dated credit-limit changes (one row per
+      change; no uniqueness, so a card may have any number over time)
 
 **Repositories**:
 - `SQLiteBillRepository`
@@ -296,7 +350,7 @@ Separate from budget infrastructure. Manages user identity and credentials.
     and Read-Only Viewer Package export/import, admin only), Preferences, Bank
     Account Settings, Switch User, Exit
   - Users menu (admin only): Manage Users (list, Add User, Delete Selected)
-  - Help menu: How It Works, About, View Licence
+  - Help menu: About, How It Works, View Licence
   - Read-only accounts: window title shows "(Read-only)"; destructive/edit actions
     disabled across all views
 - `main.py` - composition root; manages full session lifecycle:

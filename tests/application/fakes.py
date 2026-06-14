@@ -203,10 +203,29 @@ class FakePaymentMethodRepository:
                     c, current_balance_used=Amount(pence=balance_used)
                 )
 
-    def set_balance_applied(self, *, card_id: int, year: int, month: int) -> None:
-        """Stamp the month whose closing state was folded into the balance."""
+    def set_balance_applied(
+        self, *, card_id: int, year: int, month: int, day: int | None = None
+    ) -> None:
+        """Stamp the period whose state is folded into current_balance_used."""
         for i, c in enumerate(self._cards):
             if c.id == card_id:
                 self._cards[i] = replace(
-                    c, balance_applied_year=year, balance_applied_month=month
+                    c,
+                    balance_applied_year=year,
+                    balance_applied_month=month,
+                    balance_applied_day=day,
                 )
+
+    def update_credit_card_limit(self, *, card_id: int, limit_pence: int) -> None:
+        """Update a credit card's current credit limit."""
+        from clear_budget.domain.value_objects.amount import Amount
+
+        for i, c in enumerate(self._cards):
+            if c.id == card_id:
+                self._cards[i] = replace(c, credit_limit=Amount(pence=limit_pence))
+
+    def set_credit_limit_changes(self, *, card_id: int, changes) -> None:
+        """Replace all scheduled limit changes for a card."""
+        for i, c in enumerate(self._cards):
+            if c.id == card_id:
+                self._cards[i] = replace(c, scheduled_limit_changes=tuple(changes))

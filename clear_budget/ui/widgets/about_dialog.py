@@ -65,7 +65,7 @@ _CREDITS_HTML = "\n".join(_CREDITS)
 
 _ABOUT_TEXT = f"""\
 <h2>Clear Budget</h2>
-<p><b>Personal Budget Planner</b></p>
+<p><b>Personal Budgeting and Solvency Forecasting</b></p>
 <p><b>Version:</b> {_APP_VERSION}</p>
 <p><b>Author:</b> Oliver Ernster</p>
 <p>Distributed under the GNU Lesser General Public Licence v3.0 (LGPL-3.0).</p>

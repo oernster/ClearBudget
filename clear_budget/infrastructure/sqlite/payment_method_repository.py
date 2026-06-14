@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.credit_limit_change import CreditLimitChange
 
 
 @dataclass
@@ -24,7 +25,7 @@ class SQLitePaymentMethodRepository:
                    interest_rate_apr, payment_due_day,
                    card_expiry_month, card_expiry_year,
                    minimum_payment_pence, minimum_payment_percent, active,
-                   balance_applied_year, balance_applied_month
+                   balance_applied_year, balance_applied_month, balance_applied_day
             FROM credit_cards {where_clause}""")
         return [
             CreditCard(
@@ -41,6 +42,8 @@ class SQLitePaymentMethodRepository:
                 active=row["active"],
                 balance_applied_year=row["balance_applied_year"],
                 balance_applied_month=row["balance_applied_month"],
+                balance_applied_day=row["balance_applied_day"],
+                scheduled_limit_changes=self._limit_changes_for(card_id=row["id"]),
             )
             for row in cursor.fetchall()
         ]
@@ -56,7 +59,7 @@ class SQLitePaymentMethodRepository:
                    interest_rate_apr, payment_due_day,
                    card_expiry_month, card_expiry_year,
                    minimum_payment_pence, minimum_payment_percent, active,
-                   balance_applied_year, balance_applied_month
+                   balance_applied_year, balance_applied_month, balance_applied_day
             FROM credit_cards WHERE id = ?""",
             (card_id,),
         )
@@ -77,6 +80,8 @@ class SQLitePaymentMethodRepository:
             active=row["active"],
             balance_applied_year=row["balance_applied_year"],
             balance_applied_month=row["balance_applied_month"],
+            balance_applied_day=row["balance_applied_day"],
+            scheduled_limit_changes=self._limit_changes_for(card_id=row["id"]),
         )
 
     def update_credit_card_balance(  # pragma: no cover
@@ -91,15 +96,73 @@ class SQLitePaymentMethodRepository:
         self.conn.commit()
 
     def set_balance_applied(  # pragma: no cover
-        self, *, card_id: int, year: int, month: int
+        self, *, card_id: int, year: int, month: int, day: int | None = None
     ) -> None:
-        """Stamp the month whose closing state was folded into the balance."""
+        """Stamp the period whose state is folded into current_balance_used.
+
+        A `day` marks a mid-month manual entry (balance as-of that day); None
+        marks a whole-month fold with no day anchor.
+        """
         cursor = self.conn.cursor()
         cursor.execute(
             "UPDATE credit_cards"
-            " SET balance_applied_year = ?, balance_applied_month = ?"
+            " SET balance_applied_year = ?, balance_applied_month = ?,"
+            " balance_applied_day = ?"
             " WHERE id = ?",
-            (year, month, card_id),
+            (year, month, day, card_id),
+        )
+        self.conn.commit()
+
+    def _limit_changes_for(  # pragma: no cover
+        self, *, card_id: int
+    ) -> tuple[CreditLimitChange, ...]:
+        """Load a card's scheduled limit changes, ordered by effective date."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT effective_year, effective_month, effective_day, new_limit_pence"
+            " FROM credit_limit_changes WHERE card_id = ?"
+            " ORDER BY effective_year, effective_month, effective_day, id",
+            (card_id,),
+        )
+        return tuple(
+            CreditLimitChange(
+                effective_year=row["effective_year"],
+                effective_month=row["effective_month"],
+                effective_day=row["effective_day"],
+                new_limit=Amount(pence=row["new_limit_pence"]),
+            )
+            for row in cursor.fetchall()
+        )
+
+    def set_credit_limit_changes(  # pragma: no cover
+        self, *, card_id: int, changes: tuple[CreditLimitChange, ...]
+    ) -> None:
+        """Replace all scheduled limit changes for a card (delete then insert)."""
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM credit_limit_changes WHERE card_id = ?", (card_id,))
+        for change in changes:
+            cursor.execute(
+                "INSERT INTO credit_limit_changes (card_id, effective_year,"
+                " effective_month, effective_day, new_limit_pence)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (
+                    card_id,
+                    change.effective_year,
+                    change.effective_month,
+                    change.effective_day,
+                    change.new_limit.pence,
+                ),
+            )
+        self.conn.commit()
+
+    def update_credit_card_limit(  # pragma: no cover
+        self, *, card_id: int, limit_pence: int
+    ) -> None:
+        """Update a credit card's current credit limit (in pence)."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "UPDATE credit_cards SET credit_limit_pence = ? WHERE id = ?",
+            (limit_pence, card_id),
         )
         self.conn.commit()
 

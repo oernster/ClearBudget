@@ -3,19 +3,33 @@
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
+    QHBoxLayout,
     QLabel,
     QProgressBar,
     QPushButton,
+    QSizePolicy,
 )
 from PySide6.QtCore import Qt, Signal
 
+from clear_budget.domain.services.credit_limit_schedule import (
+    month_end_effective_limit_pence,
+)
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
-from clear_budget.ui.utils.format_helpers import build_centered_nav_header, fmt
+from clear_budget.ui.utils.format_helpers import (
+    build_centered_nav_header,
+    fmt,
+    MONTH_NAMES,
+)
 from clear_budget.ui import ui_scale
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
 from clear_budget.ui.views._solvency_panel_narratives import (
     SolvencyPanelNarrativeMixin,
 )
+
+# The solvency view presents the current month plus the next two (the forward
+# projection), so the card bars reflect a committed limit change landing within
+# that same three-month outlook, flagged by a pill per transition.
+_FORWARD_OUTLOOK_MONTHS = 3
 
 
 class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWidget):
@@ -47,9 +61,7 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
 
         # SECTION 1: OVERDRAFT ALERT (Top - Prominent)
         alert_label = QLabel("Overdraft Status")
-        alert_label.setStyleSheet(
-            ui_scale.style("font-weight: bold; font-size: 17px;")
-        )
+        alert_label.setStyleSheet(ui_scale.style("font-weight: bold; font-size: 17px;"))
         layout.addWidget(alert_label)
 
         self.overdraft_alert = QLabel(f"SAFE: {fmt(0)} buffer")
@@ -170,6 +182,46 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
             month = month.next_month()
         return None, 24
 
+    def _build_limit_change_pills(self, card, displayed, outlook):
+        """Build a pill row for the card's scheduled limit changes falling within
+        the displayed-to-outlook window (one pill per transition), or None."""
+        lo = (displayed.year, displayed.month)
+        hi = (outlook.year, outlook.month)
+        running = card.credit_limit.pence
+        pills = []
+        for change in card.scheduled_limit_changes:
+            key = (change.effective_year, change.effective_month)
+            if lo <= key <= hi:
+                increase = change.new_limit.pence >= running
+                arrow = "↑" if increase else "↓"
+                month_abbr = MONTH_NAMES[change.effective_month][:3]
+                pills.append(
+                    (
+                        f"{arrow} {change.new_limit} · "
+                        f"{change.effective_day} {month_abbr}",
+                        "#1e3a8a" if increase else "#78350f",
+                    )
+                )
+            running = change.new_limit.pence
+        if not pills:
+            return None
+        container = QWidget()
+        row = QHBoxLayout(container)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(ui_scale.px(6))
+        for text, color in pills:
+            label = QLabel(text)
+            label.setStyleSheet(
+                ui_scale.style(
+                    "font-size: 11px; font-weight: 600; color: #ffffff;"
+                    f" background-color: {color}; border-radius: 4px; padding: 1px 6px;"
+                )
+            )
+            label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+            row.addWidget(label)
+        row.addStretch(1)
+        return container
+
     def _rebuild_card_bars(self, report) -> None:
         """Clear and rebuild per-card utilisation bars for the viewed month."""
         while self.card_bars_layout.count():
@@ -180,6 +232,14 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
         cards = self.view_model.budget_service.get_credit_cards(include_inactive=False)
         if not cards:
             return
+
+        # The bar reflects the displayed month's own month-end (below). The pills
+        # give the heads-up for changes still ahead within the three-month outlook
+        # the page projects (current, next, one after).
+        outlook = report.year_month
+        for _ in range(_FORWARD_OUTLOOK_MONTHS - 1):
+            outlook = outlook.next_month()
+        month_name = MONTH_NAMES[report.year_month.month]
 
         monthly_states = {
             s.card.id: s
@@ -194,10 +254,16 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
         for card in cards:
             state = monthly_states.get(card.id)
             used_pence = card.current_balance_used.pence
-            limit_pence = card.credit_limit.pence
+            # The bar shows the displayed month's own month-end: the projected
+            # closing balance against the limit effective by that month's end.
+            limit_pence = month_end_effective_limit_pence(
+                card=card,
+                year=report.year_month.year,
+                month=report.year_month.month,
+            )
             closing_pence = state.closing_balance.pence if state else used_pence
             available_pence = limit_pence - closing_pence
-            util_pct = (used_pence / limit_pence * 100) if limit_pence else 0.0
+            util_pct = (closing_pence / limit_pence * 100) if limit_pence else 0.0
 
             name_lbl = QLabel(card.name)
             name_lbl.setStyleSheet(
@@ -207,12 +273,12 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
 
             bar = QProgressBar()
             bar.setMaximum(max(1, limit_pence))
-            bar.setValue(min(used_pence, limit_pence))
+            bar.setValue(min(closing_pence, limit_pence))
             bar.setMinimumHeight(ui_scale.px(26))
             bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
             bar.setFormat(
-                f"{fmt(used_pence)} of {fmt(limit_pence)} ({util_pct:.1f}%)"
-                f"   ·   month-end: {fmt(closing_pence)}"
+                f"{month_name} month-end: {fmt(closing_pence)}"
+                f" of {fmt(limit_pence)} ({util_pct:.1f}%)"
             )
 
             if available_pence <= _red_threshold_pence:
@@ -230,8 +296,15 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
             )
             self.card_bars_layout.addWidget(bar)
 
+            pills_row = self._build_limit_change_pills(card, report.year_month, outlook)
+            if pills_row is not None:
+                self.card_bars_layout.addWidget(pills_row)
+
             if state:
-                delta = closing_pence - used_pence
+                # Within-month change for the displayed month: closing minus that
+                # month's own opening (not today's balance), i.e. the net of this
+                # month's charges, payment and interest.
+                delta = closing_pence - state.opening_balance.pence
                 arrow = "↑" if delta > 0 else "↓" if delta < 0 else "→"
                 detail = (
                     f"Charges +{fmt(state.charges.pence)}  ·  "

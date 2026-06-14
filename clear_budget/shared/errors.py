@@ -19,6 +19,12 @@ class InvalidYearMonthError(BudgetError):
     pass
 
 
+class InvalidCreditLimitChangeError(BudgetError):
+    """Raised when a scheduled credit limit change has an invalid date."""
+
+    pass
+
+
 class BillNotFoundError(BudgetError):
     """Raised when a bill is not found."""
 

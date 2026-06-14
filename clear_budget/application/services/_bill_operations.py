@@ -1,5 +1,7 @@
 """Bill CRUD/override/skip/paid pass-throughs for BudgetService - LOC limit split."""
 
+from dataclasses import replace
+
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.value_objects.year_month import YearMonth
 
@@ -26,6 +28,18 @@ class BillOperationsMixin:
 
     def delete_bill(self, *, bill_id: int) -> None:  # pragma: no cover
         self.bill_repo.hard_delete(bill_id=bill_id)
+
+    def end_bill(self, *, bill_id: int, last_active_month: YearMonth) -> None:
+        """End a bill so it stops after last_active_month, preserving history.
+
+        Sets the bill's end month, so every earlier month (and any archived
+        snapshot) still shows it. Used by the history-safe delete: removing a
+        bill while viewing a month ends it the month before, leaving the past
+        untouched.
+        """
+        bill = self.bill_repo.get_by_id(bill_id=bill_id)
+        if bill is not None:
+            self.bill_repo.update(bill=replace(bill, end_ym=last_active_month))
 
     def set_bill_active(
         self, *, bill_id: int, active: bool
