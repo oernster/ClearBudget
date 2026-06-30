@@ -5,9 +5,47 @@ from clear_budget.domain.services.card_monthly_calculator import (
 )
 from clear_budget.ui.utils.format_helpers import fmt
 
+# Traffic-light state colours, defined once so the banner and the title-bar
+# label classify a month identically rather than via two drifting rule sets.
+_STATE_RED = "#f87171"
+_STATE_AT_RISK = "#f59e0b"
+_STATE_CAUTION = "#fbbf24"
+_STATE_SAFE = "#34d399"
+# Balance bands (in pence) separating the amber tiers from a safe close.
+_AT_RISK_BALANCE_PENCE = 20000
+_CAUTION_BALANCE_PENCE = 50000
+
 
 class SolvencyPanelNarrativeMixin:
     """Pure(ish) narrative-building helpers used by SolvencyPanel.update_display."""
+
+    @staticmethod
+    def _state_color(
+        balance_pence: int,
+        monthly_deficit_pence: int,
+        overdrawn_next_month: bool,
+    ) -> str:
+        """Traffic-light colour for a month's own solvency state.
+
+        ``overdrawn_next_month`` escalates to red as a forward warning: the
+        banner passes the real flag so it can shout about a looming overdraft,
+        while the title-bar label passes ``False`` so its colour reflects the
+        displayed month's own state rather than the next month's. This is the
+        single source of truth for both, so they never disagree on a colour.
+        """
+        if balance_pence < 0:
+            return _STATE_RED
+        if overdrawn_next_month:
+            return _STATE_RED
+        if monthly_deficit_pence > 0 and balance_pence <= _CAUTION_BALANCE_PENCE:
+            return _STATE_RED
+        if balance_pence <= _AT_RISK_BALANCE_PENCE:
+            return _STATE_AT_RISK
+        if balance_pence <= _CAUTION_BALANCE_PENCE:
+            return _STATE_CAUTION
+        if monthly_deficit_pence > 0:
+            return _STATE_CAUTION
+        return _STATE_SAFE
 
     @staticmethod
     def _health_color(balance_pence: int, monthly_drain_pence: int) -> str:

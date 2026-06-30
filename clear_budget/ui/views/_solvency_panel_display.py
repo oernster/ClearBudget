@@ -17,6 +17,7 @@ from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     fmt,
 )
+from clear_budget.ui.views._solvency_panel_narratives import _STATE_CAUTION
 from clear_budget.ui import ui_scale
 
 
@@ -89,57 +90,49 @@ class SolvencyPanelDisplayMixin:
         deficit_note = self._deficit_note(
             monthly_deficit_pence, overdraft_ym, overdrawn_next_month
         )
+        # The banner text spells out the month's situation; its colour and the
+        # title-bar colour both come from the shared _state_color classifier, so
+        # the only difference is that the banner escalates to red to warn of a
+        # next-month overdraft while the title bar reflects the month's own
+        # state (see the call below the chain).
         if balance < 0:
             self.overdraft_alert.setText(
                 f"CRITICAL: {fmt(abs(balance))} overdrawn{facility_alert}{deficit_note}"
-            )
-            self.overdraft_alert.setStyleSheet(
-                base_style + "background-color: #f87171; color: white;"
             )
         elif overdrawn_next_month:
             self.overdraft_alert.setText(
                 f"CRITICAL: overdrawn in {next_month_name} - "
                 f"{fmt(balance)} left in savings{facility_alert}{deficit_note}"
             )
-            self.overdraft_alert.setStyleSheet(
-                base_style + "background-color: #f87171; color: white;"
-            )
         elif monthly_deficit_pence > 0 and balance <= 500:
             self.overdraft_alert.setText(
                 f"CRITICAL: projected end of {month_name}: "
                 f"{fmt(balance)} - drawing down savings{deficit_note}"
             )
-            self.overdraft_alert.setStyleSheet(
-                base_style + "background-color: #f87171; color: white;"
-            )
         elif balance <= 200:
             self.overdraft_alert.setText(
                 f"AT RISK: only {fmt(balance)} remaining{deficit_note}"
-            )
-            self.overdraft_alert.setStyleSheet(
-                base_style + "background-color: #f59e0b; color: white;"
             )
         elif balance <= 500:
             self.overdraft_alert.setText(
                 f"CAUTION: {fmt(balance)} remaining{deficit_note}"
             )
-            self.overdraft_alert.setStyleSheet(
-                base_style + "background-color: #fbbf24; color: #1a1a1a;"
-            )
         elif monthly_deficit_pence > 0:
             self.overdraft_alert.setText(
                 f"CAUTION: {fmt(balance)} after {month_name} bills{deficit_note}"
-            )
-            self.overdraft_alert.setStyleSheet(
-                base_style + "background-color: #fbbf24; color: #1a1a1a;"
             )
         else:
             self.overdraft_alert.setText(
                 f"SAFE: {fmt(balance)} remaining after all {month_name} bills"
             )
-            self.overdraft_alert.setStyleSheet(
-                base_style + "background-color: #34d399; color: white;"
-            )
+        banner_color = self._state_color(
+            report.balance_pence, monthly_deficit_pence, overdrawn_next_month
+        )
+        # Dark text reads better on the light caution yellow; white elsewhere.
+        banner_fg = "#1a1a1a" if banner_color == _STATE_CAUTION else "white"
+        self.overdraft_alert.setStyleSheet(
+            base_style + f"background-color: {banner_color}; color: {banner_fg};"
+        )
 
         self.midmonth_alert.hide()
         if not is_current_month and summary and summary.income_sources:
@@ -335,8 +328,40 @@ class SolvencyPanelDisplayMixin:
         self.m2_projection_label.setText(m2_full)
         self.m2_projection_label.setStyleSheet(ui_scale.style(m2_style))
 
-        current_month_color = self._health_color(report.balance_pence, m1_drain)
+        # The title-bar colour is the displayed month's own within-month
+        # cashflow health, computed by the SAME engine that colours the Forward
+        # Projection rows (_build_month_cashflow_summary). This is the single
+        # source of truth: a month that dips overdrawn DURING the month is red
+        # even if it closes positive, exactly as the projection shows it. Keying
+        # the title off the closing balance (the banner) wrongly read such a
+        # month as amber.
+        current_month_color = self._title_health_color(report, overdraft_limit_pence)
         apply_nav_label_color(self.month_label, current_month_color)
         # Solvency is the single source of truth for the nav label colour;
         # broadcast it so the other tabs' month/year labels match.
         self.month_label_color_changed.emit(current_month_color)
+
+    def _title_health_color(self, report, overdraft_limit_pence: int) -> str:
+        """Within-month health colour for the displayed month's title bar.
+
+        Reuses _build_month_cashflow_summary, the same engine that colours the
+        Forward Projection rows, so the title bar always renders the colour
+        Solvency shows for that month. Falls back to the close-balance health
+        colour only when there is no summary to simulate.
+        """
+        summary = self.view_model.current_summary
+        if not summary:
+            return self._health_color(report.balance_pence, 0)
+        opening_pence = (
+            self.view_model.budget_service.get_projected_starting_balance_pence(
+                year_month=report.year_month
+            )
+        )
+        bank_bills_pence = sum(
+            b.amount.pence for b in summary.bills if b.payment_method_id == 1
+        )
+        drain_pence = bank_bills_pence - summary.total_income.pence
+        _, color, _ = self._build_month_cashflow_summary(
+            opening_pence, summary, drain_pence, overdraft_limit_pence
+        )
+        return color
