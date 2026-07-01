@@ -4,7 +4,8 @@ import shutil
 from datetime import date as _date
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
@@ -27,6 +28,9 @@ from clear_budget.ui.views.credit_card_view import CreditCardView
 from clear_budget.ui.views.month_view import MonthView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
 from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
+
+# GitHub releases page opened by Help > Check for Updates.
+RELEASES_URL = "https://github.com/oernster/ClearBudget/releases"
 
 
 class MainWindow(QMainWindow):
@@ -205,10 +209,12 @@ class MainWindow(QMainWindow):
         # Help menu
         help_menu = self.menuBar().addMenu("&Help")
         about_action = help_menu.addAction("&About Clear Budget")
+        check_updates_action = help_menu.addAction("Check for &Updates")
         how_it_works_action = help_menu.addAction("How It Works")
         licence_action = help_menu.addAction("View Licence (LGPL-3.0)")
         how_it_works_action.triggered.connect(self._on_how_it_works)
         about_action.triggered.connect(self._on_about)
+        check_updates_action.triggered.connect(self._on_check_updates)
         licence_action.triggered.connect(self._on_licence)
 
     def _on_new_budget(self) -> None:
@@ -292,6 +298,10 @@ class MainWindow(QMainWindow):
         from clear_budget.ui.widgets.about_dialog import AboutDialog
 
         AboutDialog(self).exec()
+
+    def _on_check_updates(self) -> None:
+        """Open the GitHub releases page in the default browser."""
+        QDesktopServices.openUrl(QUrl(RELEASES_URL))
 
     def _on_licence(self) -> None:
         from clear_budget.ui.widgets.about_dialog import LicenceDialog
