@@ -327,13 +327,22 @@ class BudgetService(
 
         _do_archive_month(self.bill_repo.conn, year_month, self.month_generator)
 
-    def auto_archive_previous_month_if_needed(
-        self, *, current_month: YearMonth
-    ) -> None:
-        prev_month = current_month.previous_month()
-        recorded = self.get_recorded_months()
-        if prev_month not in recorded:
-            self.archive_month(year_month=prev_month)
+    def auto_archive_elapsed_months(self, *, current_month: YearMonth) -> None:
+        """Archive every elapsed month up to (but excluding) current_month.
+
+        Run at startup so a month is captured into the archive the moment it
+        ends, even when the app was not opened for several months (each missing
+        month in the gap is filled). The left bound is the earliest month
+        already on record; with nothing recorded yet it is the month that just
+        ended, so history is never fabricated before the first record. Already
+        recorded months are skipped, so it is safe to run on every launch.
+        """
+        recorded = set(self.get_recorded_months())
+        month = min(recorded) if recorded else current_month.previous_month()
+        while month < current_month:
+            if month not in recorded:
+                self.archive_month(year_month=month)
+            month = month.next_month()
 
     def get_projected_starting_balance_pence(self, *, year_month: YearMonth) -> int:
         """Public wrapper: projected bank balance pence at start of year_month."""

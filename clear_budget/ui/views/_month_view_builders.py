@@ -31,13 +31,11 @@ class MonthViewBuilderMixin:
         self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         next_btn = QPushButton("Next →")
         next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.archive_btn = QPushButton("Archive Month")
         _ym = self.view_model.current_month
         self.nav_header, self.month_label = build_centered_nav_header(
             f"{MONTH_NAMES[_ym.month]} {_ym.year}",
             prev_btn=self.prev_btn,
             next_btn=next_btn,
-            trailing_widget=self.archive_btn,
         )
 
         self.solvency_hint_label = QLabel(
@@ -204,7 +202,6 @@ class MonthViewBuilderMixin:
     ) -> None:
         prev_btn.clicked.connect(self.view_model.previous_month)
         next_btn.clicked.connect(self.view_model.next_month)
-        self.archive_btn.clicked.connect(self.on_archive_month)
         self.edit_balance_btn.clicked.connect(self.on_edit_balance)
         self.add_bill_btn.clicked.connect(self.on_add_bill)
         self.delete_bill_btn.clicked.connect(self.on_delete_bill)
@@ -215,7 +212,6 @@ class MonthViewBuilderMixin:
         if not self.read_only:
             return
         for btn in (
-            self.archive_btn,
             self.edit_balance_btn,
             self.add_bill_btn,
             self.delete_bill_btn,

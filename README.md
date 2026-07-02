@@ -78,7 +78,7 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
 - **Solvency** - Financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
-- **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown)
+- **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
 ---
 

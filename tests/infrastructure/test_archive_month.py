@@ -20,8 +20,8 @@ from clear_budget.infrastructure.sqlite.payment_method_repository import (
 class TestArchiveMonth:
     """Test archiving months to database."""
 
-    def test_manual_archive_month(self, db) -> None:
-        """Test manually archiving a month."""
+    def test_archive_month_records_month(self, db) -> None:
+        """Archiving a month records it so the Archive tab can list it."""
         bill_repo = SQLiteBillRepository(db.conn)
         income_repo = SQLiteIncomeSourceRepository(db.conn)
         payment_method_repo = SQLitePaymentMethodRepository(db.conn)
@@ -122,16 +122,12 @@ class TestArchiveMonth:
         assert YearMonth(2026, 5) in recorded
         assert YearMonth(2026, 6) in recorded
 
-    def test_auto_archive_if_needed(self, db) -> None:
-        """Test auto-archiving previous month if not done."""
-        from datetime import date
-
+    def _service_with_rent(self, db) -> BudgetService:
         bill_repo = SQLiteBillRepository(db.conn)
         income_repo = SQLiteIncomeSourceRepository(db.conn)
         payment_method_repo = SQLitePaymentMethodRepository(db.conn)
         generator = MonthGenerator(bill_repo, income_repo)
         service = BudgetService(bill_repo, income_repo, payment_method_repo, generator)
-
         bill_repo.add(
             bill=Bill(
                 id=0,
@@ -145,18 +141,44 @@ class TestArchiveMonth:
                 end_ym=None,
             )
         )
+        return service
 
-        # Simulate: today is May 2026, so April should be auto-archived
-        today = YearMonth(2026, 5)
-        prev_month = today.previous_month()  # April 2026
+    def test_auto_archive_seeds_previous_month_when_nothing_recorded(self, db) -> None:
+        """With no history yet, the month that just ended is archived, and no
+        earlier month is fabricated."""
+        service = self._service_with_rent(db)
+        current = YearMonth(2026, 7)
 
-        # April should not be archived yet
-        recorded_before = service.get_recorded_months()
-        assert prev_month not in recorded_before
+        service.auto_archive_elapsed_months(current_month=current)
 
-        # Call auto-archive
-        service.auto_archive_previous_month_if_needed(current_month=today)
+        recorded = service.get_recorded_months()
+        assert YearMonth(2026, 6) in recorded  # the month that just ended
+        assert YearMonth(2026, 5) not in recorded  # no history fabricated further back
+        assert current not in recorded  # the live month is never archived
 
-        # April should now be archived
-        recorded_after = service.get_recorded_months()
-        assert prev_month in recorded_after
+    def test_auto_archive_fills_the_gap_from_earliest_record(self, db) -> None:
+        """The reported bug: May was recorded but June was lost. Catch-up
+        archives every elapsed month from the earliest record up to the live
+        month, recovering June (and any other gap)."""
+        service = self._service_with_rent(db)
+        service.archive_month(year_month=YearMonth(2026, 5))
+
+        service.auto_archive_elapsed_months(current_month=YearMonth(2026, 8))
+
+        recorded = service.get_recorded_months()
+        assert YearMonth(2026, 5) in recorded
+        assert YearMonth(2026, 6) in recorded  # was lost, now recovered
+        assert YearMonth(2026, 7) in recorded
+        assert YearMonth(2026, 8) not in recorded  # the live month stays open
+
+    def test_auto_archive_is_idempotent_across_relaunches(self, db) -> None:
+        """Running it again on the same month adds nothing (safe every launch)."""
+        service = self._service_with_rent(db)
+        current = YearMonth(2026, 7)
+
+        service.auto_archive_elapsed_months(current_month=current)
+        first = service.get_recorded_months()
+        service.auto_archive_elapsed_months(current_month=current)
+        second = service.get_recorded_months()
+
+        assert sorted(first) == sorted(second)

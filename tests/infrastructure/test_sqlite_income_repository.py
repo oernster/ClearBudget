@@ -224,3 +224,37 @@ class TestSQLiteIncomeSourceDeactivate:
         active_sources = repo.list_active()
         assert len(active_sources) == 0
         assert not any(s.id == income.id for s in active_sources)
+
+
+class TestSQLiteIncomeSourceListAll:
+    """Test listing every income source, including inactive ones."""
+
+    def test_list_all_includes_inactive(self, db) -> None:
+        """list_all returns active and deactivated sources alike."""
+        repo = SQLiteIncomeSourceRepository(db.conn)
+        active = repo.add(
+            income=IncomeSource(
+                id=0,
+                name="Salary",
+                amount=Amount(pence=200000),
+                is_reliable=True,
+                day_of_month=1,
+            )
+        )
+        retired = repo.add(
+            income=IncomeSource(
+                id=0,
+                name="Old gig",
+                amount=Amount(pence=50000),
+                is_reliable=False,
+                day_of_month=15,
+            )
+        )
+        repo.deactivate(income_id=retired.id)
+
+        everything = repo.list_all()
+        names = {s.name for s in everything}
+
+        assert {active.name, retired.name} <= names
+        # list_all keeps the retired source that list_active drops.
+        assert not any(s.id == retired.id for s in repo.list_active())

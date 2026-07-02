@@ -4,12 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "clearbudget"
-version = "1.0.0"
+# Single source of truth: the version is read from the VERSION file at build
+# time (the runtime reads the same file via clear_budget.version). Never
+# hardcode a version here.
+dynamic = ["version"]
 description = "Personal monthly budget planner with credit card tracking"
 authors = [{name = "Oliver Ernster", email = "oernster@codecrafter.uk"}]
 license = {text = "LGPL-3.0-only"}
 requires-python = ">=3.11"
 dependencies = ["PySide6>=6.7.0"]
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
 
 [tool.black]
 line-length = 88

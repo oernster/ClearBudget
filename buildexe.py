@@ -5,10 +5,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+import stamp_version
+
 
 def build_exe() -> int:
     """Create standalone EXE using PyInstaller."""
     print("Building ClearBudget EXE...")
+
+    # Propagate the canonical VERSION into static docs before packaging, so a
+    # release never ships docs whose version disagrees with VERSION.
+    stamp_version.main()
 
     root = Path(__file__).parent
     dist_dir = root / "dist-pyinstaller"

@@ -328,27 +328,39 @@ class SolvencyPanelDisplayMixin:
         self.m2_projection_label.setText(m2_full)
         self.m2_projection_label.setStyleSheet(ui_scale.style(m2_style))
 
-        # The title-bar colour is the displayed month's own within-month
-        # cashflow health, computed by the SAME engine that colours the Forward
-        # Projection rows (_build_month_cashflow_summary). This is the single
-        # source of truth: a month that dips overdrawn DURING the month is red
-        # even if it closes positive, exactly as the projection shows it. Keying
-        # the title off the closing balance (the banner) wrongly read such a
-        # month as amber.
-        current_month_color = self._title_health_color(report, overdraft_limit_pence)
+        # The title-bar colour is the displayed month's OWN within-month health,
+        # the same colour Solvency shows for that month: red only when that
+        # month's balance actually drops below zero, amber when it dips low or
+        # runs at a loss but stays in the black, green when it stays comfortable.
+        # It must NOT inherit the banner's next-month overdraft warning: a month
+        # that itself never goes negative (e.g. dips to a small positive low)
+        # stays amber even while the banner shouts about the month after it.
+        current_month_color = self._title_health_color(
+            report, is_current_month, overdraft_limit_pence
+        )
         apply_nav_label_color(self.month_label, current_month_color)
         # Solvency is the single source of truth for the nav label colour;
         # broadcast it so the other tabs' month/year labels match.
         self.month_label_color_changed.emit(current_month_color)
 
-    def _title_health_color(self, report, overdraft_limit_pence: int) -> str:
-        """Within-month health colour for the displayed month's title bar.
+    def _title_health_color(
+        self, report, is_current_month: bool, overdraft_limit_pence: int
+    ) -> str:
+        """Title-bar colour: the colour Solvency shows for the displayed month.
 
-        Reuses _build_month_cashflow_summary, the same engine that colours the
-        Forward Projection rows, so the title bar always renders the colour
-        Solvency shows for that month. Falls back to the close-balance health
-        colour only when there is no summary to simulate.
+        For a FUTURE month this is that month's Forward Projection health, from
+        the same _build_month_cashflow_summary engine that colours the
+        projection rows, so the title matches the paragraph the user saw for
+        that month (a month that dips low but stays positive is amber, not red).
+
+        The CURRENT month is judged on its live/actual balance instead. It is
+        already underway, so its real trajectory (the Overdraft Status banner's
+        own verdict) is what counts, not a re-simulation of the whole month from
+        a stale projected opening that would replay already-paid bills and dip
+        it spuriously into the red.
         """
+        if is_current_month:
+            return self._state_color(report.balance_pence, 0, False)
         summary = self.view_model.current_summary
         if not summary:
             return self._health_color(report.balance_pence, 0)

@@ -184,6 +184,15 @@ Key methods:
 - `end_bill(bill_id, last_active_month)` - history-safe delete: set the bill's end
   month, leaving every earlier month (and archived snapshots) untouched
 - `reset_all_data()` - wipes all user budget data (New Budget feature)
+- `get_recorded_months()` → `list[YearMonth]` - months already snapshotted into the
+  archive (drives the Archive tab)
+- `archive_month(year_month)` - snapshot one month's generated bills and income into
+  `months` / `month_bills` / `month_income` (idempotent; the internal archiving
+  primitive)
+- `auto_archive_elapsed_months(current_month)` - archiving is automatic, never manual:
+  run at launch (alongside `apply_elapsed_limit_changes`), it archives every elapsed
+  month up to the live month, filling any gap from the earliest recorded month so a
+  month is captured the moment it ends even across several missed launches
 
 **DTOs**:
 - `MonthSummary` - `year_month`, `total_income`, `total_bills`, `bank_bills`, `balance`, `bills`, `all_bills`, `income_sources`, `all_income_sources`
@@ -197,9 +206,9 @@ Key methods:
   1. `payment_methods` - id=1 is "Bank Account"
   2. `bills` - templates; includes `target_card_id` (migration)
   3. `income_sources`
-  4. `months`
-  5. `month_bills`
-  6. `month_income`
+  4. `months` - one row per archived month (written by auto-archive at launch)
+  5. `month_bills` - archived per-month bill snapshot
+  6. `month_income` - archived per-month income snapshot
   7. `credit_cards` - includes `minimum_payment_percent` (migration)
   8. `settings` - key/value store (`bank_balance`, `bank_balance_day`, `currency`,
      `overdraft_limit`, `overdraft_apr_bp`)
@@ -272,8 +281,12 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `build_centered_nav_header(...)` - the shared month/year navigation tray used
   by all four tabs (bordered, centred, hoisted above the scroll area by
   `ScrollableTab`). `apply_nav_label_color` / `_nav_label_style` recolour the
-  label; the colour is sourced from the Solvency panel's health state and
-  broadcast to every tab via `SolvencyPanel.month_label_color_changed`
+  label; the colour is each month's OWN within-month solvency health (current
+  month from its live balance, a future month from its Forward Projection),
+  computed once by the Solvency panel and broadcast to every tab via
+  `SolvencyPanel.month_label_color_changed` so no tab can disagree. A month is
+  red only when its own balance drops below zero; a looming overdraft in a later
+  month stays a banner warning and never colours the earlier month's title
 
 **`ui_paths.default_downloads_dir()`** (`clear_budget/ui/ui_paths.py`):
 - Cross-platform Downloads folder via `QStandardPaths.DownloadLocation`, falling
@@ -341,6 +354,11 @@ Separate from budget infrastructure. Manages user identity and credentials.
   the tray stays full-width and centred on every tab
 - `_preferences_flow.py` / `_bank_account_settings_flow.py` - dialog-orchestration
   helpers extracted from `MainWindow` to stay under the LOC limit
+- `_main_window_menus.py` (`MainWindowMenuMixin`) - status-bar and File/Users/Help
+  menu construction, extracted from `MainWindow` to stay under the LOC limit
+- `_month_view_builders.py` (`MonthViewBuilderMixin`) - builds the `MonthView`
+  sections (header, tables, buttons); the month nav tray carries only Previous/Next
+  now that archiving is automatic (no manual "Archive Month" button)
 - `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
   for the Credit Cards tab
 
@@ -512,8 +530,12 @@ distribution tool, kept separate from the runtime application described above.
 - `test_currency.py` - currency registry, `get_symbol`, `set_currency`, reset fixture
 
 ### UI Layer
-- ViewModel tests with mocked `BudgetService`
-- No widget rendering
+- The suite is Qt-free: fragile widget-level PySide6 tests (which needed a
+  `QApplication` and were flaky) have been removed
+- Pure UI-layer logic is still covered without Qt under `tests/ui_logic` - e.g.
+  the Solvency month-colour rule is exercised by instantiating the colour mixins
+  directly (no widgets)
+- The UI layer is excluded from the coverage gate (see `.coveragerc`)
 
 ### Structural Tests
 - `test_layering_rules.py` - AST-based forbidden import enforcement
@@ -524,7 +546,10 @@ distribution tool, kept separate from the runtime application described above.
 
 - **Black** 88-char line length
 - **Flake8** no violations
-- **100% test coverage** (`pytest --cov-fail-under=100`) excluding UI, interfaces, main, build scripts
+- **100% test coverage** (`pytest -v --cov`, gated at `--cov-fail-under=100`) excluding
+  UI, interfaces, main, build scripts. The suite is Qt-free and runs clean in one
+  process
+- **No mock libraries** - real implementations and hand-written fakes only
 - **No magic numbers** - all domain values derive from data, config, or named constants
 
 ## Design Principles

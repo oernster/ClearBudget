@@ -27,11 +27,12 @@ class SolvencyPanelNarrativeMixin:
     ) -> str:
         """Traffic-light colour for a month's own solvency state.
 
-        ``overdrawn_next_month`` escalates to red as a forward warning: the
-        banner passes the real flag so it can shout about a looming overdraft,
-        while the title-bar label passes ``False`` so its colour reflects the
-        displayed month's own state rather than the next month's. This is the
-        single source of truth for both, so they never disagree on a colour.
+        This is the single source of truth for both the Overdraft Status banner
+        and the title-bar label: the banner computes the colour here and the
+        title reuses that exact value, so the two are always identical. Red is
+        reserved for a genuine problem: the projected balance finishing below
+        zero, a looming next-month overdraft (``overdrawn_next_month``), or a
+        draining month left with almost nothing.
         """
         if balance_pence < 0:
             return _STATE_RED

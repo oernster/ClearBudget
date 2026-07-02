@@ -357,3 +357,28 @@ class TestSQLiteBillRepositoryPaidForMonth:
         active = repo.list_active_for_month(year_month=ym)
         marked = next(b for b in active if b.id == bill.id)
         assert marked.paid_for_month is False
+
+
+class TestSQLiteBillRepositoryHardDelete:
+    """Test permanently removing a bill."""
+
+    def test_hard_delete_removes_bill(self, db) -> None:
+        """hard_delete permanently removes the bill so it can no longer be read."""
+        repo = SQLiteBillRepository(db.conn)
+        added = repo.add(
+            bill=Bill(
+                id=0,
+                name="Gone",
+                amount=Amount(pence=5000),
+                payment_method_id=1,
+                category="misc",
+                bill_type="fixed",
+                day_of_month=1,
+                start_ym=YearMonth(2026, 1),
+                end_ym=None,
+            )
+        )
+
+        repo.hard_delete(bill_id=added.id)
+
+        assert repo.get_by_id(bill_id=added.id) is None

@@ -15,6 +15,8 @@ import sys
 import time
 from pathlib import Path
 
+import stamp_version
+
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 
@@ -60,6 +62,9 @@ def _replace_file(src: Path, dst: Path) -> None:
 
 def main() -> int:
     _require_windows()
+
+    # Propagate the canonical VERSION into static docs before packaging.
+    stamp_version.main()
 
     # 1) Build payload zip + manifest.
     _run([sys.executable, "-m", "installer.build_payload"])

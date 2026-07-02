@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from clear_budget.domain.services.bank_cashflow import BankCashflowService
-from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.widgets.bill_dialog import BillDialog
 from clear_budget.ui.widgets.income_dialog import IncomeDialog
@@ -76,22 +75,15 @@ class MonthView(
         self.view_model.month_summary_updated.connect(self.update_bills_table)
         self.view_model.month_changed.connect(self._update_month_label)
         self.view_model.month_changed.connect(self._update_prev_btn_state)
-        self.view_model.month_changed.connect(self._update_archive_btn_state)
         self.bills_table.cellClicked.connect(self._on_bill_cell_clicked)
         self.bills_table.itemChanged.connect(self._on_bill_item_changed)
         self.income_table.cellClicked.connect(self._on_income_cell_clicked)
         self.income_table.itemChanged.connect(self._on_income_item_changed)
         self._update_prev_btn_state(self.view_model.current_month)
-        self._update_archive_btn_state(self.view_model.current_month)
 
     def _update_prev_btn_state(self, year_month) -> None:
         if self.prev_btn:
             self.prev_btn.setEnabled(year_month > self.view_model.base_month)
-
-    def _update_archive_btn_state(self, year_month) -> None:
-        self.archive_btn.setEnabled(
-            not self.read_only and year_month < YearMonth.today()
-        )
 
     def _update_month_label(self, year_month) -> None:
         self.month_label.setText(f"{MONTH_NAMES[year_month.month]} {year_month.year}")
@@ -236,11 +228,6 @@ class MonthView(
             )
             self._update_balance_display()
             self.view_model.month_summary_updated.emit(self.view_model.month_summary)
-
-    def on_archive_month(self) -> None:
-        self.view_model.budget_service.archive_month(
-            year_month=self.view_model.current_month
-        )
 
     def on_add_bill(self) -> None:
         dialog = BillDialog(

@@ -55,10 +55,34 @@ black, flake8).
 
 ```
 python main.py     # launch the app
-pytest             # run the full suite (100% coverage gate enforced)
+pytest -v --cov    # run the full suite (100% coverage gate enforced)
 black .            # format (line length 88)
 flake8             # lint
 ```
+
+The suite is Qt-free and runs clean in one process: the fragile widget-level
+PySide6 tests were removed, and the UI layer is excluded from the coverage gate
+(see `.coveragerc`). Pure UI-layer logic is still tested without a `QApplication`
+under `tests/ui_logic`. Tests use real implementations and hand-written fakes, no
+mock libraries.
+
+---
+
+## Versioning
+
+The `VERSION` file at the repository root is the single source of truth. Bump the
+patch/minor/major there and nothing else needs editing:
+
+- the runtime reads it via `clear_budget/version.py`;
+- `pyproject.toml` reads it dynamically (`[tool.setuptools.dynamic]`), so packaging
+  metadata always matches;
+- static docs that cannot read it at runtime (the GitHub Pages site under `docs/`)
+  are stamped from it by `stamp_version.py`, which `buildexe.py` and
+  `buildinstaller.py` run automatically at the start of every build. Run
+  `python stamp_version.py` by hand after a bump if you want the docs updated
+  without a full build.
+
+Never hardcode a version string anywhere except `VERSION`.
 
 ---
 
