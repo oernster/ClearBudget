@@ -285,8 +285,10 @@ Separate from budget infrastructure. Manages user identity and credentials.
   month from its live balance, a future month from its Forward Projection),
   computed once by the Solvency panel and broadcast to every tab via
   `SolvencyPanel.month_label_color_changed` so no tab can disagree. A month is
-  red only when its own balance drops below zero; a looming overdraft in a later
-  month stays a banner warning and never colours the earlier month's title
+  red only when its own balance breaches the overdraft floor (below zero with no
+  facility, or beyond an agreed facility); dipping into an agreed facility but
+  staying within it is amber. A looming overdraft in a later month stays a
+  banner warning and never colours the earlier month's title
 
 **`ui_paths.default_downloads_dir()`** (`clear_budget/ui/ui_paths.py`):
 - Cross-platform Downloads folder via `QStandardPaths.DownloadLocation`, falling

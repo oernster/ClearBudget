@@ -131,3 +131,26 @@ def test_midmonth_dip_with_positive_close_is_flagged() -> None:
         from_year_month=YearMonth(2026, 7), from_balance_pence=50000
     )
     assert result == YearMonth(2026, 8)
+
+
+def test_within_facility_dip_is_not_flagged_beyond_is() -> None:
+    # Net -500/month from 900: Aug 400, Sep -100, Oct -600. A £200 facility
+    # absorbs September (-100), so October (-600) is the first floor breach.
+    svc = _service(income_pence=100000, bank_bill_pence=150000)
+    result = svc.first_overdrawn_month(
+        from_year_month=YearMonth(2026, 7),
+        from_balance_pence=90000,
+        overdraft_limit_pence=20000,
+    )
+    assert result == YearMonth(2026, 10)
+
+
+def test_no_facility_is_first_below_zero_month() -> None:
+    # With no facility the floor is zero, so September (-100) is the breach.
+    svc = _service(income_pence=100000, bank_bill_pence=150000)
+    result = svc.first_overdrawn_month(
+        from_year_month=YearMonth(2026, 7),
+        from_balance_pence=90000,
+        overdraft_limit_pence=0,
+    )
+    assert result == YearMonth(2026, 9)

@@ -81,10 +81,12 @@ class SolvencyPanelDisplayMixin:
         # used both to escalate when it is the very next month and to state the
         # runway. Same intra-month basis as the forward projection below.
         overdraft_ym = None
-        if monthly_deficit_pence > 0 and report.balance_pence >= 0:
+        not_yet_beyond_floor = report.balance_pence >= -overdraft_limit_pence
+        if monthly_deficit_pence > 0 and not_yet_beyond_floor:
             overdraft_ym = self.view_model.budget_service.first_overdrawn_month(
                 from_year_month=report.year_month,
                 from_balance_pence=report.balance_pence,
+                overdraft_limit_pence=overdraft_limit_pence,
             )
         overdrawn_next_month = overdraft_ym == next_ym
         deficit_note = self._deficit_note(
@@ -95,9 +97,19 @@ class SolvencyPanelDisplayMixin:
         # the only difference is that the banner escalates to red to warn of a
         # next-month overdraft while the title bar reflects the month's own
         # state (see the call below the chain).
-        if balance < 0:
+        if report.balance_pence < -overdraft_limit_pence:
+            beyond_note = (
+                f" - beyond your {fmt(overdraft_limit_pence)} overdraft"
+                if overdraft_limit_pence > 0
+                else facility_alert
+            )
             self.overdraft_alert.setText(
-                f"CRITICAL: {fmt(abs(balance))} overdrawn{facility_alert}{deficit_note}"
+                f"CRITICAL: {fmt(abs(balance))} overdrawn{beyond_note}{deficit_note}"
+            )
+        elif report.balance_pence < 0:
+            self.overdraft_alert.setText(
+                f"CAUTION: using {fmt(abs(balance))} of your "
+                f"{fmt(overdraft_limit_pence)} overdraft{deficit_note}"
             )
         elif overdrawn_next_month:
             self.overdraft_alert.setText(
@@ -126,7 +138,10 @@ class SolvencyPanelDisplayMixin:
                 f"SAFE: {fmt(balance)} remaining after all {month_name} bills"
             )
         banner_color = self._state_color(
-            report.balance_pence, monthly_deficit_pence, overdrawn_next_month
+            report.balance_pence,
+            monthly_deficit_pence,
+            overdrawn_next_month,
+            overdraft_limit_pence,
         )
         # Dark text reads better on the light caution yellow; white elsewhere.
         banner_fg = "#1a1a1a" if banner_color == _STATE_CAUTION else "white"
@@ -351,7 +366,9 @@ class SolvencyPanelDisplayMixin:
         For a FUTURE month this is that month's Forward Projection health, from
         the same _build_month_cashflow_summary engine that colours the
         projection rows, so the title matches the paragraph the user saw for
-        that month (a month that dips low but stays positive is amber, not red).
+        that month. Red is reserved for breaching the overdraft floor (below
+        zero with no facility, or beyond an agreed one); staying positive or
+        dipping only within a facility is amber.
 
         The CURRENT month is judged on its live/actual balance instead. It is
         already underway, so its real trajectory (the Overdraft Status banner's
@@ -360,7 +377,9 @@ class SolvencyPanelDisplayMixin:
         it spuriously into the red.
         """
         if is_current_month:
-            return self._state_color(report.balance_pence, 0, False)
+            return self._state_color(
+                report.balance_pence, 0, False, overdraft_limit_pence
+            )
         summary = self.view_model.current_summary
         if not summary:
             return self._health_color(report.balance_pence, 0)

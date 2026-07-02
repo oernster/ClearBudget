@@ -45,14 +45,18 @@ def first_overdrawn_month(
     from_year_month: YearMonth,
     from_balance_pence: int,
     horizon_months: int = _DEFAULT_HORIZON_MONTHS,
+    overdraft_limit_pence: int = 0,
 ) -> YearMonth | None:
-    """First month after ``from_year_month`` whose balance dips below zero.
+    """First month after ``from_year_month`` whose balance drops below the floor.
 
     Projects forward from ``from_balance_pence`` (the projected end-of-month
     balance of ``from_year_month``), simulating each later month day by day. A
-    month counts as overdrawn if the balance goes negative at any point during
-    it, even when later income lifts it back to a positive close. Returns
-    ``None`` when no month dips negative across the horizon.
+    month counts as overdrawn once the balance dips below the agreed overdraft
+    floor (below ``-overdraft_limit_pence``, i.e. below zero when no facility is
+    defined) at any point during it, even when later income lifts it back to a
+    positive close. Dipping into an agreed facility but staying within it does
+    not count. Returns ``None`` when no month breaches the floor across the
+    horizon.
     """
     balance = from_balance_pence
     cursor = from_year_month
@@ -62,8 +66,9 @@ def first_overdrawn_month(
         projection = BankCashflowService.project_month(
             starting_balance_pence=balance,
             events=_month_events(summary),
+            overdraft_limit_pence=overdraft_limit_pence,
         )
-        if projection.first_negative_day is not None:
+        if projection.overdraft_exceeded_day is not None:
             return cursor
         balance = projection.closing_balance_pence
     return None

@@ -27,6 +27,7 @@ from clear_budget.ui.views._solvency_panel_narratives import (
 
 RED = "#f87171"
 AMBER = "#fbbf24"
+AT_RISK = "#f59e0b"  # the "into the overdraft, but within facility" amber
 GREEN = "#34d399"
 _BANK = 1
 
@@ -195,6 +196,48 @@ def test_future_month_without_summary_falls_back_to_close_balance() -> None:
 
     color = harness._title_health_color(
         report, is_current_month=False, overdraft_limit_pence=0
+    )
+
+    assert color == RED
+
+
+# --------------------------------------------------------------------------
+# The overdraft floor: red only below the agreed facility, amber within it.
+# --------------------------------------------------------------------------
+
+
+def test_current_month_within_overdraft_facility_is_amber() -> None:
+    """A live balance in the red but within an agreed facility is amber, not
+    red: the facility makes it manageable."""
+    harness = _TitleColour()
+    report = _report(-20000, YearMonth(2026, 7))  # -£200, inside a £500 facility
+
+    color = harness._title_health_color(
+        report, is_current_month=True, overdraft_limit_pence=50000
+    )
+
+    assert color == AT_RISK
+
+
+def test_current_month_beyond_overdraft_facility_is_red() -> None:
+    """A live balance past the agreed facility is red."""
+    harness = _TitleColour()
+    report = _report(-60000, YearMonth(2026, 7))  # -£600, beyond a £500 facility
+
+    color = harness._title_health_color(
+        report, is_current_month=True, overdraft_limit_pence=50000
+    )
+
+    assert color == RED
+
+
+def test_current_month_below_zero_with_no_facility_is_red() -> None:
+    """With no facility the floor is zero, so any negative balance is red."""
+    harness = _TitleColour()
+    report = _report(-100, YearMonth(2026, 7))
+
+    color = harness._title_health_color(
+        report, is_current_month=True, overdraft_limit_pence=0
     )
 
     assert color == RED

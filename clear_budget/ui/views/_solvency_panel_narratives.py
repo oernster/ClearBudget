@@ -24,18 +24,25 @@ class SolvencyPanelNarrativeMixin:
         balance_pence: int,
         monthly_deficit_pence: int,
         overdrawn_next_month: bool,
+        overdraft_limit_pence: int = 0,
     ) -> str:
         """Traffic-light colour for a month's own solvency state.
 
-        This is the single source of truth for both the Overdraft Status banner
-        and the title-bar label: the banner computes the colour here and the
-        title reuses that exact value, so the two are always identical. Red is
-        reserved for a genuine problem: the projected balance finishing below
-        zero, a looming next-month overdraft (``overdrawn_next_month``), or a
-        draining month left with almost nothing.
+        The single source of truth for both the Overdraft Status banner and the
+        title-bar label. The red line is the agreed overdraft floor: the balance
+        finishing below ``-overdraft_limit_pence`` is red. When no facility is
+        defined the floor is zero, so this reduces to red-below-zero. Dipping
+        into an agreed facility but staying within it is amber, not red: the
+        facility makes it manageable. Red is otherwise reserved for a looming
+        next-month overdraft (``overdrawn_next_month``) or a draining month left
+        with almost nothing.
         """
-        if balance_pence < 0:
+        red_floor_pence = -overdraft_limit_pence
+        if balance_pence < red_floor_pence:
             return _STATE_RED
+        if balance_pence < 0:
+            # Into the overdraft but within the agreed facility: a warning.
+            return _STATE_AT_RISK
         if overdrawn_next_month:
             return _STATE_RED
         if monthly_deficit_pence > 0 and balance_pence <= _CAUTION_BALANCE_PENCE:

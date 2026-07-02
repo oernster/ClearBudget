@@ -49,13 +49,19 @@ class OverdraftOperationsMixin:
         set_overdraft_apr_basis_points(self.bill_repo.conn, basis_points)
 
     def first_overdrawn_month(
-        self, *, from_year_month: YearMonth, from_balance_pence: int
+        self,
+        *,
+        from_year_month: YearMonth,
+        from_balance_pence: int,
+        overdraft_limit_pence: int = 0,
     ) -> YearMonth | None:
-        """First future month whose projected end balance goes negative, else None.
+        """First future month whose projected balance breaches the floor, else None.
 
         ``from_balance_pence`` is the projected end-of-month balance of
-        ``from_year_month`` (a SolvencyReport.balance_pence). The UI uses the
-        result to state the overdraft runway on a deficit month.
+        ``from_year_month`` (a SolvencyReport.balance_pence). A month counts once
+        its balance drops below the agreed overdraft floor
+        (``-overdraft_limit_pence``, i.e. below zero when no facility is
+        defined). The UI uses the result to state the overdraft runway.
         """
         from clear_budget.application.services._overdraft_projection import (
             first_overdrawn_month as _impl,
@@ -65,6 +71,7 @@ class OverdraftOperationsMixin:
             get_month_summary=self.get_month_summary,
             from_year_month=from_year_month,
             from_balance_pence=from_balance_pence,
+            overdraft_limit_pence=overdraft_limit_pence,
         )
 
     def get_month_cashflow_projection(
