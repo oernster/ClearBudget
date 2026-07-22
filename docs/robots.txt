@@ -1,5 +1,0 @@
-# robots.txt for Clear Budget (https://oernster.github.io/ClearBudget/)
-User-agent: *
-Allow: /
-
-Sitemap: https://oernster.github.io/ClearBudget/sitemap.xml
