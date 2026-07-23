@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Why Clear Budget exists: solvency, not accounting</title>
+    <meta name="description" content="Why Clear Budget was built: a monthly total can look safe while the month itself is structurally unsafe. Clear Budget models the operational shape of a month and warns before the tightest day arrives.">
+    <meta name="author" content="Oliver Ernster">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://ernster.dev/ClearBudget/why.html">
+
+    <meta name="theme-color" content="#0a0a0d">
+    <meta name="color-scheme" content="dark">
+
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+
+    <meta property="og:title" content="Why Clear Budget exists: solvency, not accounting">
+    <meta property="og:description" content="A monthly total can look safe while the month itself is structurally unsafe. Clear Budget models the operational shape of a month.">
+    <meta property="og:image" content="https://ernster.dev/ClearBudget/clearbudget-512.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="Clear Budget app icon">
+    <meta property="og:url" content="https://ernster.dev/ClearBudget/why.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Clear Budget">
+    <meta property="og:locale" content="en_GB">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Why Clear Budget exists: solvency, not accounting">
+    <meta name="twitter:description" content="A monthly total can look safe while the month itself is structurally unsafe. Clear Budget models the operational shape of a month.">
+    <meta name="twitter:image" content="https://ernster.dev/ClearBudget/clearbudget-512.png">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<nav class="site">
+    <a class="brand" href="index.html">
+        <img src="favicon-64.png" alt="Clear Budget icon">
+        Clear Budget
+    </a>
+    <div class="links">
+        <a href="why.html">Why</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/oernster/ClearBudget">GitHub</a>
+    </div>
+</nav>
+
+<div class="container">
+
+    <h1>Why this exists</h1>
+
+    <main>
+
+        <section class="section" id="exists" aria-labelledby="exists-h">
+            <h2 id="exists-h" class="sr-only">The reasoning</h2>
+            <div class="prose">
+                <p>Budgeting software is almost universally retrospective: it answers "where did the
+                    money go?" long after the answer could change anything. A monthly total can look
+                    safe while the month itself is structurally unsafe: income lands late, bills
+                    cluster early, a card stays under its limit while its trajectory points the
+                    wrong way and a payment that is affordable at month end is impossible on the day
+                    it actually falls.</p>
+                <p>Clear Budget asks the forward question instead: will the month survive? It
+                    projects the balance day by day, bill by bill and card by card, treating credit
+                    cards as pressure systems rather than static balances. Each feature is a
+                    decision made explicit: a per-month skip or override says "this obligation does
+                    not apply this month", a paid flag says "this money has already left", a
+                    read-only viewer package is an authority boundary and the solvency panel is
+                    where scattered obligations resolve into a single answer, up to six months out.</p>
+                <p>When software tells you whether the balance survives the month, approximately
+                    right is wrong. So the projection logic sits in a pure domain no UI event or
+                    database write can reach into, inside a four-layer architecture with every
+                    dependency pointing inward, held by structural tests, a 100% coverage gate, a
+                    400-line file limit and a no-magic-numbers rule on every run.</p>
+                <p>What works now is a finished cross-platform tool: Windows, macOS and Linux from
+                    one codebase, multiple users with bcrypt sign-in and isolated per-user
+                    databases, 25 display currencies, archive snapshots and validated import and
+                    export. It is dogfood in the full sense: the application I open to decide
+                    whether my own month holds together, which is the surest way I know to keep a
+                    solvency tool honest.</p>
+                <p>Full reasoning at <a href="https://www.crankthecode.com/posts/clearbudget" style="color:var(--teal);">crankthecode.com</a>.</p>
+            </div>
+        </section>
+
+        <!-- Architecture -->
+        <section class="section" id="architecture" aria-labelledby="architecture-h">
+            <h2 id="architecture-h">Built like the apps I trust</h2>
+            <p class="lead">When software is telling you whether the balance survives the month, approximately right is wrong. So the projection logic sits in a pure domain that no UI event or database write can reach into, inside a four-layer architecture with every dependency pointing inward. Structural tests, 100% coverage, a 400-line file limit and a no-magic-numbers rule hold the line on every run.</p>
+            <div class="arch">
+                <img src="architecture.svg" width="920" height="396" loading="lazy" decoding="async"
+                     alt="Clear Budget clean architecture diagram: UI, Application, Domain and Infrastructure layers with dependencies pointing inward to a pure Domain, plus cross-cutting Auth and Shared layers">
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="actions">
+                <a class="primary" href="download.html">Download Clear Budget</a>
+                <a class="secondary" href="index.html">Back to overview</a>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        Created by Oliver Ernster &nbsp;·&nbsp; Python and PySide6 &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget/blob/main/LICENSE">LGPL-3.0</a> &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget">Source on GitHub</a> &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget/releases">Releases</a>
+    </footer>
+
+</div>
+
+</body>
+</html>

@@ -28,7 +28,6 @@
     <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="site.webmanifest">
-    <link rel="sitemap" type="application/xml" href="sitemap.xml">
 
     <!-- Open Graph -->
     <meta property="og:title" content="Clear Budget: Free forward-looking desktop budget planner">
@@ -50,337 +49,22 @@
     <meta name="twitter:image" content="https://ernster.dev/ClearBudget/clearbudget-512.png">
     <meta name="twitter:image:alt" content="Clear Budget app icon">
 
-    <style>
-        :root {
-            --bg: #0a0a0d;
-            --text: #e8eaed;
-            --muted: #9aa3b2;
-            --faint: #6b7280;
-            --panel: #161922;
-            --panel-2: #1a1f2e;
-            --border: #2a3142;
-            --blue: #3b5bdb;
-            --blue-hover: #4a68d6;
-            --teal: #2dd4bf;
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .container {
-            max-width: 1080px;
-            margin: 0 auto;
-            padding: 96px 20px 64px;
-            text-align: center;
-        }
-
-        .hero-icon {
-            display: block;
-            width: 176px;
-            height: 176px;
-            border-radius: 38px;
-            margin: 0 auto 26px;
-            box-shadow: 0 26px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
-        }
-
-        h1 {
-            font-size: 44px;
-            margin: 0 0 14px;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
-
-        .badge {
-            display: flex;
-            width: fit-content;
-            align-items: center;
-            gap: 8px;
-            font-size: 12.5px;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            color: var(--teal);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            padding: 6px 14px;
-            margin: 0 auto 22px;
-        }
-
-        .badge-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--teal);
-        }
-
-        .subtitle {
-            font-size: 18px;
-            color: var(--muted);
-            margin: 0 auto 28px;
-            max-width: 760px;
-        }
-
-        .actions a {
-            display: inline-block;
-            margin: 8px;
-            padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 15px;
-            transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-        }
-
-        .primary { background: var(--blue); color: #fff; }
-        .primary:hover { background: var(--blue-hover); transform: translateY(-1px); }
-
-        .secondary { border: 1px solid var(--border); color: var(--text); }
-        .secondary:hover { border-color: var(--teal); transform: translateY(-1px); }
-
-        .minor-detail {
-            margin-top: 28px;
-            font-size: 14px;
-            color: var(--faint);
-        }
-
-        .pitch {
-            max-width: 860px;
-            margin: 28px auto 0;
-            padding: 30px 30px;
-            background: var(--panel-2);
-            border: 1px solid var(--border);
-            border-left: 4px solid var(--teal);
-            border-radius: 14px;
-            text-align: left;
-        }
-
-        .pitch p {
-            margin: 0;
-            font-size: 22px;
-            line-height: 1.5;
-            color: var(--text);
-        }
-
-        .pitch strong { color: var(--teal); }
-        .pitch em { color: var(--muted); font-style: italic; }
-
-        .section { margin-top: 42px; }
-
-        .section h2 {
-            font-size: 24px;
-            margin: 0 0 10px;
-            font-weight: 700;
-            letter-spacing: -0.01em;
-        }
-
-        .section .lead {
-            color: var(--muted);
-            max-width: 720px;
-            margin: 0 auto 8px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-            margin-top: 28px;
-            text-align: left;
-        }
-
-        .grid.small {
-            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-            text-align: center;
-        }
-
-        .card {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px 20px;
-            transition: border-color 0.15s ease, transform 0.15s ease;
-        }
-
-        .card:hover { border-color: var(--teal); transform: translateY(-2px); }
-
-        .card h3 {
-            margin: 0 0 6px;
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .card p {
-            margin: 0;
-            font-size: 14px;
-            color: var(--muted);
-        }
-
-        #features .card h3,
-        #tabs .card h3 {
-            color: var(--teal);
-        }
-
-        .arch {
-            margin-top: 28px;
-            background: var(--panel-2);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 18px;
-        }
-
-        .arch img {
-            display: block;
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-        }
-
-        .prose {
-            max-width: 720px;
-            margin: 0 auto;
-            text-align: left;
-        }
-
-        .prose p { color: var(--muted); margin: 0 0 14px; }
-        .prose strong { color: var(--text); }
-
-        .faq {
-            max-width: 760px;
-            margin: 28px auto 0;
-            text-align: left;
-        }
-
-        .faq-item {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 18px 20px;
-            margin-bottom: 12px;
-        }
-
-        .faq-item h3 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
-        .faq-item p { margin: 0; font-size: 14px; color: var(--muted); }
-
-        .eyebrow {
-            color: var(--teal);
-            font-weight: 700;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            font-size: 13px;
-            margin-bottom: 12px;
-        }
-
-        .section-sub {
-            color: var(--muted);
-            max-width: 720px;
-            margin: 0 auto 14px;
-            font-size: 17px;
-        }
-
-        .dl-version {
-            display: inline-block;
-            margin-top: 4px;
-            font-size: 14px;
-            color: var(--teal);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            padding: 4px 14px;
-        }
-
-        .downloads {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
-            margin-top: 28px;
-        }
-
-        .dl-card {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px 20px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .dl-card .ico { font-size: 30px; }
-        .dl-card h3 { margin: 4px 0 0; font-size: 18px; font-weight: 600; }
-        .dl-card .req { color: var(--muted); font-size: 13px; margin: 0; }
-
-        .dl-card .primary {
-            display: inline-block;
-            margin: 14px auto 4px;
-            padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 15px;
-            transition: background 0.15s ease, transform 0.15s ease;
-        }
-
-        .dl-card .meta {
-            color: var(--muted);
-            font-size: 12.5px;
-            min-height: 1.2em;
-            margin: 0;
-        }
-
-        .dl-card .how { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
-
-        .dl-card code {
-            background: var(--panel-2);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 1px 6px;
-            font-size: 12px;
-            color: var(--text);
-        }
-
-        .dl-links {
-            text-align: center;
-            color: var(--muted);
-            font-size: 14px;
-            margin: 18px 0 0;
-        }
-
-        .dl-links a { color: var(--teal); text-decoration: none; }
-        .dl-links a:hover { text-decoration: underline; }
-
-        footer {
-            margin-top: 48px;
-            padding: 28px 20px 8px;
-            border-top: 1px solid var(--border);
-            color: var(--faint);
-            font-size: 13px;
-        }
-
-        footer a { color: var(--muted); text-decoration: none; }
-        footer a:hover { color: var(--teal); }
-
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
+
+<nav class="site">
+    <a class="brand" href="index.html">
+        <img src="favicon-64.png" alt="Clear Budget icon">
+        Clear Budget
+    </a>
+    <div class="links">
+        <a href="why.html">Why</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/oernster/ClearBudget">GitHub</a>
+    </div>
+</nav>
 
 <div class="container">
 
@@ -399,7 +83,7 @@
         </p>
 
         <div class="actions">
-            <a class="primary" href="#download">Download</a>
+            <a class="primary" href="download.html">Download</a>
             <a class="secondary" href="https://github.com/oernster/ClearBudget">View source</a>
         </div>
 
@@ -454,7 +138,7 @@
         <!-- The four tabs -->
         <section class="section" id="tabs" aria-labelledby="tabs-h">
             <h2 id="tabs-h">Four views, one question</h2>
-            <p class="lead">Each tab is a different angle on whether the month, and the months ahead, hold together.</p>
+            <p class="lead">Each tab is a different angle on whether the month (and the months ahead) holds together.</p>
 
             <div class="grid">
                 <div class="card">
@@ -463,11 +147,11 @@
                 </div>
                 <div class="card">
                     <h3>Solvency</h3>
-                    <p>Overdraft status, a day-by-day forward projection for the next two months, and per-card utilisation bars.</p>
+                    <p>Overdraft status, a day-by-day forward projection for the next two months and per-card utilisation bars.</p>
                 </div>
                 <div class="card">
                     <h3>Credit Cards</h3>
-                    <p>One panel per card with live pro-rated balances, and a six-month projection strip across every card.</p>
+                    <p>One panel per card with live pro-rated balances and a six-month projection strip across every card.</p>
                 </div>
                 <div class="card">
                     <h3>Archive</h3>
@@ -476,106 +160,19 @@
             </div>
         </section>
 
-        <!-- Architecture -->
-        <section class="section" id="architecture" aria-labelledby="architecture-h">
-            <h2 id="architecture-h">Built like the apps I trust</h2>
-            <p class="lead">When software is telling you whether the balance survives the month, approximately right is wrong. So the projection logic sits in a pure domain that no UI event or database write can reach into, inside a four-layer architecture with every dependency pointing inward. Structural tests, 100% coverage, a 400-line file limit and a no-magic-numbers rule hold the line on every run.</p>
-            <div class="arch">
-                <img src="architecture.svg" width="920" height="396" loading="lazy" decoding="async"
-                     alt="Clear Budget clean architecture diagram: UI, Application, Domain and Infrastructure layers with dependencies pointing inward to a pure Domain, plus cross-cutting Auth and Shared layers">
-            </div>
-        </section>
-
-        <!-- Why it exists -->
-        <section class="section" id="why" aria-labelledby="why-h">
-            <h2 id="why-h">Why it exists</h2>
-            <div class="prose">
-                <p>
-                    Most tools treat money as a flat number and answer one question after the fact:
-                    where did the money go? <strong><em>That is the wrong question to act on</em></strong>.
-                    The useful model is the one that surfaces a failure mode early enough to do something about it.
-                </p>
-                <p>
-                    So Clear Budget tracks solvency rather than accounting. It models the operational shape of a month,
-                    when income lands and when bills fall, and tells you whether the balance survives the gaps.
-                </p>
-                <p>
-                    It is dogfood, in the full sense of the word: the application I open to decide whether my own month
-                    holds together. The features exist because I needed them, not because they demonstrated well.
-                </p>
-            </div>
-        </section>
-
-        <!-- FAQ -->
-        <section class="section" id="faq" aria-labelledby="faq-h">
-            <h2 id="faq-h">Frequently asked questions</h2>
-            <div class="faq">
-                <div class="faq-item">
-                    <h3>Is Clear Budget free?</h3>
-                    <p>Yes. Clear Budget is free and open source, released under the GNU LGPL-3.0 licence.</p>
+        <!-- Explore -->
+        <section class="section" id="explore" aria-labelledby="explore-h">
+            <h2 id="explore-h">Explore</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3><a href="why.html" style="color:var(--teal);text-decoration:none;">Why this exists</a></h3>
+                    <p>The reasoning behind the solvency model and the architecture that keeps it honest.</p>
                 </div>
-                <div class="faq-item">
-                    <h3>Does Clear Budget work offline?</h3>
-                    <p>Yes. Clear Budget is local-first and runs entirely offline. It has no cloud dependency and never sends your financial data anywhere.</p>
-                </div>
-                <div class="faq-item">
-                    <h3>Which platforms does Clear Budget run on?</h3>
-                    <p>Windows, macOS and Linux, from a single PySide6 codebase. Windows ships as an installer, macOS as a signed .dmg, and Linux as a Flatpak.</p>
-                </div>
-                <div class="faq-item">
-                    <h3>Is my financial data private?</h3>
-                    <p>Yes. Data is stored locally in isolated per-user databases on your own machine, protected by a bcrypt sign-in, and is never transmitted to any server.</p>
-                </div>
-                <div class="faq-item">
-                    <h3>Does Clear Budget support multiple users and currencies?</h3>
-                    <p>Yes. It supports multiple users with separate, isolated databases and read-only viewer packages, and 25 currencies covering English-speaking countries, defaulting to GBP.</p>
+                <div class="card">
+                    <h3><a href="download.html" style="color:var(--teal);text-decoration:none;">Download</a></h3>
+                    <p>Native packages for Windows, macOS and Linux, plus the FAQ.</p>
                 </div>
             </div>
-        </section>
-
-        <!-- Download -->
-        <section class="section" id="download" aria-labelledby="download-h">
-            <div class="eyebrow">Get ClearBudget</div>
-            <h2 id="download-h">Download ClearBudget</h2>
-            <p class="section-sub">Pick your platform and you have the newest release. Free and open source
-                under the LGPL-3.0 licence; local-first, so your finances never leave your machine.</p>
-            <span class="dl-version" id="dl-version">Latest release</span>
-            <div class="downloads">
-                <div class="dl-card">
-                    <div class="ico">🪟</div>
-                    <h3>Windows</h3>
-                    <p class="req">Windows 10 or 11, 64-bit</p>
-                    <a class="primary" href="https://github.com/oernster/ClearBudget/releases/latest/download/ClearBudgetSetup.exe">
-                        Download for Windows</a>
-                    <p class="meta" data-asset="ClearBudgetSetup.exe">Setup program (.exe)</p>
-                    <p class="how">Run the setup: it installs per-user, so no administrator rights are needed.</p>
-                </div>
-                <div class="dl-card">
-                    <div class="ico">🍎</div>
-                    <h3>macOS</h3>
-                    <p class="req">Apple Silicon (M1 or later)</p>
-                    <a class="primary" href="https://github.com/oernster/ClearBudget/releases/latest/download/clearbudget.dmg">
-                        Download for macOS</a>
-                    <p class="meta" data-asset="clearbudget.dmg">Disk image (.dmg)</p>
-                    <p class="how">Open the DMG and drag ClearBudget into Applications.</p>
-                </div>
-                <div class="dl-card">
-                    <div class="ico">🐧</div>
-                    <h3>Linux</h3>
-                    <p class="req">Any distribution with Flatpak</p>
-                    <a class="primary" href="https://github.com/oernster/ClearBudget/releases/latest/download/clearbudget.flatpak">
-                        Download for Linux</a>
-                    <p class="meta" data-asset="clearbudget.flatpak">Flatpak bundle (.flatpak)</p>
-                    <p class="how">Install with <code>flatpak install clearbudget.flatpak</code>.</p>
-                </div>
-            </div>
-            <p class="dl-links">
-                <a id="dl-whats-new" href="https://github.com/oernster/ClearBudget/releases/latest">What's new in this release</a>
-                &nbsp;·&nbsp;
-                <a href="https://github.com/oernster/ClearBudget/releases">All releases</a>
-                &nbsp;·&nbsp;
-                <a href="https://github.com/oernster/ClearBudget">Source on GitHub</a>
-            </p>
         </section>
 
     </main>
@@ -583,9 +180,9 @@
     <p class="sr-only">
         Clear Budget is a free, private, local-first desktop budget planner for Windows, macOS and Linux. It models
         forward solvency for the next two months, detects mid-month overdrafts when bills cluster before income,
-        tracks credit card utilisation and interest with a six-month balance projection, and supports multiple
+        tracks credit card utilisation and interest with a six-month balance projection and supports multiple
         users with bcrypt sign-in and isolated per-user databases. Built with Python and PySide6, it runs entirely
-        offline with no cloud dependency, and is open source under the LGPL-3.0 licence.
+        offline with no cloud dependency and is open source under the LGPL-3.0 licence.
     </p>
 
     <footer>
@@ -660,74 +257,23 @@
                 "25 currencies",
                 "Local-first, fully offline, no cloud dependency"
             ]
-        },
-        {
-            "@type": "FAQPage",
-            "@id": "https://ernster.dev/ClearBudget/#faq",
-            "mainEntity": [
-                {
-                    "@type": "Question",
-                    "name": "Is Clear Budget free?",
-                    "acceptedAnswer": { "@type": "Answer", "text": "Yes. Clear Budget is free and open source, released under the GNU LGPL-3.0 licence." }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Does Clear Budget work offline?",
-                    "acceptedAnswer": { "@type": "Answer", "text": "Yes. Clear Budget is local-first and runs entirely offline. It has no cloud dependency and never sends your financial data anywhere." }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Which platforms does Clear Budget run on?",
-                    "acceptedAnswer": { "@type": "Answer", "text": "Windows, macOS and Linux, from a single PySide6 codebase. Windows ships as an installer, macOS as a signed .dmg, and Linux as a Flatpak." }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Is my financial data private?",
-                    "acceptedAnswer": { "@type": "Answer", "text": "Yes. Data is stored locally in isolated per-user databases on your own machine, protected by a bcrypt sign-in, and is never transmitted to any server." }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Does Clear Budget support multiple users and currencies?",
-                    "acceptedAnswer": { "@type": "Answer", "text": "Yes. It supports multiple users with separate, isolated databases and read-only viewer packages, and 25 currencies covering English-speaking countries, defaulting to GBP." }
-                }
-            ]
         }
     ]
 }
 </script>
 
 <script>
-    // The download buttons never go stale: each points at GitHub's releases/latest/download
-    // redirect, which always serves the newest release's asset (the asset names are version-free
-    // by design). This script only decorates the page with live details: the version chip, the
-    // release date and each installer's size, fetched from the GitHub API. If the call fails
-    // (offline, rate-limited), the static text above stands on its own.
+    // The site was one long page; these anchors now live on their own pages.
+    // Old deep links (bookmarks, shared URLs) land here first and hop across.
     (function () {
-        var api = 'https://api.github.com/repos/oernster/ClearBudget/releases/latest';
-        fetch(api).then(function (r) {
-            if (!r.ok) { throw new Error('release lookup failed'); }
-            return r.json();
-        }).then(function (rel) {
-            var version = (rel.tag_name || '').replace(/^v/, '');
-            if (version) {
-                var when = '';
-                if (rel.published_at) {
-                    when = ' · ' + new Date(rel.published_at).toLocaleDateString(undefined,
-                        {day: 'numeric', month: 'long', year: 'numeric'});
-                }
-                document.getElementById('dl-version').textContent = 'Version ' + version + when;
-            }
-            if (rel.html_url) {
-                document.getElementById('dl-whats-new').href = rel.html_url;
-            }
-            (rel.assets || []).forEach(function (asset) {
-                var meta = document.querySelector('[data-asset="' + asset.name + '"]');
-                if (meta && asset.size) {
-                    var mb = (asset.size / (1024 * 1024)).toFixed(1);
-                    meta.textContent = meta.textContent + ' · ' + mb + ' MB';
-                }
-            });
-        }).catch(function () { /* The static page already says everything essential. */ });
+        var moved = {
+            '#download': 'download.html',
+            '#faq': 'download.html#faq',
+            '#architecture': 'why.html#architecture',
+            '#why': 'why.html'
+        };
+        var target = moved[window.location.hash];
+        if (target) { window.location.replace(target); }
     })();
 </script>
 
