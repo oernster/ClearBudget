@@ -58,9 +58,7 @@ class ScrollableTab(QWidget):
             content_layout = content.layout()
             if content_layout is not None:
                 cm = content_layout.contentsMargins()
-                content_layout.setContentsMargins(
-                    cm.left(), 0, cm.right(), cm.bottom()
-                )
+                content_layout.setContentsMargins(cm.left(), 0, cm.right(), cm.bottom())
 
         self._scroll = QScrollArea()
         self._scroll.setWidget(content)

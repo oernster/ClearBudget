@@ -169,6 +169,7 @@ def _build_main_window(
     )
     budget_service.update_card_balances_for_elapsed_dates()
     budget_service.apply_elapsed_limit_changes()
+    budget_service.apply_elapsed_bank_transactions()
     budget_service.auto_archive_elapsed_months(current_month=YearMonth.today())
     month_view_model = MonthViewModel(budget_service=budget_service)
     solvency_view_model = SolvencyViewModel(budget_service=budget_service)

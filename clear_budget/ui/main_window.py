@@ -3,7 +3,7 @@
 import shutil
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtCore import Qt, QTimer, Signal, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -30,6 +30,10 @@ from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 
 # GitHub releases page opened by Help > Check for Updates.
 RELEASES_URL = "https://github.com/oernster/ClearBudget/releases"
+
+# Fire the day-rollover fold slightly after local midnight so date.today()
+# has definitely advanced when the handler runs.
+_MIDNIGHT_FOLD_BUFFER_MS = 2000
 
 
 class MainWindow(MainWindowMenuMixin, QMainWindow):
@@ -63,6 +67,28 @@ class MainWindow(MainWindowMenuMixin, QMainWindow):
         self.setMinimumSize(ui_scale.px(900), ui_scale.px(580))
         self.init_ui()
         self.apply_theme()
+        # Parented to the window so it stops firing once the window is gone.
+        self._midnight_timer = QTimer(self)
+        self._midnight_timer.setSingleShot(True)
+        self._midnight_timer.timeout.connect(self._on_midnight_fold)
+        self._schedule_midnight_fold()
+
+    def _schedule_midnight_fold(self) -> None:
+        """Arm the timer for just after the next local midnight."""
+        from datetime import datetime, timedelta
+
+        now = datetime.now()
+        next_midnight = datetime.combine(
+            now.date() + timedelta(days=1), datetime.min.time()
+        )
+        delay_ms = int((next_midnight - now).total_seconds() * 1000)
+        self._midnight_timer.start(delay_ms + _MIDNIGHT_FOLD_BUFFER_MS)
+
+    def _on_midnight_fold(self) -> None:
+        """Apply bank bills/income that fell due at midnight, then re-arm."""
+        self.month_view_model.budget_service.apply_elapsed_bank_transactions()
+        self.month_view_model.refresh_month_summary()
+        self._schedule_midnight_fold()
 
     def init_ui(self) -> None:
         """Build main window with tabs."""

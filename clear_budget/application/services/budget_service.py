@@ -7,6 +7,7 @@ from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.application.dto.solvency_report import SolvencyReport
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.application.services._bill_operations import BillOperationsMixin
+from clear_budget.application.services._card_operations import CardOperationsMixin
 from clear_budget.application.services._income_operations import (
     IncomeOperationsMixin,
 )
@@ -37,7 +38,10 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 
 @dataclass(frozen=True, slots=True)
 class BudgetService(
-    BillOperationsMixin, IncomeOperationsMixin, OverdraftOperationsMixin
+    BillOperationsMixin,
+    IncomeOperationsMixin,
+    OverdraftOperationsMixin,
+    CardOperationsMixin,
 ):
     bill_repo: BillRepository
     income_repo: IncomeSourceRepository
@@ -217,104 +221,6 @@ class BudgetService(
             summary=summary,
         )
 
-    def get_card_monthly_states(
-        self, *, year_month: YearMonth
-    ) -> list:  # pragma: no cover
-        from clear_budget.application.services._card_projection import (
-            get_card_monthly_states as _impl,
-        )
-
-        return _impl(self.payment_method_repo, self.get_month_summary, year_month)
-
-    def get_card_projection_months(
-        self, *, start_month: YearMonth, n_months: int
-    ) -> list[list]:  # pragma: no cover
-        """Return n_months of CardMonthlyState lists starting from start_month."""
-        from clear_budget.application.services._card_projection import (
-            get_card_projection_months as _impl,
-        )
-
-        return _impl(
-            self.payment_method_repo,
-            self.get_month_summary,
-            start_month=start_month,
-            n_months=n_months,
-        )
-
-    def get_credit_cards(
-        self, include_inactive: bool = False
-    ) -> list:  # pragma: no cover
-        return self.payment_method_repo.get_all_credit_cards(
-            include_inactive=include_inactive
-        )
-
-    def get_live_card_balance(self, *, card) -> Amount:
-        """Return the card's live (pro-rated) balance for the current day."""
-        from datetime import date as _date
-        from clear_budget.application.services._card_balance_updates import (
-            get_live_card_balance as _impl,
-        )
-
-        return _impl(
-            self.payment_method_repo,
-            self.get_month_summary,
-            card=card,
-            today=_date.today(),
-        )
-
-    def save_credit_card_today_balance(
-        self, *, card, today_balance: Amount, is_new: bool, today: date | None = None
-    ) -> int:
-        """Persist a card from its entered live (as-of-today) balance.
-
-        Converts the user-facing "what I owe now" figure into the start-of-month
-        opening the projection layer expects, so the displayed balance matches
-        what was entered and forward projections stay anchored. Returns the
-        persisted card id.
-        """
-        from datetime import date as _date
-        from clear_budget.application.services._card_balance_updates import (
-            save_card_with_today_balance as _impl,
-        )
-
-        return _impl(
-            self.payment_method_repo,
-            card=card,
-            today_balance_pence=today_balance.pence,
-            today=today or _date.today(),
-            is_new=is_new,
-        )
-
-    def update_card_balances_for_elapsed_dates(
-        self, *, today: date | None = None
-    ) -> None:
-        """Fold each card's closing balance once its payment date has passed."""
-        from datetime import date as _date
-        from clear_budget.application.services._card_balance_updates import (
-            update_card_balances_for_elapsed_dates as _impl,
-        )
-
-        _impl(
-            self.payment_method_repo,
-            self.get_month_summary,
-            today=today or _date.today(),
-        )
-
-    def apply_elapsed_limit_changes(self, *, today: date | None = None) -> None:
-        """Fold each card's elapsed scheduled limit changes into its limit."""
-        from datetime import date as _date
-        from clear_budget.application.services._card_limit_updates import (
-            apply_elapsed_limit_changes as _impl,
-        )
-
-        _impl(self.payment_method_repo, today=today or _date.today())
-
-    def set_credit_limit_changes(self, *, card_id: int, changes) -> None:
-        """Replace a card's scheduled credit limit changes."""
-        self.payment_method_repo.set_credit_limit_changes(
-            card_id=card_id, changes=tuple(changes)
-        )
-
     def get_recorded_months(self) -> list[YearMonth]:  # pragma: no cover
         from clear_budget.application.services._archive_helpers import (
             _get_recorded_months,
@@ -392,3 +298,39 @@ class BudgetService(
         )
 
         set_bank_balance_pence(self.bill_repo.conn, amount.pence)
+
+    def adjust_bank_balance(self, *, delta_pence: int) -> None:
+        """Apply a signed delta to the stored bank balance, stamped as-of today."""
+        from clear_budget.application.services._settings_operations import (
+            get_bank_balance_pence,
+            set_bank_balance_pence,
+        )
+
+        conn = self.bill_repo.conn
+        set_bank_balance_pence(conn, get_bank_balance_pence(conn) + delta_pence)
+
+    def apply_elapsed_bank_transactions(self, *, today: date | None = None) -> int:
+        """Fold dated bank bills/income due since the balance baseline into it.
+
+        Applies each dated bank transaction at local-midnight semantics: run
+        at startup to catch up elapsed days and at midnight while the app is
+        open. Returns the signed delta pence applied.
+        """
+        from clear_budget.application.services._bank_transaction_fold import (
+            apply_elapsed_bank_transactions as _impl,
+        )
+
+        return _impl(
+            conn=getattr(self.bill_repo, "conn", None),
+            get_month_summary=self.get_month_summary,
+            mark_bill_paid=lambda bill_id, ym: self.bill_repo.mark_paid_for_month(
+                bill_id=bill_id, year_month=ym
+            ),
+            mark_income_received=lambda iid, ym: (
+                self.income_repo.mark_received_for_month(income_id=iid, year_month=ym)
+            ),
+            mark_income_extra_received=lambda extra_id: (
+                self.income_repo.mark_extra_received(extra_id=extra_id)
+            ),
+            today=today or date.today(),
+        )

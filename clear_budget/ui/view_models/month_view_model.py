@@ -52,10 +52,11 @@ class MonthViewModel(QObject):
         self.month_summary = summary
         self.month_summary_updated.emit(summary)
 
-    def add_bill(self, *, bill: Bill) -> None:
-        """Create a new bill and refresh summary."""
-        self.budget_service.add_bill(bill=bill)
+    def add_bill(self, *, bill: Bill) -> Bill:
+        """Create a new bill and refresh summary. Returns the persisted bill."""
+        persisted = self.budget_service.add_bill(bill=bill)
         self.refresh_month_summary()
+        return persisted
 
     def update_bill(self, *, bill: Bill) -> None:
         """Update an existing bill and refresh summary."""
@@ -128,10 +129,11 @@ class MonthViewModel(QObject):
         )
         self.refresh_month_summary()
 
-    def add_income(self, *, income) -> None:
-        """Create a new income source and refresh summary."""
-        self.budget_service.add_income(income=income)
+    def add_income(self, *, income):
+        """Create a new income source and refresh summary. Returns it persisted."""
+        persisted = self.budget_service.add_income(income=income)
         self.refresh_month_summary()
+        return persisted
 
     def update_income(self, *, income) -> None:
         """Update an existing income source and refresh summary."""
@@ -149,12 +151,16 @@ class MonthViewModel(QObject):
             self.budget_service.delete_income(income_id=income_id)
         self.refresh_month_summary()
 
-    def add_income_month_extra(self, *, income) -> None:
-        """Create a one-off income entry for the current month and refresh."""
-        self.budget_service.add_income_month_extra(
+    def add_income_month_extra(self, *, income):
+        """Create a one-off income entry for the current month and refresh.
+
+        Returns the persisted entry.
+        """
+        persisted = self.budget_service.add_income_month_extra(
             income=income, year_month=self.current_month
         )
         self.refresh_month_summary()
+        return persisted
 
     def update_income_month_extra(self, *, income) -> None:
         """Update a one-off income entry for the current month and refresh."""

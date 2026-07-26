@@ -21,7 +21,19 @@ def get_bank_balance_day(conn) -> int:  # pragma: no cover
     return int(row["value"]) if row else 0
 
 
-def set_bank_balance_pence(conn, pence: int) -> None:  # pragma: no cover
+def get_bank_balance_date_iso(conn) -> str | None:  # pragma: no cover
+    if conn is None:
+        return None
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = ?", ("bank_balance_date",))
+    row = cursor.fetchone()
+    return str(row["value"]) if row else None
+
+
+def set_bank_balance_pence(
+    conn, pence: int, today: _date | None = None
+) -> None:  # pragma: no cover
+    stamp = today or _date.today()
     cursor = conn.cursor()
     cursor.execute(
         "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
@@ -29,7 +41,11 @@ def set_bank_balance_pence(conn, pence: int) -> None:  # pragma: no cover
     )
     cursor.execute(
         "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-        ("bank_balance_day", str(_date.today().day)),
+        ("bank_balance_day", str(stamp.day)),
+    )
+    cursor.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+        ("bank_balance_date", stamp.isoformat()),
     )
     conn.commit()
 

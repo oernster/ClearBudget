@@ -244,7 +244,7 @@ class TestBalanceDayFiltering:
                 payment_method_id=1,
                 category="housing",
                 bill_type="fixed",
-                day_of_month=25,
+                day_of_month=date.today().day,
                 start_ym=YearMonth(2026, 1),
                 end_ym=None,
             )
@@ -256,7 +256,7 @@ class TestBalanceDayFiltering:
             year_month=may, month_summary=summary
         )
         # M+D day=1 <= balance_day=5 → excluded; UC day=21 > 5 → included
-        # Rent day=25 >= today → included; bank_balance=0
+        # Rent due today → still outstanding, included; bank_balance=0
         assert report.balance_pence == 120000 - 100000
 
     def test_get_projected_balance_balance_day_filters_income(
@@ -291,7 +291,7 @@ class TestBalanceDayFiltering:
                 payment_method_id=1,
                 category="housing",
                 bill_type="fixed",
-                day_of_month=25,
+                day_of_month=date.today().day,
                 start_ym=YearMonth(2026, 1),
                 end_ym=None,
             )
@@ -302,7 +302,8 @@ class TestBalanceDayFiltering:
         result = svc.get_projected_month_end_balance_pence(
             year_month=today_ym, summary=summary
         )
-        # bank_balance=0 + UC(120000) - Rent(100000); M+D excluded (day=1 <= balance_day=5)
+        # bank_balance=0 + UC(120000) - Rent(100000, due today so still outstanding);
+        # M+D excluded (day=1 <= balance_day=5)
         assert result == 20000
 
     def test_projected_starting_balance_balance_day_filters_current_month_income(
@@ -337,7 +338,7 @@ class TestBalanceDayFiltering:
                 payment_method_id=1,
                 category="housing",
                 bill_type="fixed",
-                day_of_month=25,
+                day_of_month=date.today().day,
                 start_ym=YearMonth(2026, 1),
                 end_ym=None,
             )

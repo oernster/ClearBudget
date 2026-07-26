@@ -34,6 +34,9 @@ class BalanceDialog(QDialog):
         self.amount_edit = QLineEdit()
         self.amount_edit.setText(f"{self.current_balance.pounds:.2f}")
         self.amount_edit.setPlaceholderText("0.00")
+        # Pre-select the current balance so typing replaces it outright.
+        self.amount_edit.selectAll()
+        self.amount_edit.setFocus()
         layout.addWidget(self.amount_edit)
 
         btn_layout = QHBoxLayout()

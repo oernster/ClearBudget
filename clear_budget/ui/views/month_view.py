@@ -3,7 +3,6 @@
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QMessageBox,
 )
 from PySide6.QtCore import Qt
 
@@ -18,7 +17,9 @@ from clear_budget.ui.utils.format_helpers import (
     fmt,
 )
 from clear_budget.ui import ui_scale
+from clear_budget.ui.views._month_view_apply_prompt import MonthViewApplyPromptMixin
 from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
+from clear_budget.ui.views._month_view_delete_mixin import MonthViewDeleteMixin
 from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
 from clear_budget.ui.views._month_view_table_mixin import (
     MonthViewTableMixin,
@@ -43,7 +44,12 @@ _INCOME_SORT_KEYS = {
 
 
 class MonthView(
-    MonthViewBuilderMixin, MonthViewTableMixin, MonthViewEditMixin, QWidget
+    MonthViewBuilderMixin,
+    MonthViewTableMixin,
+    MonthViewEditMixin,
+    MonthViewDeleteMixin,
+    MonthViewApplyPromptMixin,
+    QWidget,
 ):
     """Displays bills and income for current month in tabular form."""
 
@@ -134,16 +140,9 @@ class MonthView(
 
             today_ym = _YM(_dt.now().year, _dt.now().month)
             if self.view_model.current_month == today_ym:
-                today_day = _dt.now().day
+                # Elapsed dated bills/income are folded into the stored
+                # balance at midnight (and at startup), so it is shown as-is.
                 pence = self.view_model.budget_service.get_bank_balance().pence
-                balance_day = self.view_model.budget_service._get_bank_balance_day()
-                if balance_day > 0:
-                    arrived_pence = sum(
-                        i.amount.pence
-                        for i in summary.income_sources
-                        if i.day_of_month and balance_day < i.day_of_month <= today_day
-                    )
-                    pence += arrived_pence
                 label = f"Balance: {fmt(pence)}"
             else:
                 _svc = self.view_model.budget_service
@@ -237,7 +236,8 @@ class MonthView(
             current_month=self.view_model.current_month,
         )
         if dialog.exec() == BillDialog.Accepted and (bill := dialog.get_bill()):
-            self.view_model.add_bill(bill=bill)
+            persisted = self.view_model.add_bill(bill=bill)
+            self._offer_apply_new_bill(persisted)
 
     def _get_bill_from_row(self, row: int):
         if row < 0 or not self.view_model.month_summary:
@@ -290,56 +290,14 @@ class MonthView(
                     self.view_model.delete_bill_month_override(bill_id=eb.id)
                 self.view_model.update_bill(bill=eb)
 
-    def on_delete_bill(self) -> None:
-        rows = sorted({idx.row() for idx in self.bills_table.selectedIndexes()})
-        ids = [b.id for r in rows if (b := self._get_bill_from_row(r)) is not None]
-        if not ids:
-            return
-        viewed = self.view_model.current_month
-        viewed_name = MONTH_NAMES[viewed.month]
-        noun = "bill" if len(ids) == 1 else f"{len(ids)} bills"
-        scope = self._ask_delete_scope(noun, viewed_name)
-        if scope == "stop":
-            self.view_model.end_bills(
-                bill_ids=ids, last_active_month=viewed.previous_month()
-            )
-        elif scope == "wipe":
-            self.view_model.delete_bills(bill_ids=ids)
-
-    def _ask_delete_scope(self, noun: str, viewed_name: str) -> str:
-        """Ask how to delete: 'stop' (from viewed month on), 'wipe' (all), 'cancel'."""
-        box = QMessageBox(self)
-        box.setWindowTitle("Delete Bill")
-        box.setText(
-            f"Delete {noun}?\n\n"
-            f"Stop from {viewed_name}: drops it from {viewed_name} onward and "
-            f"keeps every earlier month unchanged.\n"
-            f"Delete entirely: removes it from every month, including history. "
-            f"This cannot be undone."
-        )
-        stop_btn = box.addButton(
-            f"Stop from {viewed_name}", QMessageBox.ButtonRole.AcceptRole
-        )
-        wipe_btn = box.addButton(
-            "Delete entirely", QMessageBox.ButtonRole.DestructiveRole
-        )
-        cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
-        box.setDefaultButton(cancel_btn)
-        box.exec()
-        clicked = box.clickedButton()
-        if clicked is stop_btn:
-            return "stop"
-        if clicked is wipe_btn:
-            return "wipe"
-        return "cancel"
-
     def on_add_income(self) -> None:
         dialog = IncomeDialog(self, None, current_month=self.view_model.current_month)
         if dialog.exec() == IncomeDialog.Accepted and (inc := dialog.get_income()):
             if dialog.month_only_check.isChecked():
-                self.view_model.add_income_month_extra(income=inc)
+                persisted = self.view_model.add_income_month_extra(income=inc)
             else:
-                self.view_model.add_income(income=inc)
+                persisted = self.view_model.add_income(income=inc)
+            self._offer_apply_new_income(persisted)
 
     def _on_income_row_header_click(self, row: int) -> None:
         if self.read_only:
@@ -359,25 +317,3 @@ class MonthView(
                 if had_override:
                     self.view_model.delete_income_month_override(income_id=inc.id)
                 self.view_model.update_income(income=inc)
-
-    def on_delete_income(self) -> None:
-        rows = sorted({idx.row() for idx in self.income_table.selectedIndexes()})
-        incomes = [i for r in rows if (i := self._get_income_from_row(r)) is not None]
-        if not incomes:
-            return
-        count = len(incomes)
-        noun = "income source" if count == 1 else f"{count} income sources"
-        reply = QMessageBox.question(
-            self,
-            "Delete Income",
-            f"Permanently delete {noun}?\n\nThis cannot be undone.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
-            extra_ids = [i.id for i in incomes if i.is_month_only]
-            income_ids = [i.id for i in incomes if not i.is_month_only]
-            for extra_id in extra_ids:
-                self.view_model.delete_income_month_extra(extra_id=extra_id)
-            if income_ids:
-                self.view_model.delete_incomes(income_ids=income_ids)

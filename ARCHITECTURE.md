@@ -150,6 +150,9 @@ focused mixins to stay under the 400-LOC-per-file limit:
   settings, `get_month_cashflow_projection()` and `first_overdrawn_month()`
   (the runway: first future month to dip into the red, delegating to
   `_overdraft_projection.py`)
+- `CardOperationsMixin` (`_card_operations.py`) - credit-card pass-throughs and
+  folds (card monthly states/projections, live balance, as-of-today balance
+  save, elapsed-date and limit-change folds)
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
@@ -171,7 +174,19 @@ Key methods:
 - `skip_bill_for_month(bill_id, year_month)` / `unskip_bill_for_month(bill_id, year_month)`
 - `delete_bill_month_override(bill_id, year_month)`
 - `get_projected_month_end_balance_pence(year_month)` → `int` (signed)
-- `get_bank_balance()` / `set_bank_balance(amount)`
+- `get_bank_balance()` / `set_bank_balance(amount)` - the stored balance is
+  stamped with the date it was set (`bank_balance_day` plus the full
+  `bank_balance_date`), the baseline the elapsed fold advances from
+- `apply_elapsed_bank_transactions(today=None)` → `int` (`_bank_transaction_fold.py`) -
+  applies every dated bank bill/income that fell due after the balance baseline
+  to the stored balance (local-midnight semantics), marks each item paid or
+  received so no projection counts it twice, then advances the baseline to
+  today; run at launch and re-run by the MainWindow midnight timer; a due day
+  beyond a short month's end is applied on its last day; card bills are left to
+  the card fold
+- `adjust_bank_balance(delta_pence)` - signed delta to the stored balance,
+  stamped as-of today (backs the same-day "update balance now?" prompt when an
+  item dated today is added)
 - `get_overdraft_limit()` / `set_overdraft_limit(amount)` - overdraft facility limit
 - `get_overdraft_apr_basis_points()` / `set_overdraft_apr_basis_points(basis_points)` -
   overdraft APR, stored as basis points (1bp = 0.01%)
@@ -377,7 +392,10 @@ Separate from budget infrastructure. Manages user identity and credentials.
   - `_session_loop()` → login → open DB → load currency → build window → show
   - `_reload_database()` → triggered by `database_replaced`; closes old DB, reopens, loads currency, rebuilds window
   - `_build_main_window()` calls `update_card_balances_for_elapsed_dates()` so any
-    fully-elapsed months are folded into card balances at session start
+    fully-elapsed months are folded into card balances at session start, then
+    `apply_elapsed_bank_transactions()` so dated bank bills/income that fell due
+    while the app was closed are folded into the bank balance; while the app is
+    open, a MainWindow timer re-runs the bank fold just after each local midnight
   - Cross-platform single-instance lock: a named kernel mutex on Windows, an
     exclusive `fcntl` advisory lock on a file in `~/.clearbudget/` on macOS and Linux
   - Screen-aware UI scale (`ui_scale.init`): factor = available screen height / 1260,
