@@ -225,7 +225,9 @@ Key methods:
   5. `month_bills` - archived per-month bill snapshot
   6. `month_income` - archived per-month income snapshot
   7. `credit_cards` - includes `minimum_payment_percent` (migration)
-  8. `settings` - key/value store (`bank_balance`, `bank_balance_day`, `currency`,
+  8. `settings` - key/value store (`bank_balance`, `bank_balance_day`,
+     `bank_balance_date` (the fold baseline; legacy databases without it fall
+     back to `bank_balance_day`), `currency`,
      `overdraft_limit`, `overdraft_apr_bp`)
   9. `bill_month_overrides` - per-month bill amount/day override (`day_of_month` is a migration)
   10. `bill_month_skips` - per-month bill exclusion

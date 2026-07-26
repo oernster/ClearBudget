@@ -1,4 +1,4 @@
-<img width="64" height="64" alt="Clear Budget" src="https://github.com/user-attachments/assets/4e8c5620-7890-4527-9eb6-14adad1ebea8" /> [Clear Budget](https://oernster.github.io/ClearBudget/)
+<img width="64" height="64" alt="Clear Budget" src="https://github.com/user-attachments/assets/4e8c5620-7890-4527-9eb6-14adad1ebea8" /> [Clear Budget](https://ernster.dev/ClearBudget/)
 
 # Clear Budget
 
@@ -46,6 +46,14 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 - Per-bill monthly overrides (amount and due day overrides for a specific month)
 - Per-bill "paid" flag - excludes a paid bill from "still due" totals and the
   projected balance for the rest of the month
+- Self-maintaining bank balance: dated bank bills are deducted from the balance
+  at local midnight on their due day and dated income is added the same way;
+  days that pass while the app is closed are caught up at the next launch, and
+  applied items tick their Paid/Received flags so nothing is counted twice
+- Adding a bill or income dated today offers to apply it to the balance
+  immediately (decline if your balance already reflects it)
+- The balance edit dialog opens with the current figure selected, ready to
+  type straight over
 - Per-month income flexibility: per-month overrides, per-month skips, a
   "received" flag, and "this month only" one-off income entries
 - Solvency analysis with forward cashflow projections (next 2 months)
@@ -75,7 +83,7 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 
 ## Application Tabs
 
-- **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
+- **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
 - **Solvency** - Financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
@@ -214,11 +222,12 @@ or the bill template:
 - **Override**: amount and/or due day changed for one month; shown with blue `(*)` indicator
 - **Paid**: bill marked as paid for the month is excluded from "still due" totals and
   the projected balance for the rest of that month, since the money has already left
-  the account
+  the account. Ticked automatically when a dated bank bill is applied to the
+  balance at midnight on its due day
 
 Income sources have the same per-month flexibility (overrides, skips, and a "received"
-flag), plus "this month only" one-off entries for ad-hoc income not tied to a
-recurring template.
+flag that likewise ticks itself when a dated income is applied to the balance), plus
+"this month only" one-off entries for ad-hoc income not tied to a recurring template.
 
 Beyond single-month tweaks, a bill can be given an **end month** so it stops after
 that month; deleting a bill offers two scopes: **stop from the viewed month**

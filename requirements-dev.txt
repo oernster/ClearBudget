@@ -25,6 +25,7 @@ PySide6_Essentials==6.11.1
 pytest==9.0.3
 pytest-cov==7.1.0
 pytest-qt==4.5.0
+ruff==0.16.0
 pytokens==0.4.1
 setuptools==82.0.1
 shiboken6==6.11.1

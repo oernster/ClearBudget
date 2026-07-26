@@ -38,6 +38,18 @@ each day even before the bill is paid in full - not just the
 "still due" figure shown in the Solvency tab.</p>
 
 <hr>
+<h3>Your bank balance</h3>
+<p>You set your balance once with the pencil icon (the dialog opens with the
+figure selected, so you can type straight over it); Clear Budget then keeps
+it up to date. When a bank bill with a due day reaches that day, its amount
+is deducted from your balance at midnight and its <b>Paid</b> box is ticked;
+income with an arrival day is added the same way and marked <b>Received</b>.
+Days that pass while the app is closed are caught up the next time it opens.
+Adding a bill or income dated today asks whether to apply it to the balance
+straight away - say No if your balance already reflects it. Bills paid by
+credit card never touch the bank balance.</p>
+
+<hr>
 <h3>Tabs</h3>
 <ul>
   <li><b>Monthly Budget</b> - your bills and income for one month, in tables.</li>
@@ -49,10 +61,10 @@ each day even before the bill is paid in full - not just the
 <h3>Monthly Budget tab</h3>
 <ul>
   <li><b>&larr; Previous / Next &rarr;</b> - move between months.</li>
-  <li><b>Archive Month</b> - store this month's data permanently in the
-      Archive tab. Only available for months that have fully ended -
-      disabled for the current and future months.</li>
-  <li><b>&#128221; (pencil icon)</b> - set your current bank account balance.</li>
+  <li><b>&#128221; (pencil icon)</b> - set your current bank account balance;
+      from then on it is kept up to date automatically (see "Your bank
+      balance" above). Past months are archived automatically as they end -
+      there is no manual archive step.</li>
   <li><b>Overdraft warning</b> - if your projected balance dips below zero at
       any point this month, a warning appears under the nav row: amber if the
       dip stays within your overdraft facility (with an estimated daily
@@ -67,13 +79,15 @@ each day even before the bill is paid in full - not just the
   <li><b>Paid</b> checkbox (bills) - tick once you have actually paid this
       bill this month. Removes it from "still due" and your projected
       balance for the rest of the month, since the money has already left
-      your account.</li>
+      your account. Ticked automatically when a dated bank bill is applied
+      to your balance at midnight on its due day.</li>
   <li><b>Add Income</b> - opens a form to create a new income source.</li>
   <li><b>Delete Income</b> - removes the selected income source (asks for confirmation).</li>
   <li><b>Reliable</b> checkbox (income) - tick if this income is dependable
       and should count towards your safety calculations.</li>
   <li><b>Received</b> checkbox (income) - tick once this income has actually
-      arrived this month.</li>
+      arrived this month. Ticked automatically when a dated income is
+      applied to your balance at midnight on its arrival day.</li>
 </ul>
 
 <h3>Bill dialog (Add/Edit Bill)</h3>

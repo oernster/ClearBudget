@@ -49,7 +49,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 
 `requirements.txt` holds the runtime dependencies (PySide6, bcrypt).
 `requirements-dev.txt` adds the build and quality tooling (PyInstaller, pytest,
-black, flake8).
+black, flake8, ruff).
 
 ### Run, test and lint from source
 
@@ -58,6 +58,7 @@ python main.py     # launch the app
 pytest -v --cov    # run the full suite (100% coverage gate enforced)
 black .            # format (line length 88)
 flake8             # lint
+ruff check .       # lint (wider default rule set)
 ```
 
 The suite is Qt-free and runs clean in one process: the fragile widget-level
