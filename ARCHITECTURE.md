@@ -153,6 +153,11 @@ focused mixins to stay under the 400-LOC-per-file limit:
 - `CardOperationsMixin` (`_card_operations.py`) - credit-card pass-throughs and
   folds (card monthly states/projections, live balance, as-of-today balance
   save, elapsed-date and limit-change folds)
+- `BalanceApplicationMixin` (`_balance_application.py`) - same-day
+  `apply_bill_to_balance_now` / `apply_income_to_balance_now` plus the
+  `balance_applied` log helpers; deleting a bill or income (or ending a bill
+  from a month onward) reverses its logged applications, and a manual balance
+  entry clears the log because the typed figure supersedes them
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
@@ -216,8 +221,9 @@ Key methods:
 ### Infrastructure Layer
 
 **Per-user database** (`~/.clearbudget/budget_<username>.db`):
-- `Database(db_path)` - SQLite connection and schema management
-- Schema - 16 application tables (plus SQLite's internal `sqlite_sequence`):
+- `Database(db_path)` - SQLite connection and schema management (the DDL and
+  migrations live in `_schema.py`, split out for the LOC limit)
+- Schema - 17 application tables (plus SQLite's internal `sqlite_sequence`):
   1. `payment_methods` - id=1 is "Bank Account"
   2. `bills` - templates; includes `target_card_id` (migration)
   3. `income_sources`
@@ -238,6 +244,10 @@ Key methods:
   15. `income_month_extras` - "this month only" one-off income, not tied to a template
   16. `credit_limit_changes` - scheduled dated credit-limit changes (one row per
       change; no uniqueness, so a card may have any number over time)
+  17. `balance_applied` - log of amounts the app applied to the bank balance
+      automatically (midnight fold or same-day prompt), one signed row per item
+      per month; deleting an item reverses its rows, a manual balance entry
+      clears the log
 
 **Repositories**:
 - `SQLiteBillRepository`

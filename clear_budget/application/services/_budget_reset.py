@@ -5,6 +5,13 @@ import sqlite3
 _WIPE_TABLES = [
     "bill_month_skips",
     "bill_month_overrides",
+    "bill_month_paid",
+    "income_month_overrides",
+    "income_month_skips",
+    "income_month_received",
+    "income_month_extras",
+    "balance_applied",
+    "credit_limit_changes",
     "month_bills",
     "month_income",
     "months",

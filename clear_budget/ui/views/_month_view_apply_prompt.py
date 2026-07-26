@@ -48,10 +48,8 @@ class MonthViewApplyPromptMixin:
             "Choose No if your balance already reflects this payment."
         ):
             return
-        svc = self.view_model.budget_service
-        svc.adjust_bank_balance(delta_pence=-bill.amount.pence)
-        svc.mark_bill_paid_for_month(
-            bill_id=bill.id, year_month=self.view_model.current_month
+        self.view_model.budget_service.apply_bill_to_balance_now(
+            bill=bill, year_month=self.view_model.current_month
         )
         self.view_model.refresh_month_summary()
 
@@ -65,12 +63,7 @@ class MonthViewApplyPromptMixin:
             "Choose No if your balance already reflects this income."
         ):
             return
-        svc = self.view_model.budget_service
-        svc.adjust_bank_balance(delta_pence=income.amount.pence)
-        if income.is_month_only:
-            svc.mark_income_extra_received(extra_id=income.id)
-        else:
-            svc.mark_income_received_for_month(
-                income_id=income.id, year_month=self.view_model.current_month
-            )
+        self.view_model.budget_service.apply_income_to_balance_now(
+            income=income, year_month=self.view_model.current_month
+        )
         self.view_model.refresh_month_summary()

@@ -52,6 +52,9 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
   applied items tick their Paid/Received flags so nothing is counted twice
 - Adding a bill or income dated today offers to apply it to the balance
   immediately (decline if your balance already reflects it)
+- Deleting an item whose amount was applied automatically hands the amount
+  back to the balance; manually setting the balance supersedes earlier
+  automatic applications
 - The balance edit dialog opens with the current figure selected, ready to
   type straight over
 - Per-month income flexibility: per-month overrides, per-month skips, a

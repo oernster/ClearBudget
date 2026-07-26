@@ -17,7 +17,17 @@ class IncomeOperationsMixin:
     ) -> IncomeSource:  # pragma: no cover
         return self.income_repo.update(income=income)
 
-    def delete_income(self, *, income_id: int) -> None:  # pragma: no cover
+    def delete_income(self, *, income_id: int) -> None:
+        """Delete an income source, handing back any applied balance amounts."""
+        from clear_budget.application.services._balance_application import (
+            reverse_applied_for_item,
+        )
+
+        reverse_applied_for_item(
+            getattr(self.income_repo, "conn", None),
+            item_type="income",
+            item_id=income_id,
+        )
         self.income_repo.hard_delete(income_id=income_id)
 
     def add_income_month_extra(
@@ -30,7 +40,17 @@ class IncomeOperationsMixin:
     ) -> IncomeSource:  # pragma: no cover
         return self.income_repo.update_month_extra(year_month=year_month, income=income)
 
-    def delete_income_month_extra(self, *, extra_id: int) -> None:  # pragma: no cover
+    def delete_income_month_extra(self, *, extra_id: int) -> None:
+        """Delete a one-off income entry, handing back any applied amount."""
+        from clear_budget.application.services._balance_application import (
+            reverse_applied_for_item,
+        )
+
+        reverse_applied_for_item(
+            getattr(self.income_repo, "conn", None),
+            item_type="income_extra",
+            item_id=extra_id,
+        )
         self.income_repo.delete_month_extra(extra_id=extra_id)
 
     def update_income_for_month(

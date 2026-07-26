@@ -14,6 +14,7 @@ silently skipped.
 
 from datetime import date, timedelta
 
+from clear_budget.application.services._balance_application import record_applied
 from clear_budget.application.services._settings_operations import (
     get_bank_balance_date_iso,
     get_bank_balance_day,
@@ -96,14 +97,30 @@ def apply_elapsed_bank_transactions(
             ):
                 delta -= bill.amount.pence
                 mark_bill_paid(bill.id, year_month)
+                record_applied(
+                    conn,
+                    item_type="bill",
+                    item_id=bill.id,
+                    year_month=year_month,
+                    amount_pence=-bill.amount.pence,
+                )
         for income in summary.income_sources:
             if income.received_for_month or not _due_on(income.day_of_month, day):
                 continue
             delta += income.amount.pence
             if income.is_month_only:
                 mark_income_extra_received(income.id)
+                income_type = "income_extra"
             else:
                 mark_income_received(income.id, year_month)
+                income_type = "income"
+            record_applied(
+                conn,
+                item_type=income_type,
+                item_id=income.id,
+                year_month=year_month,
+                amount_pence=income.amount.pence,
+            )
         day += timedelta(days=1)
     set_bank_balance_pence(conn, get_bank_balance_pence(conn) + delta, today=today)
     return delta

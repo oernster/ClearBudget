@@ -6,6 +6,9 @@ from datetime import date
 from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.application.dto.solvency_report import SolvencyReport
 from clear_budget.application.services.month_generator import MonthGenerator
+from clear_budget.application.services._balance_application import (
+    BalanceApplicationMixin,
+)
 from clear_budget.application.services._bill_operations import BillOperationsMixin
 from clear_budget.application.services._card_operations import CardOperationsMixin
 from clear_budget.application.services._income_operations import (
@@ -42,6 +45,7 @@ class BudgetService(
     IncomeOperationsMixin,
     OverdraftOperationsMixin,
     CardOperationsMixin,
+    BalanceApplicationMixin,
 ):
     bill_repo: BillRepository
     income_repo: IncomeSourceRepository
@@ -292,11 +296,16 @@ class BudgetService(
 
         reset_budget_data(self.bill_repo.conn)
 
-    def set_bank_balance(self, *, amount: Amount) -> None:  # pragma: no cover
+    def set_bank_balance(self, *, amount: Amount) -> None:
+        """Store a manually entered balance; supersedes prior auto-applications."""
+        from clear_budget.application.services._balance_application import (
+            clear_applied_log,
+        )
         from clear_budget.application.services._settings_operations import (
             set_bank_balance_pence,
         )
 
+        clear_applied_log(self.bill_repo.conn)
         set_bank_balance_pence(self.bill_repo.conn, amount.pence)
 
     def adjust_bank_balance(self, *, delta_pence: int) -> None:
