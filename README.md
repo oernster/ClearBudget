@@ -183,8 +183,11 @@ Defaults to GBP.
 - `subscriptions` - Recurring services
 - `credit_payment` - Credit card payments
 - `groceries` - Food and household
-- `discretionary` - Entertainment and leisure
-- `one_time` - One-off purchases
+- `discretionary` - Entertainment, leisure and one-off purchases
+
+For a genuinely one-off expense, tick "This month only" when adding the bill;
+the retired `one_time` category is recategorised to `discretionary`
+automatically (archived months keep their historical label).
 
 ---
 

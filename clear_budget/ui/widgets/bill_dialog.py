@@ -31,7 +31,6 @@ class BillDialog(QDialog):
         "credit_payment",
         "groceries",
         "discretionary",
-        "one_time",
     ]
 
     @staticmethod

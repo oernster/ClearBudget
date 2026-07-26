@@ -1,7 +1,5 @@
 """Tests for Bill entity."""
 
-import pytest
-
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -33,7 +31,7 @@ class TestBillCreation:
             name="Camera Amazon Layaway",
             amount=Amount(pence=6000),
             payment_method_id=1,
-            category="one_time",
+            category="discretionary",
             bill_type="expiring",
             day_of_month=1,
             start_ym=YearMonth(2026, 1),

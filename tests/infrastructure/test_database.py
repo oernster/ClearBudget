@@ -120,7 +120,7 @@ class TestDatabaseGetOrCreateMonth:
         db.conn.execute(
             "INSERT INTO bills (name, amount_pence, payment_method_id, category,"
             " bill_type, day_of_month, start_year, start_month, end_year, end_month)"
-            " VALUES ('One-off', 1000, 1, 'one_time', 'fixed', 26, 2026, 9, 2026, 9)"
+            " VALUES ('One-off', 1000, 1, 'discretionary', 'fixed', 26, 2026, 9, 2026, 9)"
         )
         db.conn.execute(
             "INSERT INTO bills (name, amount_pence, payment_method_id, category,"
@@ -138,3 +138,17 @@ class TestDatabaseGetOrCreateMonth:
         }
         assert rows["One-off"] == (2026, 9)
         assert rows["Recurring"] == (2000, 1)
+
+    def test_one_time_category_is_migrated_to_discretionary(self, db) -> None:
+        """The retired one_time category is recategorised on schema run."""
+        db.conn.execute(
+            "INSERT INTO bills (name, amount_pence, payment_method_id, category,"
+            " bill_type, day_of_month, start_year, start_month)"
+            " VALUES ('Gadget', 7900, 1, 'one_time', 'fixed', 12, 2000, 1)"
+        )
+        db.conn.commit()
+        db.create_schema()
+        row = db.conn.execute(
+            "SELECT category FROM bills WHERE name = 'Gadget'"
+        ).fetchone()
+        assert row["category"] == "discretionary"

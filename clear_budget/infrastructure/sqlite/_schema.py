@@ -169,6 +169,13 @@ def create_schema(conn) -> None:
         )
         """)
 
+    # The one_time category is retired: "This month only" on Add covers the
+    # one-off case. Recategorise any remaining bills into discretionary
+    # (archived month snapshots keep their historical label).
+    cursor.execute(
+        "UPDATE bills SET category = 'discretionary' WHERE category = 'one_time'"
+    )
+
     # Migrate bills added with current-month start_ym to always-visible 2000-01.
     # One-off bills (start == end, added via "This month only") are scoped to
     # exactly their month on purpose and are left alone.

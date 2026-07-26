@@ -16,7 +16,7 @@ class Bill:
         amount: Monthly amount due
         payment_method_id: Which account/card to debit (FK to PaymentMethod)
         category: Type of bill (housing, utilities, subscriptions,
-            credit_payment, groceries, discretionary, one_time)
+            credit_payment, groceries, discretionary)
         bill_type: fixed | variable | expiring
         day_of_month: Day bill is due (1-31, None if not tied to a specific day)
         start_ym: First month this bill appears (YYYY-MM)
@@ -47,9 +47,7 @@ class Bill:
             return False
         if year_month < self.start_ym:
             return False
-        if self.end_ym is not None and year_month > self.end_ym:
-            return False
-        return True
+        return self.end_ym is None or year_month <= self.end_ym
 
     def __str__(self) -> str:
         return f"{self.name} ({self.amount})"
