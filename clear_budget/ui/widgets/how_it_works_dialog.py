@@ -214,6 +214,9 @@ paid by credit card never touch the bank balance.</p>
       way.</li>
   <li><b>Up / Down</b> - walk the rows inside a table, or switch tabs while
       the tab bar is highlighted.</li>
+  <li><b>Submenus</b> - inside an open menu, Right arrow on an item with a
+      submenu (File &gt; Import / Export) opens it and Left arrow steps back
+      out to the parent menu.</li>
   <li><b>Enter or Space</b> - press the highlighted button or checkbox.</li>
   <li>A green outline shows what is focused or hovered; a red outline marks
       a control that is disabled right now. Nothing is highlighted when the

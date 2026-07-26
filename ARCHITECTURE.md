@@ -431,6 +431,10 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
   ends; tables keep Up/Down for their rows, the tab bar cycles tabs on
   Up/Down, text inputs keep their arrows for the caret
+- Submenus keep Qt's native horizontal arrows: inside an open menu, Right on
+  a submenu item (File > Import / Export) enters it with its first item
+  active and Left inside a submenu exits back to the parent item; on plain
+  items the arrows still step the ring between menu titles
 - Enter equals Space on buttons and checkboxes (main window and dialogs);
   inside modal dialogs the arrows walk the dialog's own tab order
 - Neutral start: a 0x0 sink takes the initial focus so nothing is highlighted

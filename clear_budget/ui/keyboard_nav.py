@@ -6,9 +6,12 @@ Tab and Right step forward, Shift+Tab and Backtab and Left step back, both
 wrapping, and the horizontal arrows are tested first so they step the ring
 everywhere: out of an open menu, out of a table, out of the tab bar. Up and
 Down stay internal to a stop that owns them (a table walks its rows, the tab
-bar cycles tabs); Enter and Space activate. Inside a modal dialog the same
-arrows walk the dialog's own tab order and Enter toggles a focused checkbox.
-Text inputs always keep their arrows for the caret.
+bar cycles tabs); Enter and Space activate. Inside an open menu the toolkit
+keeps two horizontal-arrow cases: Right on a submenu item enters the submenu
+and Left inside a submenu exits back to its parent; every other Left/Right
+still steps the ring. Inside a modal dialog the same arrows walk the dialog's
+own tab order and Enter toggles a focused checkbox. Text inputs always keep
+their arrows for the caret.
 """
 
 from PySide6.QtCore import QEvent, QObject, Qt
@@ -76,8 +79,13 @@ class KeyboardNavigator(QObject):
     def _current_index(self, stops: list) -> int:
         focus = QApplication.focusWidget()
         # A stale activeAction can outlive focus moving elsewhere; the title
-        # highlight only counts as the current stop while the bar owns focus.
-        active = self._menubar.activeAction() if self._menubar.hasFocus() else None
+        # highlight only counts as the current stop while the bar owns focus
+        # or one of its menus is open (walking a menu's items moves focus to
+        # the QMenu popup while the title stays the current ring stop).
+        menu_owns_keys = self._menubar.hasFocus() or isinstance(
+            QApplication.activePopupWidget(), QMenu
+        )
+        active = self._menubar.activeAction() if menu_owns_keys else None
         for i, (kind, target) in enumerate(stops):
             if kind == _MENU:
                 if active is target:
@@ -167,6 +175,8 @@ class KeyboardNavigator(QObject):
         if key in _FORWARD_KEYS or key in _BACK_KEYS:
             if key in _ARROW_LR and isinstance(focus, _TEXT_ENTRY_TYPES):
                 return False
+            if key in _ARROW_LR and self._submenu_arrow(popup, key):
+                return False
             self._step(1 if key in _FORWARD_KEYS else -1)
             return True
 
@@ -189,6 +199,19 @@ class KeyboardNavigator(QObject):
         if key == Qt.Key.Key_Space:
             return self._space_in_menus(popup)
         return False
+
+    @staticmethod
+    def _submenu_arrow(popup, key) -> bool:
+        # Qt owns two horizontal-arrow cases inside an open menu: Right on an
+        # item that has a submenu enters it (first item active) and Left inside
+        # a submenu closes back to the parent item. Yield those to the toolkit;
+        # every other Left/Right in a menu still steps the ring.
+        if not isinstance(popup, QMenu):
+            return False
+        if key == Qt.Key.Key_Right:
+            action = popup.activeAction()
+            return action is not None and action.menu() is not None
+        return isinstance(popup.parentWidget(), QMenu)
 
     def _space_in_menus(self, popup) -> bool:
         # Qt's Windows styles ignore Space in menus; make it equal to Enter.
