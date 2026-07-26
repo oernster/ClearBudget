@@ -1,18 +1,21 @@
 """Dialog for adding/editing bills."""
 
+from typing import ClassVar
+
+from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDateEdit,
     QDialog,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QSpinBox,
-    QComboBox,
-    QCheckBox,
-    QDateEdit,
     QPushButton,
+    QSpinBox,
+    QVBoxLayout,
 )
-from PySide6.QtCore import QDate
+
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -21,7 +24,7 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 class BillDialog(QDialog):
     """Dialog for creating/editing a bill."""
 
-    CATEGORIES = [
+    CATEGORIES: ClassVar[list[str]] = [
         "housing",
         "utilities",
         "subscriptions",
@@ -41,7 +44,7 @@ class BillDialog(QDialog):
         """Convert display category name to internal format (lowercase, underscores)."""
         return display_name.lower().replace(" ", "_")
 
-    BILL_TYPES = ["fixed", "variable", "expiring"]
+    BILL_TYPES: ClassVar[list[str]] = ["fixed", "variable", "expiring"]
 
     def __init__(
         self,
@@ -62,7 +65,9 @@ class BillDialog(QDialog):
         if bill is not None:
             self.load_bill(bill)
         else:
-            self.month_only_check.setEnabled(False)
+            self.month_only_check.setToolTip(
+                "Add as a one-off bill for this month only; it will not recur"
+            )
 
     def init_ui(self) -> None:
         """Build dialog layout."""
@@ -158,13 +163,22 @@ class BillDialog(QDialog):
         self._update_pays_card_visibility()
 
     def _on_month_only_changed(self) -> None:
-        if self.month_only_check.isChecked():
-            month_str = f"{self.current_month.month}/{self.current_month.year}"
+        checked = self.month_only_check.isChecked()
+        month_str = f"{self.current_month.month}/{self.current_month.year}"
+        if not checked:
+            self.month_only_status.setText("")
+        elif self.bill is None:
+            self.month_only_status.setText(
+                f"One-off bill for {month_str} only - it will not recur"
+            )
+        else:
             self.month_only_status.setText(
                 f"Changes saved for {month_str} only - template unchanged"
             )
-        else:
-            self.month_only_status.setText("")
+        if self.bill is None:
+            # A one-off already ends this month; the end-month row is implied.
+            self.ends_check.setEnabled(not checked)
+            self.end_date_edit.setEnabled(not checked and self.ends_check.isChecked())
 
     def _update_pays_card_visibility(self) -> None:
         visible = (
@@ -242,7 +256,12 @@ class BillDialog(QDialog):
             target_card_id = self.pays_card_combo.currentData()
 
             end_ym = None
-            if self.ends_check.isChecked():
+            start_ym = self.bill.start_ym if self.bill else YearMonth(2000, 1)
+            if self.bill is None and self.month_only_check.isChecked():
+                # One-off: scoped to exactly the viewed month.
+                start_ym = self.current_month
+                end_ym = self.current_month
+            elif self.ends_check.isChecked():
                 end_date = self.end_date_edit.date()
                 end_ym = YearMonth(end_date.year(), end_date.month())
 
@@ -254,7 +273,7 @@ class BillDialog(QDialog):
                 category=category,
                 bill_type=bill_type,
                 day_of_month=day,
-                start_ym=self.bill.start_ym if self.bill else YearMonth(2000, 1),
+                start_ym=start_ym,
                 end_ym=end_ym,
                 active=True,
                 target_card_id=target_card_id,

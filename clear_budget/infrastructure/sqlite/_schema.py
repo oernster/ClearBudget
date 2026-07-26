@@ -169,9 +169,13 @@ def create_schema(conn) -> None:
         )
         """)
 
-    # Migrate bills added with current-month start_ym to always-visible 2000-01
+    # Migrate bills added with current-month start_ym to always-visible 2000-01.
+    # One-off bills (start == end, added via "This month only") are scoped to
+    # exactly their month on purpose and are left alone.
     cursor.execute(
-        "UPDATE bills SET start_year = 2000, start_month = 1" " WHERE start_year > 2000"
+        "UPDATE bills SET start_year = 2000, start_month = 1"
+        " WHERE start_year > 2000"
+        " AND (end_year IS NULL OR end_year <> start_year OR end_month <> start_month)"
     )
 
     # Add target_card_id to bills (links credit_payment bills to their card)

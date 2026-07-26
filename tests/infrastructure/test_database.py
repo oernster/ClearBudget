@@ -114,3 +114,27 @@ class TestDatabaseGetOrCreateMonth:
         database.create_schema()  # first call adds columns
         database.create_schema()  # second call hits except: pass for each ALTER TABLE
         database.close()
+
+    def test_start_ym_migration_spares_one_off_bills(self, db) -> None:
+        """Re-running the schema keeps one-off (start == end) bills scoped."""
+        db.conn.execute(
+            "INSERT INTO bills (name, amount_pence, payment_method_id, category,"
+            " bill_type, day_of_month, start_year, start_month, end_year, end_month)"
+            " VALUES ('One-off', 1000, 1, 'one_time', 'fixed', 26, 2026, 9, 2026, 9)"
+        )
+        db.conn.execute(
+            "INSERT INTO bills (name, amount_pence, payment_method_id, category,"
+            " bill_type, day_of_month, start_year, start_month, end_year, end_month)"
+            " VALUES ('Recurring', 1000, 1, 'utilities', 'fixed', 5, 2026, 9,"
+            " NULL, NULL)"
+        )
+        db.conn.commit()
+        db.create_schema()
+        rows = {
+            row["name"]: (row["start_year"], row["start_month"])
+            for row in db.conn.execute(
+                "SELECT name, start_year, start_month FROM bills"
+            ).fetchall()
+        }
+        assert rows["One-off"] == (2026, 9)
+        assert rows["Recurring"] == (2000, 1)

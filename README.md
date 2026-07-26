@@ -44,6 +44,8 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
   preserves earlier (and archived) months, with a separate "delete entirely"
   option for bills added by mistake
 - Per-bill monthly overrides (amount and due day overrides for a specific month)
+- One-off bills: "This month only" when adding a bill creates a bill scoped to
+  just that month, mirroring one-off income entries
 - Per-bill "paid" flag - excludes a paid bill from "still due" totals and the
   projected balance for the rest of the month
 - Self-maintaining bank balance: dated bank bills are deducted from the balance
