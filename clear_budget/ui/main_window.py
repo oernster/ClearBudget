@@ -18,6 +18,7 @@ from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import ui_scale
 from clear_budget.ui._main_window_menus import MainWindowMenuMixin
+from clear_budget.ui._main_window_nav import MainWindowNavMixin
 from clear_budget.ui.ui_paths import default_downloads_dir
 from clear_budget.shared.db_validation import validate_db
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
@@ -36,7 +37,7 @@ RELEASES_URL = "https://github.com/oernster/ClearBudget/releases"
 _MIDNIGHT_FOLD_BUFFER_MS = 2000
 
 
-class MainWindow(MainWindowMenuMixin, QMainWindow):
+class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
     """Application main window with tabbed views."""
 
     # Emitted when the user switches account.
@@ -154,6 +155,10 @@ class MainWindow(MainWindowMenuMixin, QMainWindow):
             self.solvency_view_model.update_month_summary(
                 self.month_view_model.month_summary
             )
+
+        self._setup_keyboard_nav(
+            [month_view, solvency_panel, credit_card_view, archive_view]
+        )
 
     @staticmethod
     def _scrollable(widget: QWidget) -> ScrollableTab:

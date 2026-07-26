@@ -88,6 +88,11 @@ QTableWidget {{
     gridline-color: #3a4156;
     color: #e5e7eb;
     selection-background-color: #1e3a5f;
+    border: 2px solid transparent;
+}}
+
+QTableWidget:enabled:focus {{
+    border: 2px solid #34d399;
 }}
 
 QHeaderView::section {{
@@ -110,8 +115,12 @@ QPushButton {{
     font-weight: 600;
 }}
 
-QPushButton:hover {{
+QPushButton:enabled:hover {{
     background-color: #4a68d6;
+    border: 2px solid #34d399;
+}}
+
+QPushButton:enabled:focus {{
     border: 2px solid #34d399;
 }}
 
@@ -130,8 +139,18 @@ QPushButton#DangerButton {{
     background-color: #7a1f25;
 }}
 
-QPushButton#DangerButton:hover {{
+QPushButton#DangerButton:enabled:hover {{
     background-color: #6a1b21;
+    border: 2px solid #34d399;
+}}
+
+QPushButton#DangerButton:enabled:focus {{
+    border: 2px solid #34d399;
+}}
+
+QPushButton#DangerButton:disabled {{
+    background-color: #3a4156;
+    border: 2px solid #f87171;
 }}
 
 QLabel {{
@@ -161,8 +180,8 @@ QLineEdit {{
     padding: 4px 8px;
 }}
 
-QLineEdit:focus {{
-    border: 2px solid #2dd4bf;
+QLineEdit:enabled:focus {{
+    border: 2px solid #34d399;
 }}
 
 QLineEdit:disabled {{
@@ -178,7 +197,11 @@ QSpinBox, QDoubleSpinBox {{
     padding: 4px 8px;
 }}
 
-QSpinBox:disabled, QDoubleSpinBox:disabled {{
+QSpinBox:enabled:focus, QDoubleSpinBox:enabled:focus, QDateEdit:enabled:focus {{
+    border: 2px solid #34d399;
+}}
+
+QSpinBox:disabled, QDoubleSpinBox:disabled, QDateEdit:disabled {{
     border: 2px solid #f87171;
     color: #6b7280;
 }}
@@ -189,6 +212,10 @@ QComboBox {{
     border: 1px solid #3a4156;
     border-radius: 4px;
     padding: 4px 8px;
+}}
+
+QComboBox:enabled:focus {{
+    border: 2px solid #34d399;
 }}
 
 QComboBox:disabled {{
@@ -266,6 +293,14 @@ QCheckBox::indicator:unchecked:hover {{
 QCheckBox::indicator:disabled {{
     border-color: #f87171;
     background: transparent;
+}}
+
+QCheckBox:enabled:focus {{
+    color: #34d399;
+}}
+
+QTabBar:focus {{
+    border-bottom: 2px solid #34d399;
 }}
 
 QMenuBar {{

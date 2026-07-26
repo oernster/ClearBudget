@@ -68,6 +68,10 @@ paid by credit card never touch the bank balance.</p>
       from then on it is kept up to date automatically (see "Your bank
       balance" above). Past months are archived automatically as they end -
       there is no manual archive step.</li>
+  <li><b>App icon (in the navigation tray)</b> - opens the viewed month as a
+      graph: the bank balance day by day here, or every card's balance on
+      the Credit Cards tab. A button in the graph switches between bar and
+      line styles.</li>
   <li><b>Overdraft warning</b> - if your projected balance dips below zero at
       any point this month, a warning appears under the nav row: amber if the
       dip stays within your overdraft facility (with an estimated daily
@@ -200,6 +204,20 @@ paid by credit card never touch the bank balance.</p>
       dips below zero.</li>
   <li><b>Switch User</b> - log out and return to the login screen.</li>
   <li><b>Exit</b> - close Clear Budget.</li>
+</ul>
+
+<h3>Keyboard navigation</h3>
+<ul>
+  <li><b>Tab or Right arrow</b> - move forward through the menus, the tabs
+      and the controls on the current tab, wrapping around at the end.</li>
+  <li><b>Shift+Tab or Left arrow</b> - move backward, wrapping the other
+      way.</li>
+  <li><b>Up / Down</b> - walk the rows inside a table, or switch tabs while
+      the tab bar is highlighted.</li>
+  <li><b>Enter or Space</b> - press the highlighted button or checkbox.</li>
+  <li>A green outline shows what is focused or hovered; a red outline marks
+      a control that is disabled right now. Nothing is highlighted when the
+      app opens - press Tab or Right to start.</li>
 </ul>
 
 <h3>Read-only viewer accounts</h3>

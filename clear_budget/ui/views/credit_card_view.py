@@ -52,11 +52,12 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         layout = QVBoxLayout()
 
         self.prev_btn = QPushButton("← Previous")
-        self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.next_btn = QPushButton("Next →")
-        self.next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.nav_header, self.month_label = build_centered_nav_header(
-            "", prev_btn=self.prev_btn, next_btn=self.next_btn
+        self.nav_header, self.month_label, self.graph_btn = build_centered_nav_header(
+            "",
+            prev_btn=self.prev_btn,
+            next_btn=self.next_btn,
+            icon_action=self.on_show_graph,
         )
         self._refresh_month_label()
 
@@ -132,6 +133,31 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
     def set_nav_label_color(self, color: str) -> None:
         """Recolour the nav month label to match the Solvency tab."""
         apply_nav_label_color(self.month_label, color)
+
+    def on_show_graph(self) -> None:
+        """Open the month graph: one balance series per active card."""
+        from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+        from clear_budget.ui.widgets.month_graph_dialog import MonthGraphDialog
+
+        ym = self.current_month
+        series = self.budget_service.get_card_graph_series(year_month=ym)
+        MonthGraphDialog(
+            self,
+            title=f"{MONTH_NAMES[ym.month]} {ym.year}: card balances by day",
+            series=series,
+        ).exec()
+
+    def nav_targets(self) -> list:
+        """Ordered keyboard-ring stops for this tab."""
+        card_buttons = self.cards_container.findChildren(QPushButton)
+        return [
+            self.graph_btn,
+            self.prev_btn,
+            self.next_btn,
+            *card_buttons,
+            self.add_btn,
+            self.projection_table,
+        ]
 
     def _get_status_text(self, utilization: float) -> str:
         """Get status text based on card utilization."""

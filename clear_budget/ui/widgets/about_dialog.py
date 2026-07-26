@@ -3,18 +3,18 @@
 import sys
 from pathlib import Path
 
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QDialog,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QTextBrowser,
+    QVBoxLayout,
 )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
 
 from clear_budget.ui import ui_scale
+from clear_budget.ui.widgets.neutral_dialog import NeutralDialog
 from clear_budget.version import __version__ as _APP_VERSION
 
 
@@ -37,18 +37,30 @@ _IS_WINDOWS = sys.platform == "win32"
 # (pywin32) can be filtered, and so no stray source comments leak into the
 # rendered dialog text.
 _CREDITS: list[str] = [
-    "<li><b>Python</b> - Copyright &copy; 2001&ndash;2025 Python Software "
-    "Foundation. Licensed under the PSF Licence.</li>",
-    "<li><b>PySide6 (Qt for Python)</b> - Copyright &copy; The Qt Company "
-    "Ltd. Licensed under LGPL-3.0.</li>",
-    "<li><b>SQLite</b> - Dedicated to the public domain by D. Richard Hipp "
-    "and contributors.</li>",
-    "<li><b>bcrypt</b> - Copyright &copy; Nate Lawson, Perry Metzger and "
-    "contributors. Licensed under the Apache Licence 2.0.</li>",
-    "<li><b>pytest</b> - Copyright &copy; 2004&ndash;2025 Holger Krekel and "
-    "pytest contributors. Licensed under the MIT Licence.</li>",
-    "<li><b>black</b> - Copyright &copy; 2018&ndash;2025 Łukasz Langa and "
-    "contributors. Licensed under the MIT Licence.</li>",
+    (
+        "<li><b>Python</b> - Copyright &copy; 2001&ndash;2025 Python Software "
+        "Foundation. Licensed under the PSF Licence.</li>"
+    ),
+    (
+        "<li><b>PySide6 (Qt for Python)</b> - Copyright &copy; The Qt Company "
+        "Ltd. Licensed under LGPL-3.0.</li>"
+    ),
+    (
+        "<li><b>SQLite</b> - Dedicated to the public domain by D. Richard Hipp "
+        "and contributors.</li>"
+    ),
+    (
+        "<li><b>bcrypt</b> - Copyright &copy; Nate Lawson, Perry Metzger and "
+        "contributors. Licensed under the Apache Licence 2.0.</li>"
+    ),
+    (
+        "<li><b>pytest</b> - Copyright &copy; 2004&ndash;2025 Holger Krekel and "
+        "pytest contributors. Licensed under the MIT Licence.</li>"
+    ),
+    (
+        "<li><b>black</b> - Copyright &copy; 2018&ndash;2025 Łukasz Langa and "
+        "contributors. Licensed under the MIT Licence.</li>"
+    ),
 ]
 if _IS_WINDOWS:
     _CREDITS.append(
@@ -87,11 +99,11 @@ _LGPL3_NOTICE_HEAD = (
     "Clear Budget - Personal Budget Planner\n"
     "Copyright (C) 2025 Oliver Ernster\n"
     "\n"
-    "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"  # noqa: E501
+    "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"
     "\n"
-    "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public Licence for more details.\n"  # noqa: E501
+    "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public Licence for more details.\n"
     "\n"
-    "You should have received a copy of the GNU Lesser General Public Licence along with this program. If not, see <https://www.gnu.org/licenses/>.\n"  # noqa: E501
+    "You should have received a copy of the GNU Lesser General Public Licence along with this program. If not, see <https://www.gnu.org/licenses/>.\n"
     "\n"
     "----------------------------------------\n"
     "\n"
@@ -101,8 +113,8 @@ _LGPL3_NOTICE_HEAD = (
     "\n"
     "Key terms summary:\n"
     "  • You may use, copy, modify, and distribute this software under LGPL-3.0.\n"
-    "  • If you distribute modified versions of this software, you must make the modified source available under the same licence.\n"  # noqa: E501
-    "  • You must allow end users to replace or relink the LGPL-licensed libraries (PySide6 / Qt) used by this application.\n"  # noqa: E501
+    "  • If you distribute modified versions of this software, you must make the modified source available under the same licence.\n"
+    "  • You must allow end users to replace or relink the LGPL-licensed libraries (PySide6 / Qt) used by this application.\n"
     "  • There is NO WARRANTY for this program, to the extent permitted by law.\n"
     "\n"
     "----------------------------------------\n"
@@ -114,10 +126,14 @@ _LGPL3_NOTICE_HEAD = (
 # Third-party licence blocks, joined by a blank line. pywin32 is included only
 # on Windows so the notice matches what is actually shipped on each platform.
 _THIRD_PARTY_LICENCES: list[str] = [
-    "PySide6 (Qt for Python) - LGPL-3.0\n"
-    "  https://www.gnu.org/licenses/lgpl-3.0.html\n",
-    "Python Standard Library - PSF Licence\n"
-    "  https://docs.python.org/3/license.html\n",
+    (
+        "PySide6 (Qt for Python) - LGPL-3.0\n"
+        "  https://www.gnu.org/licenses/lgpl-3.0.html\n"
+    ),
+    (
+        "Python Standard Library - PSF Licence\n"
+        "  https://docs.python.org/3/license.html\n"
+    ),
     "SQLite - Public Domain\n  https://www.sqlite.org/copyright.html\n",
     "bcrypt - Apache Licence 2.0\n  https://www.apache.org/licenses/LICENSE-2.0\n",
     "pytest - MIT Licence\n  https://opensource.org/licenses/MIT\n",
@@ -136,7 +152,70 @@ _THIRD_PARTY_LICENCES.append(
 _LGPL3_NOTICE = _LGPL3_NOTICE_HEAD + "\n".join(_THIRD_PARTY_LICENCES)
 
 
-class AboutDialog(QDialog):
+class _CreditsAutoScroller(QObject):
+    """Cycles the About credits: read down slowly, pause, rewind fast, repeat.
+
+    The text scrolls to the bottom at a human reading pace, holds there for a
+    few seconds so the tail can be read, rewinds to the top at a faster pace
+    and starts over. The first descent begins after the same short hold, so
+    the header is readable too. Any manual interaction (wheel, click or
+    dragging the scrollbar) stops the animation for the rest of the dialog's
+    life; the reader has taken over.
+    """
+
+    _TICK_MS = 40
+    _DOWN_STEP_PX = 1
+    _UP_STEP_PX = 6
+    _BOTTOM_PAUSE_MS = 4000
+    _TOP_PAUSE_MS = 2000
+
+    def __init__(self, browser: QTextBrowser) -> None:
+        super().__init__(browser)
+        self._bar = browser.verticalScrollBar()
+        self._phase = "pause_top"
+        self._wait_ms = self._TOP_PAUSE_MS
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(self._TICK_MS)
+        browser.viewport().installEventFilter(self)
+        self._bar.sliderPressed.connect(self.stop)
+
+    def stop(self) -> None:
+        self._timer.stop()
+
+    def eventFilter(self, obj, event) -> bool:
+        if event.type() in (QEvent.Type.Wheel, QEvent.Type.MouseButtonPress):
+            self.stop()
+        return False
+
+    def _tick(self) -> None:
+        maximum = self._bar.maximum()
+        if maximum <= 0:
+            return
+        if self._phase == "pause_top" or self._phase == "pause_bottom":
+            self._wait_ms -= self._TICK_MS
+            if self._wait_ms <= 0:
+                self._phase = "down" if self._phase == "pause_top" else "up"
+            return
+        if self._phase == "down":
+            value = self._bar.value() + max(1, ui_scale.px(self._DOWN_STEP_PX))
+            if value >= maximum:
+                self._bar.setValue(maximum)
+                self._phase = "pause_bottom"
+                self._wait_ms = self._BOTTOM_PAUSE_MS
+            else:
+                self._bar.setValue(value)
+            return
+        value = self._bar.value() - max(1, ui_scale.px(self._UP_STEP_PX))
+        if value <= 0:
+            self._bar.setValue(0)
+            self._phase = "pause_top"
+            self._wait_ms = self._TOP_PAUSE_MS
+        else:
+            self._bar.setValue(value)
+
+
+class AboutDialog(NeutralDialog):
     """About ClearBudget dialog showing author, icon, and library credits."""
 
     def __init__(self, parent=None) -> None:
@@ -164,6 +243,7 @@ class AboutDialog(QDialog):
         body.setMinimumHeight(ui_scale.px(340))
         body.setStyleSheet("QTextBrowser { border: none; background: transparent; }")
         layout.addWidget(body)
+        self._credits_scroller = _CreditsAutoScroller(body)
 
         btn_row = QHBoxLayout()
         close_btn = QPushButton("Close")
@@ -175,7 +255,7 @@ class AboutDialog(QDialog):
         close_btn.clicked.connect(self.accept)
 
 
-class LicenceDialog(QDialog):
+class LicenceDialog(NeutralDialog):
     """Displays the LGPL-3.0 licence notice and third-party attributions."""
 
     def __init__(self, parent=None) -> None:

@@ -37,10 +37,8 @@ class ArchiveView(QWidget):
         layout = QVBoxLayout()
 
         self.prev_year_btn = QPushButton("← Previous")
-        self.prev_year_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.next_year_btn = QPushButton("Next →")
-        self.next_year_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.nav_header, self.year_label = build_centered_nav_header(
+        self.nav_header, self.year_label, _ = build_centered_nav_header(
             "", prev_btn=self.prev_year_btn, next_btn=self.next_year_btn
         )
 
@@ -106,6 +104,10 @@ class ArchiveView(QWidget):
         self.prev_year_btn.setEnabled(idx > 0)
         self.next_year_btn.setEnabled(0 <= idx < len(self.available_years) - 1)
         self.load_history(year_months)
+
+    def nav_targets(self) -> list:
+        """Ordered keyboard-ring stops for this tab."""
+        return [self.prev_year_btn, self.next_year_btn, self.archive_table]
 
     def set_nav_label_color(self, color: str) -> None:
         """Recolour the nav year label to match the Solvency tab."""

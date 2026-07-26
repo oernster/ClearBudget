@@ -158,6 +158,11 @@ focused mixins to stay under the 400-LOC-per-file limit:
   `balance_applied` log helpers; deleting a bill or income (or ending a bill
   from a month onward) reverses its logged applications, and a manual balance
   entry clears the log because the typed figure supersedes them
+- `GraphSeriesMixin` (`_month_graph_series.py`) - month graph data:
+  `get_bank_graph_series` (day-end projected bank balance across the viewed
+  month, anchored through today's stored balance for the current month) and
+  `get_card_graph_series` (one day-end balance series per active card),
+  reusing the same projection day conventions as the rest of the app
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
@@ -217,6 +222,7 @@ Key methods:
 **DTOs**:
 - `MonthSummary` - `year_month`, `total_income`, `total_bills`, `bank_bills`, `balance`, `bills`, `all_bills`, `income_sources`, `all_income_sources`
 - `SolvencyReport` - `year_month`, `balance_pence: int` (signed), `deficit`, `buffer`, `forward_shortfall`, `is_solvent`, `first_negative_day`
+- `GraphSeries` - `label`, `values` (one signed pence value per day of month)
 
 ### Infrastructure Layer
 
@@ -405,6 +411,33 @@ Separate from budget infrastructure. Manages user identity and credentials.
   balance now?" offer for an item added dated today or edited to today's date
   (dialog or inline); fires only on a genuine transition to today and skips
   items already paid, received or skipped
+- `MonthGraphDialog` / `_line_bar_chart.py` (`LineBarChart`) - the month graph
+  opened by the nav-tray icon button on Monthly Budget (bank balance by day)
+  and Credit Cards (one series per card, with a legend); a pilot button
+  toggles bar vs line rendering, drawn with QPainter (no chart dependency)
+- `NeutralDialog` (`neutral_dialog.py`) - dialog base with a neutral start: a
+  0x0 focus sink absorbs the initial focus so nothing is highlighted until
+  the first Tab or Right (used by the graph, About and Licence dialogs;
+  BalanceDialog deliberately keeps its field focused and selected instead)
+- `AboutDialog` credits auto-scroll (`_CreditsAutoScroller`) - the About text
+  scrolls to the bottom at reading pace, pauses, rewinds faster and repeats;
+  any manual interaction stops it
+
+**Keyboard navigation** (`keyboard_nav.py` + `_main_window_nav.py`):
+- One application-level `KeyboardNavigator` event filter drives an explicit
+  focus ring: menu-bar titles, the tab bar, then the active tab's stops (each
+  view's `nav_targets()`), recomputed live so disabled or hidden stops are
+  skipped (a disabled Previous at the base month simply drops out)
+- Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
+  ends; tables keep Up/Down for their rows, the tab bar cycles tabs on
+  Up/Down, text inputs keep their arrows for the caret
+- Enter equals Space on buttons and checkboxes (main window and dialogs);
+  inside modal dialogs the arrows walk the dialog's own tab order
+- Neutral start: a 0x0 sink takes the initial focus so nothing is highlighted
+  on launch
+- Ring colours are three-state, enforced in the QSS: no ring at rest, a green
+  ring while an enabled control is hovered or focused, a permanent red ring
+  while disabled (hover/focus rules are gated on `:enabled`)
 - `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
   for the Credit Cards tab
 

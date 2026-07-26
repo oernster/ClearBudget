@@ -52,10 +52,8 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
         layout = QVBoxLayout()
 
         self.prev_btn = QPushButton("← Previous")
-        self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.next_btn = QPushButton("Next →")
-        self.next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.nav_header, self.month_label = build_centered_nav_header(
+        self.nav_header, self.month_label, _ = build_centered_nav_header(
             "May 2026", prev_btn=self.prev_btn, next_btn=self.next_btn
         )
 
@@ -157,6 +155,10 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
 
         layout.addStretch()
         self.setLayout(layout)
+
+    def nav_targets(self) -> list:
+        """Ordered keyboard-ring stops for this tab."""
+        return [self.prev_btn, self.next_btn]
 
     def connect_signals(self) -> None:
         """Connect ViewModel signals to view updates."""

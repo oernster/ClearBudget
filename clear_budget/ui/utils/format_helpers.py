@@ -103,14 +103,50 @@ def apply_nav_label_color(label, color: str) -> None:
     label.setStyleSheet(_nav_label_style(color))
 
 
-def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
-    """Return (QWidget, QLabel) - centered icon + month label for nav rows.
+def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
+    """Return the nav icon as a tabbable QPushButton wired to `on_click`.
+
+    Object-name styled, so it carries its own three-state ring rules: no ring
+    at rest, green ring on hover or keyboard focus while enabled, red ring
+    while disabled (the app-wide QSS rules do not reach object-name buttons).
+    """
+    from PySide6.QtCore import QSize, Qt
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QPushButton
+
+    btn = QPushButton()
+    btn.setObjectName("NavGraphButton")
+    scaled = icon_pixmap.scaledToHeight(
+        icon_height, Qt.TransformationMode.SmoothTransformation
+    )
+    btn.setIcon(QIcon(scaled))
+    btn.setIconSize(QSize(scaled.width(), scaled.height()))
+    btn.setToolTip("Show this month as a graph")
+    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn.setStyleSheet(
+        "QPushButton#NavGraphButton { background: transparent;"
+        " border: 2px solid transparent; border-radius: 6px; padding: 2px; }"
+        "QPushButton#NavGraphButton:enabled:hover,"
+        "QPushButton#NavGraphButton:enabled:focus"
+        " { border: 2px solid #34d399; }"
+        "QPushButton#NavGraphButton:disabled { border: 2px solid #f87171; }"
+    )
+    btn.clicked.connect(on_click)
+    return btn
+
+
+def build_nav_month_widget(
+    initial_text: str, prev_btn=None, next_btn=None, icon_action=None
+):
+    """Return (QWidget, QLabel, icon_btn) - centered icon + month label for nav.
 
     If `prev_btn`/`next_btn` are given, they are placed either side of the
-    month label so the navigation buttons flank the title.
+    month label so the navigation buttons flank the title. When `icon_action`
+    is given the icon becomes a tabbable button wired to it (the month-graph
+    opener); otherwise it stays a decorative label and icon_btn is None.
     """
-    from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel
     from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
     container = QWidget()
     layout = QHBoxLayout(container)
@@ -120,19 +156,25 @@ def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
     if prev_btn is not None:
         layout.addWidget(prev_btn)
 
+    icon_btn = None
     icon_pixmap = _load_cropped_icon_pixmap()
     if icon_pixmap is not None:
         icon_height = prev_btn.sizeHint().height() if prev_btn is not None else 24
-        icon_lbl = QLabel()
-        icon_lbl.setPixmap(
-            icon_pixmap.scaledToHeight(
-                icon_height, Qt.TransformationMode.SmoothTransformation
+        if icon_action is not None:
+            icon_btn = _build_icon_graph_button(icon_pixmap, icon_height, icon_action)
+            layout.addSpacing(10)
+            layout.addWidget(icon_btn)
+        else:
+            icon_lbl = QLabel()
+            icon_lbl.setPixmap(
+                icon_pixmap.scaledToHeight(
+                    icon_height, Qt.TransformationMode.SmoothTransformation
+                )
             )
-        )
-        # Match the month label's own 10px padding, so the gap before the
-        # icon equals the gap after the year (before the next/prev buttons).
-        icon_lbl.setContentsMargins(10, 0, 0, 0)
-        layout.addWidget(icon_lbl)
+            # Match the month label's own 10px padding, so the gap before the
+            # icon equals the gap after the year (before the next/prev buttons).
+            icon_lbl.setContentsMargins(10, 0, 0, 0)
+            layout.addWidget(icon_lbl)
 
     month_lbl = QLabel(initial_text)
     month_lbl.setStyleSheet(_nav_label_style(NAV_LABEL_DEFAULT_COLOR))
@@ -142,7 +184,7 @@ def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
     if next_btn is not None:
         layout.addWidget(next_btn)
 
-    return container, month_lbl
+    return container, month_lbl, icon_btn
 
 
 # Symmetric vertical padding (unscaled px) above and below the nav row, so the
@@ -166,9 +208,16 @@ NAV_TRAY_FLOAT_MARGIN = 8
 
 
 def build_centered_nav_header(
-    initial_text: str, prev_btn=None, next_btn=None, trailing_widget=None
+    initial_text: str,
+    prev_btn=None,
+    next_btn=None,
+    trailing_widget=None,
+    icon_action=None,
 ):
-    """Return (QWidget, QLabel): the nav cluster centred within a full-width row.
+    """Return (QWidget, QLabel, icon_btn): the nav cluster centred full-width.
+
+    `icon_action`, when given, turns the tray icon into a tabbable month-graph
+    button wired to it; icon_btn is then that button (else None).
 
     The returned widget is meant to be placed OUTSIDE the scroll area (see
     ScrollableTab), so it spans the full tab width and centres identically on
@@ -188,8 +237,8 @@ def build_centered_nav_header(
     from PySide6.QtCore import Qt
     from clear_budget.ui import ui_scale
 
-    nav_center, month_lbl = build_nav_month_widget(
-        initial_text, prev_btn=prev_btn, next_btn=next_btn
+    nav_center, month_lbl, icon_btn = build_nav_month_widget(
+        initial_text, prev_btn=prev_btn, next_btn=next_btn, icon_action=icon_action
     )
 
     # Bordered tray. WA_StyledBackground is required for a plain QWidget to paint
@@ -236,7 +285,7 @@ def build_centered_nav_header(
     floatm = ui_scale.px(NAV_TRAY_FLOAT_MARGIN)
     outer.setContentsMargins(inset, floatm, inset, floatm)
     outer.addWidget(tray)
-    return header, month_lbl
+    return header, month_lbl, icon_btn
 
 
 def fmt(amount: "int | float") -> str:

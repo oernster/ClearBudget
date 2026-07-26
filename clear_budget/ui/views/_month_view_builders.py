@@ -28,14 +28,13 @@ class MonthViewBuilderMixin:
     def _build_header_section(self, layout: QVBoxLayout) -> tuple:
         header_layout = QVBoxLayout()
         self.prev_btn = QPushButton("← Previous")
-        self.prev_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        next_btn = QPushButton("Next →")
-        next_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        next_btn = self.next_btn = QPushButton("Next →")
         _ym = self.view_model.current_month
-        self.nav_header, self.month_label = build_centered_nav_header(
+        self.nav_header, self.month_label, self.graph_btn = build_centered_nav_header(
             f"{MONTH_NAMES[_ym.month]} {_ym.year}",
             prev_btn=self.prev_btn,
             next_btn=next_btn,
+            icon_action=self.on_show_graph,
         )
 
         self.solvency_hint_label = QLabel(
@@ -67,13 +66,17 @@ class MonthViewBuilderMixin:
         self.bills_label = QLabel(f"Bills: {fmt(0)}")
         self.bills_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
         self.edit_balance_btn = QPushButton("📝")
-        self.edit_balance_btn.setMaximumWidth(28)
-        self.edit_balance_btn.setMaximumHeight(22)
+        self.edit_balance_btn.setMaximumWidth(32)
+        self.edit_balance_btn.setMaximumHeight(26)
+        self.edit_balance_btn.setToolTip("Edit bank balance")
         self.edit_balance_btn.setStyleSheet(
             ui_scale.style(
-                "QPushButton { border: none; background-color: transparent;"
-                " color: #34d399; font-size: 20px; padding: 0px; }"
-                "QPushButton:hover { background-color: #1a1a2e; border-radius: 3px; }"
+                "QPushButton { border: 2px solid transparent;"
+                " background-color: transparent; color: #34d399;"
+                " font-size: 20px; padding: 0px; border-radius: 4px; }"
+                "QPushButton:enabled:hover, QPushButton:enabled:focus"
+                " { background-color: #1a1a2e; border: 2px solid #34d399; }"
+                "QPushButton:disabled { border: 2px solid #f87171; }"
             )
         )
         self.balance_label = QLabel(f"Balance: {fmt(0)}")
@@ -133,7 +136,6 @@ class MonthViewBuilderMixin:
         bills_btn_layout = QHBoxLayout()
         self.add_bill_btn = QPushButton("Add Bill")
         self.delete_bill_btn = QPushButton("Delete Bill")
-        self.delete_bill_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         bills_btn_layout.addWidget(self.add_bill_btn)
         bills_btn_layout.addStretch()
         bills_btn_layout.addWidget(self.delete_bill_btn)
@@ -179,7 +181,6 @@ class MonthViewBuilderMixin:
         income_btn_layout = QHBoxLayout()
         self.add_income_btn = QPushButton("Add Income")
         self.delete_income_btn = QPushButton("Delete Income")
-        self.delete_income_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         income_btn_layout.addWidget(self.add_income_btn)
         income_btn_layout.addStretch()
         income_btn_layout.addWidget(self.delete_income_btn)

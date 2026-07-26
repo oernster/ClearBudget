@@ -14,6 +14,7 @@ from clear_budget.application.services._card_operations import CardOperationsMix
 from clear_budget.application.services._income_operations import (
     IncomeOperationsMixin,
 )
+from clear_budget.application.services._month_graph_series import GraphSeriesMixin
 from clear_budget.application.services._overdraft_operations import (
     OverdraftOperationsMixin,
 )
@@ -46,6 +47,7 @@ class BudgetService(
     OverdraftOperationsMixin,
     CardOperationsMixin,
     BalanceApplicationMixin,
+    GraphSeriesMixin,
 ):
     bill_repo: BillRepository
     income_repo: IncomeSourceRepository

@@ -81,6 +81,13 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 - Dynamic payment methods: assign bills to bank account or specific credit cards
 - Database export and validated import (File menu)
 - Display currency selection - 25 currencies covering English-speaking countries (File > Preferences)
+- Month graphs: the icon in the navigation tray opens the viewed month as a
+  bar or line graph (a pilot button switches the style); Monthly Budget plots
+  the bank balance day by day, Credit Cards plots every card on one chart
+- Full keyboard navigation: Tab or Right steps forward, Shift+Tab or Left
+  steps back (wrapping); Up/Down walk table rows and cycle the tabs; Enter
+  equals Space; focus and hover show a green ring, disabled controls a red
+  one; nothing is focused on launch until the first keypress
 - Dark theme UI with scrollable tabs and scroll position indicators; a consistent, centred month/year navigation tray on every tab, with the date colour-coded by financial health (green/amber/red)
 - Built-in "How It Works" help screen explaining pro-rating, balances and archiving
 - SQLite storage: per-user budget database + shared users database

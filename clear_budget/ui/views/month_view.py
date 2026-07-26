@@ -215,6 +215,38 @@ class MonthView(
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
 
+    def on_show_graph(self) -> None:
+        """Open the month graph for the viewed month's bank balance."""
+        from clear_budget.ui.widgets.month_graph_dialog import MonthGraphDialog
+
+        summary = self.view_model.month_summary
+        if summary is None:
+            return
+        ym = self.view_model.current_month
+        series = self.view_model.budget_service.get_bank_graph_series(
+            year_month=ym, summary=summary
+        )
+        MonthGraphDialog(
+            self,
+            title=f"{MONTH_NAMES[ym.month]} {ym.year}: bank balance by day",
+            series=[series],
+        ).exec()
+
+    def nav_targets(self) -> list:
+        """Ordered keyboard-ring stops for this tab."""
+        return [
+            self.graph_btn,
+            self.prev_btn,
+            self.next_btn,
+            self.edit_balance_btn,
+            self.bills_table,
+            self.add_bill_btn,
+            self.delete_bill_btn,
+            self.income_table,
+            self.add_income_btn,
+            self.delete_income_btn,
+        ]
+
     def on_edit_balance(self) -> None:
         dialog = BalanceDialog(self, self.view_model.budget_service.get_bank_balance())
         if (
