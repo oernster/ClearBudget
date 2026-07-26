@@ -435,6 +435,10 @@ Separate from budget infrastructure. Manages user identity and credentials.
   a submenu item (File > Import / Export) enters it with its first item
   active and Left inside a submenu exits back to the parent item; on plain
   items the arrows still step the ring between menu titles
+- Every stop is actionable: a table is ONE stop, never one per read-only
+  cell (`setTabKeyNavigation(False)` on all dialog tables, e.g. Manage
+  Users, Archive Details); Up/Down walk its rows (arming Delete Selected in
+  Manage Users) and Tab or Left/Right leave it in a single press
 - Enter equals Space on buttons and checkboxes (main window and dialogs);
   inside modal dialogs the arrows walk the dialog's own tab order
 - Neutral start: a 0x0 sink takes the initial focus so nothing is highlighted

@@ -149,22 +149,14 @@ class KeyboardNavigator(QObject):
             return False
         if QApplication.activePopupWidget() is not None:
             return False
-        if focus is not None and self._inside_table(focus):
-            return False
+        # A table is one stop: Left/Right step the ring out of it (Up/Down
+        # stay native for its rows; a cell editor is a text input and was
+        # already given its arrows above).
         if key == Qt.Key.Key_Right:
             modal.focusNextChild()
         else:
             modal.focusPreviousChild()
         return True
-
-    @staticmethod
-    def _inside_table(widget) -> bool:
-        parent = widget
-        while parent is not None:
-            if isinstance(parent, QTableWidget):
-                return True
-            parent = parent.parentWidget()
-        return False
 
     # ---- main-window surface ------------------------------------------------
     def _window_keys(self, event) -> bool:

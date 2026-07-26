@@ -213,7 +213,9 @@ paid by credit card never touch the bank balance.</p>
   <li><b>Shift+Tab or Left arrow</b> - move backward, wrapping the other
       way.</li>
   <li><b>Up / Down</b> - walk the rows inside a table, or switch tabs while
-      the tab bar is highlighted.</li>
+      the tab bar is highlighted. A table is a single stop: Tab or the
+      horizontal arrows leave it in one press rather than visiting every
+      cell.</li>
   <li><b>Submenus</b> - inside an open menu, Right arrow on an item with a
       submenu (File &gt; Import / Export) opens it and Left arrow steps back
       out to the parent menu.</li>

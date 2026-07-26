@@ -2,13 +2,14 @@
 
 from PySide6.QtWidgets import (
     QDialog,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
-    QPushButton,
+    QVBoxLayout,
 )
+
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import ui_scale
 
@@ -60,6 +61,9 @@ class ArchiveDetailDialog(QDialog):
             ["Name", "Amount", "Category", "Payment Method", "Due Day"]
         )
         bills_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        # Display-only table: focus is only useful for scrolling, so it is one
+        # ring stop, never one per read-only cell.
+        bills_table.setTabKeyNavigation(False)
         layout.addWidget(bills_table)
 
         # Populate bills
@@ -91,6 +95,7 @@ class ArchiveDetailDialog(QDialog):
             ["Name", "Amount", "Reliable", "Due Day"]
         )
         income_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        income_table.setTabKeyNavigation(False)
         layout.addWidget(income_table)
 
         # Populate income

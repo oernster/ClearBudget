@@ -2,21 +2,21 @@
 
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
-    QVBoxLayout,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
-    QHeaderView,
-    QMessageBox,
+    QVBoxLayout,
 )
-from PySide6.QtCore import Qt
 
-from clear_budget.auth.user_store import UserStore
 from clear_budget.auth.models import User
+from clear_budget.auth.user_store import UserStore
 from clear_budget.shared.config import Config
 from clear_budget.ui import ui_scale
 
@@ -55,6 +55,10 @@ class UserManagementDialog(QDialog):
         self.table.setHorizontalHeaderLabels(["Username", "Role", "ID"])
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        # One ring stop, not one per cell: the cells are read-only, so walking
+        # them with Tab gives the user nothing. Up/Down select rows (arming
+        # Delete Selected); Tab and Left/Right leave in a single press.
+        self.table.setTabKeyNavigation(False)
         hdr = self.table.horizontalHeader()
         hdr.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         hdr.setStretchLastSection(False)
