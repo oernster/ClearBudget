@@ -45,8 +45,9 @@ it up to date. When a bank bill with a due day reaches that day, its amount
 is deducted from your balance at midnight and its <b>Paid</b> box is ticked;
 income with an arrival day is added the same way and marked <b>Received</b>.
 Days that pass while the app is closed are caught up the next time it opens.
-Adding a bill or income dated today asks whether to apply it to the balance
-straight away - say No if your balance already reflects it. Deleting a bill
+Adding a bill or income dated today, or editing an existing item's day to
+today, asks whether to apply it to the balance straight away - say No if
+your balance already reflects it. Deleting a bill
 or income whose amount was applied automatically hands the amount back, and
 setting the balance yourself supersedes everything applied before it. Bills
 paid by credit card never touch the bank balance.</p>

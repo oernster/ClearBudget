@@ -1,6 +1,7 @@
 """Inline-edit handler mixin for MonthView - extracted to stay under LOC limit."""
 
 import dataclasses
+from typing import ClassVar
 
 from PySide6.QtCore import Qt, QTimer
 
@@ -11,8 +12,8 @@ from clear_budget.shared.currency import get_symbol
 class MonthViewEditMixin:
     """Inline cell-edit and checkbox handlers for MonthView."""
 
-    _EDITABLE_BILL_COLS = {0, 1, 2, 4}
-    _EDITABLE_INCOME_COLS = {0, 1, 3}
+    _EDITABLE_BILL_COLS: ClassVar[set[int]] = {0, 1, 2, 4}
+    _EDITABLE_INCOME_COLS: ClassVar[set[int]] = {0, 1, 3}
 
     def _on_bill_cell_clicked(self, row: int, col: int) -> None:
         if col not in (5, 6, 7):
@@ -86,9 +87,20 @@ class MonthViewEditMixin:
                 return
             if u == bill:
                 return
-            QTimer.singleShot(0, lambda: self.view_model.update_bill(bill=u))
+            QTimer.singleShot(0, lambda: self._inline_update_bill(bill, u))
         except (ValueError, AttributeError):
             QTimer.singleShot(0, self.view_model.refresh_month_summary)
+
+    def _inline_update_bill(self, before, after) -> None:
+        self.view_model.update_bill(bill=after)
+        self._offer_apply_edited_bill(before, after)
+
+    def _inline_update_income(self, before, after) -> None:
+        if before.is_month_only:
+            self.view_model.update_income_month_extra(income=after)
+        else:
+            self.view_model.update_income(income=after)
+        self._offer_apply_edited_income(before, after)
 
     def _on_income_item_changed(self, item) -> None:
         if item.column() in (2, 4, 5, 6):
@@ -115,12 +127,7 @@ class MonthViewEditMixin:
                 return
             if u == inc:
                 return
-            if inc.is_month_only:
-                QTimer.singleShot(
-                    0, lambda: self.view_model.update_income_month_extra(income=u)
-                )
-            else:
-                QTimer.singleShot(0, lambda: self.view_model.update_income(income=u))
+            QTimer.singleShot(0, lambda: self._inline_update_income(inc, u))
         except (ValueError, AttributeError):
             QTimer.singleShot(0, self.view_model.refresh_month_summary)
 

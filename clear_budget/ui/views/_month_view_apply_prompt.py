@@ -53,6 +53,31 @@ class MonthViewApplyPromptMixin:
         )
         self.view_model.refresh_month_summary()
 
+    def _offer_apply_edited_bill(self, before, after) -> None:
+        """Offer to apply a bill whose due day was just edited to today.
+
+        An edit that lands on today is treated like adding the bill dated
+        today. No offer when the day was already today (it was considered
+        then) or when the bill was already paid or skipped for the month.
+        """
+        if before is None:
+            return
+        if self._added_for_today(before.day_of_month):
+            return
+        if before.paid_for_month or before.skipped_for_month:
+            return
+        self._offer_apply_new_bill(after)
+
+    def _offer_apply_edited_income(self, before, after) -> None:
+        """Offer to apply an income whose day was just edited to today."""
+        if before is None:
+            return
+        if self._added_for_today(before.day_of_month):
+            return
+        if before.received_for_month or before.skipped_for_month:
+            return
+        self._offer_apply_new_income(after)
+
     def _offer_apply_new_income(self, income) -> None:
         """Offer to add an income entry added for today to the balance."""
         if income is None or not self._added_for_today(income.day_of_month):

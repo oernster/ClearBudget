@@ -52,8 +52,9 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
   at local midnight on their due day and dated income is added the same way;
   days that pass while the app is closed are caught up at the next launch, and
   applied items tick their Paid/Received flags so nothing is counted twice
-- Adding a bill or income dated today offers to apply it to the balance
-  immediately (decline if your balance already reflects it)
+- Adding a bill or income dated today, or editing an existing item's day to
+  today, offers to apply it to the balance immediately (decline if your
+  balance already reflects it)
 - Deleting an item whose amount was applied automatically hands the amount
   back to the balance; manually setting the balance supersedes earlier
   automatic applications

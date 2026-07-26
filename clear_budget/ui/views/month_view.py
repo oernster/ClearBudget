@@ -1,30 +1,30 @@
 """Month budget view widget - displays bills and income for selected month."""
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-)
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QVBoxLayout,
+    QWidget,
+)
 
 from clear_budget.domain.services.bank_cashflow import BankCashflowService
-from clear_budget.ui.view_models.month_view_model import MonthViewModel
-from clear_budget.ui.widgets.bill_dialog import BillDialog
-from clear_budget.ui.widgets.income_dialog import IncomeDialog
-from clear_budget.ui.widgets.balance_dialog import BalanceDialog
+from clear_budget.ui import ui_scale
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     apply_nav_label_color,
     fmt,
 )
-from clear_budget.ui import ui_scale
+from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.views._month_view_apply_prompt import MonthViewApplyPromptMixin
 from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
 from clear_budget.ui.views._month_view_delete_mixin import MonthViewDeleteMixin
 from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
 from clear_budget.ui.views._month_view_table_mixin import (
-    MonthViewTableMixin,
     _BANK_ACCOUNT_ID,
+    MonthViewTableMixin,
 )
+from clear_budget.ui.widgets.balance_dialog import BalanceDialog
+from clear_budget.ui.widgets.bill_dialog import BillDialog
+from clear_budget.ui.widgets.income_dialog import IncomeDialog
 
 _BILLS_SORT_KEYS = {
     0: lambda b: b.name.lower(),
@@ -135,10 +135,12 @@ class MonthView(
 
     def _update_balance_display(self) -> None:
         if summary := self.view_model.month_summary:
-            from clear_budget.domain.value_objects.year_month import YearMonth as _YM
             from datetime import datetime as _dt
 
-            today_ym = _YM(_dt.now().year, _dt.now().month)
+            from clear_budget.domain.value_objects.year_month import YearMonth as _YM
+
+            now = _dt.now()  # noqa: DTZ005 (app runs on naive local time)
+            today_ym = _YM(now.year, now.month)
             if self.view_model.current_month == today_ym:
                 # Elapsed dated bills/income are folded into the stored
                 # balance at midnight (and at startup), so it is shown as-is.
@@ -289,6 +291,7 @@ class MonthView(
                 if had_override:
                     self.view_model.delete_bill_month_override(bill_id=eb.id)
                 self.view_model.update_bill(bill=eb)
+            self._offer_apply_edited_bill(bill, eb)
 
     def on_add_income(self) -> None:
         dialog = IncomeDialog(self, None, current_month=self.view_model.current_month)
@@ -317,3 +320,4 @@ class MonthView(
                 if had_override:
                     self.view_model.delete_income_month_override(income_id=inc.id)
                 self.view_model.update_income(income=inc)
+            self._offer_apply_edited_income(income, inc)
