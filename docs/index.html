@@ -125,6 +125,10 @@
                     <p>Per-month skips, amount and due-day overrides, paid and received flags and one-off entries, plus end dates for bills and a delete that leaves earlier months untouched.</p>
                 </div>
                 <div class="card">
+                    <h3>Self-maintaining balance</h3>
+                    <p>Set your bank balance once: dated bills and income are applied to it at local midnight on their day and ticked off automatically. Delete an applied item and the amount is handed back.</p>
+                </div>
+                <div class="card">
                     <h3>Private by design</h3>
                     <p>Per-user isolated databases with a bcrypt sign-in and read-only viewer packages. No cloud, no account servers.</p>
                 </div>
@@ -143,7 +147,7 @@
             <div class="grid">
                 <div class="card">
                     <h3>Monthly Budget</h3>
-                    <p>Bills and income for the month, with the running balance or projected month-end figure and a mid-month overdraft warning.</p>
+                    <p>Bills and income for the month, with a balance that keeps itself up to date as dated items fall due, the projected month-end figure for future months and a mid-month overdraft warning.</p>
                 </div>
                 <div class="card">
                     <h3>Solvency</h3>
@@ -251,6 +255,7 @@
                 "Credit card utilisation, interest and six-month balance projection",
                 "Scheduled credit-limit changes",
                 "Per-month bill and income overrides, skips and one-off entries",
+                "Self-maintaining bank balance: dated items applied at local midnight and reversed on delete",
                 "End-dated bills and history-safe delete",
                 "Multiple users with bcrypt sign-in and isolated per-user databases",
                 "Read-only viewer packages",

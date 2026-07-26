@@ -225,7 +225,10 @@ Key methods:
   migrations live in `_schema.py`, split out for the LOC limit)
 - Schema - 17 application tables (plus SQLite's internal `sqlite_sequence`):
   1. `payment_methods` - id=1 is "Bank Account"
-  2. `bills` - templates; includes `target_card_id` (migration)
+  2. `bills` - templates; includes `target_card_id` (migration). Start months
+     are normalised to 2000-01 except one-off bills (start == end), which stay
+     scoped to their month; the retired `one_time` category is recategorised
+     to `discretionary` (both are idempotent launch migrations)
   3. `income_sources`
   4. `months` - one row per archived month (written by auto-archive at launch)
   5. `month_bills` - archived per-month bill snapshot
@@ -343,7 +346,9 @@ Separate from budget infrastructure. Manages user identity and credentials.
   - `update_month_summary()` called after balance edits via `month_summary_updated`
 
 **Views**:
-- `MonthView` - bill/income tables with inline editing; balance display adapts to current vs future month
+- `MonthView` - bill/income tables with inline editing; balance display adapts
+  to current vs future month; composed of mixins (builders, table, edit, delete,
+  apply-prompt) to stay under the LOC limit
 - `SolvencyPanel` - overdraft alert, mid-month alert, card bars, forward projection
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
@@ -369,11 +374,15 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `_viewer_package_import_flow.py` - shared import flow used by both the login
   screen and File > Import Read-Only Viewer Package; raises `UsernameClashError`
   (with `existing_is_viewer`) if the package's username collides with a real account
-- `BillDialog` - add/edit bill; month-only scope toggle, paid checkbox
+- `BillDialog` - add/edit bill; "This month only" on Add creates a one-off
+  scoped to exactly the viewed month (start == end), on Edit it stores a
+  per-month override; optional end-month control (greyed while one-off is
+  ticked, since the ending is implied)
 - `CreditCardDialog` - add/edit credit card
 - `IncomeDialog` - add/edit income source; "this month only" checkbox with
   contextual status text
-- `BalanceDialog` - edit current bank balance
+- `BalanceDialog` - edit current bank balance; opens with the figure focused
+  and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
 - `HowItWorksDialog` - Help menu explanation of pro-rating, balances, archiving
 - `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text
@@ -388,6 +397,14 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `_month_view_builders.py` (`MonthViewBuilderMixin`) - builds the `MonthView`
   sections (header, tables, buttons); the month nav tray carries only Previous/Next
   now that archiving is automatic (no manual "Archive Month" button)
+- `_month_view_edit_mixin.py` (`MonthViewEditMixin`) - inline cell edits and
+  the active/skip/paid/received checkbox handlers
+- `_month_view_delete_mixin.py` (`MonthViewDeleteMixin`) - the bill
+  (stop-from-month vs delete-entirely) and income delete confirmation flows
+- `_month_view_apply_prompt.py` (`MonthViewApplyPromptMixin`) - the "update
+  balance now?" offer for an item added dated today or edited to today's date
+  (dialog or inline); fires only on a genuine transition to today and skips
+  items already paid, received or skipped
 - `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
   for the Credit Cards tab
 
