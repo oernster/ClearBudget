@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication
 from clear_budget.shared.resources import find_qt_window_icon_path
 from clear_budget.ui import launch_screen
 from clear_budget.version import APP_NAME, __version__
-from installer.cli import parse_args, wants_remove_user_data
+from installer.cli import parse_args
 from installer.shared.logging_setup import setup_installer_logging
 from installer.ui.icons import (
     build_installer_window_icon,
@@ -39,10 +39,6 @@ def main(argv: list[str] | None = None) -> int:
     sys.excepthook = _excepthook
 
     args = parse_args(list(argv) if argv is not None else sys.argv[1:])
-
-    # When invoked as uninstaller from Settings, we can optionally run without UI
-    # in the future. For now, always show UI.
-    _ = wants_remove_user_data(args)
 
     app = QApplication([f"{APP_NAME} Setup"])
     app.setApplicationName(f"{APP_NAME} Setup")

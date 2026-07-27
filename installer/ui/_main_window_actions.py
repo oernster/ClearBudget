@@ -325,7 +325,7 @@ def operation_callable(
             uninstall_with_feedback,
             {
                 "identity": window._identity,
-                "opts": UninstallOptions(remove_user_data=True),
+                "opts": UninstallOptions(),
             },
         )
 

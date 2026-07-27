@@ -10,9 +10,6 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from platformdirs import user_cache_dir, user_data_dir
-
-from clear_budget.version import APP_AUTHOR, APP_NAME, LEGACY_APP_NAME
 from installer.ops.errors import AppRunningError, InstallerOperationError
 from installer.ops.running_app import is_app_running
 from installer.ops.shortcuts import (
@@ -40,7 +37,13 @@ _DEFERRED_DELETE_INTERVAL_MS = 500
 
 @dataclass(frozen=True, slots=True)
 class UninstallOptions:
-    remove_user_data: bool = True
+    """Options for an uninstall.
+
+    Empty on purpose: the one option that used to live here, `remove_user_data`,
+    is gone with the behaviour it controlled. The type is kept because the
+    uninstall entry points take it and a future option (keeping shortcuts, say)
+    would land here rather than growing another parameter.
+    """
 
 
 def uninstall(identity, opts: UninstallOptions) -> None:
@@ -83,11 +86,16 @@ def uninstall(identity, opts: UninstallOptions) -> None:
     except Exception:
         pass
 
-    # Remove user data (current and legacy app-name dirs).
-    if opts.remove_user_data:
-        for name in (APP_NAME, LEGACY_APP_NAME):
-            shutil.rmtree(user_data_dir(name, APP_AUTHOR), ignore_errors=True)
-            shutil.rmtree(user_cache_dir(name, APP_AUTHOR), ignore_errors=True)
+    # Uninstall does NOT touch user data, by decision. It removes the program
+    # and leaves ~/.clearbudget alone, so accounts, every user's budget and the
+    # saved theme survive an uninstall, and reinstalling picks up where the
+    # user left off. There is nothing to opt into: an option to delete every
+    # budget on the machine is irreversible, and an installer is the wrong
+    # place to offer it.
+    #
+    # What stood here deleted two platformdirs directories that this app has
+    # never written to, inherited from the installer this one was rebranded
+    # from. It presented itself as removing user data while removing none.
 
     # Remove install directory. When this uninstaller runs from outside the
     # install dir nothing locks it (the app is already confirmed not running),
