@@ -85,12 +85,12 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
   bar or line graph (a pilot button switches the style); Monthly Budget plots
   the bank balance day by day, Credit Cards plots every card on one chart
 - Export the graph as a single HTML file: one page carrying both the bar and
-  the line rendering with text explaining what each shows. A second export
-  takes a range of months and charts the path of solvency across them, month
-  end against the lowest point reached inside each month, with a table and a
-  traffic light per month. Both files are self-contained (inline styles,
-  inline SVG) so they can be emailed or printed, and both default to your
-  Downloads folder
+  the line rendering with text explaining what each shows. On Monthly Budget
+  a second export takes a range of months and charts your bank balance across
+  them, month end against the lowest point reached inside each month, with a
+  table and a traffic light per month. Both files are self-contained (inline
+  styles, inline SVG) in the dark theme, so they can be emailed and opened
+  offline, and both default to your Downloads folder
 - Full keyboard navigation: Tab or Right steps forward, Shift+Tab or Left
   steps back (wrapping); Up/Down walk table rows and the tab strip; Enter
   equals Space; focus and hover show a green ring, disabled controls a red

@@ -6,11 +6,16 @@ A pilot button switches between bar and line rendering. Neutral start,
 Escape closes, and the ring is Tab/Right forward with the pilot, the two
 export buttons and Close as the stops.
 
-Two exports sit beside the pilot. "Export HTML" writes THIS month as a
-standalone page carrying both renderings at once, since a page has room for
-both where the dialog has room for one. "Export projection" asks for a range
-of months and writes the path of solvency across them. Both are offered here
-because this is where the user is already looking at the shape of the money.
+"Export HTML" writes THIS month as a standalone page carrying both renderings
+at once, since a page has room for both where the dialog has room for one. It
+is offered wherever the graph is, because it exports whatever is plotted.
+
+"Export balance projection" asks for a range of months and writes the BANK
+balance across them. It appears only when the caller supplies a
+`budget_service` and an `anchor_month`, which the Monthly Budget page does and
+the Credit Cards page deliberately does not: a bank-balance projection offered
+from a graph of card balances would claim to project what is on screen and
+would not.
 """
 
 from PySide6.QtWidgets import (
@@ -36,6 +41,9 @@ _DIALOG_MIN_HEIGHT = 440
 
 _PILOT_TO_LINE = "Switch to line graph"
 _PILOT_TO_BAR = "Switch to bar graph"
+# Named for what it projects, so the button cannot read as "a projection of
+# whatever this graph happens to be showing".
+_PROJECTION_LABEL = "Export balance projection…"
 _HTML_FILTER = "Web page (*.html)"
 _HTML_SUFFIX = ".html"
 
@@ -87,7 +95,7 @@ class MonthGraphDialog(NeutralDialog):
         button_row.addWidget(self.export_btn)
 
         if self._can_project():
-            self.projection_btn = QPushButton("Export projection…")
+            self.projection_btn = QPushButton(_PROJECTION_LABEL)
             self.projection_btn.clicked.connect(self._export_projection)
             button_row.addWidget(self.projection_btn)
 

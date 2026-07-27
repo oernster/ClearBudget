@@ -147,13 +147,14 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
 
         ym = self.current_month
         series = self.budget_service.get_card_graph_series(year_month=ym)
+        # No budget_service here on purpose, so no projection button: the
+        # multi-month projection is a BANK balance one and would be incoherent
+        # offered from a graph of card balances.
         MonthGraphDialog(
             self,
             title=f"{MONTH_NAMES[ym.month]} {ym.year}: card balances by day",
             series=series,
             month_label=f"{MONTH_NAMES[ym.month]} {ym.year}",
-            budget_service=self.budget_service,
-            anchor_month=ym,
         ).exec()
 
     def restyle(self) -> None:

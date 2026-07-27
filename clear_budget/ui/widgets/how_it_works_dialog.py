@@ -76,12 +76,14 @@ paid by credit card never touch the bank balance.</p>
       separate colour follows the shape of the month, passing through every
       day's figure (on the Credit Cards graph it follows the total across all
       your cards). The line style needs no curve; it already joins those
-      figures. Two buttons export the graph: <b>Export HTML</b> saves this
-      month as a single web page carrying both styles at once, and
-      <b>Export projection</b> asks for a range of months and saves the path
-      of your balance across them, showing both where each month ends and
-      the lowest it gets on the way. Both save to your Downloads folder and
-      open in any browser with no internet connection.</li>
+      figures. <b>Export HTML</b> saves the month you are viewing as a single
+      web page carrying both styles at once. On Monthly Budget there is also
+      <b>Export balance projection</b>, which asks for a range of months and
+      saves your bank balance across them, showing both where each month ends
+      and the lowest it gets on the way; it is not offered on Credit Cards,
+      where a bank projection would have nothing to do with the cards on
+      screen. Both save to your Downloads folder and open in any browser with
+      no internet connection.</li>
   <li><b>Sun / moon button (far right of the tray, every tab)</b> - switches
       between light and dark mode. The whole app restyles immediately and
       your choice is remembered for next time.</li>

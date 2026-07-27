@@ -481,15 +481,20 @@ bank statement. Both identities are tested.
     `_curve_shown()` predicate gates the drawing, the legend entry and the
     axis range together, so the axis is never padded for a curve that is not
     there
-  - Two exports sit beside the pilot button. "Export HTML" writes THIS month as a
-    standalone page carrying BOTH renderings at once, since a page has room for both
-    where the dialog has room for one. "Export projection" opens `MonthRangeDialog`
-    for a first and last month, then writes the path of solvency across that range.
-    Both default to the user's Downloads folder (`ui_paths.default_downloads_dir`,
+  - "Export HTML" writes THIS month as a standalone page carrying BOTH renderings
+    at once, since a page has room for both where the dialog has room for one. It
+    exports whatever is plotted, so it is offered from both pages
+  - "Export balance projection" opens `MonthRangeDialog` for a first and last month,
+    then writes the BANK balance across that range. It is built only when the caller
+    supplies a `budget_service` and an `anchor_month`: Monthly Budget does, Credit
+    Cards deliberately does NOT. A bank-balance projection offered from a graph of
+    card balances claims to project what is on screen and does not, which is why the
+    button is scoped rather than the report being retitled. A card-balance projection
+    would be a separate report with its own state rule (headroom against each card's
+    limit, not an overdraft floor)
+  - Both default to the user's Downloads folder (`ui_paths.default_downloads_dir`,
     Qt's `DownloadLocation` so it is right on Windows, macOS and Linux, falling back
-    to home). The projection button is only built when the dialog was given a
-    `budget_service` and an `anchor_month`, so a caller with only a series still gets
-    a working graph
+    to home)
   - `_chart_hover.py` (`ChartHoverMixin`) - hovering reads out the balance at
     the point under the pointer (`Day 14: £1,204.55`, prefixed with the series
     label when more than one is plotted). Line mode marks each inflection day
