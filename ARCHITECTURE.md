@@ -376,6 +376,14 @@ bank statement. Both identities are tested.
   staying within it is amber. A looming overdraft in a later month stays a
   banner warning and never colours the earlier month's title
 
+**`glyph_metrics`** (`clear_budget/ui/utils/glyph_metrics.py`):
+- Painted-pixel measurement for both images and text. `opaque_bounding_rect`
+  crops the nav icon to its real content (the source PNG carries uneven
+  transparent margins that otherwise throw the tray spacing out) and
+  `glyph_font_px_for_height` sizes an emoji by rendering it and measuring what
+  it actually paints. See the Theme section for why a measurement replaced the
+  fixed fraction that preceded it.
+
 **`ui_paths.default_downloads_dir()`** (`clear_budget/ui/ui_paths.py`):
 - Cross-platform Downloads folder via `QStandardPaths.DownloadLocation`, falling
   back to `Path.home()`. Used as the default directory for all file dialogs
@@ -441,7 +449,13 @@ bank statement. Both identities are tested.
   and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
 - `HowItWorksDialog` - Help menu explanation of pro-rating, balances, archiving
-- `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text
+- `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text. The credits are
+  two lists, not one: what is BUNDLED with the application (whose licences
+  travel with the binary, which is what LGPL-3.0 compliance turns on) and what
+  is only used to build and test it. The bundled list was checked against what
+  the build actually ships, including the native libraries and the binding
+  runtime, rather than against `requirements.txt`, which names neither.
+  `pywin32` appears only on Windows, where it is genuinely shipped
 - `ScrollableTab` - wraps any view in `QScrollArea` with scroll indicator
   buttons; also hoists the view's `nav_header` (the shared, centred month/year
   navigation tray) above the scroll area and zeroes the content's top margin so
@@ -465,11 +479,13 @@ bank statement. Both identities are tested.
   opened by the nav-tray icon button on Monthly Budget (bank balance by day)
   and Credit Cards (one series per card, with a legend); a pilot button
   toggles bar vs line rendering, drawn with QPainter (no chart dependency)
-  - `_chart_curve.py` - Qt-free curve maths: the day-end totals (one curve
-    however many series are plotted, so with a single series it IS that series)
-    plus the inflection days where direction changes. Tested without a
-    QApplication in `tests/ui_logic/test_chart_curve.py`, like the solvency
-    colour rules
+  - Curve maths is Qt-free and lives in `application/reporting/curve.py`, NOT
+    beside the widget: the day-end totals (one curve however many series are
+    plotted, so with a single series it IS that series), the inflection days
+    where direction changes and the Bezier segments. The chart imports it, and
+    so does the SVG exporter, which is the reason it sits in the application
+    layer rather than the UI one. Tested without a QApplication in
+    `tests/application/reporting/test_curve.py`, under the coverage gate
   - Bar mode overlays that as a smooth curve FOLLOWING the data, in a `curve`
     colour held outside the series palette so it never reads as one more
     series. Monotone cubic interpolation (Fritsch-Carlson): it passes through
@@ -561,7 +577,9 @@ bank statement. Both identities are tested.
     and Read-Only Viewer Package export/import, admin only), Preferences, Bank
     Account Settings, Switch User, Exit
   - Users menu (admin only): Manage Users (list, Add User, Delete Selected)
-  - Help menu: About, How It Works, View Licence
+  - Help menu: About, Check for Updates (opens the GitHub releases page in the
+    system browser; the app itself neither downloads nor phones home), How It
+    Works, View Licence
   - Read-only accounts: window title shows "(Read-only)"; destructive/edit actions
     disabled across all views
 - `main.py` - composition root; manages full session lifecycle:
@@ -834,10 +852,17 @@ distribution tool, kept separate from the runtime application described above.
 ### UI Layer
 - The suite is Qt-free: fragile widget-level PySide6 tests (which needed a
   `QApplication` and were flaky) have been removed
-- Pure UI-layer logic is still covered without Qt under `tests/ui_logic` - e.g.
-  the Solvency month-colour rule is exercised by instantiating the colour mixins
-  directly (no widgets)
+- Pure UI-layer logic is still covered without Qt under `tests/ui_logic`: the
+  Solvency month-colour rule (by instantiating the colour mixins directly), the
+  tab-strip keyboard cursor, theme persistence and the window-geometry
+  arithmetic. What lands here is logic a widget happens to host, extracted far
+  enough from Qt to be asserted on
 - The UI layer is excluded from the coverage gate (see `.coveragerc`)
+- Anything that must be seen rather than asserted (a painted ring, a glyph
+  against an icon, a window's placement on a monitor) is measured with an
+  offscreen probe outside the suite. Measure emoji and font sizes on the REAL
+  platform though: under `QT_QPA_PLATFORM=offscreen` Qt substitutes its own
+  font database and the answer does not describe the shipped app
 
 ### Structural Tests
 - `test_layering_rules.py` - AST-based forbidden import enforcement
@@ -848,6 +873,10 @@ distribution tool, kept separate from the runtime application described above.
 
 - **Black** 88-char line length
 - **Flake8** no violations
+- **Ruff** clean under its default rule set (`ruff check .`), run alongside
+  black and flake8 rather than replacing either. A genuine false positive is
+  suppressed with a targeted `# noqa: <RULE>` and a reason, never by changing
+  behaviour; where ruff and black disagree on formatting, black wins
 - **100% test coverage** (`pytest -v --cov`, gated at `--cov-fail-under=100`) excluding
   UI, interfaces, main, build scripts. The suite is Qt-free and runs clean in one
   process

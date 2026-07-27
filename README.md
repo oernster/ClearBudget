@@ -97,7 +97,15 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
   one; nothing is focused on launch until the first keypress. Stepping into
   the tab strip never switches tab: it lands on the next tab you are not
   already on and waits for Enter
-- Dark theme UI with scrollable tabs and scroll position indicators; a consistent, centred month/year navigation tray on every tab, with the date colour-coded by financial health (green/amber/red)
+- Dark and light themes: a sun/moon button at the far right of the navigation
+  tray on every tab switches between them, the whole app restyles immediately
+  (the sign-in screen included) and the choice is remembered between sessions
+- Scrollable tabs with scroll position indicators; a consistent, centred
+  month/year navigation tray on every tab, with the date colour-coded by
+  financial health (green/amber/red)
+- Opens on the monitor you started it from, centred, rather than on whichever
+  display the system calls primary; dialogs open over the window that raised
+  them, focused on their first usable control
 - Built-in "How It Works" help screen explaining pro-rating, balances and archiving
 - SQLite storage: per-user budget database + shared users database
 
@@ -163,6 +171,8 @@ machine under `~/.clearbudget/`:
   bcrypt hashes, never in plain text.
 - `budget_<username>.db` - one separate database per user. Accounts cannot read
   each other's budget data through the application.
+- `ui_settings.json` - the chosen theme, so the app opens the way you left it.
+  No budget data is kept here.
 
 **What the login protects, and what it does not.** The username/password sign-in
 is an access-control gate for the application: it stops another person who shares
@@ -299,7 +309,10 @@ shows:
 
 ## Help Menu
 
-- **About Clear Budget**
+- **About Clear Budget** - version, author and the open source credits, split
+  into what is bundled with the application and what is only used to build it
+- **Check for Updates** - opens the GitHub releases page in your browser. The
+  app does not download anything or contact any server on its own
 - **How It Works** - plain-English explanation of pro-rating, balances, archiving and
   tab behaviour, kept in sync with the calculation logic
 - **View Licence (LGPL-3.0)**
@@ -335,11 +348,26 @@ See Help > View Licence in the application, or visit https://www.gnu.org/license
 
 ### Open Source Credits
 
+Bundled with the application, so their licences travel with it:
+
 - **Python** - Python Software Foundation (PSF Licence)
 - **PySide6 (Qt for Python)** - The Qt Company (LGPL-3.0)
+- **Shiboken6** - The Qt Company; the binding runtime PySide6 is built on (LGPL-3.0)
 - **SQLite** - Public Domain
+- **OpenSSL** - The OpenSSL Project Authors; the cryptographic libraries Python
+  links against (Apache-2.0)
+- **libffi** - Anthony Green and contributors (MIT-style licence)
 - **bcrypt** - Nate Lawson, Perry Metzger (Apache-2.0)
-- **pytest** - Holger Krekel et al. (MIT)
-- **black** - Lukasz Langa et al. (MIT)
-- **pywin32** - Mark Hammond (PSF Licence)
+- **pywin32** - Mark Hammond (PSF Licence); Windows only, where it is actually shipped
+
+Used to build and test it, not shipped, but no less owed:
+
 - **PyInstaller** - PyInstaller contributors (GPL-2.0 + bootloader exception)
+- **Pillow** - Jeffrey A. Clark and contributors; builds the application icons (HPND)
+- **pytest**, **pytest-qt**, **pytest-cov** (MIT) and **coverage.py** (Apache-2.0)
+- **black** - Lukasz Langa et al. (MIT)
+- **Flake8** - Tarek Ziade, Ian Stapleton Cordasco and contributors (MIT)
+- **Ruff** - Astral Software Inc. (MIT)
+
+The same two lists appear in Help > About, which is the copy checked against
+what the build actually bundles.

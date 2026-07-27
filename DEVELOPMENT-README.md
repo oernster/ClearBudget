@@ -49,7 +49,12 @@ pip install -r requirements.txt -r requirements-dev.txt
 
 `requirements.txt` holds the runtime dependencies (PySide6, bcrypt).
 `requirements-dev.txt` adds the build and quality tooling (PyInstaller, pytest,
-black, flake8, ruff).
+pytest-cov, coverage, black, flake8, ruff).
+
+The icon scripts (`create_icons.py`, `create_icon.py` and the macOS
+`dmg_icon.py`) need Pillow, which is not in `requirements-dev.txt` because the
+icons under `assets/` are committed and a normal build never regenerates them.
+Install it only if you are changing the artwork: `pip install pillow`.
 
 ### Run, test and lint from source
 
@@ -66,6 +71,16 @@ PySide6 tests were removed, and the UI layer is excluded from the coverage gate
 (see `.coveragerc`). Pure UI-layer logic is still tested without a `QApplication`
 under `tests/ui_logic`. Tests use real implementations and hand-written fakes, no
 mock libraries.
+
+A coverage-gated run prints the coverage table last and emits no "N passed"
+line, so read the exit code rather than the tail of the output: `0` means the
+tests passed AND the gate was met.
+
+Appearance is verified with throwaway offscreen probes rather than tests, since
+what matters is what gets painted. Run those with
+`QT_QPA_PLATFORM=offscreen`, EXCEPT when measuring text or emoji: offscreen
+substitutes Qt's own font database, so a font size tuned there does not match
+what ships. Measure those on the real platform.
 
 ---
 
