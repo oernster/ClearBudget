@@ -81,6 +81,9 @@ def main(argv: list[str] | None = None) -> int:
     win = InstallerMainWindow(cli_args=args)
     launch_screen.centre(win)
     win.show()
+    # Again after show: the header-fit controller can grow the window to keep
+    # its text visible, and a window centred before that grows off centre.
+    launch_screen.centre(win)
     return app.exec()
 
 

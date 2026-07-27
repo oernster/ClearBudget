@@ -18,12 +18,22 @@ Rect = tuple[int, int, int, int]
 
 
 def centred_position(*, available: Rect, size: tuple[int, int]) -> tuple[int, int]:
-    """The top-left that centres a window of `size` within `available`."""
+    """The top-left that centres a window of `size` within `available`.
+
+    `size` is the window's FRAME, not its client area. Qt's move() positions
+    the frame of a top-level window while setGeometry() positions the client
+    rect inside it, so centring a client rect leaves the visible window high
+    and left of centre by half the title bar and border.
+
+    A window bigger than the screen is pulled back to the screen's own origin
+    rather than centred to a negative offset, so its title bar stays reachable
+    and the overhang all falls off the far edge.
+    """
     x, y, width, height = available
     window_width, window_height = size
     return (
-        x + (width - window_width) // 2,
-        y + (height - window_height) // 2,
+        max(x, x + (width - window_width) // 2),
+        max(y, y + (height - window_height) // 2),
     )
 
 

@@ -37,10 +37,29 @@ def test_centring_respects_a_taskbar_offset():
     assert centred_position(available=available, size=(920, 820)) == (500, 160)
 
 
-def test_a_window_larger_than_the_screen_is_not_pushed_off_the_left():
-    """Integer division of a negative overhang still lands on the screen."""
-    x, _ = centred_position(available=_PRIMARY, size=(2560, 1400))
-    assert x == 0
+def test_a_window_larger_than_the_screen_is_clamped_to_its_origin():
+    """The overhang falls off the far edge so the title bar stays reachable."""
+    assert centred_position(available=_PRIMARY, size=(3000, 1600)) == (0, 0)
+
+
+def test_clamping_uses_the_screen_origin_not_zero():
+    """On a monitor at negative coordinates, zero is a different screen."""
+    assert centred_position(available=_LEFT_MONITOR, size=(3000, 1600)) == (-1920, 0)
+
+
+def test_the_size_given_is_the_frame_not_the_client_rect():
+    """A 23px title bar and 8px of border shift the window by half of that.
+
+    Qt's move() positions a top-level window's frame while setGeometry()
+    positions the client rect inside it, so passing a client size here would
+    leave the visible window high and left. Measured frame on a real desktop:
+    23px title bar, 4+4px resize border.
+    """
+    client = (860, 839)
+    frame = (client[0] + 8, client[1] + 23 + 8)
+    by_client = centred_position(available=_PRIMARY, size=client)
+    by_frame = centred_position(available=_PRIMARY, size=frame)
+    assert by_client[1] - by_frame[1] == (23 + 8) // 2
 
 
 # The default main window: fractions on a big screen, floors on a small one.

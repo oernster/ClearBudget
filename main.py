@@ -233,6 +233,9 @@ def main() -> int:
             icon = QIcon(str(icon_path))
             if not icon.isNull():
                 window.setWindowIcon(icon)
+        # Geometry first so the window is created on the launch monitor at the
+        # right size, then show, then centre: the frame margins and any size
+        # the layout insists on are only knowable once the window exists.
         window.setGeometry(
             *default_window_rect(
                 available=_avail,
@@ -243,6 +246,7 @@ def main() -> int:
             )
         )
         window.show()
+        launch_screen.centre(window)
         window.logout_requested.connect(_session_loop)
         window.database_replaced.connect(lambda: _reload_database(user, window))
 

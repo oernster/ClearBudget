@@ -522,6 +522,16 @@ Separate from budget infrastructure. Manages user identity and credentials.
     placement cannot be exercised on a one-screen machine. It works in virtual-desktop
     coordinates, so a monitor left of or above the primary one (negative x or y) needs
     no special case
+  - Centring positions the window's FRAME, not its client rect, and happens AFTER the
+    window is shown. `setGeometry()` places the client rect while `move()` places the
+    frame, so centring geometry alone leaves the window half a title bar high and half
+    a border left (measured: a 23px title bar with 4+4px borders puts it 19px out).
+    Worse, a layout can insist on a larger size than the window was given, and a window
+    centred before that happens is off centre by however much it grew. `launch_screen.centre`
+    therefore places twice: once immediately, so the window is created on the right
+    monitor and never jumps across displays, then again on the next event-loop turn
+    with the real frame size, before the first paint. A window larger than its screen
+    is clamped to that screen's origin so its title bar stays reachable
   - A dialog is given a SIZE, never a position: `setGeometry(100, 100, w, h)` pins a
     dialog to whichever monitor covers virtual-desktop (100, 100) regardless of where
     its parent window is. Sized alone, Qt centres it on its parent

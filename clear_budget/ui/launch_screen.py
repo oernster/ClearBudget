@@ -24,6 +24,7 @@ reads.
 
 from __future__ import annotations
 
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QCursor, QGuiApplication
 
 from clear_budget.ui._window_geometry import Rect, centred_position
@@ -52,19 +53,34 @@ def available() -> Rect:
 
 
 def centre(window) -> None:
-    """Move `window` to the middle of the launch screen, without resizing it.
+    """Centre `window`'s visible frame on the launch screen, without resizing.
 
-    Sized from the larger of the window's current size and its size hint, so
-    a dialog that has already been given a size keeps it and one that has not
-    is placed for the size it is about to take rather than for Qt's unshown
-    default.
+    Placed TWICE on purpose. Once now, so the window is created on the right
+    monitor at roughly the right spot and never jumps across displays. Then
+    again as soon as the event loop turns, because two things are unknown
+    until the window actually exists: the frame margins Qt adds around the
+    client area, and whether the layout forced the window wider or taller
+    than the size it was given. Either leaves a once-placed window off
+    centre, the second badly so. The correction happens before the first
+    paint, so it is not visible.
     """
+    _place(window)
+    QTimer.singleShot(0, window, lambda: _place(window))
+
+
+def _place(window) -> None:
+    """Move `window` so its frame is centred on the launch screen."""
     if screen() is None:
         return
-    size, hint = window.size(), window.sizeHint()
+    # frameGeometry() is the client rect until the window is created, so fall
+    # back to the size hint for a window that has not been shown yet.
+    frame, hint = window.frameGeometry(), window.sizeHint()
     window.move(
         *centred_position(
             available=available(),
-            size=(max(size.width(), hint.width()), max(size.height(), hint.height())),
+            size=(
+                max(frame.width(), hint.width()),
+                max(frame.height(), hint.height()),
+            ),
         )
     )
