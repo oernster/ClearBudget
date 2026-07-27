@@ -640,6 +640,18 @@ bank statement. Both identities are tested.
   widget-state-first form `QTabBar:focus::tab:selected` is silently ignored by
   Qt.) `MainWindow` sets `tabBar().setDrawBase(False)` because Qt ignores
   drawBase from a stylesheet and would draw a rule under the strip
+- Spin-box arrows are IMAGES, generated per colour (`spin_arrows.py`), not CSS
+  triangles. Qt's stylesheet engine does not implement the `width: 0` plus
+  transparent-side-borders idiom: it honours the zero size, draws nothing and
+  leaves the button box, which is why the year pickers showed two empty
+  rectangles (measured: the up button was 366 pixels of one flat colour).
+  `image: url(...)` is Qt's only stylesheet route to a glyph there. The images
+  are drawn into `~/.clearbudget/arrows/` and cached under a filename made from
+  the colour and size, so each theme gets its own without any being shipped,
+  hand-maintained or added to the packaging scripts. A `QProxyStyle` drawing
+  `PE_IndicatorSpinUp` is NOT an alternative: once a global stylesheet is set,
+  `QStyleSheetStyle` renders the styled spin box itself and never delegates that
+  primitive (verified: zero calls reached the proxy)
 - Content whose colours are computed in code (card panels, projection cells,
   solvency lines, table row colours) cannot follow the stylesheet, so those
   views expose `restyle()` and `theme.apply_theme` calls it after a switch

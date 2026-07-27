@@ -12,9 +12,16 @@ from __future__ import annotations
 
 from clear_budget.ui import ui_scale
 from clear_budget.ui._theme_labels import label_roles_qss
+from clear_budget.ui.spin_arrows import arrow_size, arrow_url
 
 # Corner radius shared by the nav tray and the group boxes it matches.
 _NAV_TRAY_RADIUS_PX = 6
+# Spin-box button box. Wide and tall enough that the arrow SpinArrowStyle draws
+# inside it reads clearly rather than being squeezed into a sliver; the two
+# buttons split the field's height between them, so the minimum applies per
+# button and sets the field's own height in practice.
+SPIN_BUTTON_WIDTH_PX = 22
+SPIN_BUTTON_MIN_HEIGHT_PX = 14
 # Unscaled font size of the status-bar date label and the emoji theme toggle.
 _STATUS_LABEL_FONT_PX = 18
 _THEME_TOGGLE_FONT_PX = 16
@@ -22,11 +29,17 @@ _THEME_TOGGLE_FONT_PX = 16
 
 def control_qss(t: dict[str, str]) -> str:
     """QSS for spin-box buttons, the date edit and the calendar popup."""
+    arrow_w, arrow_h = arrow_size()
+    up_arrow = arrow_url(t["text"], up=True)
+    down_arrow = arrow_url(t["text"], up=False)
+    up_arrow_disabled = arrow_url(t["text_disabled"], up=True)
+    down_arrow_disabled = arrow_url(t["text_disabled"], up=False)
     return f"""
 QSpinBox::up-button, QDoubleSpinBox::up-button {{
     subcontrol-origin: border;
     subcontrol-position: top right;
-    width: 18px;
+    width: {SPIN_BUTTON_WIDTH_PX}px;
+    min-height: {SPIN_BUTTON_MIN_HEIGHT_PX}px;
     border-left: 1px solid {t["border"]};
     border-top-right-radius: 4px;
     background-color: {t["panel_alt_bg"]};
@@ -35,7 +48,8 @@ QSpinBox::up-button, QDoubleSpinBox::up-button {{
 QSpinBox::down-button, QDoubleSpinBox::down-button {{
     subcontrol-origin: border;
     subcontrol-position: bottom right;
-    width: 18px;
+    width: {SPIN_BUTTON_WIDTH_PX}px;
+    min-height: {SPIN_BUTTON_MIN_HEIGHT_PX}px;
     border-left: 1px solid {t["border"]};
     border-bottom-right-radius: 4px;
     background-color: {t["panel_alt_bg"]};
@@ -46,28 +60,29 @@ QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {{
     background-color: {t["border"]};
 }}
 
+/* The arrows are images, not CSS triangles. Qt's stylesheet engine does not
+   implement the `width: 0` plus transparent-border triangle idiom: it honours
+   the zero size, draws nothing, and leaves the button box behind, which is
+   what showed two empty rectangles. image: url() is Qt's only stylesheet route
+   to a glyph here; spin_arrows draws and caches one per colour. */
 QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-bottom: 5px solid {t["text"]};
+    image: url({up_arrow});
+    width: {arrow_w}px;
+    height: {arrow_h}px;
 }}
 
 QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 5px solid {t["text"]};
+    image: url({down_arrow});
+    width: {arrow_w}px;
+    height: {arrow_h}px;
 }}
 
 QSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:disabled {{
-    border-bottom-color: {t["text_disabled"]};
+    image: url({up_arrow_disabled});
 }}
 
 QSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:disabled {{
-    border-top-color: {t["text_disabled"]};
+    image: url({down_arrow_disabled});
 }}
 
 QDateEdit {{
