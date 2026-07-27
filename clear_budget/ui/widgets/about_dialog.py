@@ -36,7 +36,12 @@ _IS_WINDOWS = sys.platform == "win32"
 # Open source credits as discrete HTML <li> items so platform-specific entries
 # (pywin32) can be filtered, and so no stray source comments leak into the
 # rendered dialog text.
-_CREDITS: list[str] = [
+# Components SHIPPED inside the application, listed first because these are
+# the ones whose licences travel with the binary. Checked against what the
+# build actually bundles (PySide6, shiboken6, bcrypt, and the native
+# sqlite3/libcrypto/libssl/libffi libraries), not against requirements.txt,
+# which lists neither the transitive native libraries nor shiboken6.
+_SHIPPED: list[str] = [
     (
         "<li><b>Python</b> - Copyright &copy; 2001&ndash;2025 Python Software "
         "Foundation. Licensed under the PSF Licence.</li>"
@@ -46,34 +51,80 @@ _CREDITS: list[str] = [
         "Ltd. Licensed under LGPL-3.0.</li>"
     ),
     (
+        "<li><b>Shiboken6</b> - Copyright &copy; The Qt Company Ltd. The "
+        "binding runtime PySide6 is built on. Licensed under LGPL-3.0.</li>"
+    ),
+    (
         "<li><b>SQLite</b> - Dedicated to the public domain by D. Richard Hipp "
         "and contributors.</li>"
     ),
     (
+        "<li><b>OpenSSL</b> - Copyright &copy; The OpenSSL Project Authors. "
+        "Provides the cryptographic libraries Python links against. Licensed "
+        "under the Apache Licence 2.0.</li>"
+    ),
+    (
+        "<li><b>libffi</b> - Copyright &copy; Anthony Green and contributors. "
+        "Licensed under an MIT-style licence.</li>"
+    ),
+    (
         "<li><b>bcrypt</b> - Copyright &copy; Nate Lawson, Perry Metzger and "
         "contributors. Licensed under the Apache Licence 2.0.</li>"
+    ),
+]
+if _IS_WINDOWS:
+    _SHIPPED.append(
+        "<li><b>pywin32</b> - Copyright &copy; Mark Hammond. Licensed under "
+        "the PSF Licence.</li>"
+    )
+
+# Tools used to BUILD and verify the application. They are not shipped, so
+# they are courtesy rather than obligation, but the work is no less owed.
+_TOOLING: list[str] = [
+    (
+        "<li><b>PyInstaller</b> - Copyright &copy; 2010&ndash;2025 PyInstaller "
+        "contributors. Licensed under GPL-2.0 with a bootloader exception for "
+        "bundled applications.</li>"
+    ),
+    (
+        "<li><b>Pillow</b> - Copyright &copy; Jeffrey A. Clark and "
+        "contributors. Builds the application icons. Licensed under the "
+        "HPND (MIT-CMU) licence.</li>"
     ),
     (
         "<li><b>pytest</b> - Copyright &copy; 2004&ndash;2025 Holger Krekel and "
         "pytest contributors. Licensed under the MIT Licence.</li>"
     ),
     (
+        "<li><b>pytest-qt</b> - Copyright &copy; Bruno Oliveira and "
+        "contributors. Licensed under the MIT Licence.</li>"
+    ),
+    (
+        "<li><b>pytest-cov</b> - Copyright &copy; Marc Schlaich and "
+        "contributors. Licensed under the MIT Licence.</li>"
+    ),
+    (
+        "<li><b>coverage.py</b> - Copyright &copy; Ned Batchelder and "
+        "contributors. Licensed under the Apache Licence 2.0.</li>"
+    ),
+    (
         "<li><b>black</b> - Copyright &copy; 2018&ndash;2025 Łukasz Langa and "
         "contributors. Licensed under the MIT Licence.</li>"
     ),
+    (
+        "<li><b>Flake8</b> - Copyright &copy; Tarek Ziad&eacute;, Ian Stapleton "
+        "Cordasco and contributors. Licensed under the MIT Licence.</li>"
+    ),
+    (
+        "<li><b>Ruff</b> - Copyright &copy; Astral Software Inc. Licensed "
+        "under the MIT Licence.</li>"
+    ),
 ]
-if _IS_WINDOWS:
-    _CREDITS.append(
-        "<li><b>pywin32</b> - Copyright &copy; Mark Hammond. Licensed under "
-        "the PSF Licence.</li>"
-    )
-_CREDITS.append(
-    "<li><b>PyInstaller</b> - Copyright &copy; 2010&ndash;2025 PyInstaller "
-    "contributors. Licensed under GPL-2.0 with a bootloader exception for "
-    "bundled applications.</li>"
-)
 
-_CREDITS_HTML = "\n".join(_CREDITS)
+_CREDITS: list[str] = _SHIPPED + _TOOLING
+
+_SHIPPED_HTML = "\n".join(_SHIPPED)
+_TOOLING_HTML = "\n".join(_TOOLING)
 
 _ABOUT_TEXT = f"""\
 <h2>Clear Budget</h2>
@@ -85,8 +136,13 @@ _ABOUT_TEXT = f"""\
 <h3>Open Source Credits</h3>
 <p>Clear Budget is built on the shoulders of the following open source projects
 and their communities:</p>
+<p><b>Bundled with the application</b>, so their licences travel with it:</p>
 <ul>
-{_CREDITS_HTML}
+{_SHIPPED_HTML}
+</ul>
+<p><b>Used to build and test it</b>, not shipped, but no less owed:</p>
+<ul>
+{_TOOLING_HTML}
 </ul>
 <p>My thanks to the Python community for providing an outstanding ecosystem
 that makes projects like this possible.</p>
