@@ -151,6 +151,9 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
             self,
             title=f"{MONTH_NAMES[ym.month]} {ym.year}: card balances by day",
             series=series,
+            month_label=f"{MONTH_NAMES[ym.month]} {ym.year}",
+            budget_service=self.budget_service,
+            anchor_month=ym,
         ).exec()
 
     def restyle(self) -> None:

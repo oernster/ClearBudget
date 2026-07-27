@@ -17,13 +17,13 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
 
-from clear_budget.ui import ui_scale
-from clear_budget.ui.utils.format_helpers import fmt
-from clear_budget.ui.widgets._chart_curve import (
+from clear_budget.application.reporting.curve import (
     bezier_segments,
     daily_totals,
     inflection_days,
 )
+from clear_budget.ui import ui_scale
+from clear_budget.ui.utils.format_helpers import fmt
 from clear_budget.ui.widgets._chart_hover import ChartHoverMixin
 
 MODE_BAR = "bar"

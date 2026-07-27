@@ -23,6 +23,9 @@ from clear_budget.application.services._month_mappers import (
 from clear_budget.application.services._overdraft_operations import (
     OverdraftOperationsMixin,
 )
+from clear_budget.application.services._projection_series import (
+    ProjectionSeriesMixin,
+)
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.interfaces.bill_repository import BillRepository
 from clear_budget.domain.interfaces.income_source_repository import (
@@ -50,6 +53,7 @@ class BudgetService(
     CardOperationsMixin,
     BalanceApplicationMixin,
     GraphSeriesMixin,
+    ProjectionSeriesMixin,
 ):
     bill_repo: BillRepository
     income_repo: IncomeSourceRepository

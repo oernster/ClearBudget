@@ -14,7 +14,7 @@ What the curve promises, and why:
 
 from itertools import pairwise
 
-from clear_budget.ui.widgets._chart_curve import (
+from clear_budget.application.reporting.curve import (
     bezier_segments,
     daily_totals,
     inflection_days,
@@ -174,3 +174,32 @@ def test_a_plateau_does_not_report_every_day_inside_it() -> None:
 def test_inflection_days_ignores_the_endpoints() -> None:
     assert inflection_days((5, 1)) == ()
     assert inflection_days(()) == ()
+
+
+# ---------------------------------------------------------------------------
+# The monotone clamp: a steep run next to a gentle one.
+# ---------------------------------------------------------------------------
+_STEEP_THEN_GENTLE = (0, 1, 100, 101)
+
+
+def test_a_steep_step_beside_a_gentle_one_has_its_tangents_clamped():
+    """Fritsch-Carlson scales a tangent pair back onto the circle of radius 3.
+
+    Without the clamp the gentle segments either side of a steep one carry
+    momentum they did not earn and the curve sails past the value it is
+    meant to reach.
+    """
+    xs = [float(i) for i in range(len(_STEEP_THEN_GENTLE))]
+    ys = [float(v) for v in _STEEP_THEN_GENTLE]
+    slopes = monotone_slopes(xs, ys)
+    deltas = [(ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]) for i in range(len(xs) - 1)]
+    for i, delta in enumerate(deltas):
+        alpha, beta = slopes[i] / delta, slopes[i + 1] / delta
+        assert (alpha * alpha + beta * beta) ** 0.5 <= 3.0 + 1e-9
+
+
+def test_a_steep_step_does_not_make_the_curve_overshoot():
+    """The clamp exists for this: nothing above the highest value."""
+    sampled = _sample(_as_points(_STEEP_THEN_GENTLE))
+    assert max(y for _x, y in sampled) <= max(_STEEP_THEN_GENTLE) + 1e-6
+    assert min(y for _x, y in sampled) >= min(_STEEP_THEN_GENTLE) - 1e-6

@@ -232,6 +232,9 @@ class MonthView(
             self,
             title=f"{MONTH_NAMES[ym.month]} {ym.year}: bank balance by day",
             series=[series],
+            month_label=f"{MONTH_NAMES[ym.month]} {ym.year}",
+            budget_service=self.view_model.budget_service,
+            anchor_month=ym,
         ).exec()
 
     def nav_targets(self) -> list:

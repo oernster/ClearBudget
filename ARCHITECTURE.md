@@ -294,6 +294,41 @@ Separate from budget infrastructure. Manages user identity and credentials.
 **`User`** model (`clear_budget/auth/models.py`):
 - `id`, `username`, `is_admin`, `is_read_only` (default `False`)
 
+### Reporting (`clear_budget/application/reporting/`)
+
+Pure string building for the HTML exports: no Qt, no file access, no clock, so
+it is all under the coverage gate and testable without a QApplication.
+
+- `curve.py` - the monotone cubic (Fritsch-Carlson) curve maths. It lives here
+  rather than beside the widget because BOTH the on-screen chart and the exported
+  SVG need it, and the UI layer is not something the application layer may import
+- `chart_svg.py` - the bar and line charts as inline SVG, following the same rules
+  as `_line_bar_chart.py` (curve in bar mode only, axis always includes zero, zero
+  line only when the range crosses it). The export redraws the series rather than
+  screenshotting the widget: vector output stays sharp, needs no image file beside
+  the HTML and can be tested as a string. Deliberately NOT themed; a report is
+  shared and printed, so it uses one fixed ink-on-paper palette rather than coming
+  out as a black rectangle from dark mode
+- `document.py` - the page shell. The stylesheet is inline and the charts are inline
+  SVG, so an exported file references nothing outside itself and survives being
+  emailed or moved (there is a test asserting no `src`, `href` or `@import`)
+- `month_report.py` - one month: both renderings plus the text saying what each is
+  for, and the four figures worth pulling out (opening, closing, change, the low
+  and its day)
+- `projection_report.py` - a month range: a chart of two lines per month, the
+  month-end balance and the LOWEST point inside that month, plus a table and a
+  traffic light per month. The two lines are the point of it: a month that opens
+  and closes in credit can still bounce a payment mid-month, and a report drawn
+  from closing balances alone would show that month as healthy
+
+`ProjectionMonth` (`application/dto/projection_month.py`) carries one month's
+figures and derives its own state: red below the agreed overdraft floor, caution
+for a dip below zero or a month that ends lower than it started, safe otherwise.
+`ProjectionSeriesMixin.get_projection_months` builds them by running the SAME
+day-by-day bank projection the month graph draws over each month in the range, so
+the report and the graph can never disagree about a month they both cover (there
+is a test asserting exactly that).
+
 ### Shared Layer
 
 **`Config`** (`clear_budget/shared/config.py`):
@@ -431,6 +466,15 @@ Separate from budget infrastructure. Manages user identity and credentials.
     `_curve_shown()` predicate gates the drawing, the legend entry and the
     axis range together, so the axis is never padded for a curve that is not
     there
+  - Two exports sit beside the pilot button. "Export HTML" writes THIS month as a
+    standalone page carrying BOTH renderings at once, since a page has room for both
+    where the dialog has room for one. "Export projection" opens `MonthRangeDialog`
+    for a first and last month, then writes the path of solvency across that range.
+    Both default to the user's Downloads folder (`ui_paths.default_downloads_dir`,
+    Qt's `DownloadLocation` so it is right on Windows, macOS and Linux, falling back
+    to home). The projection button is only built when the dialog was given a
+    `budget_service` and an `anchor_month`, so a caller with only a series still gets
+    a working graph
   - `_chart_hover.py` (`ChartHoverMixin`) - hovering reads out the balance at
     the point under the pointer (`Day 14: £1,204.55`, prefixed with the series
     label when more than one is plotted). Line mode marks each inflection day
