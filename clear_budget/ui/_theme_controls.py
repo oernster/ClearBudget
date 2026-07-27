@@ -26,6 +26,8 @@ SPIN_BUTTON_MIN_HEIGHT_PX = 14
 # NOT sized here: it derives from the nav icon's height in code so the two read
 # as a matched pair (see format_helpers._build_theme_toggle_button).
 _STATUS_LABEL_FONT_PX = 18
+# Tooltips read as secondary text, so a notch below the body size.
+_TOOLTIP_FONT_PX = 12
 
 
 def control_qss(t: dict[str, str]) -> str:
@@ -156,6 +158,7 @@ def widget_extras_qss(t: dict[str, str], s: dict[str, str]) -> str:
     green on hover/focus while enabled, permanent red while disabled).
     """
     status_px = ui_scale.px(_STATUS_LABEL_FONT_PX)
+    tooltip_px = ui_scale.px(_TOOLTIP_FONT_PX)
     return f"""
 #navTray {{
     border: 1px solid {t["border"]};
@@ -186,6 +189,18 @@ QPushButton#ThemeToggleButton:enabled:focus {{
 QPushButton#NavGraphButton:disabled,
 QPushButton#ThemeToggleButton:disabled {{
     border: 2px solid {t["danger"]};
+}}
+
+/* Tooltips were unstyled, so they took the platform default and, worse, any
+   font-size a widget's own stylesheet happened to set (the theme toggle's
+   emoji size leaked into its hover text). Sizing and theming them here gives
+   every tooltip in the app one appearance. */
+QToolTip {{
+    font-size: {tooltip_px}px;
+    color: {t["text"]};
+    background-color: {t["panel_bg"]};
+    border: 1px solid {t["border"]};
+    padding: 4px 6px;
 }}
 
 QLabel#StatusDateLabel {{

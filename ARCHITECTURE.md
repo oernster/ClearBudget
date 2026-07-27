@@ -626,7 +626,14 @@ bank statement. Both identities are tested.
   object-name ring rules intact (verified: 0 ring pixels at rest, 385 green on
   focus, 380 red when disabled). An emoji does not fill its em box, so the font
   is set at 1.08x the icon height; measured, that lands both painted glyphs on
-  38px rather than 35 against 38
+  38px rather than 35 against 38. The rule MUST carry a selector
+  (`QPushButton#ThemeToggleButton { ... }`): a bare `font-size` cascades to the
+  widget's whole subtree and its TOOLTIP counts, which is what briefly rendered
+  the hover text at the emoji's size
+- `QToolTip` is styled app-wide (size, colour, background, border). Without a
+  rule, tooltips take the platform default and are the one surface that escapes
+  the theme entirely, as well as being open to inheriting whatever font-size a
+  widget's own stylesheet sets
 - Dark: background near-black `#0a0a0d`, panels/trays `#242938`, borders
   `#3a4156`, table selection deep blue `#1e3a5f`; light: grey `#f3f4f6`
   background, white panels, slate borders, blue selection

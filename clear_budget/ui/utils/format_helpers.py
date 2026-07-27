@@ -172,9 +172,12 @@ def _build_theme_toggle_button(glyph_height: int):
     # font-size on QWidget, and a stylesheet rule beats setFont however
     # specific the font is. A widget's own sheet beats the application's, and
     # setting only font-size leaves the object-name ring rules intact.
-    btn.setStyleSheet(
-        f"font-size: {max(1, round(glyph_height * _TOGGLE_GLYPH_FRACTION))}px;"
-    )
+    #
+    # SELECTOR REQUIRED. A bare `font-size: 42px` cascades to everything in the
+    # widget's subtree, and a tooltip counts: the hover text came out in the
+    # emoji's size. Scoping it to the button means nothing else can inherit it.
+    glyph_px = max(1, round(glyph_height * _TOGGLE_GLYPH_FRACTION))
+    btn.setStyleSheet(f"QPushButton#ThemeToggleButton {{ font-size: {glyph_px}px; }}")
     btn.setToolTip(theme.toggle_tooltip(current))
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
     btn.clicked.connect(lambda: theme.toggle_theme(QApplication.instance()))
