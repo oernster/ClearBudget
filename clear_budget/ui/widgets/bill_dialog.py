@@ -60,7 +60,10 @@ class BillDialog(QDialog):
         self.current_month = current_month or YearMonth.today()
         self.setWindowTitle("Add Bill" if bill is None else "Edit Bill")
         self.setModal(True)
-        self.setGeometry(100, 100, 400, 300)
+        # Size only, never position: (100, 100) is a fixed point in the
+        # virtual desktop, so it pinned the dialog to one monitor wherever the
+        # window that opened it was. Sized alone, Qt centres it on its parent.
+        self.resize(400, 300)
         self.init_ui()
         if bill is not None:
             self.load_bill(bill)

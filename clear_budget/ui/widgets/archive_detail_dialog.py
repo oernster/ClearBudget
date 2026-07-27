@@ -23,7 +23,10 @@ class ArchiveDetailDialog(QDialog):
         self.year_month = year_month
         self.summary = summary
         self.setWindowTitle(f"Archive Details - {year_month}")
-        self.setGeometry(100, 100, 700, 600)
+        # Size only, never position: see bill_dialog. A fixed virtual-desktop
+        # point pins the dialog to one monitor; sized alone, Qt centres it on
+        # its parent.
+        self.resize(700, 600)
         self.setModal(True)
         self.init_ui()
 

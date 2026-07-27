@@ -11,6 +11,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication
 
 from clear_budget.shared.resources import find_qt_window_icon_path
+from clear_budget.ui import launch_screen
 from clear_budget.version import APP_NAME, __version__
 from installer.cli import parse_args, wants_remove_user_data
 from installer.shared.logging_setup import setup_installer_logging
@@ -74,7 +75,11 @@ def main(argv: list[str] | None = None) -> int:
     except Exception:
         logger.exception("Failed to set QApplication window icon")
 
+    # Open on the monitor the setup executable was started from rather than
+    # on whichever display Windows calls primary.
+    launch_screen.init()
     win = InstallerMainWindow(cli_args=args)
+    launch_screen.centre(win)
     win.show()
     return app.exec()
 

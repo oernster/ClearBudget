@@ -501,13 +501,30 @@ Separate from budget infrastructure. Manages user identity and credentials.
     open, a MainWindow timer re-runs the bank fold just after each local midnight
   - Cross-platform single-instance lock: a named kernel mutex on Windows, an
     exclusive `fcntl` advisory lock on a file in `~/.clearbudget/` on macOS and Linux
-  - Screen-aware UI scale (`ui_scale.init`): factor = available screen height / 1260,
-    capped at 1.5x on tall/4K displays and floored at 0.5x, so the UI scales *down*
-    on short displays such as a 13in MacBook
+  - Launch monitor (`launch_screen.init`): resolved ONCE at startup as the screen
+    under the mouse pointer, falling back to the primary screen when the pointer is
+    on none. Everything the session opens (the login dialog, the main window) is
+    placed on that screen, so on a multi-monitor desktop the app appears where it
+    was started from instead of on whichever display Windows calls primary. The
+    shell passes no launch monitor, so the pointer is a proxy, not an exact answer;
+    it is resolved once rather than per window, or a dialog would open on whichever
+    monitor the mouse was resting on. `installer/app.py` does the same before
+    showing the setup window
+  - Screen-aware UI scale (`ui_scale.init`): factor = the LAUNCH screen's available
+    height / 1260, capped at 1.5x on tall/4K displays and floored at 0.5x, so the UI
+    scales *down* on short displays such as a 13in MacBook, and scales for the
+    monitor the app actually opens on
   - Default window geometry: 33% of available width x 92% of available height,
     centred, with absolute minimum floors (860 x 780 logical points, capped to the
     available screen) so the multi-column Bills/Income tables stay readable on small
-    laptops
+    laptops. The arithmetic is `_window_geometry.default_window_rect`, kept Qt-free
+    and tested in `tests/ui_logic/test_window_geometry.py` because multi-monitor
+    placement cannot be exercised on a one-screen machine. It works in virtual-desktop
+    coordinates, so a monitor left of or above the primary one (negative x or y) needs
+    no special case
+  - A dialog is given a SIZE, never a position: `setGeometry(100, 100, w, h)` pins a
+    dialog to whichever monitor covers virtual-desktop (100, 100) regardless of where
+    its parent window is. Sized alone, Qt centres it on its parent
 
 **Theme** (`theme.py` + `theme_tokens.py` + `theme_qss.py` + `_theme_controls.py`):
 - Applied at `QApplication` level - covers all windows and dialogs

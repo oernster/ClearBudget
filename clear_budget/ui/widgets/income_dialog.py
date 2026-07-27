@@ -32,7 +32,10 @@ class IncomeDialog(QDialog):
         self.current_month = current_month or YearMonth.today()
         self.setWindowTitle("Add Income" if income is None else "Edit Income")
         self.setModal(True)
-        self.setGeometry(100, 100, 400, 240)
+        # Size only, never position: see bill_dialog. A fixed virtual-desktop
+        # point pins the dialog to one monitor; sized alone, Qt centres it on
+        # its parent.
+        self.resize(400, 240)
         self.init_ui()
         if income is not None:
             self.load_income(income)

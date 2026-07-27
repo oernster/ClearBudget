@@ -31,6 +31,7 @@ from clear_budget.infrastructure.sqlite.payment_method_repository import (
 )
 from clear_budget.shared.config import Config
 from clear_budget.shared.currency import set_currency
+from clear_budget.ui._window_geometry import default_window_rect
 from clear_budget.ui.main_window import MainWindow
 from clear_budget.ui.theme import apply_theme, load_saved_theme
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
@@ -81,6 +82,9 @@ _UI_SCALE_REFERENCE_HEIGHT_PT = 1260.0
 # bound (0.5x) is enforced inside ui_scale.init().
 _MAX_UI_SCALE_FACTOR = 1.5
 
+# Index of the height element in an (x, y, width, height) screen rect.
+_AVAILABLE_HEIGHT = 3
+
 
 def _acquire_single_instance_lock():
     """Acquire a single-instance lock for this process.
@@ -119,17 +123,22 @@ def _acquire_single_instance_lock():
 
 def _run_login_flow(user_store: UserStore) -> User | None:
     """Show first-run or login dialog.  Returns authenticated User or None (quit)."""
+    from clear_budget.ui import launch_screen
     from clear_budget.ui.widgets.create_user_dialog import CreateUserDialog
     from clear_budget.ui.widgets.login_dialog import LoginDialog
 
     if not user_store.has_users():
         dlg = CreateUserDialog(user_store, is_first_user=True)
+        # These have no parent to be centred on, so without this they take
+        # Qt's default placement on the primary screen.
+        launch_screen.centre(dlg)
         if dlg.exec() != CreateUserDialog.Accepted or dlg.created_user is None:
             return None
         # First user just created - log them in directly.
         return dlg.created_user
 
     dlg = LoginDialog(user_store)
+    launch_screen.centre(dlg)
     if dlg.exec() != LoginDialog.Accepted:
         return None
     return dlg.authenticated_user
@@ -195,12 +204,14 @@ def main() -> int:
         QMessageBox.warning(None, "ClearBudget", "ClearBudget is already running.")
         return 1
 
-    from clear_budget.ui import ui_scale
+    from clear_budget.ui import launch_screen, ui_scale
 
-    _screen = app.primaryScreen()
-    _avail = _screen.availableGeometry()
-    _avail_h = _avail.height()
-    _avail_w = _avail.width()
+    # Resolve the monitor the app was started from before anything is shown,
+    # so every window this session opens lands there rather than on whichever
+    # display happens to be primary.
+    launch_screen.init()
+    _avail = launch_screen.available()
+    _avail_h = _avail[_AVAILABLE_HEIGHT]
     ui_scale.init(min(_avail_h / _UI_SCALE_REFERENCE_HEIGHT_PT, _MAX_UI_SCALE_FACTOR))
 
     icon_path = _find_runtime_icon()
@@ -222,17 +233,15 @@ def main() -> int:
             icon = QIcon(str(icon_path))
             if not icon.isNull():
                 window.setWindowIcon(icon)
-        _restore_w = min(
-            max(int(_avail_w * _WINDOW_WIDTH_FRACTION), _MIN_WINDOW_WIDTH_PT),
-            _avail_w,
+        window.setGeometry(
+            *default_window_rect(
+                available=_avail,
+                width_fraction=_WINDOW_WIDTH_FRACTION,
+                height_fraction=_WINDOW_HEIGHT_FRACTION,
+                min_width=_MIN_WINDOW_WIDTH_PT,
+                min_height=_MIN_WINDOW_HEIGHT_PT,
+            )
         )
-        _restore_h = min(
-            max(int(_avail_h * _WINDOW_HEIGHT_FRACTION), _MIN_WINDOW_HEIGHT_PT),
-            _avail_h,
-        )
-        _restore_x = _avail.x() + (_avail_w - _restore_w) // 2
-        _restore_y = _avail.y() + (_avail_h - _restore_h) // 2
-        window.setGeometry(_restore_x, _restore_y, _restore_w, _restore_h)
         window.show()
         window.logout_requested.connect(_session_loop)
         window.database_replaced.connect(lambda: _reload_database(user, window))
