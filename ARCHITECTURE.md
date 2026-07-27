@@ -415,6 +415,20 @@ Separate from budget infrastructure. Manages user identity and credentials.
   opened by the nav-tray icon button on Monthly Budget (bank balance by day)
   and Credit Cards (one series per card, with a legend); a pilot button
   toggles bar vs line rendering, drawn with QPainter (no chart dependency)
+  - `_chart_trend.py` - Qt-free trend maths: a centred moving average of the
+    day-end totals (one curve however many series are plotted) plus the
+    inflection days where direction changes. Tested without a QApplication in
+    `tests/ui_logic/test_chart_trend.py`, like the solvency colour rules
+  - Both renderings overlay that trend as a smooth curve (quadratic segments
+    through the midpoints) in a `trend` colour held outside the series palette,
+    so it never reads as one more series; it is included in the y-range because
+    it shares the axis
+  - `_chart_hover.py` (`ChartHoverMixin`) - hovering reads out the balance at
+    the point under the pointer (`Day 14: £1,204.55`, prefixed with the series
+    label when more than one is plotted). Line mode marks each inflection day
+    with a dot to aim at; bar mode treats the whole bar as the target. Hit
+    testing uses the chart's own `_geometry()`, so a readout can only land on a
+    point that was drawn
 - `NeutralDialog` (`neutral_dialog.py`) - dialog base with a neutral start: a
   0x0 focus sink absorbs the initial focus so nothing is highlighted until
   the first Tab or Right (used by the graph, About and Licence dialogs;
@@ -515,9 +529,10 @@ Separate from budget infrastructure. Manages user identity and credentials.
   (verified by an offscreen diff); the light values are chosen to pass WCAG AA
   on the light background
 - The month-graph chart follows the theme too: `_line_bar_chart` resolves its
-  chrome tokens AND its series palette per paint (`theme_tokens
-  .series_colours_for`), so pastels plot on the dark canvas and saturated
-  mid-tones on the light one, same hue order either way
+  chrome tokens, its series palette AND its trend colour per paint
+  (`theme_tokens.series_colours_for` / `trend_colour_for`), so pastels plot on
+  the dark canvas and saturated mid-tones on the light one, same hue order
+  either way
 - Amber/red semantic warning colours (card thresholds, overdraft warnings) are
   theme-independent
 

@@ -113,6 +113,11 @@ LIGHT: dict[str, str] = {
 # per-theme palette: pastels read on a near-black canvas, saturated mid-tones
 # read on a light one. Same hue order in both, so a series keeps its identity
 # across a theme switch.
+# The trend overlay is deliberately outside the series palette in both themes,
+# so it never reads as one more plotted series.
+TREND_DARK = "#e879f9"
+TREND_LIGHT = "#a21caf"
+
 SERIES_DARK = (
     "#34d399",
     "#60a5fa",
@@ -170,6 +175,11 @@ def tokens_for(theme_name: str) -> dict[str, str]:
 def series_colours_for(theme_name: str) -> tuple[str, ...]:
     """Return the chart series palette for `theme_name`, defaulting to dark."""
     return _SERIES_BY_THEME.get(theme_name, SERIES_DARK)
+
+
+def trend_colour_for(theme_name: str) -> str:
+    """Return the chart trend-overlay colour, defaulting to dark."""
+    return TREND_LIGHT if theme_name == THEME_LIGHT else TREND_DARK
 
 
 def state_colours_for(theme_name: str) -> dict[str, str]:
