@@ -174,6 +174,10 @@ machine under `~/.clearbudget/`:
 - `ui_settings.json` - the chosen theme, so the app opens the way you left it.
   No budget data is kept here.
 
+Uninstalling does not touch any of this. It removes the program, its shortcuts
+and its entry in Apps and features, so reinstalling picks up where you left
+off. To remove your data, delete `~/.clearbudget` yourself.
+
 **What the login protects, and what it does not.** The username/password sign-in
 is an access-control gate for the application: it stops another person who shares
 your computer from opening the app and casually reading or editing your budget.
