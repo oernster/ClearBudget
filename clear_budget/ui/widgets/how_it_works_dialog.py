@@ -78,7 +78,7 @@ paid by credit card never touch the bank balance.</p>
       your cards). The line style needs no curve; it already joins those
       figures. <b>Export HTML</b> saves the month you are viewing as a single
       web page carrying both styles at once. On Monthly Budget there is also
-      <b>Export balance projection</b>, which asks for a range of months and
+      <b>Export projection HTML</b>, which asks for a range of months and
       saves your bank balance across them, showing both where each month ends
       and the lowest it gets on the way; it is not offered on Credit Cards,
       where a bank projection would have nothing to do with the cards on

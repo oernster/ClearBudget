@@ -10,7 +10,7 @@ export buttons and Close as the stops.
 at once, since a page has room for both where the dialog has room for one. It
 is offered wherever the graph is, because it exports whatever is plotted.
 
-"Export balance projection" asks for a range of months and writes the BANK
+"Export projection HTML" asks for a range of months and writes the BANK
 balance across them. It appears only when the caller supplies a
 `budget_service` and an `anchor_month`, which the Monthly Budget page does and
 the Credit Cards page deliberately does not: a bank-balance projection offered
@@ -41,9 +41,10 @@ _DIALOG_MIN_HEIGHT = 440
 
 _PILOT_TO_LINE = "Switch to line graph"
 _PILOT_TO_BAR = "Switch to bar graph"
-# Named for what it projects, so the button cannot read as "a projection of
-# whatever this graph happens to be showing".
-_PROJECTION_LABEL = "Export balance projection…"
+# Pairs with "Export HTML" so the two read as a set. What it projects is kept
+# unambiguous by WHERE it is offered (Monthly Budget only) and by the report
+# itself, which is titled and captioned as a bank balance projection.
+_PROJECTION_LABEL = "Export projection HTML…"
 _HTML_FILTER = "Web page (*.html)"
 _HTML_SUFFIX = ".html"
 

@@ -484,7 +484,7 @@ bank statement. Both identities are tested.
   - "Export HTML" writes THIS month as a standalone page carrying BOTH renderings
     at once, since a page has room for both where the dialog has room for one. It
     exports whatever is plotted, so it is offered from both pages
-  - "Export balance projection" opens `MonthRangeDialog` for a first and last month,
+  - "Export projection HTML" opens `MonthRangeDialog` for a first and last month,
     then writes the BANK balance across that range. It is built only when the caller
     supplies a `budget_service` and an `anchor_month`: Monthly Budget does, Credit
     Cards deliberately does NOT. A bank-balance projection offered from a graph of
