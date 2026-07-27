@@ -84,6 +84,15 @@ def _load_cropped_icon_pixmap():
 # broadcasts it so every tab's nav label stays consistent.
 NAV_LABEL_DEFAULT_COLOR = "#9ca3af"
 
+# Nav-icon height used when there is no Previous button to measure against.
+_FALLBACK_ICON_PX = 24
+# Font pixel size of the theme-toggle emoji, as a fraction of the nav icon's
+# height. An emoji does not fill its em box, so the font has to be set a little
+# larger than the icon for the two to LOOK the same size. Measured, not
+# guessed: at 1.0 the painted glyph came out 35px against the icon's 38px, and
+# the painted height tracks the font size at about 0.9, so 1.08 lands on it.
+_TOGGLE_GLYPH_FRACTION = 1.08
+
 
 def _nav_label_style(color: str) -> str:
     """Return the standard nav month/year label stylesheet in `color`.
@@ -101,6 +110,16 @@ def _nav_label_style(color: str) -> str:
 def apply_nav_label_color(label, color: str) -> None:
     """Recolour a nav month/year label, preserving its base style."""
     label.setStyleSheet(_nav_label_style(color))
+
+
+def nav_glyph_height(prev_btn) -> int:
+    """The height every glyph in the nav tray is sized to.
+
+    One source for both the app icon and the theme toggle, taken from the
+    Previous button so the row reads as a single band. They are built in
+    different functions, so deriving it twice is how they drifted apart.
+    """
+    return prev_btn.sizeHint().height() if prev_btn is not None else _FALLBACK_ICON_PX
 
 
 def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
@@ -127,12 +146,19 @@ def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
     return btn
 
 
-def _build_theme_toggle_button():
+def _build_theme_toggle_button(glyph_height: int):
     """Return the sun/moon theme toggle as a tabbable QPushButton.
 
     Object-name styled by the theme QSS (three-state ring, transparent
     fill). The glyph shows the mode a press switches TO; theme.apply_theme
     refreshes every toggle's glyph and tooltip after each switch.
+
+    Sized from `glyph_height`, the same height the nav icon is scaled to, so
+    the two read as a matched pair rather than the toggle looking like an
+    afterthought beside it. The font is set on the widget rather than in the
+    QSS because only the widget knows that height; the QSS deliberately
+    carries no font-size for this button, since a stylesheet rule would win
+    over setFont and pin it back to a fixed size.
     """
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication, QPushButton
@@ -142,6 +168,13 @@ def _build_theme_toggle_button():
     current = theme.current_theme(QApplication.instance())
     btn = QPushButton(theme.toggle_glyph(current))
     btn.setObjectName("ThemeToggleButton")
+    # A WIDGET-level stylesheet, not setFont: the app stylesheet sets a
+    # font-size on QWidget, and a stylesheet rule beats setFont however
+    # specific the font is. A widget's own sheet beats the application's, and
+    # setting only font-size leaves the object-name ring rules intact.
+    btn.setStyleSheet(
+        f"font-size: {max(1, round(glyph_height * _TOGGLE_GLYPH_FRACTION))}px;"
+    )
     btn.setToolTip(theme.toggle_tooltip(current))
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
     btn.clicked.connect(lambda: theme.toggle_theme(QApplication.instance()))
@@ -169,10 +202,10 @@ def build_nav_month_widget(
     if prev_btn is not None:
         layout.addWidget(prev_btn)
 
+    icon_height = nav_glyph_height(prev_btn)
     icon_btn = None
     icon_pixmap = _load_cropped_icon_pixmap()
     if icon_pixmap is not None:
-        icon_height = prev_btn.sizeHint().height() if prev_btn is not None else 24
         if icon_action is not None:
             icon_btn = _build_icon_graph_button(icon_pixmap, icon_height, icon_action)
             layout.addSpacing(10)
@@ -281,7 +314,7 @@ def build_centered_nav_header(
     right_layout.setSpacing(8)
     if trailing_widget is not None:
         right_layout.addWidget(trailing_widget)
-    theme_btn = _build_theme_toggle_button()
+    theme_btn = _build_theme_toggle_button(nav_glyph_height(prev_btn))
     right_layout.addWidget(theme_btn)
     row.addWidget(right_cell, 0, 2, Qt.AlignmentFlag.AlignRight | align_v)
     # A left balance of equal width keeps both outer columns matched even

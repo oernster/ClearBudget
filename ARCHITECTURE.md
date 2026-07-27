@@ -616,6 +616,17 @@ bank statement. Both identities are tested.
   `theme_tokens.py`; the sun/moon toggle at the far right of every nav tray
   switches them at runtime (`theme.toggle_theme`) and the choice persists in
   `~/.clearbudget/ui_settings.json`, applying from the login screen onward
+- The toggle's emoji is sized to MATCH the nav icon, both from
+  `format_helpers.nav_glyph_height` (the Previous button's height). One source
+  because the two are built in different functions, which is how they drifted
+  apart in the first place. The font is applied as a WIDGET-level stylesheet,
+  not `setFont`: the app stylesheet sets `font-size` on `QWidget` and any
+  stylesheet rule beats `setFont`, so the size was silently ignored. A widget's
+  own sheet beats the application's, and setting only `font-size` leaves the
+  object-name ring rules intact (verified: 0 ring pixels at rest, 385 green on
+  focus, 380 red when disabled). An emoji does not fill its em box, so the font
+  is set at 1.08x the icon height; measured, that lands both painted glyphs on
+  38px rather than 35 against 38
 - Dark: background near-black `#0a0a0d`, panels/trays `#242938`, borders
   `#3a4156`, table selection deep blue `#1e3a5f`; light: grey `#f3f4f6`
   background, white panels, slate borders, blue selection

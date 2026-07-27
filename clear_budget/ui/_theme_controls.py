@@ -22,9 +22,10 @@ _NAV_TRAY_RADIUS_PX = 6
 # button and sets the field's own height in practice.
 SPIN_BUTTON_WIDTH_PX = 22
 SPIN_BUTTON_MIN_HEIGHT_PX = 14
-# Unscaled font size of the status-bar date label and the emoji theme toggle.
+# Unscaled font size of the status-bar date label. The theme toggle's glyph is
+# NOT sized here: it derives from the nav icon's height in code so the two read
+# as a matched pair (see format_helpers._build_theme_toggle_button).
 _STATUS_LABEL_FONT_PX = 18
-_THEME_TOGGLE_FONT_PX = 16
 
 
 def control_qss(t: dict[str, str]) -> str:
@@ -155,7 +156,6 @@ def widget_extras_qss(t: dict[str, str], s: dict[str, str]) -> str:
     green on hover/focus while enabled, permanent red while disabled).
     """
     status_px = ui_scale.px(_STATUS_LABEL_FONT_PX)
-    toggle_px = ui_scale.px(_THEME_TOGGLE_FONT_PX)
     return f"""
 #navTray {{
     border: 1px solid {t["border"]};
@@ -169,8 +169,10 @@ QPushButton#NavGraphButton, QPushButton#ThemeToggleButton {{
     padding: 2px;
 }}
 
+/* No font-size here on purpose: a stylesheet rule beats setFont, and the
+   toggle's glyph is sized in code from the nav icon's height so the two match.
+   See _build_theme_toggle_button. */
 QPushButton#ThemeToggleButton {{
-    font-size: {toggle_px}px;
     padding: 2px 6px;
 }}
 
