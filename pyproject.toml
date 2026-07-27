@@ -21,6 +21,23 @@ version = {file = "VERSION"}
 line-length = 88
 target-version = ["py311"]
 
+[tool.ruff]
+# Kept in step with [tool.black] so the two never disagree on wrapping.
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint.per-file-ignores]
+# The installer runs unattended against a live Windows machine, where a
+# best-effort step (COM teardown in a finally block, removing a shortcut that
+# is already gone, deleting a temp dir still held by Explorer) must never abort
+# a half-finished install.  Those handlers are broad and silent on purpose;
+# the failures that do matter are raised as InstallerOperationError.
+"installer/**/*.py" = ["BLE001", "S110", "S112"]
+# Tests build fixtures relative to the local calendar date, because that is the
+# semantics the code under test has: a budget month is the user's calendar
+# month, so a timezone-aware clock here would not match the application.
+"tests/**/*.py" = ["DTZ005", "DTZ011"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --cov=clear_budget --cov=main --cov-report=term-missing --cov-fail-under=100 --cov-config=.coveragerc"

@@ -57,7 +57,7 @@ def build_exe() -> int:
         "main.py",
     ]
 
-    result = subprocess.run(cmd, cwd=root)
+    result = subprocess.run(cmd, cwd=root, check=False)
     if result.returncode != 0:
         print("PyInstaller build failed")
         return 1

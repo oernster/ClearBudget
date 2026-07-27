@@ -6,9 +6,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from clear_budget.version import APP_APPUSERMODELID
 from installer.constants import InstallerIdentity
 from installer.ops.errors import InstallerOperationError
-from clear_budget.version import APP_APPUSERMODELID
 
 
 def _default_icon_location_for(target_exe: Path) -> str:
@@ -122,7 +122,7 @@ def create_shortcut(
         persist.Save(str(shortcut_path), 0)
     except InstallerOperationError:
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise InstallerOperationError(
             f"Failed to create shortcut '{shortcut_path}' -> '{target_exe}': {exc!r}"
         ) from exc

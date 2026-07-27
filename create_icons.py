@@ -1,7 +1,9 @@
 """Generate application icons for ClearBudget."""
 
-from PIL import Image, ImageDraw
+import sys
 from pathlib import Path
+
+from PIL import Image, ImageDraw
 
 
 def create_icon(size: int) -> Image.Image:
@@ -74,9 +76,6 @@ def main() -> int:
         icon.save(png_path, "PNG")
         print(f"  [OK] {png_path.name}")
 
-    # Create ICO from largest PNG
-    icon_512 = Image.open(root / "clearbudget_512.png")
-
     # Create ICO with multiple sizes
     ico_sizes = []
     for size in [16, 32, 48, 64, 128, 256]:
@@ -89,11 +88,11 @@ def main() -> int:
         ico_sizes[0].save(
             ico_path, "ICO", sizes=[(s.width, s.height) for s in ico_sizes]
         )
-        print(f"  [OK] clearbudget.ico")
+        print("  [OK] clearbudget.ico")
 
     print("Icon generation complete!")
     return 0
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

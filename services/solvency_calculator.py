@@ -1,4 +1,3 @@
-from datetime import datetime
 from models.month import Month
 
 
@@ -93,7 +92,7 @@ class SolvencyCalculator:
             monthly_charge = sum(b["amount"] for b in bills_on_card)
 
             # Get payment to this card
-            payment_cursor = db.execute(
+            _payment_cursor = db.execute(
                 'SELECT amount FROM month_bills WHERE category = "credit_payment" AND payment_method_id = ? AND month_id = ?',
                 (1, 1),  # Simplified - would need actual month_id
             )

@@ -126,7 +126,9 @@ class TestAmountComparison:
         b = Amount(pence=100)
         c = Amount(pence=200)
         assert a == b
-        assert not (a == c)
+        # Deliberately exercises __eq__ rather than __ne__, so this must not
+        # be rewritten as `a != c`.
+        assert not (a == c)  # noqa: SIM201
 
     def test_not_equal(self) -> None:
         """Test != operator."""
@@ -138,13 +140,13 @@ class TestAmountComparison:
         """Test comparison with non-Amount raises TypeError."""
         amt = Amount(pence=100)
         with pytest.raises(TypeError):
-            amt < 100  # type: ignore
+            _ = amt < 100  # type: ignore
         with pytest.raises(TypeError):
-            amt <= 100  # type: ignore
+            _ = amt <= 100  # type: ignore
         with pytest.raises(TypeError):
-            amt > 100  # type: ignore
+            _ = amt > 100  # type: ignore
         with pytest.raises(TypeError):
-            amt >= 100  # type: ignore
+            _ = amt >= 100  # type: ignore
 
     def test_multiply_by_non_numeric_type_error(self) -> None:
         """Test multiply with non-numeric type raises TypeError."""

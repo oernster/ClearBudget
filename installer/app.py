@@ -10,6 +10,8 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
+from clear_budget.shared.resources import find_qt_window_icon_path
+from clear_budget.version import APP_NAME, __version__
 from installer.cli import parse_args, wants_remove_user_data
 from installer.shared.logging_setup import setup_installer_logging
 from installer.ui.icons import (
@@ -17,8 +19,6 @@ from installer.ui.icons import (
     set_windows_app_user_model_id,
 )
 from installer.ui.main_window import InstallerMainWindow
-from clear_budget.shared.resources import find_qt_window_icon_path
-from clear_budget.version import APP_NAME, __version__
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
 
     log_path = setup_installer_logging()
 
-    def _excepthook(exc_type, exc, tb):  # noqa: ANN001
+    def _excepthook(exc_type, exc, tb):
         # Ensure we capture crashes that happen on the main thread.
         with log_path.open("a", encoding="utf-8") as f:
             f.write("\n=== Unhandled exception ===\n")

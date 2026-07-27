@@ -12,6 +12,7 @@ from pathlib import Path
 
 from platformdirs import user_cache_dir, user_data_dir
 
+from clear_budget.version import APP_AUTHOR, APP_NAME, LEGACY_APP_NAME
 from installer.ops.errors import AppRunningError, InstallerOperationError
 from installer.ops.running_app import is_app_running
 from installer.ops.shortcuts import (
@@ -24,8 +25,6 @@ from installer.state.registry import (
     read_uninstall_entry,
     try_read_install_location,
 )
-from clear_budget.version import APP_AUTHOR, APP_NAME, LEGACY_APP_NAME
-
 
 # Direct (synchronous) delete: a brief bounded retry rides out transient locks
 # (e.g. an anti-virus scanner holding a handle) before the failure is surfaced.
@@ -44,7 +43,7 @@ class UninstallOptions:
     remove_user_data: bool = True
 
 
-def uninstall(identity, opts: UninstallOptions) -> None:  # noqa: ANN001 (identity)
+def uninstall(identity, opts: UninstallOptions) -> None:
     if os.name != "nt":
         raise InstallerOperationError("Uninstall is Windows-only")
 
@@ -106,7 +105,7 @@ def uninstall_with_feedback(
     *,
     progress=None,
     cancel_event=None,
-) -> None:  # noqa: ANN001
+) -> None:
     if cancel_event is not None and getattr(cancel_event, "is_set", lambda: False)():
         raise InstallerOperationError("Cancelled")
     if progress:
@@ -196,7 +195,7 @@ def _schedule_delete_after_exit(install_dir: Path) -> None:
     ]
 
     create_no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
-    subprocess.Popen(  # noqa: S603
+    subprocess.Popen(
         ps,
         shell=False,
         stdin=subprocess.DEVNULL,

@@ -1,6 +1,6 @@
 """Balance projection helpers for BudgetService - extracted for LOC limit."""
 
-from typing import Callable
+from collections.abc import Callable
 
 from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.domain.services._prorating import (

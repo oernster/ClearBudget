@@ -36,7 +36,7 @@ class TestLOCLimits:
                 with open(py_file, "r", encoding="utf-8") as f:
                     lines = f.readlines()
                     loc = len(lines)
-            except (UnicodeDecodeError, IOError):
+            except (OSError, UnicodeDecodeError):
                 # Skip files with encoding issues
                 continue
 
@@ -61,7 +61,7 @@ class TestLOCLimits:
                 with open(py_file, "r", encoding="utf-8") as f:
                     lines = f.readlines()
                     loc = len(lines)
-            except (UnicodeDecodeError, IOError):
+            except (OSError, UnicodeDecodeError):
                 continue
 
             if loc > 400:

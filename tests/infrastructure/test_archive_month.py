@@ -1,7 +1,5 @@
 """Tests for month archiving with real database."""
 
-import pytest
-
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.entities.bill import Bill

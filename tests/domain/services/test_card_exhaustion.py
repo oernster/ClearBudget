@@ -1,9 +1,5 @@
 """Tests for CardExhaustionService."""
 
-import math
-
-import pytest
-
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.services.card_exhaustion import CardExhaustionService
 from clear_budget.domain.value_objects.amount import Amount

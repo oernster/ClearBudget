@@ -33,7 +33,7 @@ def get_bank_balance_date_iso(conn) -> str | None:  # pragma: no cover
 def set_bank_balance_pence(
     conn, pence: int, today: _date | None = None
 ) -> None:  # pragma: no cover
-    stamp = today or _date.today()
+    stamp = today or _date.today()  # noqa: DTZ011 (naive local dates)
     cursor = conn.cursor()
     cursor.execute(
         "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",

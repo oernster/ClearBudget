@@ -27,7 +27,7 @@ def _require_windows() -> None:
 
 def _run(cmd: list[str]) -> None:
     print("\n> " + " ".join(cmd))
-    subprocess.check_call(cmd)  # noqa: S603
+    subprocess.check_call(cmd)
 
 
 def _retry_unlink(path: Path, *, attempts: int = 20, delay_s: float = 0.15) -> None:

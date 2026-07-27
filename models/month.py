@@ -1,6 +1,3 @@
-from datetime import datetime
-
-
 class Month:
     @staticmethod
     def get_or_create(db, year_month):
@@ -19,7 +16,7 @@ class Month:
         month_id = cursor.lastrowid
 
         # Populate from bill templates
-        start_year, start_month = map(int, year_month.split("-"))
+        _start_year, _start_month = map(int, year_month.split("-"))
         cursor = db.execute(
             """
             SELECT id, name, amount, payment_method_id, category, bill_type, day_of_month, start_ym, end_ym

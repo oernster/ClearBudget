@@ -1,20 +1,17 @@
 """Tests for BudgetService.reset_all_data."""
 
-import sqlite3
-from pathlib import Path
-
 import pytest
 
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
+from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.income_source_repository import (
     SQLiteIncomeSourceRepository,
 )
 from clear_budget.infrastructure.sqlite.payment_method_repository import (
     SQLitePaymentMethodRepository,
 )
-from clear_budget.infrastructure.sqlite.database import Database
 
 
 @pytest.fixture()

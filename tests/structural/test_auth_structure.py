@@ -121,8 +121,9 @@ class TestUserModelImmutability:
     """User model is a frozen dataclass (immutable)."""
 
     def test_user_is_immutable(self) -> None:
-        from clear_budget.auth.models import User
         import dataclasses
+
+        from clear_budget.auth.models import User
 
         fields = dataclasses.fields(User)
         assert len(fields) > 0

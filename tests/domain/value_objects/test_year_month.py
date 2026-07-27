@@ -181,13 +181,13 @@ class TestYearMonthComparison:
         """Test comparison with non-YearMonth raises TypeError."""
         ym = YearMonth(year=2026, month=5)
         with pytest.raises(TypeError):
-            ym < "2026-06"  # type: ignore
+            _ = ym < "2026-06"  # type: ignore
         with pytest.raises(TypeError):
-            ym <= "2026-06"  # type: ignore
+            _ = ym <= "2026-06"  # type: ignore
         with pytest.raises(TypeError):
-            ym > "2026-06"  # type: ignore
+            _ = ym > "2026-06"  # type: ignore
         with pytest.raises(TypeError):
-            ym >= "2026-06"  # type: ignore
+            _ = ym >= "2026-06"  # type: ignore
 
     def test_hash(self) -> None:
         """Test that equal YearMonths have equal hashes."""

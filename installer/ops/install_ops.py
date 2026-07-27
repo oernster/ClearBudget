@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import sys
 import uuid
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
-
-import logging
 
 from platformdirs import user_data_dir
 
+from clear_budget.shared.resources import find_app_icon_path
+from clear_budget.version import APP_AUTHOR, APP_NAME, __version__
 from installer.constants import InstallerIdentity
 from installer.ops.errors import AppRunningError, InstallerOperationError
 from installer.ops.legacy import (
@@ -26,13 +27,11 @@ from installer.ops.payload import payload_zip_path
 from installer.ops.running_app import is_app_running
 from installer.ops.shortcuts import create_shortcut, get_shortcut_paths
 from installer.state.registry import write_uninstall_entry
-from clear_budget.shared.resources import find_app_icon_path
-from clear_budget.version import APP_NAME, APP_AUTHOR, __version__
 
 logger = logging.getLogger("installer.install")
 
 
-def _progress(progress, *, pct: int | None, message: str) -> None:  # noqa: ANN001
+def _progress(progress, *, pct: int | None, message: str) -> None:
     if not progress:
         return
     if pct is None:
@@ -56,9 +55,7 @@ def _installer_staging_root() -> Path:
     return Path(local) / "ClearBudgetInstaller" / "staging"
 
 
-def _extract_payload_to(
-    staging_dir: Path, *, progress=None, cancel_event=None
-) -> None:  # noqa: ANN001
+def _extract_payload_to(staging_dir: Path, *, progress=None, cancel_event=None) -> None:
     staging_dir.mkdir(parents=True, exist_ok=True)
     _check_cancel(cancel_event)
     _progress(progress, pct=10, message="Extracting payload...")
@@ -119,7 +116,7 @@ def _swap_in_bundle(staging_dir: Path, target_dir: Path) -> None:
             shutil.rmtree(backup_dir, ignore_errors=True)
 
 
-def _check_cancel(cancel_event) -> None:  # noqa: ANN001
+def _check_cancel(cancel_event) -> None:
     if cancel_event is not None and getattr(cancel_event, "is_set", lambda: False)():
         raise InstallerOperationError("Cancelled")
 
@@ -238,7 +235,7 @@ def install_new(
     *,
     progress=None,
     cancel_event=None,
-) -> None:  # noqa: ANN001
+) -> None:
     target_dir = opts.target_dir.resolve()
 
     migrate_legacy_appdata_dirs()

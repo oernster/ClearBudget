@@ -6,7 +6,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
-    QLabel,
     QLineEdit,
     QProgressBar,
     QPushButton,
@@ -16,7 +15,6 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.version import APP_NAME, __version__
-
 from installer.ui._safe_label import SafeLabel
 
 
@@ -70,7 +68,7 @@ def build_installer_main_window_ui(window: Any) -> None:
     window._licence_btn.setObjectName("LicenceButton")
     window._licence_btn.setToolTip("Installer licence")
 
-    window._theme_toggle_btn = QPushButton(window._theme.toggle_label)  # noqa: SLF001
+    window._theme_toggle_btn = QPushButton(window._theme.toggle_label)
     window._theme_toggle_btn.setObjectName("ThemeToggle")
 
     # Give the left side stretch so the header title has priority in width
@@ -103,7 +101,7 @@ def build_installer_main_window_ui(window: Any) -> None:
 
     window._install_dir_edit = QLineEdit()
     window._install_dir_edit.setPlaceholderText("Installation directory")
-    window._install_dir_edit.setText(str(window._default_install_dir()))  # noqa: SLF001
+    window._install_dir_edit.setText(str(window._default_install_dir()))
 
     browse = QPushButton("Browse")
     browse.setObjectName("BrowseButton")

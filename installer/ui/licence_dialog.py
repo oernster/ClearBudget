@@ -12,7 +12,7 @@ from installer.ui.lgpl3_license_text import LGPL_V3_TEXT
 
 
 class InstallerLicenceDialog(QDialog):
-    def __init__(self, parent=None) -> None:  # noqa: ANN001 (Qt API)
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
         self.setWindowTitle("Installer licence")

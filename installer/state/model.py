@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import FrozenSet, Optional
 
 from installer.state.versioning import compare_versions
 
@@ -27,9 +26,9 @@ class InstalledInfo:
 @dataclass(frozen=True, slots=True)
 class InstallerState:
     installer_version: str
-    installed: Optional[InstalledInfo]
+    installed: InstalledInfo | None
 
-    def allowed_operations(self) -> FrozenSet[Operation]:
+    def allowed_operations(self) -> frozenset[Operation]:
         if self.installed is None:
             return frozenset({Operation.INSTALL})
 

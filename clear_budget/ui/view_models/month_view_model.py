@@ -25,8 +25,10 @@ class MonthViewModel(QObject):
         super().__init__()
         self.budget_service = budget_service
         self.current_month = current_month or YearMonth.today()
-        self.base_month = YearMonth(datetime.now().year, datetime.now().month)
-        self.today = datetime.now().date()
+        # One clock read, so base_month and today cannot straddle midnight.
+        now = datetime.now()  # noqa: DTZ005 (app runs on naive local time)
+        self.base_month = YearMonth(now.year, now.month)
+        self.today = now.date()
         self.month_summary: MonthSummary | None = None
         self.refresh_month_summary()
 

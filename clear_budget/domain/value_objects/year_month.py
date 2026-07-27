@@ -39,7 +39,7 @@ class YearMonth:
     @classmethod
     def today(cls) -> "YearMonth":
         """Get current year-month."""
-        now = datetime.now()
+        now = datetime.now()  # noqa: DTZ005 (app runs on naive local time)
         return cls(year=now.year, month=now.month)
 
     def __str__(self) -> str:

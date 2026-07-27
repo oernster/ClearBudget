@@ -10,7 +10,6 @@ import datetime as _dt
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,12 +19,12 @@ class UninstallEntry:
     install_location: Path
     uninstall_string: str
 
-    display_icon: Optional[str] = None
-    publisher: Optional[str] = None
+    display_icon: str | None = None
+    publisher: str | None = None
 
-    shortcut_desktop: Optional[bool] = None
-    shortcut_start_menu: Optional[bool] = None
-    installer_path: Optional[str] = None
+    shortcut_desktop: bool | None = None
+    shortcut_start_menu: bool | None = None
+    installer_path: str | None = None
 
 
 def _require_windows() -> None:
@@ -33,7 +32,7 @@ def _require_windows() -> None:
         raise RuntimeError("Registry operations are supported on Windows only")
 
 
-def read_uninstall_entry(uninstall_key: str) -> Optional[UninstallEntry]:
+def read_uninstall_entry(uninstall_key: str) -> UninstallEntry | None:
     _require_windows()
 
     import winreg  # noqa: WPS433 (stdlib, windows-only)
@@ -41,7 +40,7 @@ def read_uninstall_entry(uninstall_key: str) -> Optional[UninstallEntry]:
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, uninstall_key) as k:
 
-            def _q(name: str) -> Optional[str]:
+            def _q(name: str) -> str | None:
                 try:
                     return str(winreg.QueryValueEx(k, name)[0])
                 except OSError:
@@ -83,11 +82,11 @@ def write_uninstall_entry(
     display_version: str,
     install_location: Path,
     uninstall_string: str,
-    display_icon: Optional[str] = None,
-    publisher: Optional[str] = None,
-    shortcut_desktop: Optional[bool] = None,
-    shortcut_start_menu: Optional[bool] = None,
-    installer_path: Optional[str] = None,
+    display_icon: str | None = None,
+    publisher: str | None = None,
+    shortcut_desktop: bool | None = None,
+    shortcut_start_menu: bool | None = None,
+    installer_path: str | None = None,
 ) -> None:
     _require_windows()
 
@@ -104,7 +103,7 @@ def write_uninstall_entry(
         if publisher:
             winreg.SetValueEx(k, "Publisher", 0, winreg.REG_SZ, publisher)
 
-        today = _dt.date.today().strftime("%Y%m%d")
+        today = _dt.date.today().strftime("%Y%m%d")  # noqa: DTZ011 (naive local dates)
         winreg.SetValueEx(k, "InstallDate", 0, winreg.REG_SZ, today)
 
         # Avoid Windows showing Modify/Repair buttons; our installer handles this.
@@ -142,7 +141,7 @@ def delete_uninstall_entry(uninstall_key: str) -> None:
         raise
 
 
-def try_read_install_location(uninstall_key: str) -> Optional[Path]:
+def try_read_install_location(uninstall_key: str) -> Path | None:
     """Best-effort read of InstallLocation even if other fields are missing."""
 
     _require_windows()
@@ -161,7 +160,7 @@ def try_read_install_location(uninstall_key: str) -> Optional[Path]:
         return None
 
 
-def _parse_bool(v: Optional[str]) -> Optional[bool]:
+def _parse_bool(v: str | None) -> bool | None:
     if v is None:
         return None
     s = str(v).strip().lower()

@@ -8,7 +8,6 @@ Uses AST walking to verify that:
 """
 
 import ast
-import sys
 from pathlib import Path
 
 

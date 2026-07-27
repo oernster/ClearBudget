@@ -8,13 +8,13 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from clear_budget.version import APP_AUTHOR, APP_NAME, __version__
 from installer.ops.errors import AppRunningError, InstallerOperationError
 from installer.ops.legacy import cleanup_orphaned_legacy_install
 from installer.ops.payload import iter_manifest_entries, load_manifest, payload_zip_path
 from installer.ops.running_app import is_app_running
 from installer.ops.shortcuts import create_shortcut, get_shortcut_paths
 from installer.state.registry import read_uninstall_entry, write_uninstall_entry
-from clear_budget.version import APP_AUTHOR, APP_NAME, __version__
 
 
 def _sha256_file(path: Path) -> str:
@@ -37,7 +37,7 @@ def repair(
     *,
     progress=None,
     cancel_event=None,
-) -> None:  # noqa: ANN001
+) -> None:
     if os.name != "nt":
         raise InstallerOperationError("Repair is Windows-only")
 
@@ -81,12 +81,10 @@ def repair(
     sp = get_shortcut_paths(identity)
     if progress:
         progress("Restoring shortcuts...")
-    if opts.restore_desktop_shortcut:
-        if not sp.desktop_lnk.exists():
-            create_shortcut(exe, sp.desktop_lnk, working_dir=install_dir)
-    if opts.restore_start_menu_shortcut:
-        if not sp.start_menu_lnk.exists():
-            create_shortcut(exe, sp.start_menu_lnk, working_dir=install_dir)
+    if opts.restore_desktop_shortcut and not sp.desktop_lnk.exists():
+        create_shortcut(exe, sp.desktop_lnk, working_dir=install_dir)
+    if opts.restore_start_menu_shortcut and not sp.start_menu_lnk.exists():
+        create_shortcut(exe, sp.start_menu_lnk, working_dir=install_dir)
 
     # Restore uninstall metadata.
     uninstall_cmd = entry.uninstall_string

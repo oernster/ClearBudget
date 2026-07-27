@@ -8,7 +8,6 @@ as a bcrypt hash.  It can be used to reset a forgotten password.
 import secrets
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 import bcrypt
 
@@ -76,7 +75,7 @@ class UserStore:
             for r in rows
         ]
 
-    def find_user(self, username: str) -> Optional[User]:
+    def find_user(self, username: str) -> User | None:
         row = self._conn.execute(
             "SELECT id, username, is_admin, is_read_only FROM users"
             " WHERE username = ? COLLATE NOCASE",
@@ -95,7 +94,7 @@ class UserStore:
     # Authentication
     # ------------------------------------------------------------------
 
-    def verify_password(self, username: str, password: str) -> Optional[User]:
+    def verify_password(self, username: str, password: str) -> User | None:
         """Return User if credentials are valid, else None."""
         row = self._conn.execute(
             "SELECT id, username, password_hash, is_admin, is_read_only FROM users"

@@ -1,6 +1,7 @@
 """Create multi-resolution ICO file from PNG images."""
 
 from pathlib import Path
+
 from PIL import Image
 
 PROJECT_ROOT = Path(__file__).parent
@@ -28,7 +29,8 @@ for png_name in png_files:
             else:
                 images.append(img.convert("RGBA"))
             print(f"Loaded: {png_name} ({img.width}x{img.height})")
-        except Exception as e:
+        except OSError as e:
+            # PIL raises UnidentifiedImageError (an OSError) for unreadable files.
             print(f"Failed to load {png_name}: {e}")
 
 if images:

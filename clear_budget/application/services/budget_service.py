@@ -5,7 +5,6 @@ from datetime import date
 
 from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.application.dto.solvency_report import SolvencyReport
-from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.application.services._balance_application import (
     BalanceApplicationMixin,
 )
@@ -15,13 +14,16 @@ from clear_budget.application.services._income_operations import (
     IncomeOperationsMixin,
 )
 from clear_budget.application.services._month_graph_series import GraphSeriesMixin
+from clear_budget.application.services._month_mappers import (
+    bills_to_month_bills as _bills_to_month_bills,
+)
+from clear_budget.application.services._month_mappers import (
+    income_to_month_income as _income_to_month_income,
+)
 from clear_budget.application.services._overdraft_operations import (
     OverdraftOperationsMixin,
 )
-from clear_budget.application.services._month_mappers import (
-    bills_to_month_bills as _bills_to_month_bills,
-    income_to_month_income as _income_to_month_income,
-)
+from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.interfaces.bill_repository import BillRepository
 from clear_budget.domain.interfaces.income_source_repository import (
     IncomeSourceRepository,
@@ -99,7 +101,7 @@ class BudgetService(
             return self.calculate_solvency(year_month=year_month)
         from datetime import date as _date
 
-        today = _date.today()
+        today = _date.today()  # noqa: DTZ011 (naive local dates)
         today_ym = YearMonth(today.year, today.month)
         month_bills, month_income = self._apply_current_month_filters(
             month_summary.bills,
@@ -113,7 +115,7 @@ class BudgetService(
     def calculate_solvency(self, *, year_month: YearMonth) -> SolvencyReport:
         from datetime import date as _date
 
-        today = _date.today()
+        today = _date.today()  # noqa: DTZ011 (naive local dates)
         today_ym = YearMonth(today.year, today.month)
         summary = self.get_month_summary(year_month=year_month)
         month_bills, month_income = self._apply_current_month_filters(
@@ -130,7 +132,7 @@ class BudgetService(
         (matching the filtering used for the solvency balance projection).
         For other months, returns all bills/income unchanged.
         """
-        today = date.today()
+        today = date.today()  # noqa: DTZ011 (naive local dates)
         today_ym = YearMonth(today.year, today.month)
         return self._apply_current_month_filters(
             summary.bills, summary.income_sources, year_month, today_ym, today.day
@@ -212,11 +214,12 @@ class BudgetService(
     ) -> int:
         """Projected bank balance pence at end of year_month. Signed."""
         from datetime import date as _date
+
         from clear_budget.application.services._balance_projection import (
             projected_month_end_balance_pence,
         )
 
-        today = _date.today()
+        today = _date.today()  # noqa: DTZ011 (naive local dates)
         return projected_month_end_balance_pence(
             get_month_summary=self.get_month_summary,
             get_bank_balance_pence=lambda: self.get_bank_balance().pence,
@@ -262,11 +265,12 @@ class BudgetService(
 
     def _projected_starting_balance_pence(self, year_month: YearMonth) -> int:
         from datetime import date as _date
+
         from clear_budget.application.services._balance_projection import (
             projected_starting_balance_pence,
         )
 
-        today = _date.today()
+        today = _date.today()  # noqa: DTZ011 (naive local dates)
         return projected_starting_balance_pence(
             get_month_summary=self.get_month_summary,
             get_bank_balance_pence=lambda: self.get_bank_balance().pence,
@@ -343,5 +347,5 @@ class BudgetService(
             mark_income_extra_received=lambda extra_id: (
                 self.income_repo.mark_extra_received(extra_id=extra_id)
             ),
-            today=today or date.today(),
+            today=today or date.today(),  # noqa: DTZ011 (naive local dates)
         )

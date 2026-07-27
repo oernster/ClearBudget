@@ -2,73 +2,120 @@
 
 For packaging (e.g., PyInstaller onefile), we want a robust way to locate bundled
 assets without hard-coding absolute paths.
+
+Every lookup is best-effort: a root that cannot be resolved on this platform is
+skipped rather than raised, because a missing icon must never stop the app from
+starting.  The guards below are narrow on purpose.  Only filesystem resolution
+(`Path.resolve`, `Path.cwd`, `Path.exists`) can realistically fail here, and only
+with `OSError`, plus `IndexError` where a parent directory is indexed.
 """
 
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterable
 from pathlib import Path
+
+# Both capitalisation variants are searched: the repo ships `ClearBudget.ico`,
+# while some build steps stage it lower-cased.
+_ICO_NAMES = ("ClearBudget.ico", "clearbudget.ico")
+
+# Preference order for a Qt window icon: native ICO first, then PNGs largest
+# to smallest, so Qt gets the best available source when the ICO plugin is
+# missing from a frozen build.
+_QT_ICON_NAMES = (
+    "clearbudget.ico",
+    "clearbudget_256.png",
+    "clearbudget_128.png",
+    "clearbudget_64.png",
+    "clearbudget_48.png",
+    "clearbudget_32.png",
+    "clearbudget_16.png",
+)
+
+_SPLASH_NAME = "clearbudget_256.png"
+
+# In onedir PyInstaller builds, user-added data files can end up under
+# `_internal/` depending on how the `.spec` is generated.
+_INTERNAL_DIR = "_internal"
+
+
+def _meipass_root() -> Path | None:
+    """Return the PyInstaller onefile extraction dir, or None outside a bundle."""
+    meipass = getattr(sys, "_MEIPASS", None)
+    return Path(meipass) if meipass else None
+
+
+def _exe_dir() -> Path | None:
+    """Return the directory holding the running executable, or None."""
+    try:
+        return Path(sys.executable).resolve().parent
+    except OSError:
+        return None
+
+
+def _repo_root() -> Path | None:
+    """Return the repo root for a source checkout, or None.
+
+    Layout: clear_budget/shared/resources.py, so the root is parents[2].
+    """
+    try:
+        return Path(__file__).resolve().parents[2]
+    except (OSError, IndexError):
+        return None
+
+
+def _cwd() -> Path | None:
+    """Return the current working directory, or None if it is unavailable."""
+    try:
+        return Path.cwd()
+    except OSError:
+        return None
+
+
+def _is_file(path: Path) -> bool:
+    """Return True if path is an existing regular file, False if unreadable."""
+    try:
+        return path.exists() and path.is_file()
+    except OSError:
+        return False
+
+
+def _first_existing(candidates: Iterable[Path]) -> Path | None:
+    """Return the first candidate that is an existing file, else None."""
+    for candidate in candidates:
+        if _is_file(candidate):
+            return candidate
+    return None
+
+
+def _dedup(paths: Iterable[Path]) -> list[Path]:
+    """Drop repeated paths while preserving first-seen order."""
+    seen: set[str] = set()
+    out: list[Path] = []
+    for path in paths:
+        key = str(path)
+        if key not in seen:
+            seen.add(key)
+            out.append(path)
+    return out
 
 
 def find_app_icon_path(*, project_root: Path | None = None) -> Path | None:
     """Locate the ClearBudget `.ico` file for runtime window/taskbar icons."""
-
-    candidates: list[Path] = []
-
-    # PyInstaller onefile extracts bundled data files to sys._MEIPASS.
-    # If we ship icon as an --add-data, it will be available here.
-    try:
-        meipass = getattr(sys, "_MEIPASS", None)
-        if meipass:
-            # Try both capitalization variants
-            candidates.append(Path(meipass) / "ClearBudget.ico")
-            candidates.append(Path(meipass) / "clearbudget.ico")
-    except Exception:
-        pass
-
-    if project_root is not None:
-        # Try both capitalization variants
-        candidates.append(project_root / "ClearBudget.ico")
-        candidates.append(project_root / "clearbudget.ico")
-
-    # When packaged, placing icon next to the exe is a common pattern.
-    try:
-        exe_dir = Path(sys.executable).resolve().parent
-        candidates.append(exe_dir / "ClearBudget.ico")
-        candidates.append(exe_dir / "clearbudget.ico")
-    except Exception:
-        pass
-
-    # In onedir PyInstaller builds, user-added data files can end up under
-    # `_internal/` depending on how the `.spec` is generated.
-    try:
-        internal_dir = Path(sys.executable).resolve().parent / "_internal"
-        candidates.append(internal_dir / "ClearBudget.ico")
-        candidates.append(internal_dir / "clearbudget.ico")
-    except Exception:
-        pass
-
-    # Repo layout fallback: clear_budget/shared/resources.py -> repo root is parents[2].
-    try:
-        root = Path(__file__).resolve().parents[2]
-        candidates.append(root / "ClearBudget.ico")
-        candidates.append(root / "clearbudget.ico")
-    except Exception:
-        pass
-
-    # As a final fallback, look in CWD.
-    cwd = Path.cwd()
-    candidates.append(cwd / "ClearBudget.ico")
-    candidates.append(cwd / "clearbudget.ico")
-
-    for p in candidates:
-        try:
-            if p.exists() and p.is_file():
-                return p
-        except Exception:
-            continue
-
-    return None
+    exe_dir = _exe_dir()
+    roots = [
+        _meipass_root(),
+        project_root,
+        exe_dir,
+        exe_dir / _INTERNAL_DIR if exe_dir is not None else None,
+        _repo_root(),
+        _cwd(),
+    ]
+    candidates = [
+        root / name for root in roots if root is not None for name in _ICO_NAMES
+    ]
+    return _first_existing(candidates)
 
 
 def find_qt_window_icon_path(*, project_root: Path | None = None) -> Path | None:
@@ -77,65 +124,19 @@ def find_qt_window_icon_path(*, project_root: Path | None = None) -> Path | None
     Prefer `.ico` (native Windows icon), but fall back to a bundled `.png` if
     the Qt ICO plugin is unavailable in the frozen build.
     """
-
-    def _candidate_roots() -> list[Path]:
-        roots: list[Path] = []
-
-        if project_root is not None:
-            roots.append(project_root)
-
-        # PyInstaller onefile extracts bundled data files to sys._MEIPASS.
-        try:
-            meipass = getattr(sys, "_MEIPASS", None)
-            if meipass:
-                roots.append(Path(meipass))
-        except Exception:
-            pass
-
-        # Next to exe.
-        try:
-            roots.append(Path(sys.executable).resolve().parent)
-        except Exception:
-            pass
-
-        # In onedir PyInstaller builds, user-added data files can end up under
-        # `_internal/` depending on how the `.spec` is generated.
-        try:
-            exe_dir = Path(sys.executable).resolve().parent
-            roots.append(exe_dir / "_internal")
-        except Exception:
-            pass
-
-        # Repo layout: clear_budget/shared/resources.py -> repo root is parents[2].
-        try:
-            roots.append(Path(__file__).resolve().parents[2])
-        except Exception:
-            pass
-
-        # As a final fallback, look in CWD.
-        roots.append(Path.cwd())
-        return roots
-
-    filenames = [
-        "clearbudget.ico",
-        "clearbudget_256.png",
-        "clearbudget_128.png",
-        "clearbudget_64.png",
-        "clearbudget_48.png",
-        "clearbudget_32.png",
-        "clearbudget_16.png",
+    exe_dir = _exe_dir()
+    roots = [
+        project_root,
+        _meipass_root(),
+        exe_dir,
+        exe_dir / _INTERNAL_DIR if exe_dir is not None else None,
+        _repo_root(),
+        _cwd(),
     ]
-
-    for root in _candidate_roots():
-        for name in filenames:
-            p = root / name
-            try:
-                if p.exists() and p.is_file():
-                    return p
-            except Exception:
-                continue
-
-    return None
+    candidates = [
+        root / name for root in roots if root is not None for name in _QT_ICON_NAMES
+    ]
+    return _first_existing(candidates)
 
 
 def find_splash_image_path(*, project_root: Path | None = None) -> Path | None:
@@ -144,49 +145,17 @@ def find_splash_image_path(*, project_root: Path | None = None) -> Path | None:
     We prefer a PNG because it is reliably loadable by Qt even when the ICO
     plugin is missing in frozen builds.
     """
-
-    candidates: list[Path] = []
-
-    # PyInstaller onefile extracts bundled data files to sys._MEIPASS.
-    try:
-        meipass = getattr(sys, "_MEIPASS", None)
-        if meipass:
-            candidates.append(Path(meipass) / "clearbudget_256.png")
-    except Exception:
-        pass
-
-    if project_root is not None:
-        candidates.append(project_root / "clearbudget_256.png")
-
-    # Next to exe.
-    try:
-        candidates.append(Path(sys.executable).resolve().parent / "clearbudget_256.png")
-    except Exception:
-        pass
-
-    # In onedir PyInstaller builds, data files may end up under `_internal/`.
-    try:
-        candidates.append(
-            Path(sys.executable).resolve().parent / "_internal" / "clearbudget_256.png"
-        )
-    except Exception:
-        pass
-
-    # Repo layout fallback.
-    try:
-        candidates.append(Path(__file__).resolve().parents[2] / "clearbudget_256.png")
-    except Exception:
-        pass
-
-    candidates.append(Path.cwd() / "clearbudget_256.png")
-
-    for p in candidates:
-        try:
-            if p.exists() and p.is_file():
-                return p
-        except Exception:
-            continue
-    return None
+    exe_dir = _exe_dir()
+    roots = [
+        _meipass_root(),
+        project_root,
+        exe_dir,
+        exe_dir / _INTERNAL_DIR if exe_dir is not None else None,
+        _repo_root(),
+        _cwd(),
+    ]
+    candidates = [root / _SPLASH_NAME for root in roots if root is not None]
+    return _first_existing(candidates)
 
 
 def iter_qt_window_icon_candidates(*, project_root: Path | None = None) -> list[Path]:
@@ -197,89 +166,23 @@ def iter_qt_window_icon_candidates(*, project_root: Path | None = None) -> list[
     The caller should still verify the icon is actually loadable by Qt
     (e.g. `.ico` may exist but fail to load if the Qt ICO plugin is missing).
     """
+    roots = _dedup(
+        root
+        for root in (
+            project_root,
+            _meipass_root(),
+            _exe_dir(),
+            _repo_root(),
+            _cwd(),
+        )
+        if root is not None
+    )
+    # `_internal/` variants are searched only after every plain root.
+    internal_roots = [root / _INTERNAL_DIR for root in roots]
 
-    def _roots() -> list[Path]:
-        roots: list[Path] = []
-
-        if project_root is not None:
-            roots.append(project_root)
-
-        # PyInstaller onefile extracts bundled data files to sys._MEIPASS.
-        try:
-            meipass = getattr(sys, "_MEIPASS", None)
-            if meipass:
-                roots.append(Path(meipass))
-        except Exception:
-            pass
-
-        # Next to exe.
-        try:
-            roots.append(Path(sys.executable).resolve().parent)
-        except Exception:
-            pass
-
-        # Repo layout fallback.
-        try:
-            roots.append(Path(__file__).resolve().parents[2])
-        except Exception:
-            pass
-
-        # CWD.
-        try:
-            roots.append(Path.cwd())
-        except Exception:
-            pass
-
-        # De-dup while preserving order.
-        seen: set[str] = set()
-        out: list[Path] = []
-        for r in roots:
-            key = str(r)
-            if key in seen:
-                continue
-            seen.add(key)
-            out.append(r)
-        return out
-
-    filenames = [
-        # Prefer native ICO, then fall back to PNGs.
-        "clearbudget.ico",
-        "clearbudget_256.png",
-        "clearbudget_128.png",
-        "clearbudget_64.png",
-        "clearbudget_48.png",
-        "clearbudget_32.png",
-        "clearbudget_16.png",
-    ]
-
-    candidates: list[Path] = []
-    roots = _roots()
-
-    # In onedir PyInstaller builds, user-added data files can end up under
-    # `_internal/` depending on how the `.spec` is generated.
-    internal_roots: list[Path] = []
-    for r in list(roots):
-        try:
-            internal_roots.append(r / "_internal")
-        except Exception:
-            continue
-
-    for root in roots + internal_roots:
-        for name in filenames:
-            p = root / name
-            try:
-                if p.exists() and p.is_file():
-                    candidates.append(p)
-            except Exception:
-                continue
-
-    # De-dup while preserving order.
-    seen2: set[str] = set()
-    out2: list[Path] = []
-    for p in candidates:
-        key = str(p)
-        if key in seen2:
-            continue
-        seen2.add(key)
-        out2.append(p)
-    return out2
+    return _dedup(
+        path
+        for root in roots + internal_roots
+        for name in _QT_ICON_NAMES
+        if _is_file(path := root / name)
+    )

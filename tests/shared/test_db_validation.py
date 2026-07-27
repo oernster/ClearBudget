@@ -24,7 +24,6 @@ def test_missing_tables_reports_error(tmp_path) -> None:
 
 
 def test_missing_columns_reports_error(tmp_path) -> None:
-    import sqlite3
 
     path = tmp_path / "valid.db"
     db = Database(path)

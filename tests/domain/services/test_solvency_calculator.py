@@ -1,7 +1,5 @@
 """Tests for SolvencyCalculatorService."""
 
-import pytest
-
 from clear_budget.domain.entities.month_bill import MonthBill
 from clear_budget.domain.entities.month_income import MonthIncome
 from clear_budget.domain.services.solvency_calculator import SolvencyCalculatorService

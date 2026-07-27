@@ -46,7 +46,6 @@ class TestInterestRatePersistence:
 
     def test_apr_null_when_zero(self, db) -> None:
         repo = _repo(db)
-        card = _card(apr=0.0)
         # Dialog returns None for 0.0; test None persists
         c = CreditCard(
             id=0,

@@ -1,11 +1,8 @@
 """Tests for CardMonthlyCalculator domain service."""
 
-import pytest
-
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.services.card_monthly_calculator import (
-    CardMonthlyState,
     calculate_card_monthly_state,
 )
 from clear_budget.domain.value_objects.amount import Amount

@@ -162,7 +162,7 @@ def set_volume_icon(icns_path: Path, final_dmg: str, rw_dmg_name: str) -> None:
         try:
             shutil.copy(icns_path, Path(mount_point) / ".VolumeIcon.icns")
             set_file = subprocess.run(
-                ["xcrun", "-f", "SetFile"], capture_output=True, text=True
+                ["xcrun", "-f", "SetFile"], capture_output=True, text=True, check=False
             ).stdout.strip()
             if set_file:
                 subprocess.run([set_file, "-a", "C", mount_point], check=True)

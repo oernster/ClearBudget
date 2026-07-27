@@ -1,5 +1,7 @@
 """Tests for UserStore: authentication and user management."""
 
+import sqlite3
+
 import pytest
 
 from clear_budget.auth.user_store import UserStore
@@ -40,12 +42,12 @@ class TestCreateUser:
 
     def test_duplicate_username_raises(self, store: UserStore) -> None:
         store.create_user("alice", "pass1234")
-        with pytest.raises(Exception):
+        with pytest.raises(sqlite3.IntegrityError):
             store.create_user("alice", "other1234")
 
     def test_username_case_insensitive_duplicate(self, store: UserStore) -> None:
         store.create_user("Alice", "pass1234")
-        with pytest.raises(Exception):
+        with pytest.raises(sqlite3.IntegrityError):
             store.create_user("ALICE", "other1234")
 
     def test_recovery_codes_are_unique_per_user(self, store: UserStore) -> None:

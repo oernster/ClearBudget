@@ -260,7 +260,7 @@ class TestAdjustBankBalance:
         _seed_balance(conn, pence=10000, day=1, iso="2026-07-01")
         budget_service.adjust_bank_balance(delta_pence=-2500)
         assert _setting(conn, "bank_balance") == "7500"
-        stamp = date.today()  # noqa: DTZ011 (matches the app's local-date stamp)
+        stamp = date.today()
         assert _setting(conn, "bank_balance_date") == stamp.isoformat()
 
     def test_from_unset_balance(self, budget_service):

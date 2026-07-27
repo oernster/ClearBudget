@@ -8,13 +8,12 @@ from pathlib import Path
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QMainWindow, QMessageBox
 
+from clear_budget.shared.resources import find_qt_window_icon_path
+from clear_budget.version import APP_NAME
 from installer.constants import InstallerIdentity
-from installer.state.registry import read_uninstall_entry
 from installer.state.model import Operation
-from installer.ui.themes import DARK, LIGHT, Theme
-from installer.ui.worker import OperationController, OperationResult
-from installer.ui.icons import build_installer_window_icon
-from installer.ui._main_window_build import build_installer_main_window_ui
+from installer.state.registry import read_uninstall_entry
+from installer.ui._header_fit import HeaderFitController
 from installer.ui._main_window_actions import (
     browse_install_dir,
     connect_signals,
@@ -23,27 +22,28 @@ from installer.ui._main_window_actions import (
     on_progress,
     refresh_state,
     request_operation,
-    set_buttons_for_allowed_ops,
-    set_ui_busy,
     show_installer_licence,
 )
-from installer.ui._main_window_uninstall import confirm_and_run_uninstall
+from installer.ui._main_window_build import build_installer_main_window_ui
+from installer.ui._main_window_buttons import (
+    set_buttons_for_allowed_ops,
+    set_ui_busy,
+)
 from installer.ui._main_window_types import UiSelections
-from installer.ui._header_fit import HeaderFitController
+from installer.ui._main_window_uninstall import confirm_and_run_uninstall
+from installer.ui.icons import build_installer_window_icon
+from installer.ui.themes import DARK, LIGHT, Theme
+from installer.ui.worker import OperationController, OperationResult
 
-from clear_budget.shared.resources import find_qt_window_icon_path
-from clear_budget.version import APP_NAME
-
-# Backwards-compat for tests that monkeypatch
-# `installer.ui.main_window.read_uninstall_entry`.
+# The imported `read_uninstall_entry` is re-exported at module level so tests can
+# monkeypatch `installer.ui.main_window.read_uninstall_entry`.
 # Actual runtime uses `self._read_uninstall_entry`.
-read_uninstall_entry = read_uninstall_entry
 
 
 class InstallerMainWindow(QMainWindow):
     operationRequested = Signal(str, object)
 
-    def __init__(self, cli_args) -> None:  # noqa: ANN001 (Qt entrypoint)
+    def __init__(self, cli_args) -> None:
         super().__init__()
 
         if os.name != "nt":
@@ -118,15 +118,15 @@ class InstallerMainWindow(QMainWindow):
         self._theme = DARK if self._theme is LIGHT else LIGHT
         self._apply_theme()
 
-    def showEvent(self, event) -> None:  # noqa: ANN001 (Qt override)
+    def showEvent(self, event) -> None:
         super().showEvent(event)
         self._header_fit.schedule()
 
-    def resizeEvent(self, event) -> None:  # noqa: ANN001 (Qt override)
+    def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._header_fit.schedule()
 
-    def event(self, event) -> bool:  # noqa: ANN001 (Qt override)
+    def event(self, event) -> bool:
         header_fit = getattr(self, "_header_fit", None)
         if header_fit is not None and header_fit.should_watch_event_type(event.type()):
             header_fit.schedule()
@@ -165,10 +165,10 @@ class InstallerMainWindow(QMainWindow):
     def _request_operation(self, op: Operation) -> None:
         request_operation(self, op)
 
-    def _on_progress(self, payload) -> None:  # noqa: ANN001
+    def _on_progress(self, payload) -> None:
         on_progress(self, payload)
 
-    def closeEvent(self, event) -> None:  # noqa: ANN001 (Qt override)
+    def closeEvent(self, event) -> None:
         if self._op_controller.is_running:
             box = QMessageBox(self)
             box.setIcon(QMessageBox.Warning)

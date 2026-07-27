@@ -18,7 +18,8 @@ def get_card_monthly_states(
     cards = payment_method_repo.get_all_credit_cards(include_inactive=False)
     summary = get_month_summary(year_month=year_month)
     all_bills = list(summary.all_bills)
-    today_ym = YearMonth(datetime.now().year, datetime.now().month)
+    now = datetime.now()  # noqa: DTZ005 (app runs on naive local time)
+    today_ym = YearMonth(now.year, now.month)
     today_bills = list(get_month_summary(year_month=today_ym).all_bills)
     results = []
     for card in cards:
@@ -56,7 +57,8 @@ def get_card_projection_months(
     Balances chain forward correctly.
     """
     cards = payment_method_repo.get_all_credit_cards(include_inactive=False)
-    today_ym = YearMonth(datetime.now().year, datetime.now().month)
+    now = datetime.now()  # noqa: DTZ005 (app runs on naive local time)
+    today_ym = YearMonth(now.year, now.month)
     today_bills = list(get_month_summary(year_month=today_ym).all_bills)
     balances = {
         card.id: anchored_month_opening_pence(

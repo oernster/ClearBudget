@@ -31,21 +31,21 @@ class SafeLabel(QLabel):
         self._draw_dx_px = int(draw_dx_px)
         self._draw_dy_px = int(draw_dy_px)
 
-    def sizeHint(self) -> QSize:  # noqa: N802 (Qt override)
+    def sizeHint(self) -> QSize:
         base = super().sizeHint()
         return QSize(
             base.width() + self._extra_width_px,
             base.height() + self._extra_height_px,
         )
 
-    def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt override)
+    def minimumSizeHint(self) -> QSize:
         base = super().minimumSizeHint()
         return QSize(
             base.width() + self._extra_width_px,
             base.height() + self._extra_height_px,
         )
 
-    def paintEvent(self, event) -> None:  # noqa: ANN001,N802 (Qt override)
+    def paintEvent(self, event) -> None:
         # Default QLabel painting can clip large/bold glyphs by 1px on some
         # Windows DPI/text-scaling configurations. When a draw offset is
         # configured, we paint the text slightly shifted to guarantee all pixels

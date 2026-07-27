@@ -2,7 +2,6 @@
 
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.amount import Amount
-from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.income_source_repository import (
     SQLiteIncomeSourceRepository,
 )
@@ -120,7 +119,7 @@ class TestSQLiteIncomeSourceList:
         """Test that inactive sources are excluded."""
         repo = SQLiteIncomeSourceRepository(db.conn)
 
-        active = repo.add(
+        repo.add(
             income=IncomeSource(
                 id=0,
                 name="Active",
@@ -129,7 +128,7 @@ class TestSQLiteIncomeSourceList:
                 day_of_month=1,
             )
         )
-        inactive = repo.add(
+        repo.add(
             income=IncomeSource(
                 id=0,
                 name="Inactive",

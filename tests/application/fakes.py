@@ -5,13 +5,6 @@ from dataclasses import dataclass, field, replace
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.entities.income_source import IncomeSource
-from clear_budget.domain.interfaces.bill_repository import BillRepository
-from clear_budget.domain.interfaces.income_source_repository import (
-    IncomeSourceRepository,
-)
-from clear_budget.domain.interfaces.payment_method_repository import (
-    PaymentMethodRepository,
-)
 from clear_budget.domain.value_objects.year_month import YearMonth
 
 

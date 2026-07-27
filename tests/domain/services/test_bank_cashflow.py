@@ -1,7 +1,5 @@
 """Tests for BankCashflowService."""
 
-import pytest
-
 from clear_budget.domain.services.bank_cashflow import (
     BankCashflowService,
     DailyCashflowEvent,

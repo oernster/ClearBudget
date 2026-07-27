@@ -1,5 +1,7 @@
 """Tests for shared.currency module."""
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 import clear_budget.shared.currency as currency_module
@@ -29,7 +31,7 @@ class TestCurrencyDataclass:
 
     def test_currency_is_frozen(self) -> None:
         c = Currency(code="GBP", symbol="£", name="British Pound")
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             c.code = "USD"  # type: ignore[misc]
 
 

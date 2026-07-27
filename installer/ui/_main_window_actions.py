@@ -6,15 +6,15 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
+from clear_budget.version import APP_NAME, __version__
 from installer.ops.errors import InstallerOperationError
 from installer.ops.install_ops import InstallOptions, install_new, upgrade_or_reinstall
 from installer.ops.repair_ops import RepairOptions, repair
 from installer.ops.uninstall_ops import UninstallOptions, uninstall_with_feedback
 from installer.state.model import InstalledInfo, InstallerState, Operation
-from installer.ui.licence_dialog import InstallerLicenceDialog
-from clear_budget.version import APP_NAME, __version__
-
+from installer.ui._main_window_buttons import set_buttons_for_allowed_ops
 from installer.ui._main_window_types import UiSelections
+from installer.ui.licence_dialog import InstallerLicenceDialog
 
 if TYPE_CHECKING:  # pragma: no cover
     from installer.ui.main_window import InstallerMainWindow
@@ -132,62 +132,6 @@ def refresh_state(window: InstallerMainWindow) -> None:
         window._install_dir_edit.setText(str(entry.install_location))
 
 
-def set_buttons_for_allowed_ops(
-    window: InstallerMainWindow,
-    allowed: set[Operation] | frozenset[Operation],
-) -> None:
-    # Primary buttons are shown in the center row. We use up to two.
-    # Uninstall is shown separately in red.
-    window._btn_uninstall.setVisible(Operation.UNINSTALL in allowed)
-
-    primary_ops: list[Operation] = [
-        op
-        for op in [
-            Operation.INSTALL,
-            Operation.UPGRADE,
-            Operation.REINSTALL,
-            Operation.REPAIR,
-        ]
-        if op in allowed
-    ]
-    left = primary_ops[0] if primary_ops else None
-    right = primary_ops[1] if len(primary_ops) > 1 else None
-
-    def _label(op: Operation) -> str:
-        return {
-            Operation.INSTALL: "Install",
-            Operation.UPGRADE: "Upgrade",
-            Operation.REINSTALL: "Reinstall",
-            Operation.REPAIR: "Repair",
-        }[op]
-
-    if left is None:
-        window._btn_primary_left.setVisible(False)
-    else:
-        window._btn_primary_left.setVisible(True)
-        window._btn_primary_left.setText(_label(left))
-        try:
-            window._btn_primary_left.clicked.disconnect()
-        except Exception:
-            pass
-        window._btn_primary_left.clicked.connect(
-            lambda: window._request_operation(left)
-        )
-
-    if right is None:
-        window._btn_primary_right.setVisible(False)
-    else:
-        window._btn_primary_right.setVisible(True)
-        window._btn_primary_right.setText(_label(right))
-        try:
-            window._btn_primary_right.clicked.disconnect()
-        except Exception:
-            pass
-        window._btn_primary_right.clicked.connect(
-            lambda: window._request_operation(right)
-        )
-
-
 def validate_install_dir(path: Path) -> bool:
     # Best-effort check that the directory is user-writeable.
     try:
@@ -211,15 +155,19 @@ def current_selections(window: InstallerMainWindow) -> UiSelections:
 
 def request_operation(window: InstallerMainWindow, op: Operation) -> None:
     selections = current_selections(window)
-    if op in {Operation.INSTALL, Operation.UPGRADE, Operation.REINSTALL}:
-        if not validate_install_dir(selections.install_dir):
-            QMessageBox.critical(
-                window,
-                "Invalid installation directory",
-                "The selected installation directory is not writable without "
-                "administrator privileges.",
-            )
-            return
+    writes_install_dir = op in {
+        Operation.INSTALL,
+        Operation.UPGRADE,
+        Operation.REINSTALL,
+    }
+    if writes_install_dir and not validate_install_dir(selections.install_dir):
+        QMessageBox.critical(
+            window,
+            "Invalid installation directory",
+            "The selected installation directory is not writable without "
+            "administrator privileges.",
+        )
+        return
 
     if window._op_controller.is_running:
         return
@@ -245,7 +193,7 @@ def request_operation(window: InstallerMainWindow, op: Operation) -> None:
     )
 
 
-def on_progress(window: InstallerMainWindow, payload) -> None:  # noqa: ANN001
+def on_progress(window: InstallerMainWindow, payload) -> None:
     # payload can be:
     # - str message
     # - {"pct": int, "message": str}
@@ -260,21 +208,6 @@ def on_progress(window: InstallerMainWindow, payload) -> None:  # noqa: ANN001
 
     if isinstance(payload, str) and payload:
         window._progress.setText(payload)
-
-
-def set_ui_busy(window: InstallerMainWindow, busy: bool) -> None:
-    window._progress_bar.setVisible(busy)
-    for w in [
-        window._btn_primary_left,
-        window._btn_primary_right,
-        window._btn_uninstall,
-        window._licence_btn,
-        window._theme_toggle_btn,
-        window._install_dir_edit,
-        window._desktop_cb,
-        window._startmenu_cb,
-    ]:
-        w.setEnabled(not busy)
 
 
 def on_app_running(window: InstallerMainWindow, op: Operation, msg: str) -> None:
@@ -297,7 +230,7 @@ def on_operation_finished(
     window: InstallerMainWindow,
     op: Operation,
     result,
-) -> None:  # noqa: ANN001
+) -> None:
     window._set_ui_busy(False)
     if result.ok:
         window._progress_bar.setValue(100)

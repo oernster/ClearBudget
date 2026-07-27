@@ -5,15 +5,14 @@ Goal: keep the UI responsive while long file operations execute.
 
 from __future__ import annotations
 
+import logging
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
-from PySide6.QtCore import QObject, QThread, Signal, Slot, Qt
+from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
 
 from installer.ops.errors import AppRunningError, InstallerOperationError
-
-import logging
 
 ProgressCb = Callable[[str], None]
 
@@ -70,10 +69,11 @@ class OperationWorker(QObject):
             self.appRunning.emit(str(exc) or "Application is running")
             self.finished.emit(OperationResult(ok=False, message="app_running"))
         except InstallerOperationError as exc:
-            logger.exception("Operation failed (expected): %s", exc)
+            # logger.exception already records the exception and traceback.
+            logger.exception("Operation failed (expected)")
             self.finished.emit(OperationResult(ok=False, message=str(exc)))
-        except Exception as exc:  # noqa: BLE001
-            logger.exception("Operation failed (unexpected): %s", exc)
+        except Exception as exc:
+            logger.exception("Operation failed (unexpected)")
             self.finished.emit(OperationResult(ok=False, message=repr(exc)))
         finally:
             # Ensure we clear progress text in UI even if something goes wrong.
@@ -84,7 +84,7 @@ class OperationWorker(QObject):
             except Exception:
                 pass
 
-    def _emit_progress(self, payload) -> None:  # noqa: ANN001
+    def _emit_progress(self, payload) -> None:
         # Always emit asynchronously to avoid any chance of a UI-thread deadlock.
         self.progress.emit(payload)
 
@@ -115,7 +115,7 @@ class _GuiRelay(QObject):
         self._result: OperationResult | None = None
 
     @Slot(object)
-    def handle_progress(self, payload) -> None:  # noqa: ANN001
+    def handle_progress(self, payload) -> None:
         self._on_progress(payload)
 
     @Slot(str)
@@ -123,7 +123,7 @@ class _GuiRelay(QObject):
         self._on_app_running(msg)
 
     @Slot(object)
-    def store_result(self, result) -> None:  # noqa: ANN001
+    def store_result(self, result) -> None:
         # Result is stored on the GUI thread.
         try:
             self._result = result
@@ -145,9 +145,9 @@ class OperationController:
     """Runs a single operation on a dedicated QThread."""
 
     def __init__(self) -> None:
-        self._thread: Optional[QThread] = None
-        self._worker: Optional[OperationWorker] = None
-        self._relay: Optional[_GuiRelay] = None
+        self._thread: QThread | None = None
+        self._worker: OperationWorker | None = None
+        self._relay: _GuiRelay | None = None
         self._cancel_event = threading.Event()
 
     @property

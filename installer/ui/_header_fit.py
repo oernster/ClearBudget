@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from PySide6.QtCore import QEvent, QTimer, Qt
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QFont, QFontMetrics
 from PySide6.QtWidgets import QApplication
 
@@ -63,7 +63,7 @@ class HeaderFitController:
 
         self._ensure_fits()
 
-    def should_watch_event_type(self, et) -> bool:  # noqa: ANN001
+    def should_watch_event_type(self, et) -> bool:
         watched = {
             QEvent.Type.ScreenChangeInternal,
             QEvent.Type.FontChange,
@@ -143,7 +143,7 @@ class HeaderFitController:
             QApplication.processEvents()
 
     @staticmethod
-    def _fits(title) -> bool:  # noqa: ANN001
+    def _fits(title) -> bool:
         fm = QFontMetrics(title.font())
 
         # Basic guard: if Qt would elide, it doesn't fit.
@@ -162,7 +162,7 @@ class HeaderFitController:
             return True
 
     @staticmethod
-    def _tight_requirements_px(title) -> tuple[int, int]:  # noqa: ANN001
+    def _tight_requirements_px(title) -> tuple[int, int]:
         fm = QFontMetrics(title.font())
         try:
             tight = fm.tightBoundingRect(title.text())
@@ -174,7 +174,7 @@ class HeaderFitController:
             req_h = int(fm.height() + 6)
         return req_w, req_h
 
-    def _ensure_label_has_bbox_room(self, title) -> tuple[int, int]:  # noqa: ANN001
+    def _ensure_label_has_bbox_room(self, title) -> tuple[int, int]:
         """Ensure the label itself has enough contents rect in both axes."""
 
         req_w, req_h = self._tight_requirements_px(title)
@@ -218,7 +218,7 @@ class HeaderFitController:
                 w.resize(w.width(), new_h)
                 QApplication.processEvents()
 
-    def _shrink_font_until_fit(self, title) -> None:  # noqa: ANN001
+    def _shrink_font_until_fit(self, title) -> None:
         """Last resort: reduce header font size until it fits."""
 
         base_px = title.property("_base_header_font_px")

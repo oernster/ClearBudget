@@ -94,7 +94,7 @@ def check_platform() -> None:
     if sys.platform != "darwin":
         sys.exit("ERROR: This script must run on macOS.")
     result = subprocess.run(
-        ["sw_vers", "-productVersion"], capture_output=True, text=True
+        ["sw_vers", "-productVersion"], capture_output=True, text=True, check=False
     )
     print(f"  macOS {result.stdout.strip()}")
     require("pyinstaller", "pyinstaller")

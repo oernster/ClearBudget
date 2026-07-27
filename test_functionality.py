@@ -1,20 +1,20 @@
 """Test all major functionality of ClearBudget."""
 
-from clear_budget.shared.config import Config
-from clear_budget.infrastructure.sqlite.database import Database
-from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
-from clear_budget.infrastructure.sqlite.income_source_repository import (
-    SQLiteIncomeSourceRepository,
-)
-from clear_budget.infrastructure.sqlite.payment_method_repository import (
-    SQLitePaymentMethodRepository,
-)
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
+from clear_budget.infrastructure.sqlite.database import Database
+from clear_budget.infrastructure.sqlite.income_source_repository import (
+    SQLiteIncomeSourceRepository,
+)
+from clear_budget.infrastructure.sqlite.payment_method_repository import (
+    SQLitePaymentMethodRepository,
+)
+from clear_budget.shared.config import Config
 
 
 def test_all() -> None:

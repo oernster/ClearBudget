@@ -2,11 +2,11 @@
 
 from datetime import date
 
-from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services._card_balance_updates import (
     get_live_card_balance,
     save_card_with_today_balance,
 )
+from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.credit_card import CreditCard
@@ -29,36 +29,35 @@ def _make_service(cards: list[CreditCard] | None = None):
 
 
 def _card(**overrides) -> CreditCard:
-    defaults = dict(
-        id=2,
-        name="TestCard",
-        credit_limit=Amount(pence=100000),
-        current_balance_used=Amount(pence=10000),
-        payment_due_day=22,
-    )
+    defaults = {
+        "id": 2,
+        "name": "TestCard",
+        "credit_limit": Amount(pence=100000),
+        "current_balance_used": Amount(pence=10000),
+        "payment_due_day": 22,
+    }
     defaults.update(overrides)
     return CreditCard(**defaults)
 
 
 def _bill(**overrides) -> Bill:
-    defaults = dict(
-        id=1,
-        name="Groceries",
-        amount=Amount(pence=1500),
-        payment_method_id=2,
-        category="groceries",
-        bill_type="fixed",
-        day_of_month=10,
-        start_ym=YearMonth(2000, 1),
-        end_ym=None,
-    )
+    defaults = {
+        "id": 1,
+        "name": "Groceries",
+        "amount": Amount(pence=1500),
+        "payment_method_id": 2,
+        "category": "groceries",
+        "bill_type": "fixed",
+        "day_of_month": 10,
+        "start_ym": YearMonth(2000, 1),
+        "end_ym": None,
+    }
     defaults.update(overrides)
     return Bill(**defaults)
 
 
 class TestGetLiveCardBalance:
     def test_returns_pro_rated_balance(self) -> None:
-        today = date.today()
         card = _card()
         svc, bill_repo, _pm_repo = _make_service(cards=[card])
         bill_repo.add(bill=_bill(payment_method_id=card.id, day_of_month=1))
