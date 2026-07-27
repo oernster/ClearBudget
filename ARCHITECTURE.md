@@ -624,12 +624,23 @@ bank statement. Both identities are tested.
   stylesheet rule beats `setFont`, so the size was silently ignored. A widget's
   own sheet beats the application's, and setting only `font-size` leaves the
   object-name ring rules intact (verified: 0 ring pixels at rest, 385 green on
-  focus, 380 red when disabled). An emoji does not fill its em box, so the font
-  is set at 1.08x the icon height; measured, that lands both painted glyphs on
-  38px rather than 35 against 38. The rule MUST carry a selector
+  focus, 380 red when disabled). The rule MUST carry a selector
   (`QPushButton#ThemeToggleButton { ... }`): a bare `font-size` cascades to the
   widget's whole subtree and its TOOLTIP counts, which is what briefly rendered
   the hover text at the emoji's size
+- An emoji does not fill its em box, and no two fill it alike, so the font size
+  is MEASURED per glyph by `glyph_metrics.glyph_font_px_for_height`: the glyph
+  is painted to a scratch canvas at the target height and the font is scaled by
+  however far its opaque pixels missed. On Windows at a 42px font the sun paints
+  43px tall and the moon 38px, so the single 1.08 fraction that preceded this
+  ran the sun 4px (about 10%) proud of the icon while the moon sat right. Both
+  now land within a pixel of the icon (48x46 icon, 45x46 sun, 47x45 moon). The
+  target height rides on the button as a `navGlyphTargetPx` property so
+  `theme._refresh_toggle_buttons` re-sizes the INCOMING glyph after each switch
+  through `format_helpers.apply_toggle_glyph`; a plain `setText` left the new
+  glyph wearing the size the outgoing one needed. Measure this on the real
+  platform: under `QT_QPA_PLATFORM=offscreen` Qt substitutes its own font
+  database, where both glyphs measure 38px and the discrepancy is invisible
 - `QToolTip` is styled app-wide (size, colour, background, border). Without a
   rule, tooltips take the platform default and are the one surface that escapes
   the theme entirely, as well as being open to inheriting whatever font-size a

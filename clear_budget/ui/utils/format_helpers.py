@@ -37,29 +37,6 @@ _ICON_PIXMAP_CACHE = None
 _ICON_LOAD_ATTEMPTED = False
 
 
-def _opaque_bounding_rect(image):
-    """Return the QRect bounding box of non-transparent pixels in `image`."""
-    from PySide6.QtCore import QRect
-    from PySide6.QtGui import QImage
-
-    image = image.convertToFormat(QImage.Format.Format_ARGB32)
-    width, height = image.width(), image.height()
-
-    def row_has_content(y: int) -> bool:
-        return any((image.pixel(x, y) >> 24) & 0xFF for x in range(width))
-
-    def col_has_content(x: int) -> bool:
-        return any((image.pixel(x, y) >> 24) & 0xFF for y in range(height))
-
-    top = next((y for y in range(height) if row_has_content(y)), 0)
-    bottom = next(
-        (y for y in range(height - 1, -1, -1) if row_has_content(y)), height - 1
-    )
-    left = next((x for x in range(width) if col_has_content(x)), 0)
-    right = next((x for x in range(width - 1, -1, -1) if col_has_content(x)), width - 1)
-    return QRect(left, top, right - left + 1, bottom - top + 1)
-
-
 def _load_cropped_icon_pixmap():
     """Return the app icon pixmap cropped to its opaque bounding box, or None."""
     global _ICON_PIXMAP_CACHE, _ICON_LOAD_ATTEMPTED
@@ -69,12 +46,14 @@ def _load_cropped_icon_pixmap():
 
     from PySide6.QtGui import QImage, QPixmap
 
+    from clear_budget.ui.utils.glyph_metrics import opaque_bounding_rect
+
     if _APP_ICON_PATH is None:
         return None
     image = QImage(str(_APP_ICON_PATH))
     if image.isNull():
         return None
-    cropped = image.copy(_opaque_bounding_rect(image))
+    cropped = image.copy(opaque_bounding_rect(image))
     _ICON_PIXMAP_CACHE = QPixmap.fromImage(cropped)
     return _ICON_PIXMAP_CACHE
 
@@ -86,12 +65,10 @@ NAV_LABEL_DEFAULT_COLOR = "#9ca3af"
 
 # Nav-icon height used when there is no Previous button to measure against.
 _FALLBACK_ICON_PX = 24
-# Font pixel size of the theme-toggle emoji, as a fraction of the nav icon's
-# height. An emoji does not fill its em box, so the font has to be set a little
-# larger than the icon for the two to LOOK the same size. Measured, not
-# guessed: at 1.0 the painted glyph came out 35px against the icon's 38px, and
-# the painted height tracks the font size at about 0.9, so 1.08 lands on it.
-_TOGGLE_GLYPH_FRACTION = 1.08
+# Dynamic property carrying the height a toggle button's glyph must paint at.
+# Stored on the button because the glyph changes with the theme long after the
+# tray was built, and the refresh has only the button to work from.
+TOGGLE_TARGET_PROPERTY = "navGlyphTargetPx"
 
 
 def _nav_label_style(color: str) -> str:
@@ -146,6 +123,32 @@ def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
     return btn
 
 
+def apply_toggle_glyph(btn, glyph: str) -> None:
+    """Show `glyph` on a theme toggle at the height its tray icon is scaled to.
+
+    Called on build and again after every theme switch, because the glyph
+    changes with the theme and each one paints a different fraction of its em
+    box: sizing the sun and then swapping in the moon leaves the moon short,
+    and sizing the moon leaves the sun oversized against the nav icon. The font
+    size is therefore derived from THIS glyph every time, by measuring it.
+
+    The font is set as a WIDGET-level stylesheet, not setFont: the app
+    stylesheet sets a font-size on QWidget, and a stylesheet rule beats setFont
+    however specific the font is. A widget's own sheet beats the application's,
+    and setting only font-size leaves the object-name ring rules intact.
+
+    SELECTOR REQUIRED. A bare `font-size: 42px` cascades to everything in the
+    widget's subtree, and a tooltip counts: the hover text came out in the
+    emoji's size. Scoping it to the button means nothing else can inherit it.
+    """
+    from clear_budget.ui.utils.glyph_metrics import glyph_font_px_for_height
+
+    target = btn.property(TOGGLE_TARGET_PROPERTY) or _FALLBACK_ICON_PX
+    glyph_px = glyph_font_px_for_height(glyph, int(target))
+    btn.setText(glyph)
+    btn.setStyleSheet(f"QPushButton#ThemeToggleButton {{ font-size: {glyph_px}px; }}")
+
+
 def _build_theme_toggle_button(glyph_height: int):
     """Return the sun/moon theme toggle as a tabbable QPushButton.
 
@@ -155,10 +158,8 @@ def _build_theme_toggle_button(glyph_height: int):
 
     Sized from `glyph_height`, the same height the nav icon is scaled to, so
     the two read as a matched pair rather than the toggle looking like an
-    afterthought beside it. The font is set on the widget rather than in the
-    QSS because only the widget knows that height; the QSS deliberately
-    carries no font-size for this button, since a stylesheet rule would win
-    over setFont and pin it back to a fixed size.
+    afterthought beside it. That height rides on the button as a property, so
+    the refresh after a theme switch can size the incoming glyph to it too.
     """
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication, QPushButton
@@ -166,18 +167,10 @@ def _build_theme_toggle_button(glyph_height: int):
     from clear_budget.ui import theme
 
     current = theme.current_theme(QApplication.instance())
-    btn = QPushButton(theme.toggle_glyph(current))
+    btn = QPushButton()
     btn.setObjectName("ThemeToggleButton")
-    # A WIDGET-level stylesheet, not setFont: the app stylesheet sets a
-    # font-size on QWidget, and a stylesheet rule beats setFont however
-    # specific the font is. A widget's own sheet beats the application's, and
-    # setting only font-size leaves the object-name ring rules intact.
-    #
-    # SELECTOR REQUIRED. A bare `font-size: 42px` cascades to everything in the
-    # widget's subtree, and a tooltip counts: the hover text came out in the
-    # emoji's size. Scoping it to the button means nothing else can inherit it.
-    glyph_px = max(1, round(glyph_height * _TOGGLE_GLYPH_FRACTION))
-    btn.setStyleSheet(f"QPushButton#ThemeToggleButton {{ font-size: {glyph_px}px; }}")
+    btn.setProperty(TOGGLE_TARGET_PROPERTY, glyph_height)
+    apply_toggle_glyph(btn, theme.toggle_glyph(current))
     btn.setToolTip(theme.toggle_tooltip(current))
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
     btn.clicked.connect(lambda: theme.toggle_theme(QApplication.instance()))

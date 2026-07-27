@@ -121,10 +121,18 @@ def toggle_theme(app) -> None:
 
 
 def _refresh_toggle_buttons(app, name: str) -> None:
-    """Point every tray's toggle button at the mode a press switches to."""
+    """Point every tray's toggle button at the mode a press switches to.
+
+    Through `apply_toggle_glyph` rather than `setText`, because the sun and the
+    moon paint different fractions of their em box: the incoming glyph has to
+    be re-sized against the nav icon, not just swapped in at the size the
+    outgoing one needed.
+    """
+    from clear_budget.ui.utils.format_helpers import apply_toggle_glyph
+
     for widget in app.allWidgets():
         if widget.objectName() == "ThemeToggleButton":
-            widget.setText(toggle_glyph(name))
+            apply_toggle_glyph(widget, toggle_glyph(name))
             widget.setToolTip(toggle_tooltip(name))
 
 
