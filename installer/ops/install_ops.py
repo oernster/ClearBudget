@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import shutil
@@ -12,8 +11,6 @@ import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-
-from platformdirs import user_data_dir
 
 from clear_budget.shared.resources import find_app_icon_path
 from clear_budget.version import APP_AUTHOR, APP_NAME, __version__
@@ -201,34 +198,6 @@ def _deploy_runtime_icon_assets(*, install_dir: Path) -> None:
             pass
 
 
-def _seed_user_preferences_defaults(*, volume_multiplier: float) -> None:
-    """Seed per-user preferences.json with installer defaults.
-
-    This is intentionally only called on *new install*, not upgrade/reinstall,
-    so an existing user's preferences remain unchanged.
-    """
-
-    try:
-        data_root = Path(user_data_dir(APP_NAME, APP_AUTHOR)).resolve()
-        prefs_path = data_root / "preferences.json"
-        prefs_path.parent.mkdir(parents=True, exist_ok=True)
-
-        payload = {
-            "playback_volume": float(volume_multiplier),
-        }
-
-        # Atomic-ish write to avoid leaving a truncated file if the installer is
-        # interrupted.
-        tmp = prefs_path.with_suffix(prefs_path.suffix + f".tmp.{uuid.uuid4().hex}")
-        tmp.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-        tmp.replace(prefs_path)
-
-        logger.info("Seeded user preferences at %s", prefs_path)
-    except Exception:
-        # Best-effort: the app can still run with built-in defaults.
-        logger.exception("Failed seeding user preferences")
-
-
 def install_new(
     identity: InstallerIdentity,
     opts: InstallOptions,
@@ -255,11 +224,6 @@ def install_new(
 
         # Make sure icon assets are available next to the installed exe.
         _deploy_runtime_icon_assets(install_dir=target_dir)
-
-        # Seed user preferences so a true "first run" starts with the intended
-        # default volume. This writes to the per-user data directory (not the
-        # install directory).
-        _seed_user_preferences_defaults(volume_multiplier=0.25)
 
         _progress(progress, pct=75, message="Registering uninstall entry...")
         _check_cancel(cancel_event)
