@@ -128,11 +128,12 @@ class MonthGraphDialog(NeutralDialog):
             )
             return
         html = projection_report_html(
-            title="Solvency projection",
+            title="Bank balance projection",
             subtitle=f"{months[0].label} to {months[-1].label}.",
             months=months,
+            recorded_balance_pence=self._budget_service.get_bank_balance().pence,
         )
-        self._write(html, suggested=f"solvency-projection{_HTML_SUFFIX}")
+        self._write(html, suggested=f"bank-balance-projection{_HTML_SUFFIX}")
 
     def _write(self, html: str, *, suggested: str) -> None:
         """Ask where to put the report, then write it."""

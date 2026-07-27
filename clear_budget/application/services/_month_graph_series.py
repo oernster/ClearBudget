@@ -26,32 +26,47 @@ class GraphSeriesMixin:
 
     __slots__ = ()
 
-    def get_bank_graph_series(
-        self, *, year_month: YearMonth, summary, today: date | None = None
-    ) -> GraphSeries:
-        """Day-end projected bank balance for each day of year_month.
+    @staticmethod
+    def _per_day_pence(summary, days: int) -> list[int]:
+        """Net movement on each day of the month, indexed 1..days."""
+        per_day = [0] * (days + 1)
+        for event in _month_events(summary):
+            per_day[min(event.day_of_month, days)] += event.amount_pence
+        return per_day
 
-        For the current month the trajectory is anchored so it passes through
-        today's stored balance on today's date (the stored balance already
-        contains everything applied up to today); other months start from the
-        projected month opening.
+    def get_bank_month_opening_pence(
+        self, *, year_month: YearMonth, summary, today: date | None = None
+    ) -> int:
+        """The balance the month's day-by-day projection starts from.
+
+        For the current month this is anchored on the stored balance, wound
+        back over whatever has already been applied this month, so the
+        trajectory passes through today's real figure on today's date. Other
+        months start from the projected opening.
+
+        Public because the multi-month projection reports this number, and it
+        MUST be the one the graph actually starts from: computing an opening
+        separately let the two drift, so a report could show an opening that
+        did not add up to its own closing balance.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
         days = days_in_month(year_month.year, year_month.month)
-        events = _month_events(summary)
-        per_day = [0] * (days + 1)
-        for event in events:
-            per_day[min(event.day_of_month, days)] += event.amount_pence
+        if year_month != YearMonth(today.year, today.month):
+            return self.get_projected_starting_balance_pence(year_month=year_month)
+        per_day = self._per_day_pence(summary, days)
+        elapsed = sum(per_day[1 : min(today.day, days) + 1])
+        return self.get_bank_balance().pence - elapsed
 
-        today_ym = YearMonth(today.year, today.month)
-        if year_month == today_ym:
-            elapsed = sum(per_day[1 : min(today.day, days) + 1])
-            opening = self.get_bank_balance().pence - elapsed
-        else:
-            opening = self.get_projected_starting_balance_pence(year_month=year_month)
-
+    def get_bank_graph_series(
+        self, *, year_month: YearMonth, summary, today: date | None = None
+    ) -> GraphSeries:
+        """Day-end projected bank balance for each day of year_month."""
+        days = days_in_month(year_month.year, year_month.month)
+        per_day = self._per_day_pence(summary, days)
+        running = self.get_bank_month_opening_pence(
+            year_month=year_month, summary=summary, today=today
+        )
         values = []
-        running = opening
         for day in range(1, days + 1):
             running += per_day[day]
             values.append(running)

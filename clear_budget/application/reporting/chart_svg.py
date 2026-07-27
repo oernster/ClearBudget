@@ -6,9 +6,12 @@ series with the same rules as vector SVG: it stays sharp at any zoom, weighs
 almost nothing, needs no image file beside the HTML and, being a pure string
 build, is testable without a QApplication.
 
-Deliberately NOT themed. A report is shared and printed, so it always uses
-one light, ink-on-paper palette instead of following the app's dark or light
-mode; a dark-mode export would come out as a black rectangle on the page.
+Fixed dark palette, matching the app's dark theme, rather than following
+whichever theme is active. An export that changed appearance depending on
+what the toggle happened to be set to would be unpredictable, and the app's
+own identity is the dark one. It carries its own background rather than
+relying on the page, so it reads correctly wherever it is embedded. Printing
+one will use ink; that is the accepted cost of matching the app.
 
 The chart rules match the widget exactly (see _line_bar_chart.py): the bar
 rendering carries the following curve through every day's real value, the
@@ -20,13 +23,14 @@ from __future__ import annotations
 
 from clear_budget.application.reporting.curve import bezier_segments, daily_totals
 
-# Ink-on-paper palette, fixed for print.
-INK = "#1f2937"
-MUTED = "#6b7280"
-GRID = "#d1d5db"
-ZERO_LINE = "#dc2626"
-CURVE = "#a21caf"
-SERIES = ("#2563eb", "#059669", "#c2410c", "#7c3aed", "#0891b2", "#b45309")
+# The app's dark palette, mirrored here because the application layer may not
+# import ui.theme_tokens. Values match DARK / SERIES_DARK / CURVE_DARK.
+PANEL = "#242938"
+MUTED = "#9ca3af"
+GRID = "#3a4156"
+ZERO_LINE = "#f87171"
+CURVE = "#e879f9"
+SERIES = ("#60a5fa", "#34d399", "#fbbf24", "#c084fc", "#22d3ee", "#fb923c")
 
 WIDTH = 880
 HEIGHT = 380
@@ -234,7 +238,13 @@ def chart_svg(series, *, mode: str, labels) -> str:
         body += _curve(plot)
     body += _x_labels(plot, labels=labels)
     body += _legend(plot)
+    # Its own background rect, so the chart reads correctly wherever it is
+    # embedded rather than depending on the page behind it.
+    canvas = f'<rect width="{WIDTH}" height="{HEIGHT}" fill="{PANEL}"/>'
     return (
         f'<svg viewBox="0 0 {WIDTH} {HEIGHT}" width="100%" '
-        f'xmlns="http://www.w3.org/2000/svg" role="img">' + "".join(body) + "</svg>"
+        f'xmlns="http://www.w3.org/2000/svg" role="img">'
+        + canvas
+        + "".join(body)
+        + "</svg>"
     )

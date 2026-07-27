@@ -19,9 +19,12 @@ class ProjectionMonth:
         year: Calendar year.
         month: Calendar month, 1 to 12.
         label: Display name, e.g. "March 2026".
-        opening_pence: Balance at the end of the month's first day.
-        closing_pence: Balance at the end of the month's last day.
-        low_pence: The lowest day-end balance reached in the month.
+        opening_pence: Projected bank balance the month opens with, before any
+            of its own bills or income. Equals the previous month's close, so
+            the range reads as one chain, and equals closing_pence less
+            net_pence.
+        closing_pence: Projected bank balance at the end of the month's last day.
+        low_pence: The lowest day-end bank balance reached in the month.
         low_day: Day of the month the low falls on, 1-based.
         income_pence: Total reliable income for the month.
         bank_bills_pence: Total bills paid from the bank account.

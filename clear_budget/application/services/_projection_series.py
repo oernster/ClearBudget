@@ -9,6 +9,12 @@ The low matters more than the close. A month that opens and closes in credit
 can still bounce a payment in the third week, and a report that only carried
 opening and closing balances would hide exactly the problem it exists to
 surface.
+
+Every figure is a BANK BALANCE, chained from the balance actually recorded in
+the app: the opening is the projected balance the month starts with, and it
+equals the previous month's close. That chain is what makes the report
+checkable, so `opening_pence` is the real projected opening rather than day
+one's closing value (there is a test asserting opening + net == close).
 """
 
 from calendar import month_name
@@ -60,7 +66,9 @@ class ProjectionSeriesMixin:
                     year=year_month.year,
                     month=year_month.month,
                     label=f"{month_name[year_month.month]} {year_month.year}",
-                    opening_pence=values[0],
+                    opening_pence=self.get_bank_month_opening_pence(
+                        year_month=year_month, summary=summary
+                    ),
                     closing_pence=values[-1],
                     low_pence=low,
                     low_day=values.index(low) + 1,

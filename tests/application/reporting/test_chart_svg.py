@@ -30,16 +30,21 @@ def _svg(series, mode):
     return chart_svg(series, mode=mode, labels=_LABELS)
 
 
+# One rect is the chart's own dark background, so it reads correctly wherever
+# it is embedded; the rest are bars and legend swatches.
+_CANVAS_RECTS = 1
+
+
 def test_bar_mode_draws_one_rectangle_per_day():
     """Plus two legend swatches: the series and the curve."""
     svg = _svg([_RISING], "bar")
-    assert svg.count("<rect") == _DAYS + 2
+    assert svg.count("<rect") == _DAYS + 2 + _CANVAS_RECTS
 
 
 def test_line_mode_draws_a_polyline_and_no_bars():
     svg = _svg([_RISING], "line")
     assert "<polyline" in svg
-    assert svg.count("<rect") == 1  # the legend swatch only
+    assert svg.count("<rect") == 1 + _CANVAS_RECTS  # legend swatch only
 
 
 def test_only_bar_mode_carries_the_curve():

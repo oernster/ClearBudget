@@ -5,6 +5,8 @@ other application tests, so the projection is exercised through the real
 month generation and balance rules.
 """
 
+from itertools import pairwise
+
 import pytest
 
 from clear_budget.application.services._projection_series import months_between
@@ -131,6 +133,36 @@ def test_the_projection_agrees_with_the_month_graph(budget_service):
     month = budget_service.get_projection_months(start=_JULY, end=_JULY)[0]
     assert month.closing_pence == series.values[-1]
     assert month.low_pence == min(series.values)
+
+
+def test_opening_plus_net_equals_the_close(budget_service):
+    """The identity that makes the exported table checkable by eye.
+
+    Opening is the month's real projected opening balance, not day one's
+    closing value; if it were the latter, a month whose income lands on day 1
+    would show an opening that already contained it and the row would not add
+    up.
+    """
+    _seed(budget_service, income_pence=200_000, bill_pence=50_000, bill_day=15)
+    for month in budget_service.get_projection_months(start=_JULY, end=_SEPTEMBER):
+        assert month.opening_pence + month.net_pence == month.closing_pence
+
+
+def test_each_month_opens_where_the_previous_one_closed(budget_service):
+    """The range is one chain, which is what ties it to the real balance."""
+    _seed(budget_service, income_pence=200_000, bill_pence=50_000, bill_day=15)
+    months = budget_service.get_projection_months(start=_JULY, end=_SEPTEMBER)
+    for earlier, later in pairwise(months):
+        assert later.opening_pence == earlier.closing_pence
+
+
+def test_the_chain_starts_from_the_recorded_bank_balance(budget_service):
+    """Change the recorded balance and the whole projection moves with it."""
+    _seed(budget_service, income_pence=200_000, bill_pence=50_000, bill_day=15)
+    before = budget_service.get_projection_months(start=_JULY, end=_JULY)[0]
+    budget_service.set_bank_balance(amount=Amount(pence=500_000))
+    after = budget_service.get_projection_months(start=_JULY, end=_JULY)[0]
+    assert after.closing_pence != before.closing_pence
 
 
 def test_the_floor_is_the_overdraft_limit_as_a_negative(budget_service):

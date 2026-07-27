@@ -306,9 +306,13 @@ it is all under the coverage gate and testable without a QApplication.
   as `_line_bar_chart.py` (curve in bar mode only, axis always includes zero, zero
   line only when the range crosses it). The export redraws the series rather than
   screenshotting the widget: vector output stays sharp, needs no image file beside
-  the HTML and can be tested as a string. Deliberately NOT themed; a report is
-  shared and printed, so it uses one fixed ink-on-paper palette rather than coming
-  out as a black rectangle from dark mode
+  the HTML and can be tested as a string. Fixed DARK palette mirroring the app's
+  `DARK` / `SERIES_DARK` / `CURVE_DARK` tokens (mirrored, not imported, because the
+  application layer may not depend on the UI). Fixed rather than following the
+  active theme, so an export does not change appearance depending on where the
+  toggle happened to be. Each chart carries its own background rect so it reads
+  correctly wherever it is embedded, and the print rules keep the dark identity
+  rather than dropping pale text onto a white page
 - `document.py` - the page shell. The stylesheet is inline and the charts are inline
   SVG, so an exported file references nothing outside itself and survives being
   emailed or moved (there is a test asserting no `src`, `href` or `@import`)
@@ -328,6 +332,17 @@ for a dip below zero or a month that ends lower than it started, safe otherwise.
 day-by-day bank projection the month graph draws over each month in the range, so
 the report and the graph can never disagree about a month they both cover (there
 is a test asserting exactly that).
+
+The opening balance comes from `GraphSeriesMixin.get_bank_month_opening_pence`,
+which is the value the graph itself starts each month from. That method exists
+because the two were computed separately at first and DRIFTED: for the current
+month the graph anchors on the recorded bank balance wound back over what has
+already been applied, while `get_projected_starting_balance_pence` returns
+something else, so the exported table showed an opening that did not add up to
+its own closing balance and read as unrelated to the user's money. With one
+source, `opening + net == close` holds for every row and each month opens where
+the previous one closed, which is what makes the report checkable against a real
+bank statement. Both identities are tested.
 
 ### Shared Layer
 

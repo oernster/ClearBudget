@@ -103,8 +103,29 @@ def test_user_text_cannot_inject_markup_into_a_report():
 # The projection report exists to show the dip a closing balance hides.
 def test_the_projection_shows_the_in_month_low_not_just_the_close():
     html = projection_report_html(title="T", subtitle="S", months=[_month()])
-    assert "Lowest point in the month" in html
+    assert "Lowest bank balance in the month" in html
     assert "day 18" in html
+
+
+def test_the_projection_says_the_figures_are_bank_balances():
+    """The report was unlabelled, so the numbers read as coming from nowhere."""
+    html = projection_report_html(title="T", subtitle="S", months=[_month()])
+    assert "Every figure here is your bank balance" in html
+    assert "Opening balance" in html
+    assert "Closing balance" in html
+
+
+def test_the_projection_names_the_balance_it_was_chained_from():
+    html = projection_report_html(
+        title="T", subtitle="S", months=[_month()], recorded_balance_pence=1234_56
+    )
+    assert "Chained from your recorded bank balance of" in html
+    assert "1,234.56" in html
+
+
+def test_the_anchor_line_is_omitted_when_no_balance_is_supplied():
+    html = projection_report_html(title="T", subtitle="S", months=[_month()])
+    assert "Chained from" not in html
 
 
 def test_the_projection_charts_two_lines_per_month():

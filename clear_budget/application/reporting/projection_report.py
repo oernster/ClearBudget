@@ -20,8 +20,8 @@ from clear_budget.application.dto.projection_month import (
 from clear_budget.application.reporting.chart_svg import chart_svg
 from clear_budget.application.reporting.document import document, escape, money
 
-_CLOSING_LABEL = "Month-end balance"
-_LOW_LABEL = "Lowest point in the month"
+_CLOSING_LABEL = "Bank balance at month end"
+_LOW_LABEL = "Lowest bank balance in the month"
 
 _STATE_TEXT = {
     STATE_SAFE: "Safe",
@@ -35,16 +35,18 @@ _STATE_CLASS = {
 }
 
 _INTRO = (
-    "Each month is projected with the same day-by-day rules the month graph "
-    "uses, then reduced to the figures that describe it. Read the table for "
-    "the numbers and the chart for the direction of travel."
+    "Every figure here is your bank balance. Each month is projected with the "
+    "same day-by-day rules the month graph uses, starting from the balance "
+    "recorded in the app and carrying forward: each month opens on the "
+    "balance the month before it closed with, so opening plus net equals "
+    "month end, all the way down the table."
 )
 _CHART_TEXT = (
-    "Two lines per month. The upper one is where each month ends; the lower "
-    "one is the lowest the balance gets at any point inside that month. When "
-    "they pull apart, the month has a dip in it that the closing figure "
-    "hides, which is where a payment fails even though the month looks "
-    "healthy on paper."
+    "Two lines per month. The upper one is the bank balance each month ends "
+    "on; the lower one is the lowest that balance gets at any point inside "
+    "the month. When they pull apart, the month has a dip in it that the "
+    "closing figure hides, which is where a payment fails even though the "
+    "month looks healthy on paper."
 )
 _STATE_TEXT_NOTE = (
     "Safe means the balance stays above zero all month. Caution means it dips "
@@ -66,10 +68,10 @@ def _summary_figures(months) -> str:
     closing = [m.closing_pence for m in months]
     worst = min(months, key=lambda m: m.low_pence)
     rows = (
-        ("Starts at", money(months[0].opening_pence)),
-        ("Ends at", money(closing[-1])),
+        ("Balance at the start", money(months[0].opening_pence)),
+        ("Balance at the end", money(closing[-1])),
         ("Change over the range", money(closing[-1] - months[0].opening_pence)),
-        (f"Worst point ({escape(worst.label)})", money(worst.low_pence)),
+        (f"Lowest it ever gets ({escape(worst.label)})", money(worst.low_pence)),
     )
     items = "".join(
         f"<div><dt>{escape(label)}</dt><dd>{escape(value)}</dd></div>"
@@ -79,9 +81,11 @@ def _summary_figures(months) -> str:
 
 
 def _table(months) -> str:
+    """Opening, net and close side by side so the chain can be checked by eye."""
     head = (
-        "<thead><tr><th>Month</th><th>Income</th><th>Bills</th><th>Net</th>"
-        "<th>Month end</th><th>Lowest</th><th>State</th></tr></thead>"
+        "<thead><tr><th>Month</th><th>Opening balance</th><th>Income</th>"
+        "<th>Bills</th><th>Net</th><th>Closing balance</th>"
+        "<th>Lowest in month</th><th>State</th></tr></thead>"
     )
     rows = []
     for month in months:
@@ -89,6 +93,7 @@ def _table(months) -> str:
         rows.append(
             "<tr>"
             f"<td>{escape(month.label)}</td>"
+            f"<td>{escape(money(month.opening_pence))}</td>"
             f"<td>{escape(money(month.income_pence))}</td>"
             f"<td>{escape(money(month.bank_bills_pence))}</td>"
             f"<td>{escape(money(month.net_pence))}</td>"
@@ -110,13 +115,19 @@ def _chart(months) -> str:
     return chart_svg(lines, mode="line", labels=labels)
 
 
-def projection_report_html(*, title: str, subtitle: str, months) -> str:
+def projection_report_html(
+    *, title: str, subtitle: str, months, recorded_balance_pence: int | None = None
+) -> str:
     """Render a month range as a standalone HTML document.
 
     Args:
-        title: Page heading, e.g. "Solvency projection".
+        title: Page heading, e.g. "Bank balance projection".
         subtitle: The range in words, e.g. "March 2026 to February 2027".
         months: ProjectionMonth values, ascending.
+        recorded_balance_pence: The bank balance the projection was chained
+            from. Stated in the report so the figures can be traced back to a
+            number the user recognises rather than read as coming from
+            nowhere.
     """
     projected = list(months)
     if not projected:
@@ -129,10 +140,17 @@ def projection_report_html(*, title: str, subtitle: str, months) -> str:
         if floor
         else "No overdraft facility is set, so the floor is zero."
     )
+    anchor_note = (
+        f"Chained from your recorded bank balance of "
+        f"{money(recorded_balance_pence)}."
+        if recorded_balance_pence is not None
+        else ""
+    )
     body = (
         "<section>\n"
         f"{_summary_figures(projected)}\n"
         f"<p>{escape(_INTRO)}</p>\n"
+        f'<p class="note">{escape(anchor_note)}</p>\n'
         f'<p class="note">{escape(floor_note)}</p>\n'
         "</section>\n"
         "<section>\n<h2>The path</h2>\n"
