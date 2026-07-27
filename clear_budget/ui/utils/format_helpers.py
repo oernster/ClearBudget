@@ -69,6 +69,16 @@ _FALLBACK_ICON_PX = 24
 # Stored on the button because the glyph changes with the theme long after the
 # tray was built, and the refresh has only the button to work from.
 TOGGLE_TARGET_PROPERTY = "navGlyphTargetPx"
+# The toggle glyph's painted height as a fraction of the nav icon's.
+#
+# Deliberately NOT 1.0. Matching the two by measured height was tried and reads
+# wrong: the sun and the moon are solid saturated shapes that fill their whole
+# outline, while the nav icon is a pictogram with internal detail and light
+# space in it, so equal heights leave the emoji looking the heavier of the two.
+# Optical weight, not bounding box, is what the eye compares. The measurement
+# machinery still matters underneath this, since it is what puts the sun and
+# the moon on the same height as each other.
+TOGGLE_GLYPH_SCALE = 0.8
 
 
 def _nav_label_style(color: str) -> str:
@@ -124,7 +134,10 @@ def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
 
 
 def apply_toggle_glyph(btn, glyph: str) -> None:
-    """Show `glyph` on a theme toggle at the height its tray icon is scaled to.
+    """Show `glyph` on a theme toggle, sized against the nav icon beside it.
+
+    The painted height is `TOGGLE_GLYPH_SCALE` of the icon's, not equal to it;
+    see that constant for why.
 
     Called on build and again after every theme switch, because the glyph
     changes with the theme and each one paints a different fraction of its em
@@ -143,8 +156,9 @@ def apply_toggle_glyph(btn, glyph: str) -> None:
     """
     from clear_budget.ui.utils.glyph_metrics import glyph_font_px_for_height
 
-    target = btn.property(TOGGLE_TARGET_PROPERTY) or _FALLBACK_ICON_PX
-    glyph_px = glyph_font_px_for_height(glyph, int(target))
+    icon_height = btn.property(TOGGLE_TARGET_PROPERTY) or _FALLBACK_ICON_PX
+    target = max(1, round(int(icon_height) * TOGGLE_GLYPH_SCALE))
+    glyph_px = glyph_font_px_for_height(glyph, target)
     btn.setText(glyph)
     btn.setStyleSheet(f"QPushButton#ThemeToggleButton {{ font-size: {glyph_px}px; }}")
 

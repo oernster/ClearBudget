@@ -665,8 +665,14 @@ bank statement. Both identities are tested.
   is painted to a scratch canvas at the target height and the font is scaled by
   however far its opaque pixels missed. On Windows at a 42px font the sun paints
   43px tall and the moon 38px, so the single 1.08 fraction that preceded this
-  ran the sun 4px (about 10%) proud of the icon while the moon sat right. Both
-  now land within a pixel of the icon (48x46 icon, 45x46 sun, 47x45 moon). The
+  ran the sun about 10% proud of the icon while the moon sat right. The
+  measurement is what puts the two glyphs on the same height as each other. The
+  height they are put on is `format_helpers.TOGGLE_GLYPH_SCALE` of the nav
+  icon's and deliberately not equal to it: matching bounding heights was tried
+  and reads wrong, because the sun and the moon are solid saturated shapes that
+  fill their outline while the icon is a pictogram with light space in it, so
+  at equal heights the emoji looks the heavier. Optical weight is what the eye
+  compares, not the bounding box. The
   target height rides on the button as a `navGlyphTargetPx` property so
   `theme._refresh_toggle_buttons` re-sizes the INCOMING glyph after each switch
   through `format_helpers.apply_toggle_glyph`; a plain `setText` left the new
