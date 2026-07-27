@@ -3,17 +3,20 @@
 from clear_budget.domain.services.card_monthly_calculator import (
     calculate_card_monthly_state,
 )
+from clear_budget.ui import theme
+from clear_budget.ui.theme_tokens import (
+    STATE_AT_RISK,
+    STATE_CAUTION,
+    STATE_RED,
+    STATE_SAFE,
+)
 from clear_budget.ui.utils.format_helpers import fmt
 
-# Traffic-light state colours, defined once so the banner and the title-bar
-# label classify a month identically rather than via two drifting rule sets.
-_STATE_RED = "#f87171"
-_STATE_AT_RISK = "#f59e0b"
-_STATE_CAUTION = "#fbbf24"
-_STATE_SAFE = "#34d399"
 # Balance bands (in pence) separating the amber tiers from a safe close.
 _AT_RISK_BALANCE_PENCE = 20000
 _CAUTION_BALANCE_PENCE = 50000
+# Months of drain a balance must cover to count as comfortable rather than tight.
+_MONTHS_COVERAGE_FOR_SAFE = 2
 
 
 class SolvencyPanelNarrativeMixin:
@@ -37,23 +40,45 @@ class SolvencyPanelNarrativeMixin:
         next-month overdraft (``overdrawn_next_month``) or a draining month left
         with almost nothing.
         """
+        return theme.state_colours()[
+            SolvencyPanelNarrativeMixin._state_key(
+                balance_pence,
+                monthly_deficit_pence,
+                overdrawn_next_month,
+                overdraft_limit_pence,
+            )
+        ]
+
+    @staticmethod
+    def _state_key(
+        balance_pence: int,
+        monthly_deficit_pence: int,
+        overdrawn_next_month: bool,
+        overdraft_limit_pence: int = 0,
+    ) -> str:
+        """The traffic-light STATE behind _state_color, as a palette key.
+
+        Kept separate so a widget can carry the state itself (the banner sets it
+        as a Qt property and lets the theme stylesheet supply the colours) while
+        callers that need a colour resolve it through the active palette.
+        """
         red_floor_pence = -overdraft_limit_pence
         if balance_pence < red_floor_pence:
-            return _STATE_RED
+            return STATE_RED
         if balance_pence < 0:
             # Into the overdraft but within the agreed facility: a warning.
-            return _STATE_AT_RISK
+            return STATE_AT_RISK
         if overdrawn_next_month:
-            return _STATE_RED
+            return STATE_RED
         if monthly_deficit_pence > 0 and balance_pence <= _CAUTION_BALANCE_PENCE:
-            return _STATE_RED
+            return STATE_RED
         if balance_pence <= _AT_RISK_BALANCE_PENCE:
-            return _STATE_AT_RISK
+            return STATE_AT_RISK
         if balance_pence <= _CAUTION_BALANCE_PENCE:
-            return _STATE_CAUTION
+            return STATE_CAUTION
         if monthly_deficit_pence > 0:
-            return _STATE_CAUTION
-        return _STATE_SAFE
+            return STATE_CAUTION
+        return STATE_SAFE
 
     @staticmethod
     def _health_color(balance_pence: int, monthly_drain_pence: int) -> str:
@@ -64,13 +89,14 @@ class SolvencyPanelNarrativeMixin:
         Green for 2+ months coverage.
         monthly_drain_pence: bills − income for a future month (positive = deficit).
         """
+        states = theme.state_colours()
         if balance_pence < 0:
-            return "#f87171"
+            return states[STATE_RED]
         if monthly_drain_pence <= 0:
-            return "#34d399"
-        if balance_pence >= 2 * monthly_drain_pence:
-            return "#34d399"
-        return "#fbbf24"
+            return states[STATE_SAFE]
+        if balance_pence >= _MONTHS_COVERAGE_FOR_SAFE * monthly_drain_pence:
+            return states[STATE_SAFE]
+        return states[STATE_CAUTION]
 
     def _build_month_cashflow_summary(
         self,

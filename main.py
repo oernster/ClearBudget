@@ -8,31 +8,31 @@ Handles the full login lifecycle:
 5. On MainWindow.logout_requested → close window, loop back to step 3.
 """
 
-import sys
 import ctypes
+import sys
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication, QMessageBox
 
-from clear_budget.shared.config import Config
-from clear_budget.auth.user_store import UserStore
+from clear_budget.application.services.budget_service import BudgetService
+from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.auth.models import User
-from clear_budget.infrastructure.sqlite.database import Database
+from clear_budget.auth.user_store import UserStore
+from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
+from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.income_source_repository import (
     SQLiteIncomeSourceRepository,
 )
 from clear_budget.infrastructure.sqlite.payment_method_repository import (
     SQLitePaymentMethodRepository,
 )
-from clear_budget.application.services.budget_service import BudgetService
-from clear_budget.application.services.month_generator import MonthGenerator
-from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.shared.config import Config
 from clear_budget.shared.currency import set_currency
-from clear_budget.ui.dark_theme import get_dark_qss
 from clear_budget.ui.main_window import MainWindow
+from clear_budget.ui.theme import apply_theme, load_saved_theme
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 
@@ -104,7 +104,11 @@ def _acquire_single_instance_lock():
     import fcntl
 
     Config.app_dir().mkdir(parents=True, exist_ok=True)
-    lock_file = open(Config.app_dir() / _LOCK_FILENAME, "w")
+    # Deliberately not a context manager: the handle must stay open for the
+    # process lifetime, since closing it releases the flock.
+    lock_file = open(  # noqa: SIM115 (lock held until exit)
+        Config.app_dir() / _LOCK_FILENAME, "w"
+    )
     try:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
@@ -205,7 +209,7 @@ def main() -> int:
         if not icon.isNull():
             app.setWindowIcon(icon)
 
-    app.setStyleSheet(get_dark_qss())
+    apply_theme(app, load_saved_theme())
 
     Config.app_dir().mkdir(parents=True, exist_ok=True)
     user_store = UserStore(Config.users_db_path())

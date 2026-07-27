@@ -1,23 +1,24 @@
 """Login dialog - shown at startup and on lock/switch-user."""
 
-from PySide6.QtWidgets import (
-    QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
-    QGridLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QMessageBox,
-    QFrame,
-)
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
 from pathlib import Path
 
-from clear_budget.auth.user_store import UserStore
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import (
+    QDialog,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
+
 from clear_budget.auth.models import User
-from clear_budget.ui import ui_scale
+from clear_budget.auth.user_store import UserStore
+from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.widgets._viewer_package_import_flow import (
     run_import_viewer_package_flow,
 )
@@ -60,17 +61,12 @@ class LoginDialog(QDialog):
 
         title = QLabel("Clear Budget")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet(
-            ui_scale.style(
-                "font-size: 22px; font-weight: bold;"
-                " color: #00d4ff; margin-bottom: 4px;"
-            )
-        )
+        title.setObjectName(label_roles.LOGIN_TITLE)
         layout.addWidget(title)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("color: #1e3a5f;")
+        sep.setObjectName(label_roles.SEPARATOR)
         layout.addWidget(sep)
 
         layout.addSpacing(ui_scale.px(4))
@@ -97,7 +93,7 @@ class LoginDialog(QDialog):
 
         # Error label (hidden until needed)
         self.error_label = QLabel("")
-        self.error_label.setStyleSheet("color: #f87171; font-size: 12px;")
+        self.error_label.setObjectName(label_roles.ERROR)
         self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.error_label.setVisible(False)
         layout.addWidget(self.error_label)
@@ -136,25 +132,40 @@ class LoginDialog(QDialog):
 
     @staticmethod
     def _link_style() -> str:
+        # Resolved at dialog build time, so a fresh dialog follows the
+        # currently active theme.
+        from PySide6.QtWidgets import QApplication
+
+        from clear_budget.ui import theme
+        from clear_budget.ui.theme_tokens import tokens_for
+
+        t = tokens_for(theme.current_theme(QApplication.instance()))
         return ui_scale.style(
-            "QPushButton { color: #60a5fa; font-size: 12px;"
+            f"QPushButton {{ color: {t['link']}; font-size: 12px;"
             " border: none; background: transparent; padding: 0; margin: 0; }"
-            "QPushButton:hover { color: #93c5fd; text-decoration: underline; }"
+            f"QPushButton:hover {{ color: {t['link_hover']};"
+            " text-decoration: underline; }"
         )
 
     @staticmethod
     def _input_style() -> str:
+        from PySide6.QtWidgets import QApplication
+
+        from clear_budget.ui import theme
+        from clear_budget.ui.theme_tokens import tokens_for
+
+        t = tokens_for(theme.current_theme(QApplication.instance()))
         return ui_scale.style(
             "QLineEdit {"
-            "  background-color: #0d1b2a;"
-            "  color: #e2e8f0;"
-            "  border: 1px solid #1e3a5f;"
+            f"  background-color: {t['input_bg']};"
+            f"  color: {t['input_text']};"
+            f"  border: 1px solid {t['separator']};"
             "  border-radius: 4px;"
             "  padding: 6px 8px;"
             "  font-size: 14px;"
             "}"
             "QLineEdit:focus {"
-            "  border-color: #00d4ff;"
+            f"  border-color: {t['info']};"
             "}"
         )
 
@@ -239,7 +250,7 @@ class ResetPasswordDialog(QDialog):
             "account was created, then choose a new password."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        info.setObjectName(label_roles.SUBTLE)
         layout.addWidget(info)
 
         layout.addSpacing(ui_scale.px(4))
@@ -271,7 +282,7 @@ class ResetPasswordDialog(QDialog):
             layout.addWidget(edit)
 
         self._err = QLabel("")
-        self._err.setStyleSheet("color: #f87171; font-size: 12px;")
+        self._err.setObjectName(label_roles.ERROR)
         self._err.setVisible(False)
         layout.addWidget(self._err)
 

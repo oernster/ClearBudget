@@ -1,0 +1,181 @@
+"""Control and widget-extra sub-styling, parameterised by theme tokens.
+
+Split from theme_qss to keep each module under the 400-LOC limit.
+`control_qss` styles spin buttons, the date edit and the calendar popup;
+`widget_extras_qss` carries the object-name rules for app-specific widgets
+(nav tray, nav graph button, theme toggle, status-bar date label) so those
+widgets need no inline colour styles of their own, and appends the semantic
+label roles from `_theme_labels`.
+"""
+
+from __future__ import annotations
+
+from clear_budget.ui import ui_scale
+from clear_budget.ui._theme_labels import label_roles_qss
+
+# Corner radius shared by the nav tray and the group boxes it matches.
+_NAV_TRAY_RADIUS_PX = 6
+# Unscaled font size of the status-bar date label and the emoji theme toggle.
+_STATUS_LABEL_FONT_PX = 18
+_THEME_TOGGLE_FONT_PX = 16
+
+
+def control_qss(t: dict[str, str]) -> str:
+    """QSS for spin-box buttons, the date edit and the calendar popup."""
+    return f"""
+QSpinBox::up-button, QDoubleSpinBox::up-button {{
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 18px;
+    border-left: 1px solid {t["border"]};
+    border-top-right-radius: 4px;
+    background-color: {t["panel_alt_bg"]};
+}}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button {{
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 18px;
+    border-left: 1px solid {t["border"]};
+    border-bottom-right-radius: 4px;
+    background-color: {t["panel_alt_bg"]};
+}}
+
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {{
+    background-color: {t["border"]};
+}}
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid {t["text"]};
+}}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid {t["text"]};
+}}
+
+QSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:disabled {{
+    border-bottom-color: {t["text_disabled"]};
+}}
+
+QSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:disabled {{
+    border-top-color: {t["text_disabled"]};
+}}
+
+QDateEdit {{
+    background-color: {t["panel_bg"]};
+    color: {t["text"]};
+    border: 1px solid {t["border"]};
+    border-radius: 4px;
+    padding: 4px 8px;
+}}
+
+QDateEdit::drop-down {{
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    width: 24px;
+    border-left: 1px solid {t["border"]};
+}}
+
+QDateEdit::down-arrow {{
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid {t["text"]};
+}}
+
+QCalendarWidget QWidget#qt_calendar_navigationbar {{
+    background-color: {t["calendar_nav_bg"]};
+}}
+
+QCalendarWidget QToolButton {{
+    color: {t["text"]};
+    background-color: transparent;
+    padding: 4px 8px;
+}}
+
+QCalendarWidget QToolButton:hover {{
+    background-color: {t["border"]};
+    border-radius: 4px;
+}}
+
+QCalendarWidget QMenu {{
+    background-color: {t["panel_bg"]};
+    color: {t["text"]};
+}}
+
+QCalendarWidget QSpinBox {{
+    background-color: {t["panel_bg"]};
+    color: {t["text"]};
+}}
+
+QCalendarWidget QAbstractItemView {{
+    background-color: {t["panel_bg"]};
+    color: {t["text"]};
+    selection-background-color: {t["accent"]};
+    selection-color: {t["calendar_sel_text"]};
+    outline: none;
+}}
+
+QCalendarWidget QAbstractItemView:disabled {{
+    color: {t["text_disabled"]};
+}}
+"""
+
+
+def widget_extras_qss(t: dict[str, str], s: dict[str, str]) -> str:
+    """Object-name rules for app widgets, so they carry no inline colours.
+
+    Object-name selectors beat the generic rules by id specificity, so each
+    of these buttons needs its OWN three-state ring rules (no ring at rest,
+    green on hover/focus while enabled, permanent red while disabled).
+    """
+    status_px = ui_scale.px(_STATUS_LABEL_FONT_PX)
+    toggle_px = ui_scale.px(_THEME_TOGGLE_FONT_PX)
+    return f"""
+#navTray {{
+    border: 1px solid {t["border"]};
+    border-radius: {_NAV_TRAY_RADIUS_PX}px;
+}}
+
+QPushButton#NavGraphButton, QPushButton#ThemeToggleButton {{
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    padding: 2px;
+}}
+
+QPushButton#ThemeToggleButton {{
+    font-size: {toggle_px}px;
+    padding: 2px 6px;
+}}
+
+QPushButton#NavGraphButton:enabled:hover,
+QPushButton#NavGraphButton:enabled:focus,
+QPushButton#ThemeToggleButton:enabled:hover,
+QPushButton#ThemeToggleButton:enabled:focus {{
+    border: 2px solid {t["ring"]};
+}}
+
+QPushButton#NavGraphButton:disabled,
+QPushButton#ThemeToggleButton:disabled {{
+    border: 2px solid {t["danger"]};
+}}
+
+QLabel#StatusDateLabel {{
+    font-size: {status_px}px;
+    font-weight: bold;
+    color: {t["info"]};
+    padding: 2px 8px;
+    background: transparent;
+}}
+{label_roles_qss(t, s)}"""

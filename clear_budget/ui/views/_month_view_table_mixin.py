@@ -1,9 +1,10 @@
 """MonthViewTableMixin - table population extracted from MonthView (LOC limit)."""
 
-from PySide6.QtWidgets import QTableWidgetItem
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QTableWidgetItem
 
+from clear_budget.ui import theme
 from clear_budget.ui.utils.format_helpers import format_category
 
 _BANK_ACCOUNT_ID = 1
@@ -83,7 +84,7 @@ class MonthViewTableMixin:
 
     def _apply_bill_row_style(self, row: int, bill, name_item) -> None:
         if bill.skipped_for_month:
-            skip_color = QColor("#6b7280")
+            skip_color = QColor(theme.colours()["text_disabled"])
             for c in range(self.bills_table.columnCount()):
                 it = self.bills_table.item(row, c)
                 if it:
@@ -91,7 +92,7 @@ class MonthViewTableMixin:
             name_item.setText(f"{bill.name} (skipped this month)")
         elif bill.has_month_override:
             name_item.setText(f"{bill.name} (*)")
-            name_item.setForeground(QColor("#60a5fa"))
+            name_item.setForeground(QColor(theme.colours()["link"]))
         elif (
             self.view_model.current_month == self.view_model.base_month
             and bill.day_of_month
@@ -123,9 +124,9 @@ class MonthViewTableMixin:
     def _apply_income_row_style(self, row: int, income, name_item) -> None:
         if income.is_month_only:
             name_item.setText(f"{income.name} (one-off)")
-            name_item.setForeground(QColor("#60a5fa"))
+            name_item.setForeground(QColor(theme.colours()["link"]))
         elif income.skipped_for_month:
-            skip_color = QColor("#6b7280")
+            skip_color = QColor(theme.colours()["text_disabled"])
             for c in range(self.income_table.columnCount()):
                 it = self.income_table.item(row, c)
                 if it:
@@ -133,7 +134,7 @@ class MonthViewTableMixin:
             name_item.setText(f"{income.name} (skipped this month)")
         elif income.has_month_override:
             name_item.setText(f"{income.name} (*)")
-            name_item.setForeground(QColor("#60a5fa"))
+            name_item.setForeground(QColor(theme.colours()["link"]))
         elif (
             self.view_model.current_month == self.view_model.base_month
             and income.day_of_month
@@ -142,10 +143,11 @@ class MonthViewTableMixin:
 
     def _apply_day_color(self, table, row: int, day_of_month: int) -> None:
         t = self.view_model.today.day
+        colours = theme.colours()
         color = (
-            QColor("#9ca3af")
+            QColor(colours["text_muted"])
             if day_of_month < t
-            else QColor("#fbbf24") if day_of_month == t else None
+            else QColor(colours["warn"]) if day_of_month == t else None
         )
         if color:
             for c in range(table.columnCount()):

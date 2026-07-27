@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.ui import label_roles
 
 
 class BillDialog(QDialog):
@@ -139,9 +140,7 @@ class BillDialog(QDialog):
         layout.addWidget(self.month_only_check)
 
         self.month_only_status = QLabel("")
-        self.month_only_status.setStyleSheet(
-            "color: #60a5fa; font-size: 11px; padding: 2px;"
-        )
+        self.month_only_status.setObjectName(label_roles.NOTE)
         layout.addWidget(self.month_only_status)
         self.month_only_check.stateChanged.connect(self._on_month_only_changed)
 

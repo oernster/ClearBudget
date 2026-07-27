@@ -123,15 +123,28 @@ def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
     btn.setIconSize(QSize(scaled.width(), scaled.height()))
     btn.setToolTip("Show this month as a graph")
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    btn.setStyleSheet(
-        "QPushButton#NavGraphButton { background: transparent;"
-        " border: 2px solid transparent; border-radius: 6px; padding: 2px; }"
-        "QPushButton#NavGraphButton:enabled:hover,"
-        "QPushButton#NavGraphButton:enabled:focus"
-        " { border: 2px solid #34d399; }"
-        "QPushButton#NavGraphButton:disabled { border: 2px solid #f87171; }"
-    )
     btn.clicked.connect(on_click)
+    return btn
+
+
+def _build_theme_toggle_button():
+    """Return the sun/moon theme toggle as a tabbable QPushButton.
+
+    Object-name styled by the theme QSS (three-state ring, transparent
+    fill). The glyph shows the mode a press switches TO; theme.apply_theme
+    refreshes every toggle's glyph and tooltip after each switch.
+    """
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication, QPushButton
+
+    from clear_budget.ui import theme
+
+    current = theme.current_theme(QApplication.instance())
+    btn = QPushButton(theme.toggle_glyph(current))
+    btn.setObjectName("ThemeToggleButton")
+    btn.setToolTip(theme.toggle_tooltip(current))
+    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn.clicked.connect(lambda: theme.toggle_theme(QApplication.instance()))
     return btn
 
 
@@ -195,12 +208,6 @@ NAV_HEADER_V_PADDING = 14
 # sit flush against the tab edge. Applied symmetrically to keep centring intact.
 NAV_HEADER_EDGE_PADDING = 10
 
-# Subtle bordered "tray" around the nav cluster, matching the dark_theme group
-# boxes (same colour and corner radius). The border width/radius stay unscaled
-# so the tray matches those group boxes at every UI scale; the layout insets
-# below are scaled via ui_scale.px like the rest of the nav header.
-NAV_TRAY_BORDER_COLOR = "#3a4156"
-NAV_TRAY_BORDER_RADIUS_PX = 6
 # Inset the tray from the tab edges so its sides line up with the content margin.
 NAV_TRAY_EDGE_INSET = 11
 # Gap above and below the tray so it floats between the tabs and the content.
@@ -214,10 +221,12 @@ def build_centered_nav_header(
     trailing_widget=None,
     icon_action=None,
 ):
-    """Return (QWidget, QLabel, icon_btn): the nav cluster centred full-width.
+    """Return (QWidget, QLabel, icon_btn, theme_btn): the centred nav cluster.
 
     `icon_action`, when given, turns the tray icon into a tabbable month-graph
-    button wired to it; icon_btn is then that button (else None).
+    button wired to it; icon_btn is then that button (else None). Every tray
+    also carries the sun/moon theme toggle (`theme_btn`) at its far right, in
+    line with the previous/next buttons.
 
     The returned widget is meant to be placed OUTSIDE the scroll area (see
     ScrollableTab), so it spans the full tab width and centres identically on
@@ -233,8 +242,9 @@ def build_centered_nav_header(
     the cluster, since the centre column's position depends only on the equal
     outer-column stretch, not on the trailing widget's width.
     """
-    from PySide6.QtWidgets import QWidget, QGridLayout, QVBoxLayout
     from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
+
     from clear_budget.ui import ui_scale
 
     nav_center, month_lbl, icon_btn = build_nav_month_widget(
@@ -242,15 +252,11 @@ def build_centered_nav_header(
     )
 
     # Bordered tray. WA_StyledBackground is required for a plain QWidget to paint
-    # a stylesheet border; the #navTray id selector keeps the border off the
-    # child widgets.
+    # a stylesheet border; the #navTray id selector (styled by the theme QSS)
+    # keeps the border off the child widgets.
     tray = QWidget()
     tray.setObjectName("navTray")
     tray.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-    tray.setStyleSheet(
-        f"#navTray {{ border: 1px solid {NAV_TRAY_BORDER_COLOR};"
-        f" border-radius: {NAV_TRAY_BORDER_RADIUS_PX}px; }}"
-    )
     # Three-column grid: the outer columns carry equal stretch, so the centre
     # column (the nav cluster) is always positioned at the exact midpoint of the
     # tray regardless of whether a trailing widget is present. This keeps the
@@ -267,14 +273,23 @@ def build_centered_nav_header(
     row.setColumnStretch(2, 1)
     align_v = Qt.AlignmentFlag.AlignVCenter
     row.addWidget(nav_center, 0, 1, Qt.AlignmentFlag.AlignHCenter | align_v)
+    # Right column: the optional trailing widget, then the theme toggle at
+    # the far right of the tray, in line with the prev/next buttons.
+    right_cell = QWidget()
+    right_layout = QHBoxLayout(right_cell)
+    right_layout.setContentsMargins(0, 0, 0, 0)
+    right_layout.setSpacing(8)
     if trailing_widget is not None:
-        # A left balance of equal width keeps both outer columns matched even
-        # when space is tight, so the centre column never gets squeezed off
-        # the midpoint.
-        left_balance = QWidget()
-        left_balance.setFixedWidth(trailing_widget.sizeHint().width())
-        row.addWidget(left_balance, 0, 0, Qt.AlignmentFlag.AlignLeft | align_v)
-        row.addWidget(trailing_widget, 0, 2, Qt.AlignmentFlag.AlignRight | align_v)
+        right_layout.addWidget(trailing_widget)
+    theme_btn = _build_theme_toggle_button()
+    right_layout.addWidget(theme_btn)
+    row.addWidget(right_cell, 0, 2, Qt.AlignmentFlag.AlignRight | align_v)
+    # A left balance of equal width keeps both outer columns matched even
+    # when space is tight, so the centre column never gets squeezed off
+    # the midpoint.
+    left_balance = QWidget()
+    left_balance.setFixedWidth(right_cell.sizeHint().width())
+    row.addWidget(left_balance, 0, 0, Qt.AlignmentFlag.AlignLeft | align_v)
 
     # Full-width header that insets the tray from the tab edges and lets it float
     # with a symmetric gap above and below, keeping the cluster centred in the
@@ -285,7 +300,7 @@ def build_centered_nav_header(
     floatm = ui_scale.px(NAV_TRAY_FLOAT_MARGIN)
     outer.setContentsMargins(inset, floatm, inset, floatm)
     outer.addWidget(tray)
-    return header, month_lbl, icon_btn
+    return header, month_lbl, icon_btn, theme_btn
 
 
 def fmt(amount: "int | float") -> str:

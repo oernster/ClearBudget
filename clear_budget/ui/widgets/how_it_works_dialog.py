@@ -72,6 +72,9 @@ paid by credit card never touch the bank balance.</p>
       graph: the bank balance day by day here, or every card's balance on
       the Credit Cards tab. A button in the graph switches between bar and
       line styles.</li>
+  <li><b>Sun / moon button (far right of the tray, every tab)</b> - switches
+      between light and dark mode. The whole app restyles immediately and
+      your choice is remembered for next time.</li>
   <li><b>Overdraft warning</b> - if your projected balance dips below zero at
       any point this month, a warning appears under the nav row: amber if the
       dip stays within your overdraft facility (with an estimated daily

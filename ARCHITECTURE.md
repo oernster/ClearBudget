@@ -476,24 +476,57 @@ Separate from budget infrastructure. Manages user identity and credentials.
     available screen) so the multi-column Bills/Income tables stay readable on small
     laptops
 
-**Theme** (`dark_theme.py`):
+**Theme** (`theme.py` + `theme_tokens.py` + `theme_qss.py` + `_theme_controls.py`):
 - Applied at `QApplication` level - covers all windows and dialogs
-- App background near-black `#0a0a0d`, panels/trays `#242938`, borders `#3a4156`
-- Buttons royal blue `#3b5bdb` (hover `#4a68d6`, pressed `#2f4bb8`)
-- `QPushButton` hover/selection, `QTabBar::tab` hover/selected, menu hover, and
-  focus borders: teal `#2dd4bf` (formerly orange `#f59e0b`/mauve `#a78bfa`)
-- Table selection background: deep blue `#1e3a5f`
-- Disabled/read-only widgets show a red `#f87171` border instead of the
-  hover/selection border, so read-only mode is visually distinct
-- Amber/red semantic warning colours (card balance thresholds, overdraft warnings)
-  are unchanged by the colour rework
+- Two themes, dark and light, built from ONE stylesheet template
+  (`theme_qss.build_qss(tokens)`) fed by semantic token dicts in
+  `theme_tokens.py`; the sun/moon toggle at the far right of every nav tray
+  switches them at runtime (`theme.toggle_theme`) and the choice persists in
+  `~/.clearbudget/ui_settings.json`, applying from the login screen onward
+- Dark: background near-black `#0a0a0d`, panels/trays `#242938`, borders
+  `#3a4156`, table selection deep blue `#1e3a5f`; light: grey `#f3f4f6`
+  background, white panels, slate borders, blue selection
+- Buttons royal blue `#3b5bdb` (hover `#4a68d6`, pressed `#2f4bb8`) in both
+- Ring colours per theme follow the three-state model (green hover/focus on
+  enabled, permanent red on disabled, none at rest); `outline: none` on the
+  base rule keeps the ring as the only focus indicator
+- Object-name rules for the nav tray, nav graph button, theme toggle and the
+  status-bar date label live in `_theme_controls.widget_extras_qss`; the
+  semantic label roles (`_theme_labels.label_roles_qss`, named in
+  `label_roles.py`) carry every other text colour. A widget takes a role by
+  object name instead of an inline stylesheet, which is what lets a live
+  theme switch restyle it: `label_roles.set_role` repolishes when a severity
+  role changes at runtime (a balance turning from good to danger)
+- The primary tabs are pills: unselected are transparent and quiet, the
+  selected one takes a panel fill with an accent border, hover gives the
+  green ring and keyboard focus on the bar rings the SELECTED pill green
+  (`QTabBar::tab:selected:focus`; the widget-state-first form is silently
+  ignored by Qt). `MainWindow` sets `tabBar().setDrawBase(False)` because Qt
+  ignores drawBase from a stylesheet and would draw a rule under the strip
+- Content whose colours are computed in code (card panels, projection cells,
+  solvency lines, table row colours) cannot follow the stylesheet, so those
+  views expose `restyle()` and `theme.apply_theme` calls it after a switch
+- The solvency banner carries its traffic-light state as a Qt property
+  (`state="red"` etc.) and the stylesheet supplies the fill per theme, so no
+  view holds a banner colour
+- Colour literals live ONLY in `theme_tokens.py`: chrome tokens plus two data
+  palettes (chart series, solvency states) per theme. Every dark value equals
+  the literal it replaced, so the dark theme is unchanged pixel for pixel
+  (verified by an offscreen diff); the light values are chosen to pass WCAG AA
+  on the light background
+- The month-graph chart follows the theme too: `_line_bar_chart` resolves its
+  chrome tokens AND its series palette per paint (`theme_tokens
+  .series_colours_for`), so pastels plot on the dark canvas and saturated
+  mid-tones on the light one, same hue order either way
+- Amber/red semantic warning colours (card thresholds, overdraft warnings) are
+  theme-independent
 
 ## Application Startup Flow
 
 ```
 main()
   └── QApplication created
-  └── app.setStyleSheet(get_dark_qss())        # theme applied globally
+  └── apply_theme(app, load_saved_theme())     # persisted theme applied globally
   └── UserStore opened (users.db)
   └── QTimer.singleShot(0, _session_loop)   # deferred; app.exec() must be live first
   └── app.exec()

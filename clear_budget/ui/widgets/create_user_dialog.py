@@ -1,5 +1,6 @@
 """CreateUserDialog - new account creation (first-run wizard, login screen, add-user)."""
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -12,11 +13,10 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
 )
-from PySide6.QtCore import Qt
 
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
-from clear_budget.ui import ui_scale
+from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.widgets.login_dialog import LoginDialog
 
 # Flags that give a titled dialog window WITHOUT a close button on Windows.
@@ -69,11 +69,11 @@ class CreateUserDialog(QDialog):
                 "Create the first account - this will be the admin account."
             )
             intro.setWordWrap(True)
-            intro.setStyleSheet("color: #94a3b8; font-size: 12px;")
+            intro.setObjectName(label_roles.SUBTLE)
             layout.addWidget(intro)
             sep = QFrame()
             sep.setFrameShape(QFrame.Shape.HLine)
-            sep.setStyleSheet("color: #1e3a5f;")
+            sep.setObjectName(label_roles.SEPARATOR)
             layout.addWidget(sep)
 
         lbl_user = QLabel("Username")
@@ -104,7 +104,7 @@ class CreateUserDialog(QDialog):
         layout.addWidget(self.confirm_edit)
 
         self.error_label = QLabel("")
-        self.error_label.setStyleSheet("color: #f87171; font-size: 12px;")
+        self.error_label.setObjectName(label_roles.ERROR)
         self.error_label.setVisible(False)
         layout.addWidget(self.error_label)
 
@@ -184,9 +184,7 @@ class RecoveryCodeDialog(QDialog):
         )
 
         warning = QLabel("⚠️  Save this recovery code in a safe place.")
-        warning.setStyleSheet(
-            ui_scale.style("font-size: 14px; font-weight: bold; color: #fbbf24;")
-        )
+        warning.setObjectName(label_roles.STRONG_WARN)
         layout.addWidget(warning)
 
         info = QLabel(
@@ -194,26 +192,14 @@ class RecoveryCodeDialog(QDialog):
             "If you forget your password, you will need this code to reset it."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        info.setObjectName(label_roles.SUBTLE)
         layout.addWidget(info)
 
         self._code_box = QTextEdit()
         self._code_box.setPlainText(code)
         self._code_box.setReadOnly(True)
         self._code_box.setFixedHeight(ui_scale.px(52))
-        self._code_box.setStyleSheet(
-            ui_scale.style(
-                "QTextEdit {"
-                "  font-family: monospace;"
-                "  font-size: 15px;"
-                "  background-color: #0d1b2a;"
-                "  color: #34d399;"
-                "  border: 1px solid #1e3a5f;"
-                "  border-radius: 4px;"
-                "  padding: 6px;"
-                "}"
-            )
-        )
+        self._code_box.setObjectName(label_roles.RECOVERY_CODE_BOX)
         layout.addWidget(self._code_box)
 
         copy_btn = QPushButton("⧉  Copy code to clipboard")
@@ -226,7 +212,7 @@ class RecoveryCodeDialog(QDialog):
         self._confirm_check = QCheckBox(
             "I have saved my recovery code in a safe place."
         )
-        self._confirm_check.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        self._confirm_check.setObjectName(label_roles.SUBTLE)
         self._confirm_check.stateChanged.connect(self._on_confirm_changed)
         layout.addWidget(self._confirm_check)
 

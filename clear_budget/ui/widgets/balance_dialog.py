@@ -2,12 +2,13 @@
 
 from PySide6.QtWidgets import (
     QDialog,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QVBoxLayout,
 )
+
 from clear_budget.domain.value_objects.amount import Amount
 
 

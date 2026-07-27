@@ -1,27 +1,32 @@
 """Solvency panel widget - displays financial health status and warnings."""
 
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QProgressBar,
     QPushButton,
     QSizePolicy,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Qt, Signal
 
 from clear_budget.domain.services.credit_limit_schedule import (
     month_end_effective_limit_pence,
 )
-from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
+from clear_budget.ui import label_roles, theme, ui_scale
+from clear_budget.ui.theme_tokens import STATE_AT_RISK, STATE_RED, STATE_SAFE
+
+# Section headings on this tab share one QSS role (see _theme_controls).
+_HEADING_ROLE = "SolvencySectionHeading"
 from clear_budget.ui.utils.format_helpers import (
+    MONTH_NAMES,
     build_centered_nav_header,
     fmt,
-    MONTH_NAMES,
 )
-from clear_budget.ui import ui_scale
+from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
+from clear_budget.ui.views._solvency_panel_forward import SolvencyPanelForwardMixin
 from clear_budget.ui.views._solvency_panel_narratives import (
     SolvencyPanelNarrativeMixin,
 )
@@ -32,7 +37,12 @@ from clear_budget.ui.views._solvency_panel_narratives import (
 _FORWARD_OUTLOOK_MONTHS = 3
 
 
-class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWidget):
+class SolvencyPanel(
+    SolvencyPanelDisplayMixin,
+    SolvencyPanelForwardMixin,
+    SolvencyPanelNarrativeMixin,
+    QWidget,
+):
     """Displays account solvency status with three critical sections."""
 
     # Broadcasts the health colour applied to the month label so the other tabs'
@@ -53,77 +63,56 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
 
         self.prev_btn = QPushButton("← Previous")
         self.next_btn = QPushButton("Next →")
-        self.nav_header, self.month_label, _ = build_centered_nav_header(
-            "May 2026", prev_btn=self.prev_btn, next_btn=self.next_btn
+        self.nav_header, self.month_label, _, self.theme_btn = (
+            build_centered_nav_header(
+                "May 2026", prev_btn=self.prev_btn, next_btn=self.next_btn
+            )
         )
 
         # SECTION 1: OVERDRAFT ALERT (Top - Prominent)
         alert_label = QLabel("Overdraft Status")
-        alert_label.setStyleSheet(ui_scale.style("font-weight: bold; font-size: 17px;"))
+        alert_label.setObjectName(_HEADING_ROLE)
         layout.addWidget(alert_label)
 
         self.overdraft_alert = QLabel(f"SAFE: {fmt(0)} buffer")
-        self.overdraft_alert.setStyleSheet(
-            ui_scale.style(
-                "font-size: 22px; font-weight: bold; padding: 10px; border-radius: 5px;"
-            )
-        )
+        self.overdraft_alert.setObjectName("SolvencyBanner")
         layout.addWidget(self.overdraft_alert)
 
         self.midmonth_alert = QLabel("")
         self.midmonth_alert.setWordWrap(True)
-        self.midmonth_alert.setStyleSheet(
-            ui_scale.style(
-                "font-size: 18px; font-weight: bold; padding: 8px; border-radius: 5px; "
-                "background-color: #dc2626; color: white;"
-            )
-        )
+        self.midmonth_alert.setObjectName("SolvencyMidmonthAlert")
         self.midmonth_alert.hide()
         layout.addWidget(self.midmonth_alert)
 
         # SECTION 2: OVERALL HEALTH (Middle)
         health_label = QLabel("Overall Health")
-        health_label.setStyleSheet(
-            ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 20px;")
-        )
+        health_label.setObjectName(_HEADING_ROLE)
         layout.addWidget(health_label)
 
         self.balance_label = QLabel(f"Bank Balance: {fmt(0)}")
-        self.balance_label.setStyleSheet(
-            ui_scale.style("font-size: 20px; padding: 5px;")
-        )
+        self.balance_label.setObjectName(label_roles.VALUE)
         layout.addWidget(self.balance_label)
 
         self.committed_label = QLabel("Committed this month: -")
-        self.committed_label.setStyleSheet(
-            ui_scale.style("font-size: 18px; padding: 5px; color: #9ca3af;")
-        )
+        self.committed_label.setObjectName("SolvencyCommitted")
         layout.addWidget(self.committed_label)
 
         self.remaining_bank_label = QLabel("Still due this month (bank): -")
         self.remaining_bank_label.setWordWrap(True)
-        self.remaining_bank_label.setStyleSheet(
-            ui_scale.style("font-size: 18px; padding: 5px; color: #fbbf24;")
-        )
+        self.remaining_bank_label.setObjectName("SolvencyRemainingBank")
         layout.addWidget(self.remaining_bank_label)
 
         self.remaining_card_label = QLabel("Still due this month (cards): -")
-        self.remaining_card_label.setStyleSheet(
-            ui_scale.style("font-size: 18px; padding: 5px; color: #f59e0b;")
-        )
+        self.remaining_card_label.setObjectName("SolvencyRemainingCard")
         layout.addWidget(self.remaining_card_label)
 
         self.month_breakdown_label = QLabel("")
         self.month_breakdown_label.setWordWrap(True)
-        self.month_breakdown_label.setStyleSheet(
-            ui_scale.style("font-size: 15px; padding: 5px; color: #9ca3af;")
-        )
+        self.month_breakdown_label.setObjectName("SolvencyBreakdown")
         layout.addWidget(self.month_breakdown_label)
 
         cards_header = QLabel("Credit Card Status")
-        cards_header.setStyleSheet(
-            ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 10px;")
-        )
+        cards_header.setObjectName(_HEADING_ROLE)
         layout.addWidget(cards_header)
 
         self.card_bars_container = QWidget()
@@ -134,9 +123,7 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
 
         # SECTION 3: FORWARD PROJECTION (Bottom)
         forward_label = QLabel("Forward Projection")
-        forward_label.setStyleSheet(
-            ui_scale.style("font-weight: bold; font-size: 17px; margin-top: 20px;")
-        )
+        forward_label.setObjectName(_HEADING_ROLE)
         layout.addWidget(forward_label)
 
         self.m1_projection_label = QLabel("")
@@ -158,7 +145,7 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
 
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab."""
-        return [self.prev_btn, self.next_btn]
+        return [self.prev_btn, self.next_btn, self.theme_btn]
 
     def connect_signals(self) -> None:
         """Connect ViewModel signals to view updates."""
@@ -190,6 +177,7 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
         lo = (displayed.year, displayed.month)
         hi = (outlook.year, outlook.month)
         running = card.credit_limit.pence
+        colours = theme.colours()
         pills = []
         for change in card.scheduled_limit_changes:
             key = (change.effective_year, change.effective_month)
@@ -197,11 +185,14 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
                 increase = change.new_limit.pence >= running
                 arrow = "↑" if increase else "↓"
                 month_abbr = MONTH_NAMES[change.effective_month][:3]
+                label = (
+                    f"{arrow} {change.new_limit} · "
+                    f"{change.effective_day} {month_abbr}"
+                )
                 pills.append(
                     (
-                        f"{arrow} {change.new_limit} · "
-                        f"{change.effective_day} {month_abbr}",
-                        "#1e3a8a" if increase else "#78350f",
+                        label,
+                        colours["pill_up_bg"] if increase else colours["pill_down_bg"],
                     )
                 )
             running = change.new_limit.pence
@@ -215,7 +206,8 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
             label = QLabel(text)
             label.setStyleSheet(
                 ui_scale.style(
-                    "font-size: 11px; font-weight: 600; color: #ffffff;"
+                    "font-size: 11px; font-weight: 600;"
+                    f" color: {colours['primary_text']};"
                     f" background-color: {color}; border-radius: 4px; padding: 1px 6px;"
                 )
             )
@@ -283,16 +275,19 @@ class SolvencyPanel(SolvencyPanelDisplayMixin, SolvencyPanelNarrativeMixin, QWid
                 f" of {fmt(limit_pence)} ({util_pct:.1f}%)"
             )
 
+            colours = theme.colours()
+            states = theme.state_colours()
             if available_pence <= _red_threshold_pence:
-                chunk_color = "#f87171"
+                chunk_color = states[STATE_RED]
             elif available_pence <= _amber_threshold_pence:
-                chunk_color = "#f59e0b"
+                chunk_color = states[STATE_AT_RISK]
             else:
-                chunk_color = "#34d399"
+                chunk_color = states[STATE_SAFE]
 
             bar.setStyleSheet(
-                "QProgressBar { border-radius: 4px; background-color: #1f2937;"
-                " color: white; font-weight: bold; }"
+                "QProgressBar { border-radius: 4px;"
+                f" background-color: {colours['card_stat_bg']};"
+                f" color: {colours['bar_text']}; font-weight: bold; }}"
                 f"QProgressBar::chunk {{"
                 f" background-color: {chunk_color}; border-radius: 4px; }}"
             )

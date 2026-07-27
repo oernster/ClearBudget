@@ -2,20 +2,20 @@
 
 from datetime import date as _date
 
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
-    QLabel,
-    QCheckBox,
-    QPushButton,
-    QTableWidgetItem,
-    QSizePolicy,
 )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
 
 from clear_budget.domain.services.credit_limit_schedule import (
     effective_credit_limit_pence,
@@ -23,10 +23,16 @@ from clear_budget.domain.services.credit_limit_schedule import (
 )
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
-from clear_budget.ui import ui_scale
+from clear_budget.ui import theme, ui_scale
+from clear_budget.ui.theme_tokens import STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 
 _PROJECTION_MONTHS = 6
+
+# Remaining headroom (pence) banding a projection cell: tight, worth watching,
+# or ample. The colours themselves come from the theme's cell_* tokens.
+_HEADROOM_TIGHT_PENCE = 10_000
+_HEADROOM_WATCH_PENCE = 25_000
 
 # The native Windows 11 style draws a rounded frame around any styled QLabel; on the
 # dark card those frame corners show through as ugly "black notches". A stylesheet set
@@ -52,7 +58,9 @@ class CreditCardViewLoaderMixin:
         cards = self.budget_service.get_credit_cards(include_inactive=True)
         if not cards:
             empty_label = QLabel("No credit cards configured")
-            empty_label.setStyleSheet("color: #6b7280;" + _FLAT_LABEL)
+            empty_label.setStyleSheet(
+                f"color: {theme.colours()['text_disabled']};" + _FLAT_LABEL
+            )
             self.cards_layout.addWidget(empty_label)
             self.cards_layout.addStretch(1)
             self._build_projection_strip()
@@ -65,7 +73,7 @@ class CreditCardViewLoaderMixin:
             )
         }
 
-        _today = _date.today()
+        _today = _date.today()  # noqa: DTZ011 (local date)
         _today_ym = YearMonth(_today.year, _today.month)
         for card in cards:
             state = monthly_states.get(card.id)
@@ -113,12 +121,13 @@ class CreditCardViewLoaderMixin:
             due_color = None
             if self.current_month == _today_ym:
                 d, t = card.payment_due_day, _today.day
+                states = theme.state_colours()
                 if d < t:
-                    due_color = "#9ca3af"
+                    due_color = theme.colours()["text_muted"]
                 elif d == t:
-                    due_color = "#f87171"
+                    due_color = states[STATE_RED]
                 else:
-                    due_color = "#34d399"
+                    due_color = states[STATE_SAFE]
 
             status = self._get_status_text(display_util)
             status_color = self._get_status_color(status)
@@ -153,7 +162,9 @@ class CreditCardViewLoaderMixin:
         col.setContentsMargins(0, 0, 0, 0)
         col.setSpacing(0)
         label_widget = QLabel(label)
-        label_widget.setStyleSheet(ui_scale.style("font-size: 13px; color: #9ca3af;"))
+        label_widget.setStyleSheet(
+            ui_scale.style(f"font-size: 13px; color: {theme.colours()['text_muted']};")
+        )
         value_widget = QLabel(value)
         value_style = "font-size: 16px; font-weight: 600;"
         if color:
@@ -165,7 +176,8 @@ class CreditCardViewLoaderMixin:
             pill = QLabel(pill_text)
             pill.setStyleSheet(
                 ui_scale.style(
-                    "font-size: 11px; font-weight: 600; color: #ffffff;"
+                    "font-size: 11px; font-weight: 600;"
+                    f" color: {theme.colours()['primary_text']};"
                     f" background-color: {pill_color};"
                     " border-radius: 4px; padding: 1px 6px;"
                 )
@@ -183,18 +195,15 @@ class CreditCardViewLoaderMixin:
         each arrow judged against the running limit. Blue for an increase, amber
         for a decrease."""
         running = reference_limit_pence
+        colours = theme.colours()
         pills = []
         for change in upcoming_changes:
             increase = change.new_limit.pence >= running
             arrow = "↑" if increase else "↓"
             month_abbr = MONTH_NAMES[change.effective_month][:3]
-            pills.append(
-                (
-                    f"{arrow} {change.new_limit} · "
-                    f"{change.effective_day} {month_abbr}",
-                    "#1e3a8a" if increase else "#78350f",
-                )
-            )
+            label = f"{arrow} {change.new_limit} · {change.effective_day} {month_abbr}"
+            fill = colours["pill_up_bg"] if increase else colours["pill_down_bg"]
+            pills.append((label, fill))
             running = change.new_limit.pence
         return pills
 
@@ -212,9 +221,11 @@ class CreditCardViewLoaderMixin:
         status: str,
         status_color: QColor,
     ) -> QFrame:
+        colours = theme.colours()
         frame = QFrame()
         frame.setStyleSheet(
-            "QFrame { background-color: #242938; border: 1px solid #3a4156;"
+            f"QFrame {{ background-color: {colours['panel_bg']};"
+            f" border: 1px solid {colours['border']};"
             " border-radius: 8px; }"
         )
         outer = QVBoxLayout(frame)
@@ -239,7 +250,8 @@ class CreditCardViewLoaderMixin:
         status_label = QLabel(status)
         status_label.setStyleSheet(
             ui_scale.style(
-                f"background-color: {status_color.name()}; color: white;"
+                f"background-color: {status_color.name()};"
+                f" color: {colours['primary_text']};"
                 " padding: 2px 10px; border-radius: 4px; font-weight: 600;"
                 " font-size: 12px;"
             )
@@ -330,7 +342,7 @@ class CreditCardViewLoaderMixin:
         return frame
 
     def _build_projection_strip(self) -> None:
-        _today = _date.today()
+        _today = _date.today()  # noqa: DTZ011 (local date)
         today_ym = YearMonth(_today.year, _today.month)
         month_states_list = self.budget_service.get_card_projection_months(
             start_month=today_ym, n_months=_PROJECTION_MONTHS
@@ -365,8 +377,7 @@ class CreditCardViewLoaderMixin:
             _hdr_h + _row_h * _PROJECTION_MONTHS + _frame
         )
 
-        _red_threshold_pence = 10_000
-        _amber_threshold_pence = 25_000
+        colours = theme.colours()
         for row_idx, month_states in enumerate(month_states_list):
             row_ym = row_months[row_idx]
             for col_idx, state in enumerate(month_states):
@@ -377,10 +388,12 @@ class CreditCardViewLoaderMixin:
                 available = limit_pence - closing
                 cell = QTableWidgetItem(str(state.closing_balance))
                 cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                if available <= _red_threshold_pence:
-                    cell.setBackground(QColor("#7f1d1d"))
-                elif available <= _amber_threshold_pence:
-                    cell.setBackground(QColor("#f59e0b"))
+                if available <= _HEADROOM_TIGHT_PENCE:
+                    band = "tight"
+                elif available <= _HEADROOM_WATCH_PENCE:
+                    band = "watch"
                 else:
-                    cell.setBackground(QColor("#14532d"))
+                    band = "ample"
+                cell.setBackground(QColor(colours[f"cell_{band}_bg"]))
+                cell.setForeground(QColor(colours[f"cell_{band}_fg"]))
                 self.projection_table.setItem(row_idx, col_idx, cell)

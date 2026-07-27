@@ -1,22 +1,21 @@
 """Archive view widget - displays historical month data and trends."""
 
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
+    QHeaderView,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
-    QHeaderView,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Qt
 
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
-from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
 from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     build_centered_nav_header,
 )
+from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
 
 
 class ArchiveView(QWidget):
@@ -38,7 +37,7 @@ class ArchiveView(QWidget):
 
         self.prev_year_btn = QPushButton("← Previous")
         self.next_year_btn = QPushButton("Next →")
-        self.nav_header, self.year_label, _ = build_centered_nav_header(
+        self.nav_header, self.year_label, _, self.theme_btn = build_centered_nav_header(
             "", prev_btn=self.prev_year_btn, next_btn=self.next_year_btn
         )
 
@@ -54,9 +53,8 @@ class ArchiveView(QWidget):
             QHeaderView.ResizeMode.ResizeToContents
         )
         self.archive_table.horizontalHeader().setStretchLastSection(False)
-        self.archive_table.verticalHeader().setStyleSheet(
-            "QHeaderView::section { color: #34d399; }"
-        )
+        # The row-header pencil colour comes from the app stylesheet
+        # (QHeaderView::section:vertical), so it follows the theme.
         self.archive_table.verticalHeader().sectionClicked.connect(
             self.on_row_header_click
         )
@@ -107,7 +105,12 @@ class ArchiveView(QWidget):
 
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab."""
-        return [self.prev_year_btn, self.next_year_btn, self.archive_table]
+        return [
+            self.prev_year_btn,
+            self.next_year_btn,
+            self.theme_btn,
+            self.archive_table,
+        ]
 
     def set_nav_label_color(self, color: str) -> None:
         """Recolour the nav year label to match the Solvency tab."""

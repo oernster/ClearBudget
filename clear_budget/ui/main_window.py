@@ -3,7 +3,7 @@
 import shutil
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, Signal, QUrl
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -16,11 +16,11 @@ from PySide6.QtWidgets import (
 
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
+from clear_budget.shared.db_validation import validate_db
 from clear_budget.ui import ui_scale
 from clear_budget.ui._main_window_menus import MainWindowMenuMixin
 from clear_budget.ui._main_window_nav import MainWindowNavMixin
 from clear_budget.ui.ui_paths import default_downloads_dir
-from clear_budget.shared.db_validation import validate_db
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.views.archive_view import ArchiveView
@@ -67,7 +67,7 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         self.setWindowTitle(title)
         self.setMinimumSize(ui_scale.px(900), ui_scale.px(580))
         self.init_ui()
-        self.apply_theme()
+        self._build_window_chrome()
         # Parented to the window so it stops firing once the window is gone.
         self._midnight_timer = QTimer(self)
         self._midnight_timer.setSingleShot(True)
@@ -78,7 +78,8 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         """Arm the timer for just after the next local midnight."""
         from datetime import datetime, timedelta
 
-        now = datetime.now()
+        # Local wall-clock on purpose: the fold happens at the user's midnight.
+        now = datetime.now()  # noqa: DTZ005 (local midnight is the point)
         next_midnight = datetime.combine(
             now.date() + timedelta(days=1), datetime.min.time()
         )
@@ -100,6 +101,9 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         self.tabs = QTabWidget()
         self.tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
         self.tabs.tabBar().setExpanding(False)
+        # The tabs are styled as detached pills, so Qt's base line under the
+        # whole bar would read as a stray rule (it ignores QSS drawBase).
+        self.tabs.tabBar().setDrawBase(False)
 
         month_view = MonthView(self.month_view_model, read_only=self.read_only)
         self.tabs.addTab(self._scrollable(month_view), "Monthly Budget")
@@ -318,7 +322,10 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
                 cursor = self.month_view_model.budget_service.bill_repo.conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM bills")
                 has_data = cursor.fetchone()[0] > 0
-            except Exception:
+            except Exception:  # noqa: BLE001 (any failure means assume data)
+                # Deliberately broad: if the count cannot be read for ANY
+                # reason, assume there is data so the user still gets the
+                # overwrite confirmation rather than losing it silently.
                 has_data = True
 
         if has_data:
@@ -351,7 +358,11 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         except OSError as exc:
             QMessageBox.critical(self, "Import Failed", str(exc))
 
-    def apply_theme(self) -> None:
-        """Build status bar and menus (theme applied app-wide via QApplication)."""
+    def _build_window_chrome(self) -> None:
+        """Build the status bar and menus.
+
+        Named for what it does: the THEME is applied app-wide on the
+        QApplication by clear_budget.ui.theme, not here.
+        """
         self._build_status_bar()
         self._build_menus()

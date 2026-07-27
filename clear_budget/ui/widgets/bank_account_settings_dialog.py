@@ -1,18 +1,18 @@
 """BankAccountSettingsDialog - configure the overdraft facility."""
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
-    QCheckBox,
+    QVBoxLayout,
 )
 
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.shared.currency import get_symbol
-from clear_budget.ui import ui_scale
+from clear_budget.ui import label_roles, ui_scale
 
 _BASIS_POINTS_PER_PERCENT = 100
 
@@ -53,7 +53,7 @@ class BankAccountSettingsDialog(QDialog):
             " dip below zero is covered by your facility."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        info.setObjectName(label_roles.SUBTLE)
         layout.addWidget(info)
 
         self._has_overdraft_check = QCheckBox("I have an overdraft facility")

@@ -2,23 +2,22 @@
 
 from datetime import date as _date
 
-from clear_budget.domain.services._card_live_projection import (
-    anchored_month_opening_pence,
-)
-from clear_budget.domain.services.card_monthly_calculator import (
-    calculate_card_monthly_state,
-)
 from clear_budget.domain.services._prorating import (
     days_in_month,
     prorate_remaining_pence,
 )
+from clear_budget.ui import theme, ui_scale
+from clear_budget.ui.label_roles import set_role as _repolish_role
+from clear_budget.ui.theme_tokens import STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
-    apply_nav_label_color,
     fmt,
 )
-from clear_budget.ui.views._solvency_panel_narratives import _STATE_CAUTION
-from clear_budget.ui import ui_scale
+
+
+def _repolish(widget) -> None:
+    """Re-resolve `widget`'s stylesheet after a state property change."""
+    _repolish_role(widget, widget.objectName())
 
 
 class SolvencyPanelDisplayMixin:
@@ -45,21 +44,24 @@ class SolvencyPanelDisplayMixin:
             )
         return " (" + ", ".join(parts) + ")"
 
+    def restyle(self) -> None:
+        """Re-render after a theme switch, so code-set colours follow it."""
+        if getattr(self, "_last_report", None) is not None:
+            self.update_display(self._last_report)
+
     def update_display(self, report) -> None:
         if not report:
             return
+        self._last_report = report
 
         month_name = MONTH_NAMES[report.year_month.month]
         self.month_label.setText(f"{month_name} {report.year_month.year}")
 
         balance = report.balance_pence / 100
-        today = _date.today()
+        today = _date.today()  # noqa: DTZ011 (local date)
         is_current_month = (
             report.year_month.year == today.year
             and report.year_month.month == today.month
-        )
-        base_style = ui_scale.style(
-            "font-size: 22px; font-weight: bold; padding: 10px; border-radius: 5px; "
         )
         summary = self.view_model.current_summary
         monthly_deficit_pence = 0
@@ -137,17 +139,19 @@ class SolvencyPanelDisplayMixin:
             self.overdraft_alert.setText(
                 f"SAFE: {fmt(balance)} remaining after all {month_name} bills"
             )
-        banner_color = self._state_color(
-            report.balance_pence,
-            monthly_deficit_pence,
-            overdrawn_next_month,
-            overdraft_limit_pence,
+        # The banner carries its state, not a colour: the theme stylesheet
+        # supplies the fill, so it follows a light/dark switch on its own.
+        states = theme.state_colours()
+        self.overdraft_alert.setProperty(
+            "state",
+            self._state_key(
+                report.balance_pence,
+                monthly_deficit_pence,
+                overdrawn_next_month,
+                overdraft_limit_pence,
+            ),
         )
-        # Dark text reads better on the light caution yellow; white elsewhere.
-        banner_fg = "#1a1a1a" if banner_color == _STATE_CAUTION else "white"
-        self.overdraft_alert.setStyleSheet(
-            base_style + f"background-color: {banner_color}; color: {banner_fg};"
-        )
+        _repolish(self.overdraft_alert)
 
         self.midmonth_alert.hide()
         if not is_current_month and summary and summary.income_sources:
@@ -213,7 +217,10 @@ class SolvencyPanelDisplayMixin:
                 )
                 self.committed_label.setText(f"Committed this month: {fmt(committed)}")
                 self.remaining_bank_label.setStyleSheet(
-                    ui_scale.style("font-size: 18px; padding: 5px; color: #fbbf24;")
+                    ui_scale.style(
+                        "font-size: 18px; padding: 5px;"
+                        f" color: {theme.colours()['warn']};"
+                    )
                 )
                 self.remaining_bank_label.setText(
                     f"Still due this month (bank): {fmt(remaining_bank)}"
@@ -231,11 +238,15 @@ class SolvencyPanelDisplayMixin:
                 income_pence = summary.total_income.pence
                 net_pence = all_bank - income_pence
                 self.committed_label.setText("Committed this month: -")
-                net_color = "#f87171" if net_pence > 0 else "#34d399"
+                net_color = states[STATE_RED] if net_pence > 0 else states[STATE_SAFE]
                 # The projected end is the bottom line, so colour it by its own
                 # sign (green while still in the black) rather than inheriting the
                 # red from the bills-vs-income deficit that drives the line above.
-                end_color = "#f87171" if report.balance_pence < 0 else "#34d399"
+                end_color = (
+                    states[STATE_RED]
+                    if report.balance_pence < 0
+                    else states[STATE_SAFE]
+                )
                 self.remaining_bank_label.setText(
                     f"<span style='color:{net_color};'>Bank bills: {fmt(all_bank)}"
                     f" vs income {fmt(income_pence)}</span><br>"
@@ -273,90 +284,7 @@ class SolvencyPanelDisplayMixin:
         else:
             self.month_breakdown_label.setText("")
 
-        # Compute M1/M2 forward data needed for projections.
-        m1 = report.year_month.next_month()
-        m2 = m1.next_month()
-        m1_name = MONTH_NAMES[m1.month]
-        m2_name = MONTH_NAMES[m2.month]
-        m1_summary = self.view_model.budget_service.get_month_summary(year_month=m1)
-        m2_summary = self.view_model.budget_service.get_month_summary(year_month=m2)
-        m1_bank = sum(
-            b.amount.pence for b in m1_summary.bills if b.payment_method_id == 1
-        )
-        m2_bank = sum(
-            b.amount.pence for b in m2_summary.bills if b.payment_method_id == 1
-        )
-        m1_drain = m1_bank - m1_summary.total_income.pence
-        m2_drain = m2_bank - m2_summary.total_income.pence
-        m1_end_pence = report.balance_pence + m1_summary.total_income.pence - m1_bank
-
-        self._rebuild_card_bars(report)
-
-        m1_text, m1_color, m1_clarion = self._build_month_cashflow_summary(
-            report.balance_pence, m1_summary, m1_drain, overdraft_limit_pence
-        )
-        m2_text, m2_color, m2_clarion = self._build_month_cashflow_summary(
-            m1_end_pence, m2_summary, m2_drain, overdraft_limit_pence
-        )
-
-        cards = self.view_model.budget_service.get_credit_cards(include_inactive=False)
-        m1_card_opening = {
-            c.id: anchored_month_opening_pence(
-                card=c, bills=list(m1_summary.bills), year=m1.year, month=m1.month
-            )
-            for c in cards
-        }
-        m1_card_states = {
-            c.id: calculate_card_monthly_state(
-                card=c,
-                opening_balance_pence=m1_card_opening[c.id],
-                bills=list(m1_summary.bills),
-            )
-            for c in cards
-        }
-        m2_card_opening = {
-            c.id: m1_card_states[c.id].closing_balance.pence for c in cards
-        }
-
-        m1_card_text = self._build_card_state_text(
-            cards, m1_summary.bills, m1_card_opening
-        )
-        m2_card_text = self._build_card_state_text(
-            cards, m2_summary.bills, m2_card_opening
-        )
-
-        m1_full = f"{m1_name} {m1.year}\n{m1_text}"
-        if m1_card_text:
-            m1_full += f"\n{m1_card_text}"
-        m2_full = f"{m2_name} {m2.year}\n{m2_text}"
-        if m2_card_text:
-            m2_full += f"\n{m2_card_text}"
-
-        m1_style = f"font-size: 17px; padding: 5px; color: {m1_color};"
-        if m1_clarion:
-            m1_style += " font-weight: bold; font-style: italic;"
-        self.m1_projection_label.setText(m1_full)
-        self.m1_projection_label.setStyleSheet(ui_scale.style(m1_style))
-        m2_style = f"font-size: 17px; padding: 5px; color: {m2_color};"
-        if m2_clarion:
-            m2_style += " font-weight: bold; font-style: italic;"
-        self.m2_projection_label.setText(m2_full)
-        self.m2_projection_label.setStyleSheet(ui_scale.style(m2_style))
-
-        # The title-bar colour is the displayed month's OWN within-month health,
-        # the same colour Solvency shows for that month: red only when that
-        # month's balance actually drops below zero, amber when it dips low or
-        # runs at a loss but stays in the black, green when it stays comfortable.
-        # It must NOT inherit the banner's next-month overdraft warning: a month
-        # that itself never goes negative (e.g. dips to a small positive low)
-        # stays amber even while the banner shouts about the month after it.
-        current_month_color = self._title_health_color(
-            report, is_current_month, overdraft_limit_pence
-        )
-        apply_nav_label_color(self.month_label, current_month_color)
-        # Solvency is the single source of truth for the nav label colour;
-        # broadcast it so the other tabs' month/year labels match.
-        self.month_label_color_changed.emit(current_month_color)
+        self._render_forward_projection(report, overdraft_limit_pence, is_current_month)
 
     def _title_health_color(
         self, report, is_current_month: bool, overdraft_limit_pence: int

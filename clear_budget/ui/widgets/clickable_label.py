@@ -1,8 +1,8 @@
 """Clickable label widget that emits signal on mouse press."""
 
-from PySide6.QtWidgets import QLabel
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QLabel
 
 
 class ClickableLabel(QLabel):

@@ -10,24 +10,17 @@ from datetime import date as _date
 
 from PySide6.QtWidgets import QLabel
 
-from clear_budget.ui import ui_scale
-
 
 class MainWindowMenuMixin:
     """Builds the status bar and the File/Users/Help menus for MainWindow."""
 
     def _build_status_bar(self) -> None:
-        today = _date.today().strftime("%A, %d %B %Y")
+        today = _date.today().strftime("%A, %d %B %Y")  # noqa: DTZ011 (local date)
         lbl = QLabel(f"  Today: {today}  ")
-        lbl.setStyleSheet(
-            ui_scale.style(
-                "font-size: 18px; font-weight: bold; color: #00d4ff; padding: 2px 8px;"
-            )
-        )
+        # Styled by the theme QSS (QLabel#StatusDateLabel and QStatusBar), so
+        # the bar follows the active theme instead of a baked-in dark style.
+        lbl.setObjectName("StatusDateLabel")
         self.statusBar().addPermanentWidget(lbl)
-        self.statusBar().setStyleSheet(
-            "QStatusBar { background-color: #0d0d1a; border-top: 1px solid #1e3a5f; }"
-        )
 
     def _build_menus(self) -> None:
         """Build File and Help menu bar."""

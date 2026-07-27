@@ -1,23 +1,23 @@
 """Builder mixin for MonthView - UI construction extracted to stay under LOC limit."""
 
-from PySide6.QtWidgets import (
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QTableWidget,
-    QGroupBox,
-    QLabel,
-    QHeaderView,
-    QSizePolicy,
-)
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QTableWidget,
+    QVBoxLayout,
+)
 
+from clear_budget.ui import label_roles
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     build_centered_nav_header,
     fmt,
 )
-from clear_budget.ui import ui_scale
 
 INCOME_VISIBLE_ROWS = 5
 
@@ -30,7 +30,12 @@ class MonthViewBuilderMixin:
         self.prev_btn = QPushButton("← Previous")
         next_btn = self.next_btn = QPushButton("Next →")
         _ym = self.view_model.current_month
-        self.nav_header, self.month_label, self.graph_btn = build_centered_nav_header(
+        (
+            self.nav_header,
+            self.month_label,
+            self.graph_btn,
+            self.theme_btn,
+        ) = build_centered_nav_header(
             f"{MONTH_NAMES[_ym.month]} {_ym.year}",
             prev_btn=self.prev_btn,
             next_btn=next_btn,
@@ -40,19 +45,12 @@ class MonthViewBuilderMixin:
         self.solvency_hint_label = QLabel(
             "See the Solvency tab for full balance projections."
         )
-        self.solvency_hint_label.setStyleSheet(
-            ui_scale.style(
-                "font-size: 12px; font-style: italic; color: #2dd4bf;"
-                " padding: 0px 5px;"
-            )
-        )
+        self.solvency_hint_label.setObjectName(label_roles.HINT)
         self.solvency_hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header_layout.addWidget(self.solvency_hint_label)
 
         self.overdraft_warning_label = QLabel("")
-        self.overdraft_warning_label.setStyleSheet(
-            ui_scale.style("font-size: 12px; font-weight: bold; padding: 0px 5px;")
-        )
+        self.overdraft_warning_label.setObjectName(label_roles.WARN_NOTE)
         self.overdraft_warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.overdraft_warning_label.setWordWrap(True)
         self.overdraft_warning_label.setVisible(False)
@@ -60,31 +58,16 @@ class MonthViewBuilderMixin:
 
         summary_layout = QHBoxLayout()
         self.income_label = QLabel(f"Income: {fmt(0)}")
-        self.income_label.setStyleSheet(
-            ui_scale.style("font-size: 20px; padding: 5px;")
-        )
+        self.income_label.setObjectName(label_roles.VALUE)
         self.bills_label = QLabel(f"Bills: {fmt(0)}")
-        self.bills_label.setStyleSheet(ui_scale.style("font-size: 20px; padding: 5px;"))
+        self.bills_label.setObjectName(label_roles.VALUE)
         self.edit_balance_btn = QPushButton("📝")
+        self.edit_balance_btn.setObjectName(label_roles.ICON_ACTION)
         self.edit_balance_btn.setMaximumWidth(32)
         self.edit_balance_btn.setMaximumHeight(26)
         self.edit_balance_btn.setToolTip("Edit bank balance")
-        self.edit_balance_btn.setStyleSheet(
-            ui_scale.style(
-                "QPushButton { border: 2px solid transparent;"
-                " background-color: transparent; color: #34d399;"
-                " font-size: 20px; padding: 0px; border-radius: 4px; }"
-                "QPushButton:enabled:hover, QPushButton:enabled:focus"
-                " { background-color: #1a1a2e; border: 2px solid #34d399; }"
-                "QPushButton:disabled { border: 2px solid #f87171; }"
-            )
-        )
         self.balance_label = QLabel(f"Balance: {fmt(0)}")
-        self.balance_label.setStyleSheet(
-            ui_scale.style(
-                "font-size: 20px; font-weight: bold; color: #34d399; padding: 5px;"
-            )
-        )
+        self.balance_label.setObjectName(label_roles.GOOD)
         summary_layout.addWidget(self.income_label)
         summary_layout.addWidget(self.bills_label)
         summary_layout.addStretch()
@@ -114,18 +97,11 @@ class MonthViewBuilderMixin:
         self.bills_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.bills_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.bills_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
-        self.bills_table.setStyleSheet(
-            "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
-            "border-radius:3px;background:transparent;}"
-            "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
-            "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
-        )
+        # Indicator and row-header colours come from the app stylesheet, so
+        # they follow the theme (see _theme_controls.label_roles_qss).
         _bh = self.bills_table.horizontalHeader()
         _bh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         _bh.setStretchLastSection(False)
-        self.bills_table.verticalHeader().setStyleSheet(
-            "QHeaderView::section { color: #34d399; }"
-        )
         self.bills_table.verticalHeader().sectionClicked.connect(
             self._on_bill_row_header_click
         )
@@ -162,15 +138,6 @@ class MonthViewBuilderMixin:
         _ih = self.income_table.horizontalHeader()
         _ih.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         _ih.setStretchLastSection(False)
-        self.income_table.setStyleSheet(
-            "QTableWidget::indicator{width:15px;height:15px;border:2px solid #9ca3af;"
-            "border-radius:3px;background:transparent;}"
-            "QTableWidget::indicator:checked{background:#34d399;border-color:#34d399;}"
-            "QTableWidget::indicator:unchecked:hover{border-color:#d1d5db;}"
-        )
-        self.income_table.verticalHeader().setStyleSheet(
-            "QHeaderView::section { color: #34d399; }"
-        )
         self.income_table.verticalHeader().sectionClicked.connect(
             self._on_income_row_header_click
         )

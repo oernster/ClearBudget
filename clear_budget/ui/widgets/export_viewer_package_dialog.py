@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.auth.viewer_package import export_viewer_package
-from clear_budget.ui import ui_scale
+from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.ui_paths import default_downloads_dir
 from clear_budget.ui.widgets.login_dialog import LoginDialog
 
@@ -49,7 +49,7 @@ class ExportViewerPackageDialog(QDialog):
             "computer."
         )
         intro.setWordWrap(True)
-        intro.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        intro.setObjectName(label_roles.SUBTLE)
         layout.addWidget(intro)
 
         lbl_user = QLabel("Viewer Username")
@@ -80,7 +80,7 @@ class ExportViewerPackageDialog(QDialog):
         layout.addWidget(self.confirm_edit)
 
         self.error_label = QLabel("")
-        self.error_label.setStyleSheet("color: #f87171; font-size: 12px;")
+        self.error_label.setObjectName(label_roles.ERROR)
         self.error_label.setVisible(False)
         layout.addWidget(self.error_label)
 

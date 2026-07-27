@@ -2,22 +2,24 @@
 
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
+    QCheckBox,
+    QDateEdit,
     QDialog,
-    QVBoxLayout,
+    QDoubleSpinBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QSpinBox,
-    QDoubleSpinBox,
-    QDateEdit,
-    QCheckBox,
     QPushButton,
+    QSpinBox,
+    QVBoxLayout,
     QWidget,
 )
+
 from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.credit_limit_change import CreditLimitChange
 from clear_budget.shared.errors import InvalidCreditLimitChangeError
+from clear_budget.ui import label_roles
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 
 _MAX_SCHEDULE_YEAR = 2050
@@ -152,7 +154,7 @@ class CreditCardDialog(QDialog):
         layout.addLayout(add_change_row)
 
         self.change_warning_label = QLabel("")
-        self.change_warning_label.setStyleSheet("color: #f59e0b; font-size: 12px;")
+        self.change_warning_label.setObjectName(label_roles.CHANGE_WARN)
         self.change_warning_label.setWordWrap(True)
         self.change_warning_label.setVisible(False)
         layout.addWidget(self.change_warning_label)

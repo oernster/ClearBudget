@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.domain.services.bank_cashflow import BankCashflowService
-from clear_budget.ui import ui_scale
+from clear_budget.ui import label_roles
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     apply_nav_label_color,
@@ -41,6 +41,10 @@ _INCOME_SORT_KEYS = {
     3: lambda i: i.day_of_month or 99,
     4: lambda i: not i.active,
 }
+
+# A projected balance below this is shown as thin rather than healthy: one
+# hundred pounds of headroom, in pence.
+_THIN_BALANCE_PENCE = 10000
 
 
 class MonthView(
@@ -99,6 +103,11 @@ class MonthView(
         """Recolour the nav month label to match the Solvency tab."""
         apply_nav_label_color(self.month_label, color)
 
+    def restyle(self) -> None:
+        """Repaint the row colours set in code after a theme switch."""
+        if self.view_model.month_summary:
+            self.update_bills_table(self.view_model.month_summary)
+
     def _toggle_sort(self, current_col: int, current_asc: bool, new_col: int) -> tuple:
         return (new_col, not current_asc) if current_col == new_col else (new_col, True)
 
@@ -130,8 +139,11 @@ class MonthView(
             reverse=not self.income_sort_ascending,
         )
 
-    def _get_balance_color(self, p: int) -> str:
-        return "#f87171" if p < 0 else "#fbbf24" if p < 10000 else "#34d399"
+    def _get_balance_role(self, p: int) -> str:
+        """Severity role for a balance: negative, thin, or healthy."""
+        if p < 0:
+            return label_roles.DANGER
+        return label_roles.WARN if p < _THIN_BALANCE_PENCE else label_roles.GOOD
 
     def _update_balance_display(self) -> None:
         if summary := self.view_model.month_summary:
@@ -157,13 +169,7 @@ class MonthView(
                 else:
                     label = f"Projected end: -{fmt(abs(pence))} OVERDRAWN"
             self.balance_label.setText(label)
-            color = self._get_balance_color(pence)
-            self.balance_label.setStyleSheet(
-                ui_scale.style(
-                    f"font-size: 20px; font-weight: bold;"
-                    f" color: {color}; padding: 5px;"
-                )
-            )
+            label_roles.set_role(self.balance_label, self._get_balance_role(pence))
             self._update_overdraft_warning(summary)
 
     def _update_overdraft_warning(self, summary) -> None:
@@ -191,25 +197,21 @@ class MonthView(
             )
             if daily_interest > 0:
                 text += f" - ~{fmt(daily_interest)}/day interest"
-            color = "#fbbf24"
+            role = label_roles.WARN_NOTE
         elif overdraft_limit_pence > 0:
             text = (
                 f"⚠ Balance may EXCEED your overdraft limit (-{low} around day {day})"
             )
-            color = "#f87171"
+            role = label_roles.DANGER_NOTE
         else:
             text = (
                 f"⚠ Balance may go OVERDRAWN to -{low} around day {day}"
                 " - no overdraft facility set"
             )
-            color = "#f87171"
+            role = label_roles.DANGER_NOTE
 
         self.overdraft_warning_label.setText(text)
-        self.overdraft_warning_label.setStyleSheet(
-            ui_scale.style(
-                f"font-size: 12px; font-weight: bold; padding: 0px 5px; color: {color};"
-            )
-        )
+        label_roles.set_role(self.overdraft_warning_label, role)
         self.overdraft_warning_label.setVisible(True)
 
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
@@ -238,6 +240,7 @@ class MonthView(
             self.graph_btn,
             self.prev_btn,
             self.next_btn,
+            self.theme_btn,
             self.edit_balance_btn,
             self.bills_table,
             self.add_bill_btn,

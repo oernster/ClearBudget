@@ -1,15 +1,16 @@
 """ScrollableTab - QScrollArea wrapper with visible up/down scroll indicators."""
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QScrollArea,
+    QApplication,
     QFrame,
     QPushButton,
-    QApplication,
+    QScrollArea,
     QStyle,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Qt
+
 from clear_budget.ui import ui_scale
 
 _INDICATOR_SIZE = 32

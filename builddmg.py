@@ -44,7 +44,7 @@ VOLUME_NAME = f"Install {APP_NAME}"
 # Source 1024x1024 icon and the runtime PNG bundled beside the binary.
 SOURCE_PNG = "ClearBudget.png"
 
-# Dark background matching ClearBudget's app theme (dark_theme.py base colour).
+# Dark background matching ClearBudget's dark theme (theme_tokens window_bg).
 ICON_BG = (0x0A, 0x0A, 0x0D)
 
 # Per-resolution PNGs bundled so the runtime QIcon lookup resolves, plus the

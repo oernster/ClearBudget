@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox, QWidget
 
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
-from clear_budget.auth.viewer_package import import_viewer_package, UsernameClashError
+from clear_budget.auth.viewer_package import UsernameClashError, import_viewer_package
 from clear_budget.ui.ui_paths import default_downloads_dir
 
 

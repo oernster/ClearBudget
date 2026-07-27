@@ -2,32 +2,33 @@
 
 from dataclasses import replace
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QHeaderView,
-    QGroupBox,
-    QTableWidget,
-    QSizePolicy,
-    QMessageBox,
-)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
+from PySide6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QTableWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
-from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
-from clear_budget.ui import ui_scale
+from clear_budget.ui import theme, ui_scale
+from clear_budget.ui.theme_tokens import STATE_CAUTION, STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     build_centered_nav_header,
 )
 from clear_budget.ui.views._credit_card_view_loaders import (
-    CreditCardViewLoaderMixin,
     _PROJECTION_MONTHS,
+    CreditCardViewLoaderMixin,
 )
+from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 
 
 class CreditCardView(CreditCardViewLoaderMixin, QWidget):
@@ -53,7 +54,12 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
 
         self.prev_btn = QPushButton("← Previous")
         self.next_btn = QPushButton("Next →")
-        self.nav_header, self.month_label, self.graph_btn = build_centered_nav_header(
+        (
+            self.nav_header,
+            self.month_label,
+            self.graph_btn,
+            self.theme_btn,
+        ) = build_centered_nav_header(
             "",
             prev_btn=self.prev_btn,
             next_btn=self.next_btn,
@@ -147,6 +153,10 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
             series=series,
         ).exec()
 
+    def restyle(self) -> None:
+        """Rebuild the card panels and projection cells after a theme switch."""
+        self.load_cards()
+
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab."""
         card_buttons = self.cards_container.findChildren(QPushButton)
@@ -154,6 +164,7 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
             self.graph_btn,
             self.prev_btn,
             self.next_btn,
+            self.theme_btn,
             *card_buttons,
             self.add_btn,
             self.projection_table,
@@ -168,12 +179,13 @@ class CreditCardView(CreditCardViewLoaderMixin, QWidget):
         return "OK"
 
     def _get_status_color(self, status: str) -> QColor:
-        """Get color for status."""
+        """Traffic-light colour for a card's utilisation status."""
+        states = theme.state_colours()
         if status == "DANGER":
-            return QColor("#f87171")  # Red
+            return QColor(states[STATE_RED])
         if status == "WARNING":
-            return QColor("#fbbf24")  # Yellow
-        return QColor("#34d399")  # Green
+            return QColor(states[STATE_CAUTION])
+        return QColor(states[STATE_SAFE])
 
     def on_add_card(self) -> None:
         dialog = CreditCardDialog(self)
