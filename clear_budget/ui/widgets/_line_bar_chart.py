@@ -3,15 +3,14 @@
 Renders one or more GraphSeries (day-end pence values across a month) as
 either a line chart or a grouped bar chart, with a currency y-axis, day
 x-axis, a highlighted zero line when the range crosses it and a legend.
-Both renderings carry the same smoothed trend curve, and hovering a point
-reads out that day's balance. No charting dependency; pure QPainter.
+Both renderings carry the same following curve, which passes through every
+day's real value, and hovering a point reads out that day's balance. No
+charting dependency; pure QPainter.
 
-Chrome colours, the series palette and the trend colour all come from the
+Chrome colours, the series palette and the curve colour all come from the
 active theme (resolved per paint), so the chart follows the light/dark
 toggle: pastel series on the dark canvas, saturated mid-tones on the light.
 """
-
-from itertools import pairwise
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
@@ -19,8 +18,12 @@ from PySide6.QtWidgets import QWidget
 
 from clear_budget.ui import ui_scale
 from clear_budget.ui.utils.format_helpers import fmt
+from clear_budget.ui.widgets._chart_curve import (
+    bezier_segments,
+    daily_totals,
+    inflection_days,
+)
 from clear_budget.ui.widgets._chart_hover import ChartHoverMixin
-from clear_budget.ui.widgets._chart_trend import inflection_days, trend_values
 
 MODE_BAR = "bar"
 MODE_LINE = "line"
@@ -38,9 +41,9 @@ _LEGEND_ROW_HEIGHT = 22
 _LEGEND_SWATCH = 12
 _LEGEND_LABEL_WIDTH = 180
 
-_TREND_PEN_PX = 3
-_TREND_LABEL = "Trend"
-_TREND_TOTAL_LABEL = "Trend (all series)"
+_CURVE_PEN_PX = 3
+_CURVE_LABEL = "Curve"
+_CURVE_TOTAL_LABEL = "Curve (total)"
 # A marker sits on each direction change, so the hover readout has something
 # to aim at rather than the user hunting along a bare line.
 _INFLECTION_DOT_PX = 4
@@ -53,7 +56,7 @@ _READOUT_RADIUS_PX = 4
 
 
 def _active_palette():
-    """Return (chrome tokens, series colours, trend colour) for the theme.
+    """Return (chrome tokens, series colours, curve colour) for the theme.
 
     Resolved per paint rather than at construction, so an open graph repaints
     in the new theme the moment the tray toggle switches it.
@@ -62,13 +65,13 @@ def _active_palette():
 
     from clear_budget.ui import theme
     from clear_budget.ui.theme_tokens import (
+        curve_colour_for,
         series_colours_for,
         tokens_for,
-        trend_colour_for,
     )
 
     name = theme.current_theme(QApplication.instance())
-    return tokens_for(name), series_colours_for(name), trend_colour_for(name)
+    return tokens_for(name), series_colours_for(name), curve_colour_for(name)
 
 
 class LineBarChart(ChartHoverMixin, QWidget):
@@ -79,7 +82,7 @@ class LineBarChart(ChartHoverMixin, QWidget):
         self._series = []
         self._mode = MODE_BAR
         self._hover = None
-        self._tokens, self._colours, self._trend_colour = _active_palette()
+        self._tokens, self._colours, self._curve_colour = _active_palette()
         self.setMinimumHeight(ui_scale.px(260))
         # Hover readouts need move events without a button held down.
         self.setMouseTracking(True)
@@ -95,14 +98,18 @@ class LineBarChart(ChartHoverMixin, QWidget):
         """Return the plot colour for series `idx`, cycling the palette."""
         return QColor(self._colours[idx % len(self._colours)])
 
-    def _trend(self) -> tuple[int, ...]:
-        """The smoothed day-end total across every plotted series."""
-        return trend_values([s.values for s in self._series])
+    def _curve_values(self) -> tuple[int, ...]:
+        """The day-end total the curve follows, across every plotted series.
+
+        With one series this IS that series, so the curve traces its own bars
+        rather than an average of them.
+        """
+        return daily_totals([s.values for s in self._series])
 
     def _value_range(self) -> tuple[int, int]:
         values = [v for s in self._series for v in s.values]
-        # The trend is drawn on the same axis, so it has to fit inside it.
-        values += list(self._trend())
+        # The curve shares the axis, so it has to fit inside it.
+        values += list(self._curve_values())
         low = min(0, min(values))
         high = max(0, max(values))
         if low == high:
@@ -167,7 +174,7 @@ class LineBarChart(ChartHoverMixin, QWidget):
 
     # ---- painting -----------------------------------------------------------
     def paintEvent(self, event) -> None:
-        self._tokens, self._colours, self._trend_colour = _active_palette()
+        self._tokens, self._colours, self._curve_colour = _active_palette()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.fillRect(self.rect(), QColor(self._tokens["window_bg"]))
@@ -194,7 +201,7 @@ class LineBarChart(ChartHoverMixin, QWidget):
                 QPointF(self._x_at(geom, 1), y_zero),
                 QPointF(self._x_at(geom, days), y_zero),
             )
-        self._draw_trend(painter, geom)
+        self._draw_curve(painter, geom)
         self._draw_x_labels(painter, geom)
         self._draw_legend(painter, geom)
         self._draw_hover(painter, geom)
@@ -253,30 +260,28 @@ class LineBarChart(ChartHoverMixin, QWidget):
             for day in range(1, days + 1):
                 painter.fillRect(self._bar_rect(geom, idx, day), colour)
 
-    def _draw_trend(self, painter, geom) -> None:
-        """Overlay the smoothed total as a curve, in the trend colour."""
+    def _draw_curve(self, painter, geom) -> None:
+        """Overlay a smooth curve FOLLOWING the totals, in the curve colour.
+
+        Monotone cubic segments, so the curve reaches each day's real value and
+        never bulges past a tall day or below a low one.
+        """
         _left, _top, _plot_w, _plot_h, days, _low, _high = geom
-        values = self._trend()
+        values = self._curve_values()
         if len(values) < 2:
             return
         points = [
-            QPointF(self._x_at(geom, d), self._y_at(geom, values[d - 1]))
+            (self._x_at(geom, d), self._y_at(geom, values[d - 1]))
             for d in range(1, days + 1)
         ]
-        # Quadratic segments through the midpoints turn the averaged points
-        # into one continuous curve rather than a run of short straight legs.
-        path = QPainterPath(points[0])
-        for previous, current in pairwise(points):
-            midpoint = QPointF(
-                (previous.x() + current.x()) / 2, (previous.y() + current.y()) / 2
-            )
-            path.quadTo(previous, midpoint)
-        path.lineTo(points[-1])
+        path = QPainterPath(QPointF(*points[0]))
+        for control_1, control_2, end in bezier_segments(points):
+            path.cubicTo(QPointF(*control_1), QPointF(*control_2), QPointF(*end))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.setPen(
             QPen(
-                QColor(self._trend_colour),
-                ui_scale.px(_TREND_PEN_PX),
+                QColor(self._curve_colour),
+                ui_scale.px(_CURVE_PEN_PX),
                 Qt.PenStyle.SolidLine,
                 Qt.PenCapStyle.RoundCap,
             )
@@ -309,8 +314,8 @@ class LineBarChart(ChartHoverMixin, QWidget):
             (self._series_colour(idx), series.label)
             for idx, series in enumerate(self._series)
         ]
-        trend_label = _TREND_TOTAL_LABEL if len(self._series) > 1 else _TREND_LABEL
-        entries.append((QColor(self._trend_colour), trend_label))
+        curve_label = _CURVE_TOTAL_LABEL if len(self._series) > 1 else _CURVE_LABEL
+        entries.append((QColor(self._curve_colour), curve_label))
         for colour, label in entries:
             painter.fillRect(QRectF(x, y + 3, swatch, swatch), colour)
             painter.setPen(QColor(self._tokens["text_muted"]))

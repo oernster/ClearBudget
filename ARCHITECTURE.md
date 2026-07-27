@@ -415,14 +415,18 @@ Separate from budget infrastructure. Manages user identity and credentials.
   opened by the nav-tray icon button on Monthly Budget (bank balance by day)
   and Credit Cards (one series per card, with a legend); a pilot button
   toggles bar vs line rendering, drawn with QPainter (no chart dependency)
-  - `_chart_trend.py` - Qt-free trend maths: a centred moving average of the
-    day-end totals (one curve however many series are plotted) plus the
-    inflection days where direction changes. Tested without a QApplication in
-    `tests/ui_logic/test_chart_trend.py`, like the solvency colour rules
-  - Both renderings overlay that trend as a smooth curve (quadratic segments
-    through the midpoints) in a `trend` colour held outside the series palette,
-    so it never reads as one more series; it is included in the y-range because
-    it shares the axis
+  - `_chart_curve.py` - Qt-free curve maths: the day-end totals (one curve
+    however many series are plotted, so with a single series it IS that series)
+    plus the inflection days where direction changes. Tested without a
+    QApplication in `tests/ui_logic/test_chart_curve.py`, like the solvency
+    colour rules
+  - Both renderings overlay that as a smooth curve FOLLOWING the data, in a
+    `curve` colour held outside the series palette so it never reads as one
+    more series. Monotone cubic interpolation (Fritsch-Carlson): it passes
+    through every day's real value and never overshoots a peak or a trough,
+    because a curve cutting across a tall day would draw a balance the account
+    never had. An averaged trend line was tried first and rejected for exactly
+    that reason
   - `_chart_hover.py` (`ChartHoverMixin`) - hovering reads out the balance at
     the point under the pointer (`Day 14: £1,204.55`, prefixed with the series
     label when more than one is plotted). Line mode marks each inflection day
@@ -529,8 +533,8 @@ Separate from budget infrastructure. Manages user identity and credentials.
   (verified by an offscreen diff); the light values are chosen to pass WCAG AA
   on the light background
 - The month-graph chart follows the theme too: `_line_bar_chart` resolves its
-  chrome tokens, its series palette AND its trend colour per paint
-  (`theme_tokens.series_colours_for` / `trend_colour_for`), so pastels plot on
+  chrome tokens, its series palette AND its curve colour per paint
+  (`theme_tokens.series_colours_for` / `curve_colour_for`), so pastels plot on
   the dark canvas and saturated mid-tones on the light one, same hue order
   either way
 - Amber/red semantic warning colours (card thresholds, overdraft warnings) are

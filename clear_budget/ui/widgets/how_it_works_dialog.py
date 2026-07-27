@@ -73,9 +73,9 @@ paid by credit card never touch the bank balance.</p>
       the Credit Cards tab. A button in the graph switches between bar and
       line styles. Hover a bar, or one of the marked turning points on the
       line, to read out that day's balance. A curve in a separate colour
-      runs across both styles showing the overall trend for the month
-      (smoothed, so a single large bill does not look like a change of
-      direction).</li>
+      follows the shape of the month across both styles, passing through
+      every day's figure (on the Credit Cards graph it follows the total
+      across all your cards).</li>
   <li><b>Sun / moon button (far right of the tray, every tab)</b> - switches
       between light and dark mode. The whole app restyles immediately and
       your choice is remembered for next time.</li>
