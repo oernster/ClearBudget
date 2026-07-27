@@ -501,10 +501,17 @@ bank statement. Both identities are tested.
     with a dot to aim at; bar mode treats the whole bar as the target. Hit
     testing uses the chart's own `_geometry()`, so a readout can only land on a
     point that was drawn
-- `NeutralDialog` (`neutral_dialog.py`) - dialog base with a neutral start: a
-  0x0 focus sink absorbs the initial focus so nothing is highlighted until
-  the first Tab or Right (used by the graph, About and Licence dialogs;
-  BalanceDialog deliberately keeps its field focused and selected instead)
+- `FirstStopDialog` (`first_stop_dialog.py`) - dialog base that opens with focus
+  already on its FIRST stop: the first control in its own tab order that is
+  enabled, visible and takes tab focus, found by walking Qt's focus chain so the
+  answer is whatever the first Tab press would have reached. Disabled and hidden
+  controls are passed over, the same rule the ring applies everywhere else, and a
+  dialog with nothing focusable simply focuses nothing rather than failing.
+  Replaced the old `NeutralDialog`: the neutral start belongs to the MAIN WINDOW,
+  which you look at before you act in it, not to a dialog you opened deliberately
+  to do one thing. Making a dialog wait for a Tab press costs a keystroke and
+  tells the user nothing. Plain `QDialog` subclasses already behave this way
+  through Qt's own default, so the rule holds across all 20 dialog classes
 - `AboutDialog` credits auto-scroll (`_CreditsAutoScroller`) - the About text
   scrolls to the bottom at reading pace, pauses, rewinds faster and repeats;
   any manual interaction stops it
@@ -538,8 +545,10 @@ bank statement. Both identities are tested.
   Manage Users) and Tab or Left/Right leave it in a single press
 - Enter equals Space on buttons and checkboxes (main window and dialogs);
   inside modal dialogs the arrows walk the dialog's own tab order
-- Neutral start: a 0x0 sink takes the initial focus so nothing is highlighted
-  on launch
+- Neutral start, MAIN WINDOW ONLY: a 0x0 sink takes the initial focus so nothing
+  is highlighted on launch and no menu drops open. Dialogs do the opposite and
+  open on their first stop (`FirstStopDialog`); a window is looked at before it is
+  acted in, a dialog was opened to do one specific thing
 - Ring colours are three-state, enforced in the QSS: no ring at rest, a green
   ring while an enabled control is hovered or focused, a permanent red ring
   while disabled (hover/focus rules are gated on `:enabled`)

@@ -1,9 +1,10 @@
 """MonthRangeDialog - pick the first and last month of a projected export.
 
-Two month pickers and nothing else. Neutral start, Escape closes, and the
-ring is the dialog's own tab order (the application navigator hands a modal
-its own arrows). Export stays disabled while the range runs backwards, so an
-impossible range cannot be submitted rather than being reported afterwards.
+Two month pickers and nothing else. It opens focused on the first month's
+picker, ready to type, Escape closes, and the ring is the dialog's own tab
+order (the application navigator hands a modal its own arrows). Export stays
+disabled while the range runs backwards, so an impossible range cannot be
+submitted rather than being reported afterwards.
 """
 
 from PySide6.QtWidgets import (
@@ -19,7 +20,7 @@ from PySide6.QtWidgets import (
 
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import ui_scale
-from clear_budget.ui.widgets.neutral_dialog import NeutralDialog
+from clear_budget.ui.widgets.first_stop_dialog import FirstStopDialog
 
 _MONTH_NAMES = (
     "January",
@@ -51,7 +52,7 @@ def _shift(year_month: YearMonth, months: int) -> YearMonth:
     return YearMonth(index // _MONTHS_IN_YEAR, (index % _MONTHS_IN_YEAR) + 1)
 
 
-class MonthRangeDialog(NeutralDialog):
+class MonthRangeDialog(FirstStopDialog):
     """Asks for the first and last month of a projection."""
 
     def __init__(self, parent=None, *, anchor: YearMonth) -> None:

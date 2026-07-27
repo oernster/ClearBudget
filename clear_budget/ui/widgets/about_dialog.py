@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.ui import ui_scale
-from clear_budget.ui.widgets.neutral_dialog import NeutralDialog
+from clear_budget.ui.widgets.first_stop_dialog import FirstStopDialog
 from clear_budget.version import __version__ as _APP_VERSION
 
 
@@ -255,7 +255,7 @@ class _CreditsAutoScroller(QObject):
         return self._DOWN
 
 
-class AboutDialog(NeutralDialog):
+class AboutDialog(FirstStopDialog):
     """About ClearBudget dialog showing author, icon, and library credits."""
 
     def __init__(self, parent=None) -> None:
@@ -295,7 +295,7 @@ class AboutDialog(NeutralDialog):
         close_btn.clicked.connect(self.accept)
 
 
-class LicenceDialog(NeutralDialog):
+class LicenceDialog(FirstStopDialog):
     """Displays the LGPL-3.0 licence notice and third-party attributions."""
 
     def __init__(self, parent=None) -> None:

@@ -2,9 +2,10 @@
 
 Shows the viewed month's day-by-day series for the page it was opened from
 (the bank balance on Monthly Budget, one series per card on Credit Cards).
-A pilot button switches between bar and line rendering. Neutral start,
-Escape closes, and the ring is Tab/Right forward with the pilot, the two
-export buttons and Close as the stops.
+A pilot button switches between bar and line rendering. It opens focused on
+the pilot button (the chart itself takes no focus), Escape closes, and the
+ring is Tab/Right forward with the pilot, the export buttons and Close as
+the stops.
 
 "Export HTML" writes THIS month as a standalone page carrying both renderings
 at once, since a page has room for both where the dialog has room for one. It
@@ -33,8 +34,8 @@ from clear_budget.application.reporting.projection_report import (
 from clear_budget.ui import ui_scale
 from clear_budget.ui.ui_paths import default_downloads_dir
 from clear_budget.ui.widgets._line_bar_chart import MODE_BAR, MODE_LINE, LineBarChart
+from clear_budget.ui.widgets.first_stop_dialog import FirstStopDialog
 from clear_budget.ui.widgets.month_range_dialog import MonthRangeDialog
-from clear_budget.ui.widgets.neutral_dialog import NeutralDialog
 
 _DIALOG_MIN_WIDTH = 760
 _DIALOG_MIN_HEIGHT = 440
@@ -49,7 +50,7 @@ _HTML_FILTER = "Web page (*.html)"
 _HTML_SUFFIX = ".html"
 
 
-class MonthGraphDialog(NeutralDialog):
+class MonthGraphDialog(FirstStopDialog):
     """Displays one month's series as a bar or line graph, and exports both."""
 
     def __init__(
