@@ -29,7 +29,11 @@ from clear_budget.ui.theme_qss import (
     TAB_MARGIN_RIGHT_PX,
     TAB_RADIUS_PX,
 )
-from clear_budget.ui.widgets._tab_cursor import NO_CURSOR, next_candidate
+from clear_budget.ui.widgets._tab_cursor import (
+    NO_CURSOR,
+    next_candidate,
+    next_candidate_bounded,
+)
 
 __all__ = ["NO_CURSOR", "NavTabBar"]
 
@@ -52,17 +56,52 @@ class NavTabBar(QTabBar):
         return self._cursor
 
     def enter_cursor(self, delta: int) -> None:
-        """Put the cursor on the first candidate in `delta`'s direction.
+        """Put the cursor on the strip's first candidate from the entry END.
 
-        Called as the ring steps into the strip, so arriving forward lands on
-        the tab after the current one and arriving backward on the one before.
+        The ring arrives from one side or the other, so it enters at that side:
+        arriving forward lands on the LEFTMOST usable tab and walks right,
+        arriving backward lands on the RIGHTMOST and walks left. Entering
+        beside the current tab instead, as this did, meant a forward pass could
+        only ever reach the tabs to its right, and the rest of the strip was
+        unreachable without turning round.
+
+        The tab already showing is never a candidate: landing on it costs a
+        keypress that changes nothing.
         """
-        self._set_cursor(self._next_candidate(self.currentIndex(), delta))
+        edge = -1 if delta > 0 else self.count()
+        self._set_cursor(
+            next_candidate_bounded(
+                count=self.count(), start=edge, delta=delta, skip=self._skipped()
+            )
+        )
 
     def move_cursor(self, delta: int) -> None:
-        """Walk the cursor one candidate on, wrapping at both ends."""
+        """Walk the cursor one candidate on, wrapping at both ends.
+
+        The strip's OWN keys, Up and Down: they stay inside the tab bar, so
+        wrapping is right and the cursor can circle the strip indefinitely.
+        """
         start = self._cursor if self._cursor != NO_CURSOR else self.currentIndex()
         self._set_cursor(self._next_candidate(start, delta))
+
+    def step_cursor(self, delta: int) -> bool:
+        """Walk the cursor one candidate on WITHOUT wrapping; did it move?
+
+        Tab and Shift+Tab, which are the whole window's keys rather than the
+        strip's. Every tab is a stop on the ring, so stepping back from Archive
+        reaches Solvency rather than jumping out of the strip to the menu bar,
+        which is where the ring used to send it. Returning False at the end of
+        the strip is what lets the ring carry on out of it: wrapping here would
+        trap the ring in the tab bar for ever.
+        """
+        start = self._cursor if self._cursor != NO_CURSOR else self.currentIndex()
+        index = next_candidate_bounded(
+            count=self.count(), start=start, delta=delta, skip=self._skipped()
+        )
+        if index == NO_CURSOR:
+            return False
+        self._set_cursor(index)
+        return True
 
     def clear_cursor(self) -> None:
         """Take the cursor off the strip entirely."""

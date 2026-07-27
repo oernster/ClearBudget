@@ -128,6 +128,13 @@ class KeyboardNavigator(QObject):
         if index < 0:
             self._goto(stops[0 if delta > 0 else -1], delta)
             return
+        kind, target = stops[index]
+        # Every TAB is a stop, not the strip as a whole: stepping back from
+        # Archive reaches Solvency rather than leaving for the menu bar. The
+        # strip reports when it has run out of tabs in that direction, and only
+        # then does the ring move on to the next stop.
+        if kind == _TABS and target.step_cursor(delta):
+            return
         self._goto(stops[(index + delta) % len(stops)], delta)
 
     # ---- event filter -------------------------------------------------------

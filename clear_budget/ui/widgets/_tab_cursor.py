@@ -32,3 +32,24 @@ def next_candidate(*, count: int, start: int, delta: int, skip: frozenset[int]) 
         if index not in skip:
             return index
     return NO_CURSOR
+
+
+def next_candidate_bounded(
+    *, count: int, start: int, delta: int, skip: frozenset[int]
+) -> int:
+    """As `next_candidate`, but stopping at the ends instead of wrapping.
+
+    Used by Tab and Shift+Tab, which walk the strip as part of the whole
+    window's ring: reaching the last tab in the direction of travel has to
+    report NO_CURSOR so the ring can carry on out of the strip. Wrapping there
+    would trap the ring inside the tab bar for ever. Up and Down are the
+    strip's own keys and keep the wrapping walk above.
+    """
+    if count <= 0:
+        return NO_CURSOR
+    index = start + delta
+    while 0 <= index < count:
+        if index not in skip:
+            return index
+        index += delta
+    return NO_CURSOR

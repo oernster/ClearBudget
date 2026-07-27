@@ -552,15 +552,26 @@ bank statement. Both identities are tested.
   view's `nav_targets()`), recomputed live so disabled or hidden stops are
   skipped (a disabled Previous at the base month simply drops out)
 - Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
-  ends; tables keep Up/Down for their rows, the tab strip walks its keyboard
-  cursor on Up/Down, text inputs keep their arrows for the caret
+  ends; tables keep Up/Down for their rows, text inputs keep their arrows for
+  the caret
+- EVERY TAB IS A STOP on the ring, not the strip as a whole. Tab and Shift+Tab
+  walk the tabs in visual order and only leave the strip once there are none
+  left in that direction, so on Credit Cards with the cursor on Archive,
+  Shift+Tab reaches Solvency. Treating the strip as one stop sent that keypress
+  out to the menu bar and made the tab order wrong. The ring ENTERS at the side
+  it arrives from, leftmost tab going forward and rightmost coming back, rather
+  than beside the current tab: entering beside it meant a forward pass could
+  only ever reach the tabs to its right and the rest of the strip needed a
+  turn round. Two walks back this: `_tab_cursor.next_candidate` wraps and
+  belongs to Up and Down, the strip's own keys; `next_candidate_bounded` stops
+  at the ends and belongs to Tab, since wrapping there would trap the ring in
+  the tab bar for ever
 - The tab strip's cursor is SEPARATE from its selection (`NavTabBar`). Qt ties
   a `QTabBar`'s focus to its current tab, so a plainly focused bar can only
   ring the tab the user is already on, which is a dead stop. `NavTabBar` holds
-  its own cursor instead: the ring enters the strip on the next tab that is
-  not current (forward) or the previous one (backward), Up/Down walk it
-  wrapping and skipping the current tab, and only Enter or Space commits the
-  switch. Stepping the ring therefore never changes which tab is shown. The
+  its own cursor instead: the tab already showing is never a candidate, and
+  only Enter or Space commits a switch. Stepping the ring therefore never
+  changes which tab is shown. The
   cursor paints the green ring itself, on the pill geometry imported from
   `theme_qss` (`TAB_MARGIN_*`, `TAB_BORDER_PX`, `TAB_RADIUS_PX`) so the ring
   cannot drift from the pill; verified by matching its rendered pixel box
