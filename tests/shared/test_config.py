@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
-from clear_budget.shared.config import Config, _safe_username
+import pytest
+
+from clear_budget.shared.config import APP_DIR_ENV_VAR, Config, _safe_username
 
 
 class TestConfigDefault:
@@ -57,10 +59,41 @@ class TestConfigUsersDatabasePath:
 class TestConfigAppDir:
     """Test Config.app_dir()."""
 
-    def test_app_dir_is_clearbudget_folder(self) -> None:
+    def test_app_dir_is_clearbudget_folder(self, real_app_dir) -> None:
         d = Config.app_dir()
         assert d.name == ".clearbudget"
         assert d.parent == Path.home()
+
+
+class TestConfigAppDirOverride:
+    """The CLEARBUDGET_HOME redirect.
+
+    It exists so that anything running outside the app (a probe, a script, this
+    suite) writes to a scratch directory instead of the user's live data. The
+    app never sets it.
+    """
+
+    def test_an_override_redirects_every_path(self, tmp_path, monkeypatch) -> None:
+        monkeypatch.setenv(APP_DIR_ENV_VAR, str(tmp_path))
+        assert Config.app_dir() == tmp_path
+        assert Config.users_db_path().parent == tmp_path
+        assert Config.for_user("alice").db_path.parent == tmp_path
+        assert Config.default().db_path.parent == tmp_path
+
+    def test_no_override_uses_the_real_directory(self, real_app_dir) -> None:
+        assert Config.app_dir() == Path.home() / ".clearbudget"
+
+    @pytest.mark.parametrize("blank", ["", "   ", "\t"])
+    def test_a_blank_override_is_ignored(self, blank, monkeypatch) -> None:
+        """An empty variable means unset, not "write to the current directory"."""
+        monkeypatch.setenv(APP_DIR_ENV_VAR, blank)
+        assert Config.app_dir() == Path.home() / ".clearbudget"
+
+    def test_the_override_is_read_at_call_time(self, tmp_path, monkeypatch) -> None:
+        """Not cached at import, or a test could never redirect it."""
+        first = Config.app_dir()
+        monkeypatch.setenv(APP_DIR_ENV_VAR, str(tmp_path / "elsewhere"))
+        assert Config.app_dir() != first
 
 
 class TestSafeUsername:

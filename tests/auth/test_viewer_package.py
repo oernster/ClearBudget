@@ -1,7 +1,6 @@
 """Tests for export_viewer_package / import_viewer_package."""
 
 import zipfile
-from pathlib import Path
 
 import pytest
 
@@ -143,20 +142,22 @@ class TestImportViewerPackage:
             import_viewer_package(package, store)
 
     def test_default_config_derived_from_username(
-        self, source_db, store, tmp_path, monkeypatch
+        self, source_db, store, tmp_path, isolate_app_dir
     ) -> None:
-        """When config is omitted, it defaults to Config.for_user(username)."""
+        """When config is omitted, it defaults to Config.for_user(username).
+
+        The landing directory is the scratch one every test runs against (see
+        the `isolate_app_dir` fixture), rather than a locally faked home: the
+        data directory has ONE seam now, and a test that reaches around it
+        stops proving where the app would really write.
+        """
         package = tmp_path / "package.zip"
         export_viewer_package(source_db, package, "viewer_default_cfg", "viewerpass")
-
-        fake_home = tmp_path / "fakehome"
-        fake_home.mkdir()
-        monkeypatch.setattr(Path, "home", lambda: fake_home)
 
         user = import_viewer_package(package, store)
 
         assert user.username == "viewer_default_cfg"
-        installed = fake_home / ".clearbudget" / "budget_viewer_default_cfg.db"
+        installed = isolate_app_dir / "budget_viewer_default_cfg.db"
         assert installed.exists()
 
     def test_rejects_username_clash_with_existing_real_account(

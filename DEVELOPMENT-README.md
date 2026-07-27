@@ -82,6 +82,21 @@ what matters is what gets painted. Run those with
 substitutes Qt's own font database, so a font size tuned there does not match
 what ships. Measure those on the real platform.
 
+**Always point a probe at a scratch data directory.** `~/.clearbudget` holds
+live user data: both databases, the logs and the saved theme. Set
+`CLEARBUDGET_HOME` and every path the app resolves moves with it:
+
+```powershell
+$env:CLEARBUDGET_HOME = "$env:TEMP\cb-probe"
+```
+
+This is not a style preference. A probe that calls `theme.apply_theme` to
+measure something persists that theme, because persisting is what the function
+is for, and the app then opens in the theme the probe used. The test suite sets
+the variable for itself through an autouse fixture in `tests/conftest.py`, and
+`tests/structural/test_data_dir_isolation.py` fails if that ever stops
+happening.
+
 ---
 
 ## Versioning

@@ -1,0 +1,153 @@
+"""Structural guards on the user's data directory.
+
+`~/.clearbudget` holds live user data: both databases, the logs and the saved
+theme. Writing into it from outside the running app changes what the user sees
+at their next launch, and a settings write is silent, so it surfaces later as a
+bug report against the app. It has happened: an offscreen probe applied the
+light theme in order to measure it, `apply_theme` persisted that choice, and
+the app opened in light mode from then on. Nothing was wrong with the app.
+
+Three rules, each with its own failure it is here to catch:
+
+  * the suite never resolves the real directory, so no test can write there
+    even by accident (catches the autouse redirect being removed or broken);
+  * only `shared/config.py` derives the directory, so the redirect cannot be
+    bypassed by a module building the path for itself (catches a new bypass);
+  * the theme, the specific thing that got clobbered, lands in the redirected
+    directory (catches the seam being real but unused on that path).
+"""
+
+import re
+from pathlib import Path
+
+import pytest
+
+from clear_budget.shared.config import APP_DIR_ENV_VAR, Config
+from clear_budget.ui import theme
+from clear_budget.ui.theme_tokens import THEME_DARK, THEME_LIGHT
+
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+_PACKAGE_ROOT = _PROJECT_ROOT / "clear_budget"
+
+# The one module allowed to derive the data directory.
+_CONFIG_MODULE = Path("clear_budget") / "shared" / "config.py"
+
+# `Path.home()` is also the Downloads fallback, which is a different concern
+# and not a path into user data. Named here so the allowance is deliberate
+# rather than a hole in the pattern.
+_HOME_ALLOWED = {_CONFIG_MODULE, Path("clear_budget") / "ui" / "ui_paths.py"}
+
+_APP_DIR_LITERAL = re.compile(r"""["']\.clearbudget["']""")
+_HOME_CALL = re.compile(r"Path\.home\(\)")
+
+
+def _package_sources():
+    for path in _PACKAGE_ROOT.rglob("*.py"):
+        if "__pycache__" in path.parts:
+            continue
+        yield path.relative_to(_PROJECT_ROOT), path.read_text(encoding="utf-8")
+
+
+class TestTheSuiteCannotTouchRealUserData:
+    """The autouse redirect in conftest is load-bearing; prove it is on."""
+
+    def _real_app_dir(self) -> Path:
+        return Path.home() / ".clearbudget"
+
+    def test_app_dir_is_not_the_real_one(self):
+        assert Config.app_dir() != self._real_app_dir()
+
+    def test_every_path_lands_outside_the_real_one(self):
+        real = self._real_app_dir()
+        paths = [
+            Config.app_dir(),
+            Config.users_db_path(),
+            Config.for_user("oliver").db_path,
+            Config.for_user("oliver").log_dir,
+            Config.default().db_path,
+            Config.default().log_dir,
+        ]
+        inside = [p for p in paths if real in p.parents or p == real]
+        assert not inside, "Test paths resolve inside real user data:\n" + "\n".join(
+            str(p) for p in inside
+        )
+
+    def test_the_redirect_is_what_puts_them_there(self, isolate_app_dir):
+        """Not merely different: specifically the scratch dir conftest set."""
+        assert Config.app_dir() == isolate_app_dir
+
+    def test_the_real_path_is_restored_when_the_override_is_cleared(self, real_app_dir):
+        """The guard is the env var, not a permanent rewrite of the paths."""
+        assert Config.app_dir() == self._real_app_dir()
+
+
+class TestOnlyConfigDerivesTheDataDirectory:
+    """A module that builds the path itself would bypass the redirect."""
+
+    def test_no_other_module_names_the_data_directory(self):
+        offenders = [
+            str(rel)
+            for rel, source in _package_sources()
+            if rel != _CONFIG_MODULE and _APP_DIR_LITERAL.search(source)
+        ]
+        assert not offenders, (
+            "The '.clearbudget' directory name is derived outside "
+            f"{_CONFIG_MODULE}, which bypasses {APP_DIR_ENV_VAR}:\n"
+            + "\n".join(offenders)
+        )
+
+    def test_no_other_module_reads_the_home_directory(self):
+        offenders = [
+            str(rel)
+            for rel, source in _package_sources()
+            if rel not in _HOME_ALLOWED and _HOME_CALL.search(source)
+        ]
+        assert (
+            not offenders
+        ), "Path.home() is read outside the modules allowed to:\n" + "\n".join(
+            offenders
+        )
+
+
+class TestTheInstallerLeavesUserDataAlone:
+    """Installing, repairing or reinstalling must not disturb the saved theme.
+
+    The rule is that the installer has no business naming the app's data
+    directory at all: it lays down program files and it does not know what is
+    in `~/.clearbudget`. If a future change reaches in there (to "clean up", or
+    to seed a default), a reinstall could silently reset a setting the user
+    chose, which is the same failure as the probe that prompted these guards.
+
+    The staging directories the installer creates alongside the INSTALL
+    location are a different thing and are named `.clearbudget_staging.<uuid>`,
+    which this deliberately does not match.
+    """
+
+    def test_no_installer_module_names_the_data_directory(self):
+        installer_root = _PROJECT_ROOT / "installer"
+        offenders = [
+            str(path.relative_to(_PROJECT_ROOT))
+            for path in installer_root.rglob("*.py")
+            if "__pycache__" not in path.parts
+            and _APP_DIR_LITERAL.search(path.read_text(encoding="utf-8"))
+        ]
+        assert (
+            not offenders
+        ), "The installer references the app's data directory:\n" + "\n".join(offenders)
+
+
+class TestTheSavedThemeStaysInTheScratchDirectory:
+    """The exact write that clobbered a real setting."""
+
+    @pytest.mark.parametrize("saved", [THEME_DARK, THEME_LIGHT])
+    def test_saving_a_theme_writes_only_under_the_redirect(
+        self, isolate_app_dir, saved
+    ):
+        theme._save_theme(saved)
+        written = isolate_app_dir / "ui_settings.json"
+        assert written.exists()
+        assert theme.load_saved_theme() == saved
+
+    def test_the_real_settings_file_is_never_the_target(self):
+        real = Path.home() / ".clearbudget" / "ui_settings.json"
+        assert Config.app_dir() / "ui_settings.json" != real

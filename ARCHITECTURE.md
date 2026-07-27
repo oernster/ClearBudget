@@ -351,6 +351,20 @@ bank statement. Both identities are tested.
 - `Config.for_user(username)` → `budget_<safe_username>.db`
 - `Config.users_db_path()` → `users.db`
 - `Config.app_dir()` → `~/.clearbudget/`
+- Every one of those derives from ONE function, `_resolve_app_dir()`, which
+  honours the `CLEARBUDGET_HOME` environment variable when it is set and
+  non-blank. The app never sets it: it exists so that anything running OUTSIDE
+  the app (the test suite, a probe, a script) writes to a scratch directory
+  instead of live user data. The directory holds both databases, the logs and
+  the saved theme, and a write into it is silent, so it surfaces later as a bug
+  report against the app: an offscreen probe applied the light theme in order
+  to measure it, `theme.apply_theme` persisted that choice as it is supposed
+  to and the app opened light from then on. Constrain the bad state rather than
+  remember to avoid it. The variable is read at call time, never cached, or a
+  test could not redirect it. `tests/structural/test_data_dir_isolation.py`
+  holds the rules in place: the suite never resolves the real directory, no
+  other module in the package derives it, and the installer never names it at
+  all, so installing or reinstalling cannot disturb a saved setting
 
 **`Currency`** (`clear_budget/shared/currency.py`):
 - `CURRENCIES: list[Currency]` - 25 currencies for English-speaking countries
@@ -868,6 +882,10 @@ distribution tool, kept separate from the runtime application described above.
 - `test_layering_rules.py` - AST-based forbidden import enforcement
 - `test_loc_limits.py` - No file > 400 LOC
 - `test_auth_structure.py` - Auth layer structure validation
+- `test_data_dir_isolation.py` - the suite cannot resolve the real
+  `~/.clearbudget`, only `shared/config.py` derives it and the installer never
+  names it. A `conftest.py` autouse fixture points `CLEARBUDGET_HOME` at a
+  scratch directory for EVERY test, and these assert that it is in force
 
 ## Code Quality Standards
 
