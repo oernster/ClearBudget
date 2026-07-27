@@ -3,8 +3,9 @@
 Renders one or more GraphSeries (day-end pence values across a month) as
 either a line chart or a grouped bar chart, with a currency y-axis, day
 x-axis, a highlighted zero line when the range crosses it and a legend.
-Both renderings carry the same following curve, which passes through every
-day's real value, and hovering a point reads out that day's balance. No
+The bar rendering carries a following curve, which passes through every
+day's real value; the line rendering plots the days directly, so it needs
+no curve over the top. Hovering a point reads out that day's balance. No
 charting dependency; pure QPainter.
 
 Chrome colours, the series palette and the curve colour all come from the
@@ -106,10 +107,19 @@ class LineBarChart(ChartHoverMixin, QWidget):
         """
         return daily_totals([s.values for s in self._series])
 
+    def _curve_shown(self) -> bool:
+        """Whether the curve is drawn, which is bar mode only.
+
+        The line rendering already passes through every day's real value, so
+        a curve over the top of it duplicates the line it sits on.
+        """
+        return self._mode == MODE_BAR
+
     def _value_range(self) -> tuple[int, int]:
         values = [v for s in self._series for v in s.values]
-        # The curve shares the axis, so it has to fit inside it.
-        values += list(self._curve_values())
+        if self._curve_shown():
+            # The curve shares the axis, so it has to fit inside it.
+            values += list(self._curve_values())
         low = min(0, min(values))
         high = max(0, max(values))
         if low == high:
@@ -201,7 +211,8 @@ class LineBarChart(ChartHoverMixin, QWidget):
                 QPointF(self._x_at(geom, 1), y_zero),
                 QPointF(self._x_at(geom, days), y_zero),
             )
-        self._draw_curve(painter, geom)
+        if self._curve_shown():
+            self._draw_curve(painter, geom)
         self._draw_x_labels(painter, geom)
         self._draw_legend(painter, geom)
         self._draw_hover(painter, geom)
@@ -314,8 +325,9 @@ class LineBarChart(ChartHoverMixin, QWidget):
             (self._series_colour(idx), series.label)
             for idx, series in enumerate(self._series)
         ]
-        curve_label = _CURVE_TOTAL_LABEL if len(self._series) > 1 else _CURVE_LABEL
-        entries.append((QColor(self._curve_colour), curve_label))
+        if self._curve_shown():
+            curve_label = _CURVE_TOTAL_LABEL if len(self._series) > 1 else _CURVE_LABEL
+            entries.append((QColor(self._curve_colour), curve_label))
         for colour, label in entries:
             painter.fillRect(QRectF(x, y + 3, swatch, swatch), colour)
             painter.setPen(QColor(self._tokens["text_muted"]))

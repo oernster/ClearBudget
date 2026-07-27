@@ -420,13 +420,17 @@ Separate from budget infrastructure. Manages user identity and credentials.
     plus the inflection days where direction changes. Tested without a
     QApplication in `tests/ui_logic/test_chart_curve.py`, like the solvency
     colour rules
-  - Both renderings overlay that as a smooth curve FOLLOWING the data, in a
-    `curve` colour held outside the series palette so it never reads as one
-    more series. Monotone cubic interpolation (Fritsch-Carlson): it passes
-    through every day's real value and never overshoots a peak or a trough,
-    because a curve cutting across a tall day would draw a balance the account
-    never had. An averaged trend line was tried first and rejected for exactly
-    that reason
+  - Bar mode overlays that as a smooth curve FOLLOWING the data, in a `curve`
+    colour held outside the series palette so it never reads as one more
+    series. Monotone cubic interpolation (Fritsch-Carlson): it passes through
+    every day's real value and never overshoots a peak or a trough, because a
+    curve cutting across a tall day would draw a balance the account never had.
+    An averaged trend line was tried first and rejected for exactly that reason
+  - Line mode carries no curve. The line already joins every day's real value,
+    so a curve through the same points restates the line it sits on. One
+    `_curve_shown()` predicate gates the drawing, the legend entry and the
+    axis range together, so the axis is never padded for a curve that is not
+    there
   - `_chart_hover.py` (`ChartHoverMixin`) - hovering reads out the balance at
     the point under the pointer (`Day 14: £1,204.55`, prefixed with the series
     label when more than one is plotted). Line mode marks each inflection day
