@@ -12,19 +12,31 @@ from PySide6.QtGui import QFontDatabase
 
 from clear_budget.ui import ui_scale
 from clear_budget.ui._theme_controls import control_qss, widget_extras_qss
+from clear_budget.ui._theme_inputs import combo_qss, input_qss
+from clear_budget.ui._theme_menus import menu_qss
+from clear_budget.ui._theme_tabs import (
+    TAB_BAR_LEFT_INSET_PX,
+    TAB_BORDER_PX,
+    TAB_MARGIN_BOTTOM_PX,
+    TAB_MARGIN_RIGHT_PX,
+    TAB_RADIUS_PX,
+    tab_qss,
+)
 
 SCROLLBAR_WIDTH_PX = 8
-# Inset of the tab strip from the left edge, so the first pill lines up with
-# the content card below it rather than sitting flush against the window edge.
-TAB_BAR_LEFT_INSET_PX = 4
 
-# Tab pill geometry. NavTabBar paints its keyboard cursor on exactly this
-# shape, so the numbers are named here once and imported there rather than
-# written twice and left to drift.
-TAB_MARGIN_RIGHT_PX = 6
-TAB_MARGIN_BOTTOM_PX = 6
-TAB_BORDER_PX = 2
-TAB_RADIUS_PX = 8
+# The tab pill geometry lives in _theme_tabs beside the rules that use it and
+# is re-exported here, because NavTabBar and the keyboard-nav tests have always
+# imported it from this module.
+__all__ = [
+    "SCROLLBAR_WIDTH_PX",
+    "TAB_BAR_LEFT_INSET_PX",
+    "TAB_BORDER_PX",
+    "TAB_MARGIN_BOTTOM_PX",
+    "TAB_MARGIN_RIGHT_PX",
+    "TAB_RADIUS_PX",
+    "build_qss",
+]
 
 # Generic CSS family used as a final backstop if the platform reports no
 # resolvable UI font name.
@@ -63,56 +75,7 @@ QMainWindow {{
     background-color: {t["window_bg"]};
 }}
 
-/* Tabs are rounded pills on the window background, with the content below
-   them as one card. Unselected pills stay quiet (transparent, no border) so
-   only the selected pill and whatever the pointer or keyboard is on carry a
-   border; that keeps the three-state ring model intact and drops the boxed
-   look of hard-edged tabs butted together. */
-QTabWidget::pane {{
-    border: 1px solid {t["border"]};
-    border-radius: 8px;
-    background-color: {t["panel_bg"]};
-}}
-
-QTabWidget::tab-bar {{
-    left: {TAB_BAR_LEFT_INSET_PX}px;
-}}
-
-/* The bar's base line is suppressed on the widget (setDrawBase(False) in
-   MainWindow); Qt ignores drawBase set through a stylesheet. */
-QTabBar {{
-    background: transparent;
-    border: none;
-}}
-
-QTabBar::tab {{
-    background-color: transparent;
-    color: {t["text_muted"]};
-    padding: 9px 22px;
-    margin-right: {TAB_MARGIN_RIGHT_PX}px;
-    margin-bottom: {TAB_MARGIN_BOTTOM_PX}px;
-    border: {TAB_BORDER_PX}px solid transparent;
-    border-radius: {TAB_RADIUS_PX}px;
-    font-weight: 600;
-}}
-
-QTabBar::tab:!selected:hover {{
-    background-color: {t["panel_bg"]};
-    color: {t["ring"]};
-    border-color: {t["ring"]};
-}}
-
-QTabBar::tab:selected {{
-    background-color: {t["panel_bg"]};
-    color: {t["accent"]};
-    border-color: {t["accent"]};
-}}
-
-/* No focus rule on the selected pill. The bar's keyboard cursor is a separate
-   thing from its selection (NavTabBar), and the cursor paints the green ring
-   itself on whichever tab it sits on; ringing the selected tab as well would
-   put two green rings on the strip. The accent stays a selection colour. */
-
+{tab_qss(t)}
 QGroupBox {{
     border: 1px solid {t["border"]};
     border-radius: 6px;
@@ -218,61 +181,10 @@ QLabel#SolvencyWarn {{
     font-weight: bold;
 }}
 
-QLineEdit {{
-    background-color: {t["panel_bg"]};
-    color: {t["text"]};
-    border: 1px solid {t["border"]};
-    border-radius: 4px;
-    padding: 4px 8px;
-}}
-
-QLineEdit:enabled:focus {{
-    border: 2px solid {t["ring"]};
-}}
-
-QLineEdit:disabled {{
-    border: 2px solid {t["danger"]};
-    color: {t["text_disabled"]};
-}}
-
-QSpinBox, QDoubleSpinBox {{
-    background-color: {t["panel_bg"]};
-    color: {t["text"]};
-    border: 1px solid {t["border"]};
-    border-radius: 4px;
-    padding: 4px 8px;
-}}
-
-QSpinBox:enabled:focus, QDoubleSpinBox:enabled:focus, QDateEdit:enabled:focus {{
-    border: 2px solid {t["ring"]};
-}}
-
-QSpinBox:disabled, QDoubleSpinBox:disabled, QDateEdit:disabled {{
-    border: 2px solid {t["danger"]};
-    color: {t["text_disabled"]};
-}}
+{input_qss(t)}
 {control_qss(t)}
 {widget_extras_qss(t, s)}
-QComboBox {{
-    background-color: {t["panel_bg"]};
-    color: {t["text"]};
-    border: 1px solid {t["border"]};
-    border-radius: 4px;
-    padding: 4px 8px;
-}}
-
-QComboBox:enabled:focus {{
-    border: 2px solid {t["ring"]};
-}}
-
-QComboBox:disabled {{
-    border: 2px solid {t["danger"]};
-    color: {t["text_disabled"]};
-}}
-
-QComboBox::drop-down {{
-    border: none;
-}}
+{combo_qss(t)}
 
 QProgressBar {{
     background-color: {t["inset_bg"]};
@@ -343,57 +255,7 @@ QCheckBox::indicator:disabled {{
 }}
 
 QCheckBox:enabled:focus {{
-    color: {t["ring"]};
+    color: {t["accent"]};
 }}
 
-QMenuBar {{
-    background-color: {t["window_bg"]};
-    color: {t["text"]};
-    border-bottom: 1px solid {t["border"]};
-}}
-
-QMenuBar::item {{
-    background: transparent;
-    padding: 4px 12px;
-    border-radius: 4px;
-}}
-
-QMenuBar::item:selected {{
-    border: 2px solid {t["ring"]};
-    border-radius: 4px;
-    color: {t["ring"]};
-}}
-
-QMenuBar::item:pressed {{
-    background-color: {t["border"]};
-    border: 2px solid {t["ring"]};
-    border-radius: 4px;
-}}
-
-QMenu {{
-    background-color: {t["panel_bg"]};
-    color: {t["text"]};
-    border: 1px solid {t["border"]};
-    border-radius: 4px;
-    padding: 4px 0px;
-}}
-
-QMenu::item {{
-    padding: 6px 24px 6px 12px;
-    border: 2px solid transparent;
-    border-radius: 3px;
-    margin: 2px 4px;
-}}
-
-QMenu::item:selected {{
-    border: 2px solid {t["ring"]};
-    color: {t["ring"]};
-    background-color: transparent;
-}}
-
-QMenu::separator {{
-    height: 1px;
-    background-color: {t["border"]};
-    margin: 4px 8px;
-}}
-"""
+{menu_qss(t)}"""

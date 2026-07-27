@@ -679,6 +679,26 @@ bank statement. Both identities are tested.
   glyph wearing the size the outgoing one needed. Measure this on the real
   platform: under `QT_QPA_PLATFORM=offscreen` Qt substitutes its own font
   database, where both glyphs measure 38px and the discrepancy is invisible
+- HIGHLIGHT TEXT IS TEAL, NEVER GREEN, everywhere: the hovered tab, the
+  selected tab, a menu-bar title and a menu item. Green is the RING, the border
+  saying where the pointer or the keyboard is; the words inside it take the
+  accent, the same colour that marks the selected tab. Text in the ring's own
+  green made a hovered tab read as a second, slightly different selection, two
+  greens a few degrees apart on one strip. `tests/ui_logic/test_highlight_text_colour.py`
+  holds every one of those surfaces to it. The keyboard cursor's tab is the one
+  exception and keeps muted text under its green ring, because the cursor marks
+  where the keyboard is rather than what is live; Qt gives no way to say
+  otherwise anyway (measured: with a stylesheet active, `setTabTextColor` is
+  ignored entirely)
+- The sheet is split by surface across `_theme_tabs.py` (the tab strip plus the
+  pill geometry NavTabBar paints its cursor on), `_theme_inputs.py` (the fields
+  the user types in), `_theme_menus.py`, `_theme_controls.py` and
+  `_theme_labels.py`, each a pure string builder taking the token dict. The
+  split is what keeps every module under the LOC limit, and it is also what
+  makes the highlight rule testable: `build_qss` as a whole CANNOT run without
+  a QApplication, since it resolves the system font and generates the spin-box
+  arrow images, while the per-surface builders touch no Qt at all. The blocks
+  are interpolated in their original order, because QSS is order sensitive
 - `QToolTip` is styled app-wide (size, colour, background, border). Without a
   rule, tooltips take the platform default and are the one surface that escapes
   the theme entirely, as well as being open to inheriting whatever font-size a
@@ -845,6 +865,19 @@ The Windows installer is itself a small PySide6 application under `installer/`
 (with its own `cli`, `ops`, `state`, `ui`, and payload-builder modules). It wraps
 the PyInstaller bundle into the per-user setup executable and is a build and
 distribution tool, kept separate from the runtime application described above.
+
+**The installer never touches user data.** Install, repair, reinstall and
+uninstall all deal in program files, shortcuts and the registry entry only, so
+`~/.clearbudget` survives every one of them and a reinstall carries on from
+where the user left off, saved theme included. Uninstall offers no option to
+delete it: that directory holds every account and every user's budget, deleting
+it is irreversible and an installer is the wrong place to offer it. Anyone who
+wants it gone deletes the folder by hand, which the uninstall dialog says.
+`tests/structural/test_data_dir_isolation.py` fails if any installer module so
+much as names the directory. What was there before was inherited from the
+installer this one was rebranded from: it seeded a `playback_volume` file and
+deleted two platformdirs directories, none of which this app has ever used, so
+an option that read as "remove my data" removed nothing.
 
 ## Testing Strategy
 
