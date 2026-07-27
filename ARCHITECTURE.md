@@ -451,8 +451,19 @@ Separate from budget infrastructure. Manages user identity and credentials.
   view's `nav_targets()`), recomputed live so disabled or hidden stops are
   skipped (a disabled Previous at the base month simply drops out)
 - Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
-  ends; tables keep Up/Down for their rows, the tab bar cycles tabs on
-  Up/Down, text inputs keep their arrows for the caret
+  ends; tables keep Up/Down for their rows, the tab strip walks its keyboard
+  cursor on Up/Down, text inputs keep their arrows for the caret
+- The tab strip's cursor is SEPARATE from its selection (`NavTabBar`). Qt ties
+  a `QTabBar`'s focus to its current tab, so a plainly focused bar can only
+  ring the tab the user is already on, which is a dead stop. `NavTabBar` holds
+  its own cursor instead: the ring enters the strip on the next tab that is
+  not current (forward) or the previous one (backward), Up/Down walk it
+  wrapping and skipping the current tab, and only Enter or Space commits the
+  switch. Stepping the ring therefore never changes which tab is shown. The
+  cursor paints the green ring itself, on the pill geometry imported from
+  `theme_qss` (`TAB_MARGIN_*`, `TAB_BORDER_PX`, `TAB_RADIUS_PX`) so the ring
+  cannot drift from the pill; verified by matching its rendered pixel box
+  against the selected pill's border box
 - Submenus keep Qt's native horizontal arrows: inside an open menu, Right on
   a submenu item (File > Import / Export) enters it with its first item
   active and Left inside a submenu exits back to the parent item; on plain
@@ -520,11 +531,15 @@ Separate from budget infrastructure. Manages user identity and credentials.
   theme switch restyle it: `label_roles.set_role` repolishes when a severity
   role changes at runtime (a balance turning from good to danger)
 - The primary tabs are pills: unselected are transparent and quiet, the
-  selected one takes a panel fill with an accent border, hover gives the
-  green ring and keyboard focus on the bar rings the SELECTED pill green
-  (`QTabBar::tab:selected:focus`; the widget-state-first form is silently
-  ignored by Qt). `MainWindow` sets `tabBar().setDrawBase(False)` because Qt
-  ignores drawBase from a stylesheet and would draw a rule under the strip
+  selected one takes a panel fill with an accent border and hover gives the
+  green ring. There is deliberately NO `QTabBar::tab:selected:focus` rule:
+  the green ring belongs to `NavTabBar`'s keyboard cursor, which paints it on
+  whichever tab the cursor sits on, and a focus rule on the selected pill
+  would put a second green ring on the strip. (If one is ever reinstated, the
+  subcontrol must come first: `QTabBar::tab:selected:focus` works while the
+  widget-state-first form `QTabBar:focus::tab:selected` is silently ignored by
+  Qt.) `MainWindow` sets `tabBar().setDrawBase(False)` because Qt ignores
+  drawBase from a stylesheet and would draw a rule under the strip
 - Content whose colours are computed in code (card panels, projection cells,
   solvency lines, table row colours) cannot follow the stylesheet, so those
   views expose `restyle()` and `theme.apply_theme` calls it after a switch

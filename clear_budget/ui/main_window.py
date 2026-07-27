@@ -27,6 +27,7 @@ from clear_budget.ui.views.archive_view import ArchiveView
 from clear_budget.ui.views.credit_card_view import CreditCardView
 from clear_budget.ui.views.month_view import MonthView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
+from clear_budget.ui.widgets.nav_tab_bar import NavTabBar
 from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 
 # GitHub releases page opened by Help > Check for Updates.
@@ -99,6 +100,9 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.tabs = QTabWidget()
+        # A tab bar whose keyboard cursor is separate from its selection, so
+        # stepping the focus ring into the strip never switches tab.
+        self.tabs.setTabBar(NavTabBar())
         self.tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
         self.tabs.tabBar().setExpanding(False)
         # The tabs are styled as detached pills, so Qt's base line under the

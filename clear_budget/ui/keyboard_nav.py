@@ -6,7 +6,11 @@ Tab and Right step forward, Shift+Tab and Backtab and Left step back, both
 wrapping, and the horizontal arrows are tested first so they step the ring
 everywhere: out of an open menu, out of a table, out of the tab bar. Up and
 Down stay internal to a stop that owns them (a table walks its rows, the tab
-bar cycles tabs); Enter and Space activate. Inside an open menu the toolkit
+bar walks its keyboard cursor); Enter and Space activate. The tab strip's
+cursor is deliberately separate from its selection, so stepping through the
+strip never switches tab: entering it lands on the next tab that is not the
+one already showing, and only Enter or Space commits the switch. Inside an
+open menu the toolkit
 keeps two horizontal-arrow cases: Right on a submenu item enters the submenu
 and Left inside a submenu exits back to its parent; every other Left/Right
 still steps the ring. Inside a modal dialog the same arrows walk the dialog's
@@ -98,7 +102,7 @@ class KeyboardNavigator(QObject):
                     return i
         return -1
 
-    def _goto(self, stop) -> None:
+    def _goto(self, stop, delta: int) -> None:
         kind, target = stop
         popup = QApplication.activePopupWidget()
         if popup is not None:
@@ -111,6 +115,10 @@ class KeyboardNavigator(QObject):
         # bar keeps eating the arrows as native menu navigation.
         self._menubar.setActiveAction(None)
         target.setFocus(Qt.FocusReason.TabFocusReason)
+        if kind == _TABS:
+            # The tab already showing is not a stop, so the cursor enters on
+            # the next one along in whichever direction the ring is moving.
+            target.enter_cursor(delta)
 
     def _step(self, delta: int) -> None:
         stops = self._stops()
@@ -118,9 +126,9 @@ class KeyboardNavigator(QObject):
             return
         index = self._current_index(stops)
         if index < 0:
-            self._goto(stops[0 if delta > 0 else -1])
+            self._goto(stops[0 if delta > 0 else -1], delta)
             return
-        self._goto(stops[(index + delta) % len(stops)])
+        self._goto(stops[(index + delta) % len(stops)], delta)
 
     # ---- event filter -------------------------------------------------------
     def eventFilter(self, obj, event) -> bool:
@@ -173,10 +181,13 @@ class KeyboardNavigator(QObject):
             return True
 
         if key in (Qt.Key.Key_Up, Qt.Key.Key_Down) and focus is self._tabbar:
-            count = self._tabbar.count()
-            delta = 1 if key == Qt.Key.Key_Down else -1
-            self._tabbar.setCurrentIndex((self._tabbar.currentIndex() + delta) % count)
+            # The cursor moves; the shown tab does not change until it is
+            # committed, so walking the strip never switches under the user.
+            self._tabbar.move_cursor(1 if key == Qt.Key.Key_Down else -1)
             return True
+
+        if key in _ACTIVATE_KEYS + (Qt.Key.Key_Space,) and focus is self._tabbar:
+            return self._tabbar.commit_cursor()
 
         if (
             key in _ACTIVATE_KEYS

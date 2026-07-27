@@ -18,6 +18,14 @@ SCROLLBAR_WIDTH_PX = 8
 # the content card below it rather than sitting flush against the window edge.
 TAB_BAR_LEFT_INSET_PX = 4
 
+# Tab pill geometry. NavTabBar paints its keyboard cursor on exactly this
+# shape, so the numbers are named here once and imported there rather than
+# written twice and left to drift.
+TAB_MARGIN_RIGHT_PX = 6
+TAB_MARGIN_BOTTOM_PX = 6
+TAB_BORDER_PX = 2
+TAB_RADIUS_PX = 8
+
 # Generic CSS family used as a final backstop if the platform reports no
 # resolvable UI font name.
 _FALLBACK_FONT_FAMILY = "sans-serif"
@@ -81,10 +89,10 @@ QTabBar::tab {{
     background-color: transparent;
     color: {t["text_muted"]};
     padding: 9px 22px;
-    margin-right: 6px;
-    margin-bottom: 6px;
-    border: 2px solid transparent;
-    border-radius: 8px;
+    margin-right: {TAB_MARGIN_RIGHT_PX}px;
+    margin-bottom: {TAB_MARGIN_BOTTOM_PX}px;
+    border: {TAB_BORDER_PX}px solid transparent;
+    border-radius: {TAB_RADIUS_PX}px;
     font-weight: 600;
 }}
 
@@ -100,11 +108,10 @@ QTabBar::tab:selected {{
     border-color: {t["accent"]};
 }}
 
-/* Keyboard focus on the bar rings the selected pill green, the same signal
-   every other stop gives; the accent stays a selection colour, never a ring. */
-QTabBar::tab:selected:focus {{
-    border-color: {t["ring"]};
-}}
+/* No focus rule on the selected pill. The bar's keyboard cursor is a separate
+   thing from its selection (NavTabBar), and the cursor paints the green ring
+   itself on whichever tab it sits on; ringing the selected tab as well would
+   put two green rings on the strip. The accent stays a selection colour. */
 
 QGroupBox {{
     border: 1px solid {t["border"]};
