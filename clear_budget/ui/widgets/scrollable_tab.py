@@ -109,12 +109,25 @@ class ScrollableTab(QWidget):
         self._refresh()
 
     def _reposition(self) -> None:
+        """Place the indicators inside the SCROLL AREA, not the whole tab.
+
+        The nav header is hoisted out of the scroll area and sits above it, so
+        measuring from the top of this widget put the up indicator in the
+        navigation tray, over the theme toggle at its right-hand end. The
+        indicators belong to the scrolling region and are positioned against
+        its geometry, which leaves them clear of anything above it whatever
+        height the tray happens to be.
+        """
         sz = self._down_btn.width()
         margin = ui_scale.px(_INDICATOR_MARGIN)
-        # Leave room for the vertical scrollbar (~16px)
-        x = self.width() - sz - margin - ui_scale.px(16)
-        self._up_btn.move(x, margin)
-        self._down_btn.move(x, self.height() - sz - margin)
+        area = self._scroll.geometry()
+        # Sit inside the scrollbar rather than under it. The width comes from
+        # the styled scrollbar itself, so a change to the stylesheet's
+        # scrollbar width moves the indicators with it.
+        gutter = self._scroll.verticalScrollBar().sizeHint().width()
+        x = area.right() - sz - margin - gutter
+        self._up_btn.move(x, area.top() + margin)
+        self._down_btn.move(x, area.bottom() - sz - margin)
         self._up_btn.raise_()
         self._down_btn.raise_()
 

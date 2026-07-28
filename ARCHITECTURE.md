@@ -473,7 +473,12 @@ bank statement. Both identities are tested.
 - `ScrollableTab` - wraps any view in `QScrollArea` with scroll indicator
   buttons; also hoists the view's `nav_header` (the shared, centred month/year
   navigation tray) above the scroll area and zeroes the content's top margin so
-  the tray stays full-width and centred on every tab
+  the tray stays full-width and centred on every tab. The indicators are
+  positioned against the SCROLL AREA's geometry, not this widget's: measuring
+  from the top of the whole tab put the up indicator inside the hoisted tray,
+  over the theme toggle at its right-hand end. Their right inset comes from the
+  styled scrollbar's own width rather than a fixed number, so a stylesheet
+  change to the scrollbar moves them with it
 - `_preferences_flow.py` / `_bank_account_settings_flow.py` - dialog-orchestration
   helpers extracted from `MainWindow` to stay under the LOC limit
 - `_main_window_menus.py` (`MainWindowMenuMixin`) - status-bar and File/Users/Help
