@@ -554,6 +554,21 @@ bank statement. Both identities are tested.
 - Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
   ends; tables keep Up/Down for their rows, text inputs keep their arrows for
   the caret
+- THE PAGE BODY IS THE LAST STOP on every tab, when it has something to
+  scroll. `ScrollableTab.nav_scroll_stop()` returns its `QScrollArea` only
+  while the content overflows, so a page that fits is skipped (a stop must be
+  actionable: landing on a page that scrolls nowhere spends a keypress and does
+  nothing). Without it the ring ran out at the theme toggle and wrapped
+  straight back to the File menu, so a long page such as Solvency could only be
+  read with the mouse: there was nowhere to put the keyboard that the arrows
+  would scroll. Qt scrolls a focused `QAbstractScrollArea` on Up, Down, Page
+  and Home/End by itself, so only the focus policy and the ring membership had
+  to be added. Left and Right deliberately still STEP THE RING here rather than
+  scrolling horizontally, unlike the general scrollable-region rule: nothing in
+  this app scrolls sideways, and Left/Right stepping everywhere is what stops
+  focus being trapped. The stop paints the same green ring on focus and none at
+  rest (measured: 0 pixels at rest, ~2980 focused, both themes), with no hover
+  rule, since the pointer sits over the page most of the time the app is open
 - EVERY TAB IS A STOP on the ring, not the strip as a whole. Tab and Shift+Tab
   walk the tabs in visual order and only leave the strip once there are none
   left in that direction, so on Credit Cards with the cursor on Archive,

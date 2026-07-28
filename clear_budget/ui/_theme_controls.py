@@ -191,6 +191,20 @@ QPushButton#ThemeToggleButton:disabled {{
     border: 2px solid {t["danger"]};
 }}
 
+/* The page body is a ring stop when it overflows, so it needs the same green
+   ring every other stop shows; without one the keyboard would be on it with
+   nothing to say so. Only :focus, never :hover: the pointer is over this
+   surface most of the time the app is open, and a ring following the mouse
+   around the page would be noise rather than a signal. */
+QScrollArea#TabScrollArea {{
+    border: 2px solid transparent;
+    border-radius: 6px;
+}}
+
+QScrollArea#TabScrollArea:enabled:focus {{
+    border: 2px solid {t["ring"]};
+}}
+
 /* Tooltips were unstyled, so they took the platform default and, worse, any
    font-size a widget's own stylesheet happened to set (the theme toggle's
    emoji size leaked into its hover text). Sizing and theming them here gives

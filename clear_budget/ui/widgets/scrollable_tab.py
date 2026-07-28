@@ -62,9 +62,16 @@ class ScrollableTab(QWidget):
                 content_layout.setContentsMargins(cm.left(), 0, cm.right(), cm.bottom())
 
         self._scroll = QScrollArea()
+        self._scroll.setObjectName("TabScrollArea")
         self._scroll.setWidget(content)
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        # The page body is a keyboard stop when it has something to scroll, so
+        # Up and Down can read down a long page. Qt scrolls a focused
+        # QAbstractScrollArea on the vertical arrows by itself; the ring only
+        # has to be able to land here, which needs an explicit focus policy
+        # (a QScrollArea does not take tab focus by default).
+        self._scroll.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         outer.addWidget(self._scroll)
@@ -119,3 +126,15 @@ class ScrollableTab(QWidget):
 
     def scroll_area(self) -> QScrollArea:
         return self._scroll
+
+    def nav_scroll_stop(self) -> QScrollArea | None:
+        """The page body as a ring stop, or None when there is nothing to scroll.
+
+        A stop has to be ACTIONABLE. A page that fits its tab scrolls nowhere,
+        so landing on it would spend a keypress and do nothing; a page that
+        overflows is the one thing on the tab the keyboard otherwise cannot
+        reach. The ring is rebuilt on every move, so the same page counts as a
+        stop or not according to the window size at that moment.
+        """
+        vbar = self._scroll.verticalScrollBar()
+        return self._scroll if vbar.maximum() > vbar.minimum() else None

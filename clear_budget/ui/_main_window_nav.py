@@ -34,7 +34,18 @@ class MainWindowNavMixin:
         if not 0 <= index < len(self._tab_views):
             return []
         view = self._tab_views[index]
-        return view.nav_targets() if hasattr(view, "nav_targets") else []
+        stops = list(view.nav_targets()) if hasattr(view, "nav_targets") else []
+        # The page body LAST, after the controls in the tray above it. Without
+        # it the ring ran out of stops at the theme toggle and wrapped straight
+        # back to the File menu, so a long page (Solvency) could be read only
+        # with the mouse: there was no way to put the keyboard on the thing the
+        # arrows would have scrolled. It appears only while the page actually
+        # overflows, so a short tab still wraps at the toggle.
+        page = self.tabs.widget(index)
+        scroll = page.nav_scroll_stop() if hasattr(page, "nav_scroll_stop") else None
+        if scroll is not None:
+            stops.append(scroll)
+        return stops
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
