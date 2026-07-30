@@ -127,6 +127,18 @@
                     <h3>Does Clear Budget support multiple users and currencies?</h3>
                     <p>Yes. It supports multiple users with separate, isolated databases and read-only viewer packages and 25 currencies covering English-speaking countries, defaulting to GBP.</p>
                 </div>
+                <div class="faq-item">
+                    <h3>Can I get the figures out of it?</h3>
+                    <p>Yes. A month can be exported as a single self-contained web page carrying both the bar and line views, and a bank balance projection can be exported across any range of months with a table of opening balance, income, bills, net, closing balance and the lowest point inside each month. Both files are self-contained, so they open with no internet connection and survive being emailed. The database itself exports and imports too, and a snapshot can be packaged for a read-only viewer account.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Does uninstalling delete my budgets?</h3>
+                    <p>No. Uninstalling removes the program, its shortcuts and its entry in Apps and features, and leaves your budgets, accounts and settings where they are, so reinstalling picks up where you left off. To remove them, delete the .clearbudget folder in your user folder yourself.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Can it be used without a mouse?</h3>
+                    <p>Yes. Every screen and dialog has an explicit keyboard path: Tab and the arrow keys step the same ring, the tab strip is walked tab by tab, long pages scroll from the keyboard and whatever holds focus is ringed so you can always see where you are.</p>
+                </div>
             </div>
         </section>
 
@@ -171,6 +183,21 @@
             "@type": "Question",
             "name": "Does Clear Budget support multiple users and currencies?",
             "acceptedAnswer": { "@type": "Answer", "text": "Yes. It supports multiple users with separate, isolated databases and read-only viewer packages and 25 currencies covering English-speaking countries, defaulting to GBP." }
+        },
+        {
+            "@type": "Question",
+            "name": "Can I get the figures out of Clear Budget?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. A month can be exported as a single self-contained web page carrying both the bar and line views, and a bank balance projection can be exported across any range of months with a table of opening balance, income, bills, net, closing balance and the lowest point inside each month. Both files open with no internet connection. The database itself exports and imports too, and a snapshot can be packaged for a read-only viewer account." }
+        },
+        {
+            "@type": "Question",
+            "name": "Does uninstalling Clear Budget delete my budgets?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Uninstalling removes the program, its shortcuts and its entry in Apps and features, and leaves your budgets, accounts and settings where they are, so reinstalling picks up where you left off. To remove them, delete the .clearbudget folder in your user folder yourself." }
+        },
+        {
+            "@type": "Question",
+            "name": "Can Clear Budget be used without a mouse?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Every screen and dialog has an explicit keyboard path: Tab and the arrow keys step the same ring, the tab strip is walked tab by tab, long pages scroll from the keyboard and whatever holds focus is ringed." }
         }
     ]
 }
@@ -179,9 +206,10 @@
 <script>
     // The download buttons never go stale: each points at GitHub's releases/latest/download
     // redirect, which always serves the newest release's asset (the asset names are version-free
-    // by design). This script only decorates the page with live details: the version chip, the
-    // release date and each installer's size, fetched from the GitHub API. If the call fails
-    // (offline, rate-limited), the static text above stands on its own.
+    // by design). This script only decorates the page with live details: the version chip and
+    // each installer's size, fetched from the GitHub API. Deliberately NOT the release date:
+    // the site carries no visible dates, so a page read a year from now reads the same. If the
+    // call fails (offline, rate-limited), the static text above stands on its own.
     (function () {
         var api = 'https://api.github.com/repos/oernster/ClearBudget/releases/latest';
         fetch(api).then(function (r) {
