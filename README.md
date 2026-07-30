@@ -92,11 +92,14 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
   styles, inline SVG) in the dark theme, so they can be emailed and opened
   offline, and both default to your Downloads folder
 - Full keyboard navigation: Tab or Right steps forward, Shift+Tab or Left
-  steps back (wrapping); Up/Down walk table rows and the tab strip; Enter
-  equals Space; focus and hover show a green ring, disabled controls a red
-  one; nothing is focused on launch until the first keypress. Stepping into
-  the tab strip never switches tab: it lands on the next tab you are not
-  already on and waits for Enter
+  steps back (wrapping); Up/Down walk table rows; Enter equals Space; focus
+  and hover show a green ring, disabled controls a red one; nothing is focused
+  on launch until the first keypress
+- The tab strip is walked tab by tab in the order shown, and marking a tab
+  never switches to it: Enter or Space does that. The tab you are already
+  reading is skipped
+- The page itself is the last stop on each tab whenever it has more content
+  than fits, so Up/Down, Page Up/Down and Home/End scroll it from the keyboard
 - Dark and light themes: a sun/moon button at the far right of the navigation
   tray on every tab switches between them, the whole app restyles immediately
   (the sign-in screen included) and the choice is remembered between sessions

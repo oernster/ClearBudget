@@ -976,6 +976,14 @@ an option that read as "remove my data" removed nothing.
 - **100% test coverage** (`pytest -v --cov`, gated at `--cov-fail-under=100`) excluding
   UI, interfaces, main, build scripts. The suite is Qt-free and runs clean in one
   process
+- What the gate does NOT include, stated plainly so the number is not read as
+  more than it is: besides the `.coveragerc` omissions above, every line marked
+  `# pragma: no cover` is outside it. That is the whole of
+  `SQLitePaymentMethodRepository` and most of the thin pass-throughs in
+  `application/services`. Several are exercised by tests anyway (the credit-card
+  ones are, through `tests/application/test_budget_service_crud.py`, which reads
+  through the real repository rather than a fake precisely because the gate says
+  nothing about it). Retiring the pragmas is worthwhile and has not been done
 - **No mock libraries** - real implementations and hand-written fakes only
 - **No magic numbers** - all domain values derive from data, config, or named constants
 

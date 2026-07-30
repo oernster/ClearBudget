@@ -76,6 +76,12 @@ A coverage-gated run prints the coverage table last and emits no "N passed"
 line, so read the exit code rather than the tail of the output: `0` means the
 tests passed AND the gate was met.
 
+The gate covers everything except the `.coveragerc` omissions (UI, interfaces,
+`main.py`, build scripts) and any line marked `# pragma: no cover`, of which
+there are a fair number on thin pass-throughs and on the SQLite payment-method
+repository. Read 100% as "100% of what is gated", not as "every line is
+tested"; ARCHITECTURE.md says which parts sit outside it.
+
 Appearance is verified with throwaway offscreen probes rather than tests, since
 what matters is what gets painted. Run those with
 `QT_QPA_PLATFORM=offscreen`, EXCEPT when measuring text or emoji: offscreen
