@@ -473,12 +473,20 @@ bank statement. Both identities are tested.
 - `ScrollableTab` - wraps any view in `QScrollArea` with scroll indicator
   buttons; also hoists the view's `nav_header` (the shared, centred month/year
   navigation tray) above the scroll area and zeroes the content's top margin so
-  the tray stays full-width and centred on every tab. The indicators are
-  positioned against the SCROLL AREA's geometry, not this widget's: measuring
-  from the top of the whole tab put the up indicator inside the hoisted tray,
-  over the theme toggle at its right-hand end. Their right inset comes from the
-  styled scrollbar's own width rather than a fixed number, so a stylesheet
-  change to the scrollbar moves them with it
+  the tray stays full-width and centred on every tab. The indicators sit in a
+  COLUMN of their own beside the page, laid out rather than positioned. They
+  used to float on top of the content, placed by hand, and a hand-placed
+  overlay lands on whatever happens to be beneath it: measuring from the top of
+  the whole tab put the up indicator inside the hoisted tray over the theme
+  toggle, and on a 900x580 window the down indicator sat on Monthly Budget's
+  Delete Income button, where a click scrolled instead of reaching the button.
+  A column cannot overlap anything. It is ALWAYS present, even while both
+  buttons are hidden: showing and hiding it would change the page width, which
+  can change whether the page overflows, which decides whether the buttons
+  show, a loop that flickers on content sitting near the boundary. This was the
+  only hand-placed child widget in the app; everything else is laid out, and a
+  layout cannot overlap its own children (verified by an overlap sweep over all
+  four tabs at three window sizes and nine dialogs at two: zero)
 - `_preferences_flow.py` / `_bank_account_settings_flow.py` - dialog-orchestration
   helpers extracted from `MainWindow` to stay under the LOC limit
 - `_main_window_menus.py` (`MainWindowMenuMixin`) - status-bar and File/Users/Help

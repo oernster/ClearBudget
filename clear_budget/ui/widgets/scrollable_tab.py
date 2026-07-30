@@ -1,9 +1,10 @@
-"""ScrollableTab - QScrollArea wrapper with visible up/down scroll indicators."""
+"""ScrollableTab - QScrollArea wrapper with up/down scroll indicators beside it."""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
+    QHBoxLayout,
     QPushButton,
     QScrollArea,
     QStyle,
@@ -34,7 +35,7 @@ _INDICATOR_STYLE = (
 
 
 class ScrollableTab(QWidget):
-    """Wraps a content widget in a QScrollArea and overlays ▲/▼ indicators."""
+    """Wraps a content widget in a QScrollArea with ▲/▼ indicators beside it."""
 
     def __init__(self, content: QWidget, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -74,23 +75,51 @@ class ScrollableTab(QWidget):
         self._scroll.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        outer.addWidget(self._scroll)
 
         sz = ui_scale.px(_INDICATOR_SIZE)
         _style = QApplication.style()
-        self._up_btn = QPushButton(self)
+        self._up_btn = QPushButton()
         self._up_btn.setIcon(_style.standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
         self._up_btn.setFixedSize(sz, sz)
         self._up_btn.setStyleSheet(_INDICATOR_STYLE)
         self._up_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._up_btn.hide()
 
-        self._down_btn = QPushButton(self)
+        self._down_btn = QPushButton()
         self._down_btn.setIcon(_style.standardIcon(QStyle.StandardPixmap.SP_ArrowDown))
         self._down_btn.setFixedSize(sz, sz)
         self._down_btn.setStyleSheet(_INDICATOR_STYLE)
         self._down_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._down_btn.hide()
+
+        # The indicators live in a COLUMN of their own beside the page, not
+        # floating on top of it. Floating put them over whatever happened to be
+        # under them: on a narrow window the down indicator landed on the
+        # Delete Income button, and a click there scrolled instead of reaching
+        # the button. A column cannot overlap anything, and it costs the
+        # layout, not a `move()` call, which is the same reason the up
+        # indicator once ended up in the navigation tray.
+        #
+        # The column is ALWAYS present, even while the buttons are hidden.
+        # Showing and hiding it would change the page width, which can change
+        # whether the page overflows, which decides whether the buttons show:
+        # a loop that flickers on content sitting near the boundary.
+        self._indicators = QWidget()
+        self._indicators.setFixedWidth(sz + ui_scale.px(_INDICATOR_MARGIN))
+        margin = ui_scale.px(_INDICATOR_MARGIN)
+        column = QVBoxLayout(self._indicators)
+        column.setContentsMargins(0, margin, 0, margin)
+        column.setSpacing(0)
+        column.addWidget(self._up_btn)
+        column.addStretch()
+        column.addWidget(self._down_btn)
+
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(0)
+        body.addWidget(self._scroll)
+        body.addWidget(self._indicators)
+        outer.addLayout(body)
 
         vbar = self._scroll.verticalScrollBar()
         vbar.valueChanged.connect(self._refresh)
@@ -105,31 +134,9 @@ class ScrollableTab(QWidget):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self._reposition()
+        # Nothing to place: the indicators are laid out, not positioned. The
+        # refresh stands because a resize changes whether the page overflows.
         self._refresh()
-
-    def _reposition(self) -> None:
-        """Place the indicators inside the SCROLL AREA, not the whole tab.
-
-        The nav header is hoisted out of the scroll area and sits above it, so
-        measuring from the top of this widget put the up indicator in the
-        navigation tray, over the theme toggle at its right-hand end. The
-        indicators belong to the scrolling region and are positioned against
-        its geometry, which leaves them clear of anything above it whatever
-        height the tray happens to be.
-        """
-        sz = self._down_btn.width()
-        margin = ui_scale.px(_INDICATOR_MARGIN)
-        area = self._scroll.geometry()
-        # Sit inside the scrollbar rather than under it. The width comes from
-        # the styled scrollbar itself, so a change to the stylesheet's
-        # scrollbar width moves the indicators with it.
-        gutter = self._scroll.verticalScrollBar().sizeHint().width()
-        x = area.right() - sz - margin - gutter
-        self._up_btn.move(x, area.top() + margin)
-        self._down_btn.move(x, area.bottom() - sz - margin)
-        self._up_btn.raise_()
-        self._down_btn.raise_()
 
     def _refresh(self, *_) -> None:
         vbar = self._scroll.verticalScrollBar()
