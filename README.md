@@ -26,6 +26,9 @@ pointing inward to a pure Domain that has no I/O and no framework. Layer
 boundaries are enforced automatically by AST structural tests at every test
 run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 
+See [TECH_DEBT.md](TECH_DEBT.md) for the standing reference to what is still open,
+what is deliberately left and what only looks like debt.
+
 ---
 
 ## Features
