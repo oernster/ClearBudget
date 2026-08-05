@@ -15,6 +15,51 @@ secure authentication.
 
 ---
 
+## Who it is for
+
+- Anyone who needs to know whether the month holds together, not where last
+  month's money went: the tightest day, the mid-month dip, the first month the
+  balance goes under
+- Households sharing one machine: each account gets its own isolated budget
+  database behind a bcrypt sign-in; a snapshot can be handed to someone
+  else as a read-only viewer package
+- People who want their finances to stay on their own machine, offline, with no
+  account to create and nothing phoning home
+
+## Who it is not for
+
+- Bookkeeping, invoicing, tax or double-entry accounting. There is no ledger,
+  no reconciliation against a statement feed and no chart of accounts
+- Bank connections. Clear Budget never contacts a bank, an aggregator or any
+  other server; balances are entered and then maintained by the app itself
+- Investments, assets, loans amortisation or net worth. It models a current
+  account, its income, its bills and its credit cards; nothing else
+- Shared or synchronised budgets across devices. There is no cloud, no sync and
+  no multi-device story
+- Encryption at rest. The sign-in is an access-control gate for the
+  application, not protection of the files themselves (see Data Storage and
+  Security below)
+
+---
+
+## Stack
+
+| Concern | Choice |
+|---------|--------|
+| Language | Python 3.11+ |
+| UI toolkit | PySide6 (Qt for Python), LGPL-3.0 |
+| Storage | SQLite, one budget database per user plus a shared users database |
+| Passwords | bcrypt hashes for passwords and recovery codes |
+| Money | integer pence throughout; no floating point in any financial calculation |
+| Architecture | four layers (Domain, Application, Infrastructure, UI), dependencies inward, enforced by AST structural tests |
+| Tests | pytest with a 100% line and branch coverage gate; real implementations and hand-written fakes, no mock libraries |
+| Quality | black (88 columns), flake8, ruff, a 400-line file limit |
+| Windows packaging | PyInstaller plus a bespoke per-user setup program written in PySide6 |
+| macOS packaging | `.dmg` disk image, signed and notarized when Apple credentials are configured |
+| Linux packaging | Flatpak on the Freedesktop runtime |
+
+---
+
 ## Architecture
 
 <p align="center">
@@ -64,7 +109,7 @@ what is deliberately left and what only looks like debt.
 - The balance edit dialog opens with the current figure selected, ready to
   type straight over
 - Per-month income flexibility: per-month overrides, per-month skips, a
-  "received" flag, and "this month only" one-off income entries
+  "received" flag and "this month only" one-off income entries
 - Solvency analysis with forward cashflow projections (next 2 months)
 - Runway warnings: a deficit month shows how fast savings are falling per month
   and the first month you would go overdrawn (a mid-month dip counts even when the
@@ -180,9 +225,15 @@ machine under `~/.clearbudget/`:
 - `ui_settings.json` - the chosen theme, so the app opens the way you left it.
   No budget data is kept here.
 
-Uninstalling does not touch any of this. It removes the program, its shortcuts
-and its entry in Apps and features, so reinstalling picks up where you left
-off. To remove your data, delete `~/.clearbudget` yourself.
+Installing, upgrading, repairing and uninstalling do not touch any of this.
+They deal in program files, shortcuts and the registry entry only, so
+reinstalling picks up where you left off, saved theme included. Uninstall
+deliberately offers no option to delete the directory: to remove your data,
+delete `~/.clearbudget` yourself.
+
+All amounts are held as integer pence. No financial figure in the application
+is ever a floating-point number, so nothing rounds away between the value you
+type and the value a projection uses.
 
 **What the login protects, and what it does not.** The username/password sign-in
 is an access-control gate for the application: it stops another person who shares
@@ -194,7 +245,7 @@ capable person with read access to your user folder can open
 `budget_<username>.db` directly with any SQLite tool and read its contents
 without going through Clear Budget at all. The bcrypt login does not prevent
 this, and is not intended to. For the common case - keeping a housemate, family
-member, or colleague from idly browsing your finances inside the app - this is
+member or colleague from idly browsing your finances inside the app - this is
 the right level of protection. If your threat model includes a determined local
 attacker, protect the files at rest with your operating system's own encryption
 (BitLocker on Windows, FileVault on macOS, LUKS on Linux).
@@ -270,7 +321,7 @@ or the bill template:
   the account. Ticked automatically when a dated bank bill is applied to the
   balance at midnight on its due day
 
-Income sources have the same per-month flexibility (overrides, skips, and a "received"
+Income sources have the same per-month flexibility (overrides, skips and a "received"
 flag that likewise ticks itself when a dated income is applied to the balance), plus
 "this month only" one-off entries for ad-hoc income not tied to a recurring template.
 
@@ -296,7 +347,7 @@ to end something; the second is for entries added by mistake.
   first month you would go overdrawn; it also flags "no overdraft facility" when
   you have none
 - **Mid-month alert**: detects temporary overdraft when bills cluster before the last income payment of the month
-- **Credit Card Status**: one progress bar per card showing current balance vs limit; projected month-end closing balance, charges, payment, interest, minimum due, and net direction all shown inline
+- **Credit Card Status**: one progress bar per card showing current balance vs limit; projected month-end closing balance, charges, payment, interest, minimum due and net direction all shown inline
 - **Forward Projection**: day-by-day cashflow narrative for the next two months
   including card state; a dip within an agreed overdraft reads calmly, while going
   overdrawn with no facility (or beyond it) is rendered as a stark clarion
@@ -329,7 +380,34 @@ shows:
 
 ---
 
-## Running
+## Installing
+
+Every release ships one native package per platform, from
+[the releases page](https://github.com/oernster/ClearBudget/releases/latest).
+The asset names carry no version, so a link to the latest release never goes
+stale.
+
+| Platform | Download | Install | Run |
+|----------|----------|---------|-----|
+| Windows 10/11, 64-bit | `ClearBudgetSetup.exe` | Run it. The install is per-user, so no administrator rights are needed. Run the same file again later to upgrade, repair or uninstall | Start menu or desktop shortcut; or tick "Launch Clear Budget when setup finishes" |
+| macOS (Apple Silicon) | `clearbudget.dmg` | Open the disk image and drag Clear Budget into Applications | Launchpad or Applications |
+| Linux (any distribution with Flatpak) | `clearbudget.flatpak` | `flatpak install --user clearbudget.flatpak` | `flatpak run com.oliverernster.clearbudget` |
+
+On Windows, if Clear Budget is running when you install, upgrade, repair or
+uninstall, setup offers to close it and says plainly that the running session
+ends, then waits for the file lock to release before carrying on. If the
+application will not close, setup stops and says so rather than failing part
+way through.
+
+Two absences are deliberate. Uninstall offers **no** "remove my user data"
+option: `~/.clearbudget` holds every account and every user's budget on the
+machine and deleting it cannot be undone, so it is left for you to do by hand
+(`tests/structural/test_data_dir_isolation.py` fails if any installer module so
+much as names the directory). And there is **no** launch-on-sign-in entry,
+because Clear Budget has no such feature and a setup switch for one would be a
+product decision rather than a packaging one.
+
+## Running from source
 
 ```
 python main.py
@@ -340,6 +418,18 @@ python main.py
 - Python 3.11+
 - PySide6 >= 6.8.0
 - bcrypt
+
+## Tests
+
+```
+pytest -v --cov
+```
+
+The gate is 100% line and branch coverage over `clear_budget`, `main` and the
+Qt-free half of the setup program. A coverage-gated run prints the coverage
+table last and emits no "N passed" line, so read the exit code: `0` means the
+tests passed AND the gate was met. See
+[DEVELOPMENT-README.md](DEVELOPMENT-README.md) for what sits outside the gate.
 
 ---
 

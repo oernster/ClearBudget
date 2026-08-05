@@ -70,6 +70,8 @@ def validate_db(path: Path) -> str | None:
     except sqlite3.DatabaseError as exc:
         return f"Not a valid SQLite database: {exc}"
     finally:
-        if conn is not None:
+        # Falling through to here means the connection opened, because a
+        # connect that failed returns from the except clause instead.
+        if conn is not None:  # pragma: no branch
             conn.close()
     return None

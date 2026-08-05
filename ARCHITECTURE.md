@@ -1,7 +1,30 @@
 # Clear Budget Architecture
 
-A clean architecture implementation with 4 isolated layers: Domain, Application, Infrastructure, and UI.
+A clean architecture implementation with 4 isolated layers: Domain, Application, Infrastructure and UI.
 An additional Auth layer sits alongside the main layers for user identity and credential management.
+
+## Invariants
+
+The rules the design turns on. Each one is enforced by a test rather than by
+convention, so it is named here with the test that fails when it is broken.
+Everything below this section explains how the code satisfies them.
+
+| Invariant | Enforced by |
+|-----------|-------------|
+| Dependencies point inward: UI → Application → Domain ← Infrastructure. The Domain imports nothing outward, has no I/O and no framework | `tests/structural/test_layering_rules.py` (AST scan for forbidden imports) |
+| The auth layer's surface stays where it is declared: identity and credentials never leak into budget infrastructure | `tests/structural/test_auth_structure.py` |
+| No source file exceeds 400 lines | `tests/structural/test_loc_limits.py` |
+| Only `shared/config.py` derives the real data directory. The suite never resolves it; the installer never so much as names it, so no test and no install can disturb live user data | `tests/structural/test_data_dir_isolation.py` (plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py`) |
+| 100% line AND branch coverage over `clear_budget`, `main` and the Qt-free half of the setup program | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
+| An exported report adds up: `opening + net == close` for every month | `tests/application/test_projection_series.py::test_opening_plus_net_equals_the_close` |
+| The exported report and the on-screen month graph can never disagree about a month they both cover, because both run the same day-by-day projection | `tests/application/test_projection_series.py::test_the_projection_agrees_with_the_month_graph` |
+| With ONE deliberate exception: the month in progress opens from the recorded bank balance, not the previous month's projected close. The recorded balance is the only figure in the report that is a fact; the gap is the drift the report exists to expose | `tests/application/test_projection_series.py::test_the_current_month_is_anchored_on_the_recorded_balance` and `::test_months_outside_the_current_one_still_chain_when_today_is_inside` |
+| An exported HTML file references nothing outside itself, so it survives being emailed and opens offline | `tests/application/reporting/test_reports.py::test_a_report_references_nothing_outside_itself` |
+| User-entered text cannot inject markup into an exported report | `tests/application/reporting/test_reports.py::test_user_text_cannot_inject_markup_into_a_report` |
+| Highlight text is teal, never green: green is the ring saying where focus is, not what is selected | `tests/ui_logic/test_highlight_text_colour.py` |
+| Money is integer pence everywhere. No financial value is ever a float, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object; signed balances are plain `int` pence |
+| Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
+| No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
 
 ## Overview
 
@@ -360,7 +383,7 @@ bank statement. Both identities are tested.
   report against the app: an offscreen probe applied the light theme in order
   to measure it, `theme.apply_theme` persisted that choice as it is supposed
   to and the app opened light from then on. Constrain the bad state rather than
-  remember to avoid it. The variable is read at call time, never cached, or a
+  remember to avoid it. The variable is read at call time and never cached; otherwise a
   test could not redirect it. `tests/structural/test_data_dir_isolation.py`
   holds the rules in place: the suite never resolves the real directory, no
   other module in the package derives it, and the installer never names it at
@@ -437,7 +460,7 @@ bank statement. Both identities are tested.
   (opens the viewer-package import flow) and "Create Account..." (opens
   `CreateUserDialog`, non-admin) on the row below
 - `ResetPasswordDialog` - username + recovery code + new password; distinct error for unknown username vs wrong code
-- `CreateUserDialog` - new user form (first-run wizard, login screen, or admin
+- `CreateUserDialog` - new user form (first-run wizard, login screen or admin
   "Add User"); `is_first_user=True` is the only path that creates an admin account;
   includes `RecoveryCodeDialog` on success
 - `RecoveryCodeDialog` - displays one-time recovery code; X button disabled; clipboard copy button; checkbox gate before OK activates
@@ -901,9 +924,67 @@ Each platform produces one distributable artefact from this shared codebase:
 | Linux | `build_flatpak.sh` (+ `cleanup_flatpak.sh`) | `clearbudget.flatpak`, on the Freedesktop runtime |
 
 The Windows installer is itself a small PySide6 application under `installer/`
-(with its own `cli`, `ops`, `state`, `ui`, and payload-builder modules). It wraps
+(with its own `cli`, `ops`, `state`, `ui` and payload-builder modules). It wraps
 the PyInstaller bundle into the per-user setup executable and is a build and
 distribution tool, kept separate from the runtime application described above.
+
+### The setup program
+
+The `installer` package follows the same shape as the application, for the same
+reason. `ops` holds the side effects (payload extraction, staging, shortcuts,
+process control, registration and the install, repair and uninstall sequences),
+`state` holds the HKCU registration, version comparison and the state model the
+window reads, `shared` holds resource resolution and logging and `ui` is the
+only Qt client. `app.py` is the composition root.
+
+Three seams keep the privileged work testable, which is what allows everything
+outside `installer/ui` to sit inside the 100% gate:
+
+- every external command goes through an injectable `CommandRunner`
+  (`ops/commands.py`), so no test spawns a process it did not intend to;
+- every process query and every termination goes through an injectable
+  `ProcessController` (`ops/running_app.py`), so no test lists or ends a real
+  process; matching is on the resolved executable path rather than the
+  image name so an unrelated copy elsewhere is never touched;
+- the HKCU key and the shortcut names are fields on the `InstallerIdentity`
+  value rather than constants baked into each function, so a test writes to a
+  scratch key instead of the user's own registration; the per-user
+  directories come from environment variables the suite redirects into a
+  temporary tree.
+
+The payload anchor is resolved relative to the `installer` package
+(`shared/resource_path.bundled_data_root()`), which is the repository root from
+source and the unpacked bundle root when frozen. Every asset lookup uses that
+one anchor rather than counting directory levels from its own module, which is
+what previously resolved one level above the repository in `app.py` while the
+frozen build's `_MEIPASS` branch masked it.
+
+Four behaviours are worth naming because they are what a user notices:
+
+- **A running application is offered a close, not a lecture.** Detecting it used
+  to produce "Please close Clear Budget and click Retry". The setup program now
+  offers to close it, states that the running session ends, force-terminates
+  every matching process and then polls until the file lock releases, with a
+  bounded deadline and a typed `AppStillRunningError` if the process will not
+  go. Forced rather than a close request, because a request can be declined and
+  a process that declines still holds the lock.
+- **A fresh install is guarded too.** `is_app_running` guards install, upgrade,
+  reinstall, repair and uninstall alike. Installing into a directory that
+  already holds a running executable would try to replace files Windows has
+  locked, which fails part way through.
+- **Every operation reports a percentage.** Repair walks a manifest whose length
+  is known, so it reports real per-entry progress; uninstall reports each phase.
+  Both used to emit bare strings, so the bar sat at zero and then jumped to
+  complete.
+- **Extraction cannot write outside its destination.** `ops/payload.py` resolves
+  every archive member and every repair-manifest path through one guard. The
+  payload is first-party, so this enforces a guarantee rather than fixing an
+  exploit; enforcing it is what keeps the guarantee true.
+
+Two things the setup program deliberately does not do. There is no
+"remove my user data" option (see below); there is no launch-on-sign-in
+entry: Clear Budget has no such feature, so an installer switch for it would be
+a product decision rather than a packaging one.
 
 **The installer never touches user data.** Install, repair, reinstall and
 uninstall all deal in program files, shortcuts and the registry entry only, so
@@ -956,6 +1037,24 @@ an option that read as "remove my data" removed nothing.
   platform though: under `QT_QPA_PLATFORM=offscreen` Qt substitutes its own
   font database and the answer does not describe the shipped app
 
+### Setup Program
+- `tests/installer/` covers everything under `installer/` except `app.py` and
+  `installer/ui`, at 100% line and branch
+- `conftest.py` carries four autouse isolations, each guarding one way a test
+  could reach the real machine: the profile directories are redirected through
+  the environment variables the code reads; the platformdirs lookups the legacy
+  migration makes are redirected in their own right, because platformdirs asks
+  Windows for the known folder rather than reading `%LOCALAPPDATA%`; the
+  payload anchor is redirected so a small stand-in bundle replaces the real
+  fifty-megabyte payload; and `scratch_identity` yields an `InstallerIdentity`
+  whose HKCU key lives under a test-only root and is deleted in teardown
+- `fakes.py` holds the hand-written doubles for the three seams. No mocking
+  library is used
+- What is exercised for real is exercised for real: shortcuts are written
+  through the same Shell Link COM interface the install uses (into the
+  redirected profile), the registry round-trips through `winreg` against the
+  scratch key; a full install deploys and registers a real bundle
+
 ### Structural Tests
 - `test_layering_rules.py` - AST-based forbidden import enforcement
 - `test_loc_limits.py` - No file > 400 LOC
@@ -973,9 +1072,15 @@ an option that read as "remove my data" removed nothing.
   black and flake8 rather than replacing either. A genuine false positive is
   suppressed with a targeted `# noqa: <RULE>` and a reason, never by changing
   behaviour; where ruff and black disagree on formatting, black wins
-- **100% test coverage** (`pytest -v --cov`, gated at `--cov-fail-under=100`) excluding
-  UI, interfaces, main, build scripts. The suite is Qt-free and runs clean in one
-  process
+- **100% line and branch coverage** (`pytest -v --cov`, gated at
+  `--cov-fail-under=100` with `branch = True`) over `clear_budget`, `main` and
+  the Qt-free half of the setup program, excluding UI, interfaces, main.py and
+  the build scripts. The suite is Qt-free and runs clean in one process
+- The setup program is inside the gate because it does the most privileged work
+  in the repository: registry writes, shortcut creation, per-user deployment,
+  process termination and directory removal. `installer/app.py` and
+  `installer/ui` are excluded on the same grounds as `clear_budget/ui`, and
+  `installer/build_payload.py` is a build script
 - What the gate does NOT include, stated plainly so the number is not read as
   more than it is: besides the `.coveragerc` omissions above, every line marked
   `# pragma: no cover` is outside it. That is the whole of
@@ -985,13 +1090,13 @@ an option that read as "remove my data" removed nothing.
   through the real repository rather than a fake precisely because the gate says
   nothing about it). Retiring the pragmas is worthwhile and has not been done
 - **No mock libraries** - real implementations and hand-written fakes only
-- **No magic numbers** - all domain values derive from data, config, or named constants
+- **No magic numbers** - all domain values derive from data, config or named constants
 
 ## Design Principles
 
 **Dependency direction**: always inward. UI → Application → Domain ← Infrastructure.
 
-**No magic numbers**: no hardcoded financial amounts, thresholds, day numbers, or limits in logic.
+**No magic numbers**: no hardcoded financial amounts, thresholds, day numbers or limits in logic.
 
 **Immutable value objects**: `Amount`, `YearMonth`, `SolvencyResult`, `CardMonthlyState` - all frozen dataclasses.
 

@@ -1,4 +1,12 @@
-"""Create/remove per-user shortcuts."""
+"""Creating and removing the per-user shortcuts.
+
+Shortcuts are written through the Shell Link COM interface directly, not
+through WScript.Shell with the taskbar identity stamped on afterwards. The
+identity has to be set on the link before it is saved; otherwise Windows groups an
+installed launch under a different taskbar item from a pinned one.
+
+British spelling is used in comments.
+"""
 
 from __future__ import annotations
 
@@ -7,26 +15,50 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from clear_budget.version import APP_APPUSERMODELID
-from installer.constants import InstallerIdentity
+from installer.constants import (
+    APP_ICO_NAME,
+    DESKTOP_DIR_NAME,
+    ENV_APPDATA,
+    ROAMING_APPDATA_FALLBACK,
+    SHORTCUT_EXT,
+    START_MENU_SUBPATH,
+    TASKBAR_PIN_SUBPATH,
+    InstallerIdentity,
+)
 from installer.ops.errors import InstallerOperationError
 
+_WINDOWS_OS_NAME = "nt"
+_AUMID_PROPERTY = "System.AppUserModel.ID"
+_ICON_INDEX = 0
+_SAVE_REMEMBER_FLAG = 0
 
-def _default_icon_location_for(target_exe: Path) -> str:
-    """Choose the best icon source for a shortcut.
+WINDOWS_ONLY_MESSAGE = "Shortcuts are supported on Windows only"
+EMPTY_AUMID_MESSAGE = "APP_APPUSERMODELID is empty"
 
-    Prefer `clearbudget.ico` next to the exe (deployed by the installer) so the
-    shortcut uses the branded icon even if the exe's embedded icon changes.
+
+def _require_windows() -> None:
+    if os.name != _WINDOWS_OS_NAME:
+        raise RuntimeError(WINDOWS_ONLY_MESSAGE)
+
+
+def _roaming_appdata() -> Path:
+    """Return %APPDATA%, falling back to its conventional location."""
+    appdata = os.getenv(ENV_APPDATA)
+    if appdata:
+        return Path(appdata)
+    return Path.home().joinpath(*ROAMING_APPDATA_FALLBACK)
+
+
+def icon_location_for(target_exe: Path) -> str:
+    """Choose the icon source for a shortcut.
+
+    Prefer the multi-resolution ICO the installer deploys beside the
+    executable, so the shortcut keeps the branded icon even if the executable's
+    embedded icon changes.
     """
-
-    try:
-        ico = target_exe.resolve().parent / "clearbudget.ico"
-        # Verify file exists before returning path
-        if ico.exists() and ico.is_file():
-            # Use forward slashes and full absolute path
-            return str(ico.resolve()).replace("\\", "/")
-    except Exception:
-        pass
-
+    ico = target_exe.parent / APP_ICO_NAME
+    if ico.is_file():
+        return str(ico.resolve())
     return str(target_exe)
 
 
@@ -37,130 +69,106 @@ class ShortcutPaths:
     taskbar_lnk: Path
 
 
-def _require_windows() -> None:
-    if os.name != "nt":
-        raise RuntimeError("Shortcuts are supported on Windows only")
-
-
 def get_shortcut_paths(identity: InstallerIdentity) -> ShortcutPaths:
+    """Return every per-user shortcut location, all under the user's profile."""
     _require_windows()
 
-    # Per-user Desktop.
-    desktop_dir = Path(os.path.join(os.path.expanduser("~"), "Desktop"))
-
-    # Per-user Start Menu Programs.
-    appdata = os.getenv("APPDATA") or str(Path.home() / "AppData" / "Roaming")
-    programs_dir = Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
-
-    start_menu_folder = programs_dir / identity.start_menu_folder
-
-    # Per-user taskbar pin, in the "User Pinned" TaskBar folder Windows manages.
-    taskbar_dir = (
-        Path(appdata)
-        / "Microsoft"
-        / "Internet Explorer"
-        / "Quick Launch"
-        / "User Pinned"
-        / "TaskBar"
+    desktop_dir = Path(os.path.expanduser("~")) / DESKTOP_DIR_NAME
+    appdata = _roaming_appdata()
+    start_menu_folder = (
+        appdata.joinpath(*START_MENU_SUBPATH) / identity.start_menu_folder
     )
+    taskbar_dir = appdata.joinpath(*TASKBAR_PIN_SUBPATH)
 
+    link_name = f"{identity.shortcut_name}{SHORTCUT_EXT}"
     return ShortcutPaths(
-        desktop_lnk=desktop_dir / f"{identity.shortcut_name}.lnk",
-        start_menu_lnk=start_menu_folder / f"{identity.shortcut_name}.lnk",
-        taskbar_lnk=taskbar_dir / f"{identity.shortcut_name}.lnk",
+        desktop_lnk=desktop_dir / link_name,
+        start_menu_lnk=start_menu_folder / link_name,
+        taskbar_lnk=taskbar_dir / link_name,
     )
 
 
-def create_shortcut(
-    target_exe: Path, shortcut_path: Path, *, working_dir: Path | None = None
+def _write_shell_link(
+    target_exe: Path, shortcut_path: Path, working_dir: Path | None
 ) -> None:
-    _require_windows()
-    shortcut_path.parent.mkdir(parents=True, exist_ok=True)
+    """Create one shortcut through the Shell Link COM interface."""
+    import pythoncom
+    from win32com.propsys import propsys
+    from win32com.shell import shell
 
-    # Create the shortcut directly via the Shell Link COM API.
-    #
-    # Important: do NOT create the shortcut via WScript.Shell and then attempt to
-    # stamp System.AppUserModel.ID afterwards via wrapper conversion.
-    #
-    # Taskbar identity must be deterministic for installed launches.
-    pythoncom = None
-    com_initialized = False
+    pythoncom.CoInitialize()
     try:
-        import pythoncom as _pythoncom  # type: ignore  # noqa: WPS433
-        from win32com.propsys import propsys  # type: ignore  # noqa: WPS433
-        from win32com.shell import shell  # type: ignore  # noqa: WPS433
-
-        pythoncom = _pythoncom
-
-        pythoncom.CoInitialize()
-        com_initialized = True
-
         link = pythoncom.CoCreateInstance(
             shell.CLSID_ShellLink,
             None,
             pythoncom.CLSCTX_INPROC_SERVER,
             shell.IID_IShellLink,
         )
-
         link.SetPath(str(target_exe))
         if working_dir is not None:
             link.SetWorkingDirectory(str(working_dir))
-
-        icon_path = _default_icon_location_for(target_exe)
-        link.SetIconLocation(icon_path, 0)
-
-        if not APP_APPUSERMODELID:
-            raise InstallerOperationError("APP_APPUSERMODELID is empty")
+        link.SetIconLocation(icon_location_for(target_exe), _ICON_INDEX)
 
         store = link.QueryInterface(propsys.IID_IPropertyStore)
-        key = propsys.PSGetPropertyKeyFromName("System.AppUserModel.ID")
-        pv = propsys.PROPVARIANTType(APP_APPUSERMODELID)
-        store.SetValue(key, pv)
+        key = propsys.PSGetPropertyKeyFromName(_AUMID_PROPERTY)
+        store.SetValue(key, propsys.PROPVARIANTType(APP_APPUSERMODELID))
         store.Commit()
 
-        persist = link.QueryInterface(pythoncom.IID_IPersistFile)
-        persist.Save(str(shortcut_path), 0)
-    except InstallerOperationError:
-        raise
+        link.QueryInterface(pythoncom.IID_IPersistFile).Save(
+            str(shortcut_path), _SAVE_REMEMBER_FLAG
+        )
+    finally:
+        pythoncom.CoUninitialize()
+
+
+def create_shortcut(
+    target_exe: Path, shortcut_path: Path, *, working_dir: Path | None = None
+) -> None:
+    """Write a shortcut to the installed executable, carrying the app icon."""
+    _require_windows()
+    if not APP_APPUSERMODELID:
+        raise InstallerOperationError(EMPTY_AUMID_MESSAGE)
+
+    shortcut_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        _write_shell_link(target_exe, shortcut_path, working_dir)
     except Exception as exc:
+        # Deliberately broad: the COM layer raises pywintypes.com_error, which
+        # is not an OSError; an absent pywin32 raises ImportError. Both mean
+        # the same thing to the caller, so both are reported as one failure.
         raise InstallerOperationError(
             f"Failed to create shortcut '{shortcut_path}' -> '{target_exe}': {exc!r}"
         ) from exc
-    finally:
-        try:
-            if pythoncom is not None and com_initialized:
-                pythoncom.CoUninitialize()
-        except Exception:
-            # Nothing sensible to do here; shortcut creation already failed/succeeded.
-            pass
 
 
 def remove_shortcut(shortcut_path: Path) -> None:
+    """Delete a shortcut; also its Start Menu folder when that is left empty.
+
+    Best effort throughout: a shortcut that cannot be removed is a leftover
+    icon, not a reason to fail an uninstall that has already removed the
+    program the shortcut points at.
+    """
     try:
         shortcut_path.unlink(missing_ok=True)
-    except Exception:
-        # Best effort.
+    except OSError:
         return
 
-    # Remove parent folder if empty (Start Menu subfolder).
     try:
         if shortcut_path.parent.exists() and not any(shortcut_path.parent.iterdir()):
             shortcut_path.parent.rmdir()
-    except Exception:
+    except OSError:
         return
 
 
 def remove_taskbar_pin(shortcut_path: Path) -> None:
-    """Remove a taskbar pin shortcut file (best effort).
+    """Remove a taskbar pin shortcut file, best effort.
 
-    Only the .lnk is deleted; the shared "User Pinned\\TaskBar" folder is left in
-    place because Windows manages it. The live taskbar icon may persist until
-    Explorer restarts or the user next signs in, but it no longer launches the
-    removed app.
+    Only the .lnk is deleted; the shared "User Pinned\\TaskBar" folder is left
+    in place because Windows manages it. The live taskbar icon may persist
+    until Explorer restarts or the user next signs in; it no longer
+    launches the removed app.
     """
-
     try:
         shortcut_path.unlink(missing_ok=True)
-    except Exception:
-        # Best effort.
+    except OSError:
         return

@@ -36,6 +36,11 @@ class TestDatabaseConnection:
         with pytest.raises(sqlite3.ProgrammingError):
             db.conn.execute("SELECT 1")
 
+    def test_close_without_a_connection_is_not_an_error(self, tmp_path) -> None:
+        """Closing something never opened does nothing, so a failed connect
+        can still be cleaned up after."""
+        Database(tmp_path / "test.db").close()
+
     def test_create_schema_without_connection(self, tmp_path) -> None:
         """Test that create_schema raises if not connected."""
         db_path = tmp_path / "test.db"

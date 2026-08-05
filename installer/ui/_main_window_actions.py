@@ -7,17 +7,29 @@ from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from clear_budget.version import APP_NAME, __version__
-from installer.ops.errors import InstallerOperationError
-from installer.ops.install_ops import InstallOptions, install_new, upgrade_or_reinstall
-from installer.ops.repair_ops import RepairOptions, repair
-from installer.ops.uninstall_ops import UninstallOptions, uninstall_with_feedback
+from installer.constants import APP_EXE_NAME
+from installer.ops.errors import AppStillRunningError
+from installer.ops.running_app import close_running_app, launch_app
 from installer.state.model import InstalledInfo, InstallerState, Operation
 from installer.ui._main_window_buttons import set_buttons_for_allowed_ops
+from installer.ui._main_window_ops import (
+    LAUNCHABLE_OPS,
+    operation_callable,
+    target_exe_for,
+)
 from installer.ui._main_window_types import UiSelections
+from installer.ui.close_app_dialog import (
+    confirm_close_running_app,
+    report_still_running,
+)
 from installer.ui.licence_dialog import InstallerLicenceDialog
 
 if TYPE_CHECKING:  # pragma: no cover
     from installer.ui.main_window import InstallerMainWindow
+
+# Kept visible long enough for the user to see that something happened.
+_COMPLETION_LINGER_MS = 1200
+_AUTO_CLOSE_DELAY_MS = 600
 
 
 def connect_signals(window: InstallerMainWindow) -> None:
@@ -150,6 +162,7 @@ def current_selections(window: InstallerMainWindow) -> UiSelections:
         install_dir=p,
         shortcut_desktop=bool(window._desktop_cb.isChecked()),
         shortcut_start_menu=bool(window._startmenu_cb.isChecked()),
+        launch_when_finished=bool(window._launch_cb.isChecked()),
     )
 
 
@@ -211,19 +224,28 @@ def on_progress(window: InstallerMainWindow, payload) -> None:
 
 
 def on_app_running(window: InstallerMainWindow, op: Operation, msg: str) -> None:
+    """Offer to close the running application, then retry the operation.
+
+    The old behaviour asked the user to go and close it themselves and come
+    back to click Retry. Closing it is something the setup program can do, so
+    it offers to, and only reports a failure when the process will not end.
+    """
     del msg
 
     window._set_ui_busy(False)
     window._progress.setText("")
-    box = QMessageBox(window)
-    box.setIcon(QMessageBox.Warning)
-    box.setWindowTitle(f"{APP_NAME} is running")
-    box.setText(f"Please close {APP_NAME} and click Retry.")
-    retry = box.addButton("Retry", QMessageBox.AcceptRole)
-    box.addButton("Cancel", QMessageBox.RejectRole)
-    box.exec()
-    if box.clickedButton() == retry:
-        window._request_operation(op)
+
+    if not confirm_close_running_app(window):
+        return
+
+    exe = target_exe_for(window, op, current_selections(window))
+    try:
+        close_running_app(exe)
+    except AppStillRunningError as exc:
+        report_still_running(window, str(exc))
+        return
+
+    window._request_operation(op)
 
 
 def on_operation_finished(
@@ -250,83 +272,37 @@ def on_operation_finished(
     try:
         from PySide6.QtCore import QTimer
 
-        QTimer.singleShot(1200, lambda: window._progress.setText(""))
+        QTimer.singleShot(_COMPLETION_LINGER_MS, lambda: window._progress.setText(""))
     except Exception:
+        # Best effort: the label simply keeps its completion text a while
+        # longer, which is cosmetic and never a reason to fail here.
         pass
+
+    if result.ok and op in LAUNCHABLE_OPS:
+        _launch_if_wanted(window)
+        return
 
     if op == Operation.UNINSTALL and result.ok:
         # Only auto-close when we were explicitly launched as an uninstaller
-        # (e.g. from Windows Settings via UninstallString).
+        # (from Windows Settings via UninstallString, say).
         if getattr(window._cli_args, "uninstall", False):
             try:
                 from PySide6.QtCore import QTimer
 
-                QTimer.singleShot(600, window.close)
+                QTimer.singleShot(_AUTO_CLOSE_DELAY_MS, window.close)
             except Exception:
                 window.close()
         return
 
 
-def operation_callable(
-    window: InstallerMainWindow,
-    op: Operation,
-    selections: UiSelections,
-):
-    read_entry = getattr(window, "_read_uninstall_entry", None)
-    if read_entry is None:
-        from installer.state.registry import read_uninstall_entry as read_entry
+def _launch_if_wanted(window: InstallerMainWindow) -> None:
+    """Start the freshly installed application when the user asked for it.
 
-    entry = read_entry(window._identity.uninstall_key)
-    current_install_dir = entry.install_location if entry else None
-
-    if op == Operation.INSTALL:
-        return (
-            install_new,
-            {
-                "identity": window._identity,
-                "opts": InstallOptions(
-                    target_dir=selections.install_dir,
-                    create_desktop_shortcut=selections.shortcut_desktop,
-                    create_start_menu_shortcut=selections.shortcut_start_menu,
-                ),
-            },
-        )
-
-    if op in {Operation.UPGRADE, Operation.REINSTALL}:
-        if current_install_dir is None:
-            raise InstallerOperationError("No existing installation detected")
-        return (
-            upgrade_or_reinstall,
-            {
-                "identity": window._identity,
-                "current_install_dir": current_install_dir,
-                "opts": InstallOptions(
-                    target_dir=selections.install_dir,
-                    create_desktop_shortcut=selections.shortcut_desktop,
-                    create_start_menu_shortcut=selections.shortcut_start_menu,
-                ),
-            },
-        )
-
-    if op == Operation.REPAIR:
-        return (
-            repair,
-            {
-                "identity": window._identity,
-                "opts": RepairOptions(
-                    restore_desktop_shortcut=selections.shortcut_desktop,
-                    restore_start_menu_shortcut=selections.shortcut_start_menu,
-                ),
-            },
-        )
-
-    if op == Operation.UNINSTALL:
-        return (
-            uninstall_with_feedback,
-            {
-                "identity": window._identity,
-                "opts": UninstallOptions(),
-            },
-        )
-
-    raise InstallerOperationError(f"Unsupported operation: {op}")
+    Read from the checkbox rather than from the selections captured when the
+    operation started, so the box reflects what is on screen at the moment the
+    install completes.
+    """
+    if not bool(window._launch_cb.isChecked()):
+        return
+    selections = current_selections(window)
+    launch_app(selections.install_dir / APP_EXE_NAME)

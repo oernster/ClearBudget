@@ -73,7 +73,7 @@
                     <a class="primary" href="https://github.com/oernster/ClearBudget/releases/latest/download/ClearBudgetSetup.exe">
                         Download for Windows</a>
                     <p class="meta" data-asset="ClearBudgetSetup.exe">Setup program (.exe)</p>
-                    <p class="how">Run the setup: it installs per-user, so no administrator rights are needed.</p>
+                    <p class="how">Run the setup: it installs per-user, so no administrator rights are needed. Run it again later to upgrade, repair or uninstall.</p>
                 </div>
                 <div class="dl-card">
                     <div class="ico">🍎</div>
@@ -133,7 +133,11 @@
                 </div>
                 <div class="faq-item">
                     <h3>Does uninstalling delete my budgets?</h3>
-                    <p>No. Uninstalling removes the program, its shortcuts and its entry in Apps and features, and leaves your budgets, accounts and settings where they are, so reinstalling picks up where you left off. To remove them, delete the .clearbudget folder in your user folder yourself.</p>
+                    <p>No. Uninstalling removes the program, its shortcuts and its entry in Apps and features, and leaves your budgets, accounts and settings where they are, so reinstalling picks up where you left off. There is deliberately no "remove my data" tick box: that folder holds every account and every user's budget on the machine, and deleting it cannot be undone. To remove them, delete the .clearbudget folder in your user folder yourself.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>What if Clear Budget is running when I install an update?</h3>
+                    <p>Setup notices and offers to close it for you, saying plainly that the running session ends. It waits for the application to release its lock before carrying on; it stops with a clear message rather than failing part way through if it will not close. Fresh installs, upgrades, repairs and uninstalls are all guarded the same way. When setup finishes an install, it offers to start Clear Budget for you; there is no "start with Windows" option, because the application has no such feature.</p>
                 </div>
                 <div class="faq-item">
                     <h3>Can it be used without a mouse?</h3>
@@ -192,7 +196,12 @@
         {
             "@type": "Question",
             "name": "Does uninstalling Clear Budget delete my budgets?",
-            "acceptedAnswer": { "@type": "Answer", "text": "No. Uninstalling removes the program, its shortcuts and its entry in Apps and features, and leaves your budgets, accounts and settings where they are, so reinstalling picks up where you left off. To remove them, delete the .clearbudget folder in your user folder yourself." }
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Uninstalling removes the program, its shortcuts and its entry in Apps and features, and leaves your budgets, accounts and settings where they are, so reinstalling picks up where you left off. There is deliberately no remove-my-data option: that folder holds every account and every user's budget on the machine, and deleting it cannot be undone. To remove them, delete the .clearbudget folder in your user folder yourself." }
+        },
+        {
+            "@type": "Question",
+            "name": "What if Clear Budget is running when I install an update?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Setup notices and offers to close it for you, saying plainly that the running session ends. It waits for the application to release its lock before carrying on; it stops with a clear message rather than failing part way through if it will not close. Fresh installs, upgrades, repairs and uninstalls are all guarded the same way. When setup finishes an install it offers to start Clear Budget for you; there is no start-with-Windows option, because the application has no such feature." }
         },
         {
             "@type": "Question",

@@ -78,5 +78,6 @@ def set_ui_busy(window: InstallerMainWindow, busy: bool) -> None:
         window._install_dir_edit,
         window._desktop_cb,
         window._startmenu_cb,
+        window._launch_cb,
     ]:
         w.setEnabled(not busy)

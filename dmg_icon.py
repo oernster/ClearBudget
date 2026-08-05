@@ -37,7 +37,7 @@ def _fill_png_background(path: Path, bg: tuple[int, int, int]) -> None:
         if ctype == b"IHDR":
             width, height = struct.unpack(">II", cdata[0:8])
             if cdata[8] != 8 or cdata[9] != 6:
-                return  # not 8-bit RGBA — leave as-is
+                return  # not 8-bit RGBA, leave as-is
         elif ctype == b"IDAT":
             idat_chunks.append(cdata)
         pos += 12 + n

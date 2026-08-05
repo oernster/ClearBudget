@@ -6,7 +6,6 @@ import logging
 import os
 import sys
 import traceback
-from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
@@ -15,6 +14,7 @@ from clear_budget.ui import launch_screen
 from clear_budget.version import APP_NAME, __version__
 from installer.cli import parse_args
 from installer.shared.logging_setup import setup_installer_logging
+from installer.shared.resource_path import bundled_data_root
 from installer.ui.icons import (
     build_installer_window_icon,
     set_windows_app_user_model_id,
@@ -53,17 +53,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         from PySide6.QtGui import QIcon
 
-        icon = build_installer_window_icon(
-            project_root=Path(__file__).resolve().parents[2]
-        )
+        # One anchor for every asset lookup: the repository root from source
+        # and the unpacked bundle root when frozen. Deriving it here from this
+        # module's own depth resolved one level too high, above the repository,
+        # which the frozen build's _MEIPASS branch quietly masked.
+        project_root = bundled_data_root()
+
+        icon = build_installer_window_icon(project_root=project_root)
         if not icon.isNull():
             app.setWindowIcon(icon)
             logger.info("Installer window icon applied (QApplication).")
         else:
             # Final fallback to file-based icon.
-            icon_path = find_qt_window_icon_path(
-                project_root=Path(__file__).resolve().parents[2]
-            )
+            icon_path = find_qt_window_icon_path(project_root=project_root)
             logger.info("Resolved installer Qt icon path: %s", icon_path)
 
             if icon_path is not None:

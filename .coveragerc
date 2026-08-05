@@ -1,10 +1,19 @@
 [run]
 source = clear_budget
+branch = True
 
 [report]
 show_missing = True
 skip_covered = False
 fail_under = 100
+
+exclude_lines =
+    pragma: no cover
+    \.\.\.
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    @(abc\.)?abstractmethod
+    if __name__ == .__main__.:
 
 omit =
     main.py
@@ -15,4 +24,13 @@ omit =
     */venv/*
     buildexe.py
     buildinstaller.py
-    installer/*
+    # The setup program's Qt client and its composition root, excluded on the
+    # same grounds as clear_budget/ui: their correctness lives in a real Qt
+    # event loop rather than in branch coverage of pure logic. Everything else
+    # under installer/ is Qt-free and is inside the gate.
+    installer/app.py
+    installer/ui/*
+    # A build script (a linear recipe) and the staged payload package.
+    installer/build_payload.py
+    installer/payload/*
+    installer/resources/*

@@ -113,8 +113,13 @@ def build_installer_main_window_ui(window: Any) -> None:
     window._desktop_cb.setChecked(True)
     window._startmenu_cb = QCheckBox("Create Start menu shortcut")
     window._startmenu_cb.setChecked(True)
+    # Acted on after a successful install, upgrade or reinstall, and ignored by
+    # repair and uninstall, neither of which leaves anything new to launch.
+    window._launch_cb = QCheckBox(f"Launch {APP_NAME} when setup finishes")
+    window._launch_cb.setChecked(True)
     outer.addWidget(window._desktop_cb)
     outer.addWidget(window._startmenu_cb)
+    outer.addWidget(window._launch_cb)
 
     outer.addSpacing(10)
 

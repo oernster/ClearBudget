@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QMainWindow, QMessageBox
 from clear_budget.shared.resources import find_qt_window_icon_path
 from clear_budget.version import APP_NAME
 from installer.constants import InstallerIdentity
+from installer.shared.resource_path import bundled_data_root
 from installer.state.model import Operation
 from installer.state.registry import read_uninstall_entry
 from installer.ui._header_fit import HeaderFitController
@@ -76,18 +77,20 @@ class InstallerMainWindow(QMainWindow):
         try:
             from PySide6.QtGui import QIcon
 
-            icon = build_installer_window_icon(
-                project_root=Path(__file__).resolve().parents[2]
-            )
+            # The same anchor the rest of the setup program resolves assets
+            # from, so there is one rule rather than a per-module depth count.
+            project_root = bundled_data_root()
+
+            icon = build_installer_window_icon(project_root=project_root)
             if not icon.isNull():
                 self.setWindowIcon(icon)
             else:
-                icon_path = find_qt_window_icon_path(
-                    project_root=Path(__file__).resolve().parents[2]
-                )
+                icon_path = find_qt_window_icon_path(project_root=project_root)
                 if icon_path is not None:
                     self.setWindowIcon(QIcon(str(icon_path)))
         except Exception:
+            # Best effort: a missing window icon is cosmetic, and Qt's default
+            # is preferable to a setup program that will not open.
             pass
 
         build_installer_main_window_ui(self)

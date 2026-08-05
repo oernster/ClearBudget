@@ -6,10 +6,10 @@ Run from the repository root with the venv active:
     python builddmg.py
 
 Optional env vars:
-    DEVELOPER_ID_APPLICATION  — override the default signing identity
-    APPLE_ID                  — Apple ID for notarization (skipped if not set)
-    APPLE_APP_PASSWORD        — app-specific password for notarization
-    APPLE_TEAM_ID             — Team ID for notarization (defaults to W7K465GKFJ)
+    DEVELOPER_ID_APPLICATION  : override the default signing identity
+    APPLE_ID                  : Apple ID for notarization (skipped if not set)
+    APPLE_APP_PASSWORD        : app-specific password for notarization
+    APPLE_TEAM_ID             : Team ID for notarization (defaults to W7K465GKFJ)
 """
 
 from __future__ import annotations
@@ -293,7 +293,7 @@ def verify_dmg() -> None:
     section("Verify DMG")
     run(["codesign", "--verify", FINAL_DMG])
     size_mb = os.path.getsize(FINAL_DMG) / (1024 * 1024)
-    print(f"  {FINAL_DMG}  ({size_mb:.1f} MB)  — ready for distribution")
+    print(f"  {FINAL_DMG}  ({size_mb:.1f} MB): ready for distribution")
 
 
 def apply_file_icon(png_path: Path) -> None:
@@ -327,7 +327,7 @@ def main() -> int:
             else None
         )
         if not icns_path:
-            print(f"  WARNING: {png_path} not found — building without custom icon.")
+            print(f"  WARNING: {png_path} not found; building without custom icon.")
 
         try:
             app_path = build_app_bundle(entitlements_path, icns_path)

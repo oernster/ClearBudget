@@ -8,10 +8,17 @@ VERSION instead.
 
 Two things are stamped:
 
-* delimited tokens ``<!--VERSION-->x.y.z<!--/VERSION-->`` in root markdown and
-  any docs HTML or markdown, for visible version text;
+* delimited tokens ``<!--VERSION-->x.y.z<!--/VERSION-->`` in the docs HTML and
+  markdown, for visible version text;
 * the JSON-LD ``"softwareVersion": "x.y.z"`` field in docs HTML, where an HTML
   comment token would corrupt the embedded JSON.
+
+The docs tree is the ONLY target. Root markdown (README, ARCHITECTURE,
+TECH_DEBT, DEVELOPMENT-README) carries no version data at all: it is read
+alongside the source, where VERSION is the answer, so a stamped copy in prose
+is one more thing that can disagree with it. The published site is the one
+place that cannot read VERSION at render time, which is the whole reason this
+script exists.
 
 It is idempotent (stamping an already-current file changes nothing) and prints
 the files it touched. buildexe.py and buildinstaller.py call main() so a release
@@ -50,13 +57,14 @@ def _stamp_text(text: str, version: str, *, is_html: bool) -> str:
 
 
 def _target_files(root: Path) -> list[Path]:
-    """Collect the static files that carry a stamped version."""
-    files = list(root.glob("*.md"))
+    """Collect the static files that carry a stamped version.
+
+    Scoped to the docs tree deliberately. Root markdown is never stamped.
+    """
     docs_dir = root / DOCS_DIRNAME
-    if docs_dir.is_dir():
-        files.extend(docs_dir.rglob("*.html"))
-        files.extend(docs_dir.rglob("*.md"))
-    return files
+    if not docs_dir.is_dir():
+        return []
+    return [*docs_dir.rglob("*.html"), *docs_dir.rglob("*.md")]
 
 
 def stamp(root: Path, version: str) -> list[Path]:

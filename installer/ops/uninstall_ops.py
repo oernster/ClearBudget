@@ -1,38 +1,64 @@
-"""Uninstall operation."""
+"""Uninstall: remove the shortcuts, the registration and then the files.
+
+The registration is removed before the files, so a removal that is interrupted
+part way leaves an orphaned directory rather than an entry in "Apps & features"
+pointing at nothing.
+
+Uninstall does NOT touch user data, by decision. It removes the program and
+leaves the user's data directory alone, so accounts, every user's budget and
+the saved theme survive an uninstall and reinstalling picks up where the user
+left off. There is nothing to opt into: an option to delete every budget on the
+machine is irreversible; an installer is the wrong place to offer it. What
+stood here once deleted two platformdirs directories this app has never written
+to, inherited from the installer this one was rebranded from; it presented
+itself as removing user data while removing none.
+
+British spelling is used in comments.
+"""
 
 from __future__ import annotations
 
 import os
-import shutil
-import subprocess
-import sys
-import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from installer.constants import InstallerIdentity
+from installer.ops.commands import CommandRunner
 from installer.ops.errors import AppRunningError, InstallerOperationError
-from installer.ops.running_app import is_app_running
+from installer.ops.progress import (
+    COMPLETE_PCT,
+    READ_METADATA_MESSAGE,
+    READ_METADATA_PCT,
+    REMOVE_FILES_MESSAGE,
+    REMOVE_FILES_PCT,
+    REMOVE_REGISTRY_MESSAGE,
+    REMOVE_REGISTRY_PCT,
+    REMOVE_SHORTCUTS_MESSAGE,
+    REMOVE_SHORTCUTS_PCT,
+    UNINSTALL_DONE_MESSAGE,
+    ProgressCallback,
+    report,
+)
+from installer.ops.registration import installed_exe
+from installer.ops.removal import remove_install_dir
+from installer.ops.running_app import ProcessController, is_app_running
 from installer.ops.shortcuts import (
     get_shortcut_paths,
     remove_shortcut,
     remove_taskbar_pin,
 )
+from installer.ops.staging import check_cancel
 from installer.state.registry import (
     delete_uninstall_entry,
     read_uninstall_entry,
     try_read_install_location,
 )
 
-# Direct (synchronous) delete: a brief bounded retry rides out transient locks
-# (e.g. an anti-virus scanner holding a handle) before the failure is surfaced.
-_DIRECT_DELETE_ATTEMPTS = 5
-_DIRECT_DELETE_INTERVAL_S = 0.5
+WINDOWS_ONLY_MESSAGE = "Uninstall is Windows-only"
+NOT_INSTALLED_MESSAGE = "Clear Budget is not detected as installed for this user"
+APP_RUNNING_MESSAGE = "Clear Budget is currently running"
 
-# Deferred delete: when the running installer lives inside the target dir it
-# cannot remove its own exe, so a detached helper polls until the exiting
-# installer releases the lock instead of guessing a single fixed delay.
-_DEFERRED_DELETE_ATTEMPTS = 30
-_DEFERRED_DELETE_INTERVAL_MS = 500
+_WINDOWS_OS_NAME = "nt"
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,168 +72,100 @@ class UninstallOptions:
     """
 
 
-def uninstall(identity, opts: UninstallOptions) -> None:
-    if os.name != "nt":
-        raise InstallerOperationError("Uninstall is Windows-only")
-
+def _locate_install(identity: InstallerIdentity) -> tuple[Path, object]:
+    """Return the install directory and the registry entry it came from."""
     entry = read_uninstall_entry(identity.uninstall_key)
-    install_dir = None
-    if entry is not None:
-        install_dir = entry.install_location
-    else:
-        install_dir = try_read_install_location(identity.uninstall_key)
-
+    install_dir = (
+        entry.install_location
+        if entry is not None
+        else try_read_install_location(identity.uninstall_key)
+    )
     if install_dir is None:
-        raise InstallerOperationError(
-            "Clear Budget is not detected as installed for this user"
-        )
+        raise InstallerOperationError(NOT_INSTALLED_MESSAGE)
+    return install_dir.resolve(), entry
 
-    install_dir = install_dir.resolve()
-    exe = install_dir / "ClearBudget.exe"
-    if exe.exists() and is_app_running(exe):
-        raise AppRunningError("Clear Budget is currently running")
 
-    # Remove shortcuts.
+def uninstall(
+    identity: InstallerIdentity,
+    opts: UninstallOptions,
+    *,
+    progress: ProgressCallback | None = None,
+    cancel_event=None,
+    controller: ProcessController | None = None,
+    runner: CommandRunner | None = None,
+) -> None:
+    """Remove the shortcuts, the registrations and then the install directory."""
+    del opts
+
+    if os.name != _WINDOWS_OS_NAME:
+        raise InstallerOperationError(WINDOWS_ONLY_MESSAGE)
+
+    check_cancel(cancel_event)
+    report(progress, READ_METADATA_PCT, READ_METADATA_MESSAGE)
+    install_dir, entry = _locate_install(identity)
+
+    exe = installed_exe(install_dir)
+    if exe.exists() and is_app_running(exe, controller):
+        raise AppRunningError(APP_RUNNING_MESSAGE)
+
+    report(progress, REMOVE_SHORTCUTS_PCT, REMOVE_SHORTCUTS_MESSAGE)
+    _remove_shortcuts(identity, entry)
+
+    report(progress, REMOVE_REGISTRY_PCT, REMOVE_REGISTRY_MESSAGE)
+    _delete_registration(identity)
+
+    report(progress, REMOVE_FILES_PCT, REMOVE_FILES_MESSAGE)
+    if install_dir.exists():
+        remove_install_dir(install_dir, runner)
+
+    report(progress, COMPLETE_PCT, UNINSTALL_DONE_MESSAGE)
+
+
+def _remove_shortcuts(identity: InstallerIdentity, entry) -> None:
+    """Remove whichever shortcuts the installation recorded, plus any pin.
+
+    An entry that cannot be read leaves both shortcut flags unknown, so both
+    are removed: an uninstall must not leave a launchable shortcut behind.
+    """
     sp = get_shortcut_paths(identity)
-    # If we can't read persisted flags, remove both best-effort.
     if entry is None or entry.shortcut_desktop is not False:
         remove_shortcut(sp.desktop_lnk)
     if entry is None or entry.shortcut_start_menu is not False:
         remove_shortcut(sp.start_menu_lnk)
 
-    # Remove the taskbar pin too, so uninstall leaves nothing launchable behind.
-    # Always attempted: the pin is user-created and not tracked by the persisted
-    # shortcut flags.
+    # The taskbar pin is user-created and not tracked by the persisted shortcut
+    # flags, so it is always attempted.
     remove_taskbar_pin(sp.taskbar_lnk)
 
-    # Remove registry first (best effort).
+
+def _delete_registration(identity: InstallerIdentity) -> None:
+    """Remove the Uninstall key, tolerating a key that has already gone.
+
+    Best effort: the files are about to be removed either way; refusing to
+    uninstall because the registration was already deleted by hand would leave
+    the user with no way to remove the program at all.
+    """
     try:
         delete_uninstall_entry(identity.uninstall_key)
-    except Exception:
-        pass
-
-    # Uninstall does NOT touch user data, by decision. It removes the program
-    # and leaves ~/.clearbudget alone, so accounts, every user's budget and the
-    # saved theme survive an uninstall, and reinstalling picks up where the
-    # user left off. There is nothing to opt into: an option to delete every
-    # budget on the machine is irreversible, and an installer is the wrong
-    # place to offer it.
-    #
-    # What stood here deleted two platformdirs directories that this app has
-    # never written to, inherited from the installer this one was rebranded
-    # from. It presented itself as removing user data while removing none.
-
-    # Remove install directory. When this uninstaller runs from outside the
-    # install dir nothing locks it (the app is already confirmed not running),
-    # so delete synchronously and surface any failure. Only the installed copy
-    # living inside the dir cannot delete its own exe, and so it defers.
-    if _running_from_inside(install_dir):
-        _schedule_delete_after_exit(install_dir)
-    else:
-        _delete_install_dir_now(install_dir)
+    except OSError:
+        return
 
 
 def uninstall_with_feedback(
-    identity,
+    identity: InstallerIdentity,
     opts: UninstallOptions,
     *,
     progress=None,
     cancel_event=None,
+    controller: ProcessController | None = None,
+    runner: CommandRunner | None = None,
 ) -> None:
-    if cancel_event is not None and getattr(cancel_event, "is_set", lambda: False)():
-        raise InstallerOperationError("Cancelled")
-    if progress:
-        progress("Reading installation metadata...")
-    uninstall(identity, opts)
-    if progress:
-        progress("Uninstall scheduled. Closing...")
-
-
-def _running_from_inside(install_dir: Path) -> bool:
-    """Return True if this process's exe lives inside install_dir.
-
-    Mirrors the guard in :mod:`installer.ops.legacy`: an installer copied into
-    the install dir cannot delete its own running exe and so needs the deferred
-    path, whereas a standalone installer run from elsewhere has full control.
-    On any uncertainty resolving paths, prefer the safe deferred path.
-    """
-
-    try:
-        running = Path(sys.executable).resolve()
-        install_dir = install_dir.resolve()
-    except Exception:
-        return True
-    return running == install_dir or install_dir in running.parents
-
-
-def _delete_install_dir_now(install_dir: Path) -> None:
-    """Delete install_dir synchronously, retrying briefly on transient locks.
-
-    Used when the installer runs from outside install_dir, so removal is fully
-    under our control. A failure is raised rather than silently swallowed.
-    """
-
-    install_dir = install_dir.resolve()
-    last_error: OSError | None = None
-    for attempt in range(_DIRECT_DELETE_ATTEMPTS):
-        try:
-            shutil.rmtree(install_dir)
-        except FileNotFoundError:
-            return
-        except OSError as exc:
-            last_error = exc
-        if not install_dir.exists():
-            return
-        if attempt < _DIRECT_DELETE_ATTEMPTS - 1:
-            time.sleep(_DIRECT_DELETE_INTERVAL_S)
-    raise InstallerOperationError(
-        f"Could not remove the install directory at {install_dir}: {last_error}"
-    )
-
-
-def _schedule_delete_after_exit(install_dir: Path) -> None:
-    """Schedule deletion of install_dir after this process exits.
-
-    When uninstall is invoked from the installer copy living inside install_dir,
-    Windows locks the running exe. A detached helper polls, deleting once the
-    exiting installer releases the lock, so removal does not race a fixed delay.
-    """
-
-    install_dir = install_dir.resolve()
-
-    # Use PowerShell with a hidden window; cmd.exe can flash a console window.
-    # Poll: try the delete, stop as soon as the dir is gone, otherwise wait for
-    # the parent installer to finish exiting and try again.
-    escaped = str(install_dir).replace("'", "''")
-    attempts = str(_DEFERRED_DELETE_ATTEMPTS)
-    interval = str(_DEFERRED_DELETE_INTERVAL_MS)
-    script = (
-        "$d = '" + escaped + "'; "
-        "for ($i = 0; $i -lt " + attempts + "; $i++) { "
-        "if (-not (Test-Path -LiteralPath $d)) { break } "
-        "Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction SilentlyContinue; "
-        "if (-not (Test-Path -LiteralPath $d)) { break } "
-        "Start-Sleep -Milliseconds " + interval + " "
-        "}"
-    )
-    ps = [
-        "powershell.exe",
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-WindowStyle",
-        "Hidden",
-        "-Command",
-        script,
-    ]
-
-    create_no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
-    subprocess.Popen(
-        ps,
-        shell=False,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        creationflags=create_no_window | subprocess.DETACHED_PROCESS,
+    """Run the uninstall, reporting each phase to the caller's progress bar."""
+    uninstall(
+        identity,
+        opts,
+        progress=progress,
+        cancel_event=cancel_event,
+        controller=controller,
+        runner=runner,
     )

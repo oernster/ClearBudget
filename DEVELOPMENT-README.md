@@ -53,14 +53,16 @@ pytest-cov, coverage, black, flake8, ruff).
 
 The icon scripts (`create_icons.py`, `create_icon.py` and the macOS
 `dmg_icon.py`) need Pillow, which is not in `requirements-dev.txt` because the
-icons under `assets/` are committed and a normal build never regenerates them.
-Install it only if you are changing the artwork: `pip install pillow`.
+PNG sizes and the `.ico` at the repository root are committed and a normal
+build never regenerates them. Install it only if you are changing the artwork:
+`pip install pillow`. Which of the two root icon scripts is authoritative is an
+open question recorded in [TECH_DEBT.md](TECH_DEBT.md).
 
 ### Run, test and lint from source
 
 ```
 python main.py     # launch the app
-pytest -v --cov    # run the full suite (100% coverage gate enforced)
+pytest -v --cov    # run the full suite (100% line and branch gate enforced)
 black .            # format (line length 88)
 flake8             # lint
 ruff check .       # lint (wider default rule set)
@@ -76,11 +78,45 @@ A coverage-gated run prints the coverage table last and emits no "N passed"
 line, so read the exit code rather than the tail of the output: `0` means the
 tests passed AND the gate was met.
 
-The gate covers everything except the `.coveragerc` omissions (UI, interfaces,
-`main.py`, build scripts) and any line marked `# pragma: no cover`, of which
-there are a fair number on thin pass-throughs and on the SQLite payment-method
-repository. Read 100% as "100% of what is gated", not as "every line is
-tested"; ARCHITECTURE.md says which parts sit outside it.
+The gate is measured by BRANCH as well as by line (`branch = True` in
+`.coveragerc`, `--cov-fail-under=100`), and it spans three sources:
+`clear_budget`, `main` and the Qt-free half of the setup program under
+`installer/`. The setup program is in there because it does the most privileged
+work in the repository: registry writes, shortcut creation, per-user
+deployment, process termination and directory removal. `installer/app.py` and
+`installer/ui` are excluded on the same grounds as `clear_budget/ui`, and
+`installer/build_payload.py` is a build script.
+
+Outside the gate: the `.coveragerc` omissions (UI, interfaces, `main.py`, build
+scripts) and any line marked `# pragma: no cover`, of which there are a fair
+number on thin pass-throughs and on the SQLite payment-method repository. Read
+100% as "100% of what is gated", not as "every line is tested"; ARCHITECTURE.md
+says which parts sit outside it.
+
+### Testing the setup program
+
+`tests/installer/` exercises everything under `installer/` except `app.py` and
+`installer/ui`. Nothing in it touches a real installation, and that is held in
+place by four autouse fixtures in `tests/installer/conftest.py`, each closing
+one route to the real machine:
+
+- the per-user profile directories are redirected through the environment
+  variables the code reads;
+- the `platformdirs` lookups are redirected **in their own right**, because
+  `platformdirs` asks Windows for the known folder rather than reading
+  `%LOCALAPPDATA%`. Without this fixture the legacy-directory migration would
+  find and move your actual data;
+- the payload anchor is redirected so a small stand-in bundle stands in for the
+  real fifty-megabyte payload;
+- `scratch_identity` yields an `InstallerIdentity` whose HKCU key lives under a
+  test-only root and is deleted in teardown.
+
+`tests/installer/fakes.py` holds the hand-written doubles for the three
+injectable seams (`CommandRunner`, `ProcessController` and the identity value).
+What can be exercised for real is: shortcuts are written through the same Shell
+Link COM interface the install uses, the registry round-trips through `winreg`
+against the scratch key and a full install deploys and registers a real bundle,
+all inside the redirected tree.
 
 Appearance is verified with throwaway offscreen probes rather than tests, since
 what matters is what gets painted. Run those with
@@ -117,7 +153,12 @@ patch/minor/major there and nothing else needs editing:
   are stamped from it by `stamp_version.py`, which `buildexe.py` and
   `buildinstaller.py` run automatically at the start of every build. Run
   `python stamp_version.py` by hand after a bump if you want the docs updated
-  without a full build.
+  without a full build. It is idempotent and prints what it touched.
+
+`stamp_version.py` targets the `docs/` tree ONLY. The root markdown files
+(README, ARCHITECTURE, TECH_DEBT, this file) carry no version data at all,
+stamped or otherwise: they are read alongside the source, where `VERSION` is
+the answer, so a copy of it in prose is one more thing that can disagree.
 
 Never hardcode a version string anywhere except `VERSION`.
 
@@ -134,7 +175,7 @@ Two helper scripts live in the repository root:
 
 ```bash
 ./cleanup_flatpak.sh   # optional: uninstall and purge any previous Flatpak build
-./build_flatpak.sh     # build, install locally, and produce clearbudget.flatpak
+./build_flatpak.sh     # build, install locally and produce clearbudget.flatpak
 ```
 
 `build_flatpak.sh` installs `flatpak` and `flatpak-builder` if they are missing

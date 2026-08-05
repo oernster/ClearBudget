@@ -40,8 +40,15 @@ target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --cov=clear_budget --cov=main --cov-report=term-missing --cov-fail-under=100 --cov-config=.coveragerc"
+# The hard gate covers the application package and the Qt-free half of the
+# setup program. The installer does the most privileged work in this repository
+# (registry writes, shortcut creation, per-user deployment, process control and
+# uninstall), so its operations and its state model are gated rather than left
+# unmeasured. installer/app.py and installer/ui are the Qt client and are
+# excluded in .coveragerc on the same grounds as clear_budget/ui.
+addopts = "-q --cov=clear_budget --cov=main --cov=installer --cov-report=term-missing --cov-fail-under=100 --cov-config=.coveragerc"
 pythonpath = ["."]
 
 [tool.coverage.run]
-source = ["clear_budget", "main"]
+source = ["clear_budget", "main", "installer"]
+branch = true

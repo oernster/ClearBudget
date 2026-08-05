@@ -43,3 +43,11 @@ def test_not_a_sqlite_file_reports_error(tmp_path) -> None:
     error = validate_db(path)
     assert error is not None
     assert "Not a valid SQLite database" in error
+
+
+def test_a_file_that_does_not_exist_reports_error(tmp_path) -> None:
+    """A read-only connection to an absent file fails before it is opened, so
+    the close in the finally block has no connection to work with."""
+    error = validate_db(tmp_path / "absent.db")
+    assert error is not None
+    assert "Not a valid SQLite database" in error
