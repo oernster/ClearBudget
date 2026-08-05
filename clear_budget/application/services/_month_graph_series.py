@@ -52,7 +52,9 @@ class GraphSeriesMixin:
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
         days = days_in_month(year_month.year, year_month.month)
         if year_month != YearMonth(today.year, today.month):
-            return self.get_projected_starting_balance_pence(year_month=year_month)
+            return self.get_projected_starting_balance_pence(
+                year_month=year_month, today=today
+            )
         per_day = self._per_day_pence(summary, days)
         elapsed = sum(per_day[1 : min(today.day, days) + 1])
         return self.get_bank_balance().pence - elapsed

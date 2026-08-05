@@ -263,18 +263,26 @@ class BudgetService(
                 self.archive_month(year_month=month)
             month = month.next_month()
 
-    def get_projected_starting_balance_pence(self, *, year_month: YearMonth) -> int:
-        """Public wrapper: projected bank balance pence at start of year_month."""
-        return self._projected_starting_balance_pence(year_month)
+    def get_projected_starting_balance_pence(
+        self, *, year_month: YearMonth, today: date | None = None
+    ) -> int:
+        """Public wrapper: projected bank balance pence at start of year_month.
 
-    def _projected_starting_balance_pence(self, year_month: YearMonth) -> int:
+        `today` is injectable so a caller, and a test, can ask what the
+        projection looks like on a given date rather than only on this one.
+        """
+        return self._projected_starting_balance_pence(year_month, today)
+
+    def _projected_starting_balance_pence(
+        self, year_month: YearMonth, today: date | None = None
+    ) -> int:
         from datetime import date as _date
 
         from clear_budget.application.services._balance_projection import (
             projected_starting_balance_pence,
         )
 
-        today = _date.today()  # noqa: DTZ011 (naive local dates)
+        today = today or _date.today()  # noqa: DTZ011 (naive local dates)
         return projected_starting_balance_pence(
             get_month_summary=self.get_month_summary,
             get_bank_balance_pence=lambda: self.get_bank_balance().pence,
