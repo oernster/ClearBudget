@@ -51,8 +51,11 @@ class OperationWorker(QObject):
 
             pythoncom = _pythoncom
             pythoncom.CoInitialize()
-        except Exception:
-            # Best-effort; operations that require COM will fail and report.
+        except Exception:  # noqa: BLE001
+            # Genuinely unnameable: CoInitialize raises pythoncom.com_error,
+            # which cannot be referenced until the import above has succeeded,
+            # and the import itself raises ImportError. Best-effort anyway;
+            # operations that require COM will fail and report.
             pythoncom = None
 
         try:
@@ -81,7 +84,9 @@ class OperationWorker(QObject):
             try:
                 if pythoncom is not None:
                     pythoncom.CoUninitialize()
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
+                # Same unnameable com_error as the CoInitialize above. This is
+                # teardown on a thread that is ending regardless.
                 pass
 
     def _emit_progress(self, payload) -> None:
@@ -124,11 +129,10 @@ class _GuiRelay(QObject):
 
     @Slot(object)
     def store_result(self, result) -> None:
-        # Result is stored on the GUI thread.
-        try:
-            self._result = result
-        except Exception:
-            self._result = OperationResult(ok=False, message="Invalid operation result")
+        # Stored on the GUI thread. Deliberately unguarded: a plain attribute
+        # assignment cannot raise, so the handler that used to sit here could
+        # never have run and served only to suggest this was risky.
+        self._result = result
 
     @Slot()
     def notify_finished(self) -> None:
@@ -176,7 +180,9 @@ class OperationController:
             try:
                 self._thread.terminate()
                 self._thread.wait(500)
-            except Exception:
+            except RuntimeError:
+                # The thread object's C++ half is already gone, which is the
+                # outcome this branch was trying to force anyway.
                 return
 
     def cancel(self) -> None:
@@ -236,7 +242,8 @@ class OperationController:
                 self._relay = None
                 try:
                     thread.deleteLater()
-                except Exception:
+                except RuntimeError:
+                    # Already destroyed; nothing left to schedule for deletion.
                     pass
 
         thread.finished.connect(_on_thread_finished, Qt.QueuedConnection)

@@ -47,7 +47,10 @@ class HeaderFitController:
         # due to font metric rounding.
         try:
             title.setMinimumSize(title.sizeHint())
-        except Exception:
+        except RuntimeError:
+            # The label's C++ half can be gone if the page was torn down while
+            # this was queued. The minimum size is an anti-clipping refinement,
+            # so skipping it costs nothing.
             pass
 
     def schedule(self) -> None:
@@ -158,7 +161,9 @@ class HeaderFitController:
             return title.contentsRect().width() >= int(
                 tight.width() + 4
             ) and title.contentsRect().height() >= int(tight.height() + 4)
-        except Exception:
+        except RuntimeError:
+            # Label destroyed mid-measure; report "fits" so the caller stops
+            # shrinking a widget that no longer exists.
             return True
 
     @staticmethod
@@ -168,8 +173,8 @@ class HeaderFitController:
             tight = fm.tightBoundingRect(title.text())
             req_w = int(tight.width() + 6)
             req_h = int(tight.height() + 6)
-        except Exception:
-            # Fallback: conservative.
+        except RuntimeError:
+            # Label destroyed mid-measure. Fallback: conservative.
             req_w = int(fm.horizontalAdvance(title.text()) + 10)
             req_h = int(fm.height() + 6)
         return req_w, req_h

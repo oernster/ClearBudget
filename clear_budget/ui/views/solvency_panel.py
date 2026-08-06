@@ -16,9 +16,6 @@ from clear_budget.domain.services.credit_limit_schedule import (
 )
 from clear_budget.ui import label_roles, theme, ui_scale
 from clear_budget.ui.theme_tokens import STATE_AT_RISK, STATE_RED, STATE_SAFE
-
-# Section headings on this tab share one QSS role (see _theme_controls).
-_HEADING_ROLE = "SolvencySectionHeading"
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     build_centered_nav_header,
@@ -30,6 +27,9 @@ from clear_budget.ui.views._solvency_panel_forward import SolvencyPanelForwardMi
 from clear_budget.ui.views._solvency_panel_narratives import (
     SolvencyPanelNarrativeMixin,
 )
+
+# Section headings on this tab share one QSS role (see _theme_controls).
+_HEADING_ROLE = "SolvencySectionHeading"
 
 # The solvency view presents the current month plus the next two (the forward
 # projection), so the card bars reflect a committed limit change landing within

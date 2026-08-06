@@ -88,9 +88,10 @@ class InstallerMainWindow(QMainWindow):
                 icon_path = find_qt_window_icon_path(project_root=project_root)
                 if icon_path is not None:
                     self.setWindowIcon(QIcon(str(icon_path)))
-        except Exception:
+        except (OSError, RuntimeError):
             # Best effort: a missing window icon is cosmetic, and Qt's default
-            # is preferable to a setup program that will not open.
+            # is preferable to a setup program that will not open. OSError if
+            # the asset cannot be read, RuntimeError if the window is gone.
             pass
 
         build_installer_main_window_ui(self)

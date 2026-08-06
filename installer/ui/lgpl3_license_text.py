@@ -11,21 +11,27 @@ def _read_lgpl3_text() -> str:
 
     candidates: list[Path] = []
 
+    # Each candidate is skipped rather than fatal: a location that cannot be
+    # formed is simply not a place to look, and the final FileNotFoundError
+    # names every path that was tried.
     try:
         meipass = getattr(sys, "_MEIPASS", None)
         if meipass:
             candidates.append(Path(meipass) / "LICENSE")
-    except Exception:
+    except TypeError:
+        # PyInstaller sets _MEIPASS to a str; anything else is not a path.
         pass
 
     try:
         candidates.append(Path(sys.executable).resolve().parent / "LICENSE")
-    except Exception:
+    except OSError:
+        # resolve() touches the filesystem and can fail on a broken path.
         pass
 
     try:
         candidates.append(Path(__file__).resolve().parents[2] / "LICENSE")
-    except Exception:
+    except (OSError, IndexError):
+        # IndexError if this module ever sits fewer than two levels deep.
         pass
 
     candidates.append(Path.cwd() / "LICENSE")
@@ -34,7 +40,9 @@ def _read_lgpl3_text() -> str:
         try:
             if p.exists() and p.is_file():
                 return p.read_text(encoding="utf-8", errors="replace")
-        except Exception:
+        except OSError:
+            # Unreadable or vanished between the check and the read. Try the
+            # next candidate; errors="replace" means decoding cannot fail.
             continue
 
     raise FileNotFoundError(

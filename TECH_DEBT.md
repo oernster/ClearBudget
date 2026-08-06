@@ -4,15 +4,7 @@ A standing reference to the project's outstanding technical debt. It records wha
 
 ---
 
-## 1. The installer UI still carries unexplained broad handlers
-
-`installer/ui/_main_window_actions.py`, `icons.py`, `worker.py`, `_header_fit.py`, `lgpl3_license_text.py`, `main_window.py` and `_main_window_buttons.py` hold `except Exception` blocks, several of them silent. The Qt-free half has had the house style applied (every remaining broad handler names what it degrades and why; the rest are narrowed to `OSError`); the UI half has not.
-
-`pyproject.toml` carries a per-file ignore for `installer/**/*.py` covering `BLE001`, `S110` and `S112` with a stated rationale, so the whole package passes `ruff check` under the project config. Run `ruff check --isolated` over `installer/ui` and fifty-four surface (31 `BLE001`, 21 `S110`, 2 `S112`), which is the honest measure of what is left. The two modules added with the close-running-app work, `_main_window_ops.py` and `close_app_dialog.py`, are clean, so this is inherited surface rather than a growing one.
-
-The UI is outside the coverage gate, so these are not hiding an untested failure path in the way the `ops` ones were. They are a readability item: a reader cannot tell which are deliberate and which are inherited. Narrow the ones that can be narrowed and give the rest a one-line reason, then consider whether the per-file ignore can be dropped.
-
-## 2. The UI layer is omitted from the gate in full
+## 1. The UI layer is omitted from the gate in full
 
 `.coveragerc` omits `clear_budget/ui/*` wholesale. For painting, layout and Qt wiring that is correct and matches the rest of the portfolio.
 

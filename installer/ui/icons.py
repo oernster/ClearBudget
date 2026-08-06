@@ -40,11 +40,15 @@ def _find_brand_icon_path(*, project_root: Path) -> Path | None:
     roots: list[Path] = []
 
     # In a frozen PyInstaller build, bundled files live under sys._MEIPASS.
+    # A root that cannot be formed is simply not a place to look, so each of
+    # these is skipped rather than fatal; the function returns None if no
+    # candidate holds an icon.
     try:
         meipass = getattr(sys, "_MEIPASS", None)
         if meipass:
             roots.append(Path(meipass))
-    except Exception:
+    except TypeError:
+        # PyInstaller sets _MEIPASS to a str; anything else is not a path.
         pass
 
     roots.append(project_root)
@@ -52,13 +56,15 @@ def _find_brand_icon_path(*, project_root: Path) -> Path | None:
     # Next to exe.
     try:
         roots.append(Path(sys.executable).resolve().parent)
-    except Exception:
+    except OSError:
+        # resolve() touches the filesystem and can fail on a broken path.
         pass
 
     # CWD as a final fallback.
     try:
         roots.append(Path.cwd())
-    except Exception:
+    except OSError:
+        # The working directory can have been deleted out from under us.
         pass
 
     for root in roots:
@@ -67,7 +73,8 @@ def _find_brand_icon_path(*, project_root: Path) -> Path | None:
             try:
                 if p.exists() and p.is_file():
                     return p
-            except Exception:
+            except OSError:
+                # Unreadable or on a dead drive; try the next candidate.
                 continue
 
     return None
@@ -86,5 +93,9 @@ def set_windows_app_user_model_id(app_id: str) -> None:
         import ctypes
 
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
-    except Exception:
+    except (ImportError, AttributeError, OSError):
+        # Taskbar grouping is cosmetic, so a failure here is not worth
+        # interrupting an install for: ImportError if ctypes is unavailable,
+        # AttributeError if windll or shell32 is absent, OSError if the shell
+        # call itself returns a failing HRESULT.
         return

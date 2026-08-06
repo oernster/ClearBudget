@@ -61,8 +61,9 @@ def _bind_primary(
     button.setText(_OP_LABELS[op])
     try:
         button.clicked.disconnect()
-    except Exception:
-        # No previous connection to drop; re-wiring from scratch is fine.
+    except RuntimeError:
+        # PySide raises when there is nothing connected. No previous
+        # connection to drop; re-wiring from scratch is fine.
         pass
     button.clicked.connect(lambda: window._request_operation(op))
 
