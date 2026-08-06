@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.services.bill_amount_schedule import (
     effective_bill_amount_pence,
+    scheduled_change_applies,
 )
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -127,6 +128,15 @@ class SQLiteBillRepository(BillAmountChangesMixin):
                 continue
             with_changes = replace(bill, amount_changes=changes)
             if bill.has_month_override:
+                resolved.append(with_changes)
+                continue
+            if not scheduled_change_applies(
+                bill=with_changes, year=year_month.year, month=year_month.month
+            ):
+                # A change exists but starts later, so this month's amount is
+                # the bill's own. Recording a base here would say a schedule
+                # governs a month it does not reach, and the UI reads that as
+                # "do not let this amount be edited directly".
                 resolved.append(with_changes)
                 continue
             pence = effective_bill_amount_pence(

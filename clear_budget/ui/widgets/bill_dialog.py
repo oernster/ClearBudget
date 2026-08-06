@@ -255,8 +255,10 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
         figure was on screen when OK was pressed. Pressing OK now means the
         same as pressing Add and then OK.
 
-        A pending entry that fails validation keeps the dialog open, with the
-        warning label already saying why, rather than closing and losing it.
+        A pending entry that will not parse asks whether to save without it.
+        It must never just refuse: an OK button that does nothing costs the
+        whole edit, not only the change, because the way out of a dialog that
+        will not close is to cancel it.
         """
         if not self._commit_pending_amount_change():
             return

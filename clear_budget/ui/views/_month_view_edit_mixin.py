@@ -5,6 +5,7 @@ from typing import ClassVar
 
 from PySide6.QtCore import Qt, QTimer
 
+from clear_budget.application.formatting import pounds_from_text
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.shared.currency import get_symbol
 
@@ -79,9 +80,11 @@ class MonthViewEditMixin:
                 if bill.base_amount is not None:
                     self._reject_inline_amount_edit(bill)
                     return
-                u = dataclasses.replace(
-                    bill, amount=Amount.from_pounds(float(v.lstrip(get_symbol())))
-                )
+                pounds = pounds_from_text(v)
+                if pounds is None:
+                    QTimer.singleShot(0, self.view_model.refresh_month_summary)
+                    return
+                u = dataclasses.replace(bill, amount=Amount.from_pounds(pounds))
             elif col == 2:
                 u = dataclasses.replace(bill, category=v.lower().replace(" ", "_"))
             elif col == 4:

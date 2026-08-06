@@ -69,6 +69,38 @@ def fmt(amount: int | float) -> str:
     return money_from_pounds(amount)
 
 
+def pounds_from_text(text: str) -> float | None:
+    """Read a typed amount back into whole currency units, or None.
+
+    The inverse of `_render`, and it has to live beside it: what the
+    application prints is what a person types back. `_render` groups thousands,
+    so a figure this module itself rendered as "1,400.00" was refused by a
+    plain `float()` and the entry was lost. The symbol, the grouping
+    separators, surrounding space and a leading sign are all things people
+    type; none of them make an entry invalid.
+
+    Returns None rather than raising, because what an unreadable entry means
+    belongs to the caller: one field warns, another leaves the cell alone.
+    """
+    cleaned = text.strip()
+    negative = cleaned.startswith("-")
+    if negative:
+        cleaned = cleaned[1:].lstrip()
+    symbol = get_symbol()
+    if cleaned.startswith(symbol):
+        # Sliced by length, never `lstrip`, which takes a character SET: a
+        # multi-character symbol such as "A$" would eat any leading A or $.
+        cleaned = cleaned[len(symbol) :]
+    cleaned = cleaned.replace(",", "").replace(" ", "")
+    if not cleaned:
+        return None
+    try:
+        value = float(cleaned)
+    except ValueError:
+        return None
+    return -value if negative else value
+
+
 def percentage(value: float) -> str:
     """Format an already-computed percentage, one decimal place.
 

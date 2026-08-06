@@ -24,9 +24,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from clear_budget.application.formatting import pounds_from_text
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.bill_amount_change import BillAmountChange
-from clear_budget.shared.errors import InvalidBillAmountChangeError
+from clear_budget.shared.errors import (
+    InvalidAmountError,
+    InvalidBillAmountChangeError,
+)
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 
 # Matches the end-month field above it, which reads "August 2026".
@@ -89,13 +93,16 @@ def parse_amount_change(
     Kept out of the widget so the rule can be tested without a QApplication,
     which this repository deliberately does not run in its suite.
     """
+    pounds = pounds_from_text(amount_text)
+    if pounds is None:
+        return None
     try:
         return BillAmountChange(
             effective_year=year,
             effective_month=month,
-            new_amount=Amount.from_pounds(float(amount_text.strip())),
+            new_amount=Amount.from_pounds(pounds),
         )
-    except (ValueError, InvalidBillAmountChangeError):
+    except (InvalidAmountError, InvalidBillAmountChangeError):
         return None
 
 
@@ -196,7 +203,31 @@ class BillAmountChangesSectionMixin:
         if not self.change_amount_edit.text().strip():
             return True
         self._on_add_amount_change()
-        return not self.change_amount_edit.text().strip()
+        if not self.change_amount_edit.text().strip():
+            return True
+        return self._confirm_discard_pending_change()
+
+    def _confirm_discard_pending_change(self) -> bool:
+        """Ask whether to save without the entry that will not parse.
+
+        OK must never simply do nothing. Refusing to close while the reason sat
+        in a small label inside a group box is how an edit gets abandoned along
+        with everything else in the dialog: the end month, the due day, the
+        lot. So the question is put plainly, and staying is a choice the user
+        makes rather than one the dialog makes for them.
+        """
+        from PySide6.QtWidgets import QMessageBox
+
+        typed = self.change_amount_edit.text().strip()
+        answer = QMessageBox.question(
+            self,
+            "Amount change not recorded",
+            f"'{typed}' is not an amount this can read, so that change will"
+            " not be recorded.\n\nSave the rest of the bill anyway?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return answer == QMessageBox.StandardButton.Yes
 
     def _on_add_amount_change(self) -> None:
         """Validate and append a change to the in-memory list."""

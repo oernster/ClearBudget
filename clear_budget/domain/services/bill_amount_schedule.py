@@ -13,6 +13,17 @@ from __future__ import annotations
 from clear_budget.domain.entities.bill import Bill
 
 
+def scheduled_change_applies(*, bill: Bill, year: int, month: int) -> bool:
+    """Whether any scheduled change governs (year, month).
+
+    A bill can hold a change without that change reaching the month being
+    listed: an increase effective from September says nothing about August.
+    The distinction matters because it is what decides whether the amount on
+    screen is the bill's own or the schedule's.
+    """
+    return any(c.sort_key <= (year, month) for c in bill.amount_changes)
+
+
 def effective_bill_amount_pence(*, bill: Bill, year: int, month: int) -> int:
     """The bill's amount for (year, month), in pence.
 
