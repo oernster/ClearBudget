@@ -24,14 +24,19 @@ from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     build_centered_nav_header,
 )
-from clear_budget.ui.views._credit_card_view_loaders import (
+from clear_budget.ui.views._credit_card_projection_strip import (
     _PROJECTION_MONTHS,
+    CreditCardProjectionStripMixin,
+)
+from clear_budget.ui.views._credit_card_view_loaders import (
     CreditCardViewLoaderMixin,
 )
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 
 
-class CreditCardView(CreditCardViewLoaderMixin, QWidget):
+class CreditCardView(
+    CreditCardProjectionStripMixin, CreditCardViewLoaderMixin, QWidget
+):
     """Displays credit card status with exhaustion warnings."""
 
     def __init__(

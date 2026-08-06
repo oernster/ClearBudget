@@ -4,15 +4,7 @@ A standing reference to the project's outstanding technical debt. It records wha
 
 ---
 
-## 1. `_credit_card_view_loaders.py` is at 399 lines
-
-`clear_budget/ui/views/_credit_card_view_loaders.py` is one line under the 400-line cap that `tests/structural/test_loc_limits.py` enforces. That is the worst place in the range for a file to be: the next edit fails the build for a reason unrelated to the change, and shaving a line to get back under puts it straight back in the same position.
-
-Take it to 350 or below by extracting one cohesive concern, not by trimming. Three other files sit between 355 and 382 and are fine where they are.
-
-The size test itself has no danger-band tier: it fails over 400 and says nothing about 381 to 399. Adding a second assertion at 380 would make this self-policing rather than something to notice by hand.
-
-## 2. The installer UI still carries unexplained broad handlers
+## 1. The installer UI still carries unexplained broad handlers
 
 `installer/ui/_main_window_actions.py`, `icons.py`, `worker.py`, `_header_fit.py`, `lgpl3_license_text.py`, `main_window.py` and `_main_window_buttons.py` hold `except Exception` blocks, several of them silent. The Qt-free half has had the house style applied (every remaining broad handler names what it degrades and why; the rest are narrowed to `OSError`); the UI half has not.
 
@@ -20,27 +12,21 @@ The size test itself has no danger-band tier: it fails over 400 and says nothing
 
 The UI is outside the coverage gate, so these are not hiding an untested failure path in the way the `ops` ones were. They are a readability item: a reader cannot tell which are deliberate and which are inherited. Narrow the ones that can be narrowed and give the rest a one-line reason, then consider whether the per-file ignore can be dropped.
 
-## 3. Two icon generators
-
-`create_icon.py` and `create_icons.py` are both tracked at root. The portfolio's rule is one master PNG and one `generate_icons.py` emitting the whole set. Two scripts with near-identical names mean nobody can tell which one produced the fourteen tracked PNGs, and the wrong one will eventually be run.
-
-Determine which is authoritative, delete the other and rename the survivor to `generate_icons.py` to match every other project here.
-
-## 4. The UI layer is omitted from the gate in full
+## 2. The UI layer is omitted from the gate in full
 
 `.coveragerc` omits `clear_budget/ui/*` wholesale. For painting, layout and Qt wiring that is correct and matches the rest of the portfolio.
 
-The item is that some of what sits in there is not presentation. `_credit_card_view_loaders.py` (item 1), `format_helpers.py` at 369 lines and `month_view.py` at 361 carry data shaping and formatting decisions, and formatting is where a budgeting application gets a number wrong in a way a user believes. `clear_budget/application` already holds the reporting DTOs and the projection series, so there is somewhere obvious for that logic to move to. This is continuous work, not a task with an end state; it is recorded so the omission is never read as "the UI has no logic".
+The item is that some of what sits in there is not presentation. `format_helpers.py` at 369 lines and `month_view.py` at 361 carry data shaping and formatting decisions, and formatting is where a budgeting application gets a number wrong in a way a user believes. `clear_budget/application` already holds the reporting DTOs and the projection series, so there is somewhere obvious for that logic to move to. This is continuous work, not a task with an end state; it is recorded so the omission is never read as "the UI has no logic".
 
 ---
 
 ## Looks like debt, not worth touching
 
 - The delivery scripts (`buildexe.py`, `buildinstaller.py`, `builddmg.py`, `dmg_icon.py`, `build_utils.py`, `build_flatpak.sh`, `cleanup_flatpak.sh`, `stamp_version.py`). Linear recipes, exempt from the module cap by design. Do not raise length against them.
-- The four files between 355 and 382 lines. Under the cap, clear of the danger band, nothing to do.
+- The seven files between 351 and 376 lines. Under the cap, clear of the 381 to 399 danger band, nothing to do. Both halves of that rule are now asserted in `tests/structural/test_loc_limits.py`, so this is held by the suite rather than by eye.
 - The two root `.spec` files (`ClearBudget.spec`, `ClearBudgetSetup.spec`) are PyInstaller artefacts and are untracked.
 - The `_leading_underscore.py` module naming inside `ui/views` and `application/services`. Unconventional, clear in intent (private to the package) and consistent.
-- The fourteen tracked PNG sizes plus the `.ico`. Emitted from a single master and consumed by named packaging paths. Item 3 is about which script emits them, not about the assets.
+- The fourteen tracked PNG sizes plus the `.ico`. Emitted from a single master and consumed by named packaging paths. They are derived from `ClearBudget.png`, the 1024x1024 master, by `generate_icons.py`, which reproduces all eight byte for byte.
 
 ## Not debt (do not "fix" these)
 

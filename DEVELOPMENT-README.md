@@ -51,12 +51,16 @@ pip install -r requirements.txt -r requirements-dev.txt
 `requirements-dev.txt` adds the build and quality tooling (PyInstaller, pytest,
 pytest-cov, coverage, black, flake8, ruff).
 
-The icon scripts (`create_icons.py`, `create_icon.py` and the macOS
-`dmg_icon.py`) need Pillow, which is not in `requirements-dev.txt` because the
-PNG sizes and the `.ico` at the repository root are committed and a normal
-build never regenerates them. Install it only if you are changing the artwork:
-`pip install pillow`. Which of the two root icon scripts is authoritative is an
-open question recorded in [TECH_DEBT.md](TECH_DEBT.md).
+The icon scripts (`generate_icons.py` and the macOS `dmg_icon.py`) need Pillow,
+which is not in `requirements-dev.txt` because the PNG sizes and the `.ico` at
+the repository root are committed and a normal build never regenerates them.
+Install it only if you are changing the artwork: `pip install pillow`.
+
+`ClearBudget.png`, 1024x1024 RGBA, is the master and every other icon asset is
+derived from it. `generate_icons.py` emits the seven PNG sizes and the
+multi-resolution `.ico`, and it reproduces all eight tracked files byte for
+byte, so running it on a clean tree leaves `git status` empty. Change the
+artwork by replacing the master and re-running it.
 
 ### Run, test and lint from source
 
