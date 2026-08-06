@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -30,6 +31,30 @@ from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 
 _MONTH_FORMAT = "MMM yyyy"
 _FIRST_OF_MONTH = 1
+
+# Sized to its content rather than left to the layout, which squeezed the field
+# to 56px inside this dialog and clipped anything past three digits. The string
+# is a measuring stick, not a limit: it is the widest amount worth planning for,
+# and the width comes from the font, so it holds at any scale or font size.
+_WIDEST_AMOUNT_SAMPLE = "123456.78"
+
+
+def _text_width(field: QLineEdit, sample: str) -> int:
+    """Width `field` needs to show `sample` without clipping it.
+
+    The chrome (frame, text margins and room for the cursor) is read off the
+    widget rather than guessed, so this holds when the font or the display
+    scaling changes.
+    """
+    margins = field.textMargins()
+    chrome = (
+        field.contentsMargins().left()
+        + field.contentsMargins().right()
+        + margins.left()
+        + margins.right()
+        + field.fontMetrics().averageCharWidth()
+    )
+    return field.fontMetrics().horizontalAdvance(sample) + chrome
 
 
 class BillAmountChangesSectionMixin:
@@ -45,6 +70,12 @@ class BillAmountChangesSectionMixin:
             " say. Months before it keep the amount they actually had."
         )
         explain.setWordWrap(True)
+        # A word-wrapped label reports a single line as its height hint, so in a
+        # vertical layout it gets squeezed and the wrapped text is clipped. This
+        # lets it claim the height the wrapping actually needs.
+        explain.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding
+        )
         outer.addWidget(explain)
 
         self.amount_changes_list_layout = QVBoxLayout()
@@ -62,6 +93,9 @@ class BillAmountChangesSectionMixin:
         entry.addWidget(QLabel("costs"))
         self.change_amount_edit = QLineEdit()
         self.change_amount_edit.setPlaceholderText("0.00")
+        self.change_amount_edit.setMinimumWidth(
+            _text_width(self.change_amount_edit, _WIDEST_AMOUNT_SAMPLE)
+        )
         entry.addWidget(self.change_amount_edit)
         add_btn = QPushButton("Add")
         add_btn.clicked.connect(self._on_add_amount_change)
