@@ -24,9 +24,19 @@ from installer.ui._main_window_types import UiSelections
 if TYPE_CHECKING:  # pragma: no cover
     from installer.ui.main_window import InstallerMainWindow
 
-# The operations that put a new bundle on disk, so the one the user may be
-# offered a launch of once setup finishes.
-LAUNCHABLE_OPS = frozenset({Operation.INSTALL, Operation.UPGRADE, Operation.REINSTALL})
+# The operations that leave a usable application on disk, so the ones the user
+# may be offered a launch of once setup finishes. Repair belongs here for the
+# same reason the others do: it puts the executable back, and the "Launch when
+# setup finishes" box is on screen while it runs, so leaving it out meant a
+# ticked box that did nothing.
+LAUNCHABLE_OPS = frozenset(
+    {
+        Operation.INSTALL,
+        Operation.UPGRADE,
+        Operation.REINSTALL,
+        Operation.REPAIR,
+    }
+)
 
 NO_INSTALL_MESSAGE = "No existing installation detected"
 
