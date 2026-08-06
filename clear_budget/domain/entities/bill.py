@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.bill_amount_change import BillAmountChange
 from clear_budget.domain.value_objects.year_month import YearMonth
 
 
@@ -40,6 +41,11 @@ class Bill:
     skipped_for_month: bool = False
     has_month_override: bool = False
     paid_for_month: bool = False
+    # Scheduled changes to `amount`, each effective from a month onward. The
+    # amount that applies to a given month comes from
+    # `domain.services.bill_amount_schedule.effective_bill_amount_pence`, never
+    # from reading `amount` directly, because `amount` is only the original.
+    amount_changes: tuple[BillAmountChange, ...] = ()
 
     def is_active_in_month(self, year_month: YearMonth) -> bool:
         """Check if this bill is active in the given month."""

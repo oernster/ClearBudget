@@ -146,6 +146,25 @@ def _m07_retire_one_time_category(cursor: sqlite3.Cursor) -> None:
     )
 
 
+def _m08_bill_amount_changes(cursor: sqlite3.Cursor) -> None:
+    """A bill's amount changing from a month onward (the rent increase).
+
+    One row per change rather than an edit in place, so an earlier month keeps
+    the amount it actually had.
+    """
+    cursor.execute(
+        "CREATE TABLE IF NOT EXISTS bill_amount_changes ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " bill_id INTEGER NOT NULL,"
+        " effective_year INTEGER NOT NULL,"
+        " effective_month INTEGER NOT NULL,"
+        " amount_pence INTEGER NOT NULL,"
+        " UNIQUE(bill_id, effective_year, effective_month),"
+        " FOREIGN KEY (bill_id) REFERENCES bills(id)"
+        ")"
+    )
+
+
 _MIGRATIONS: tuple[Migration, ...] = (
     _m01_credit_card_detail_columns,
     _m02_bill_target_card,
@@ -154,6 +173,7 @@ _MIGRATIONS: tuple[Migration, ...] = (
     _m05_card_balance_applied_anchor,
     _m06_income_extra_received,
     _m07_retire_one_time_category,
+    _m08_bill_amount_changes,
 )
 
 # Derived from the list so the two cannot drift apart.

@@ -1,15 +1,21 @@
 """SQLite implementation of BillRepository."""
 
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from clear_budget.domain.entities.bill import Bill
+from clear_budget.domain.services.bill_amount_schedule import (
+    effective_bill_amount_pence,
+)
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.infrastructure.sqlite._bill_amount_changes import (
+    BillAmountChangesMixin,
+)
 
 
 @dataclass
-class SQLiteBillRepository:
+class SQLiteBillRepository(BillAmountChangesMixin):
     """SQLite-backed bill repository."""
 
     conn: sqlite3.Connection
@@ -98,7 +104,36 @@ class SQLiteBillRepository:
             )
             bills.append(bill)
 
-        return bills
+        return self._apply_amount_schedule(bills, year_month=year_month)
+
+    def _apply_amount_schedule(
+        self, bills: list[Bill], *, year_month: YearMonth
+    ) -> list[Bill]:
+        """Give each bill the amount that applies to this month.
+
+        `bills.amount_pence` is only the ORIGINAL amount. What a bill costs in
+        a given month comes from its scheduled changes, so that changing a bill
+        never restates what an earlier month reported.
+
+        A single-month override still wins: it says "this one month differed",
+        which is a statement about that month rather than a change of course.
+        """
+        changes_by_bill = self.amount_changes_for_bills(tuple(b.id for b in bills))
+        resolved = []
+        for bill in bills:
+            changes = changes_by_bill.get(bill.id, ())
+            if not changes:
+                resolved.append(bill)
+                continue
+            with_changes = replace(bill, amount_changes=changes)
+            if bill.has_month_override:
+                resolved.append(with_changes)
+                continue
+            pence = effective_bill_amount_pence(
+                bill=with_changes, year=year_month.year, month=year_month.month
+            )
+            resolved.append(replace(with_changes, amount=Amount(pence=pence)))
+        return resolved
 
     def skip_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:
         """Mark a bill as skipped for one specific month."""

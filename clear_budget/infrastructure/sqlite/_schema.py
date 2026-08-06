@@ -240,6 +240,21 @@ def create_schema(conn) -> None:
         )
         """)
 
+    # A bill's amount changing from a month onward (the rent increase).
+    # One row per change rather than editing the bill in place, because
+    # editing in place would rewrite what earlier months reported.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bill_amount_changes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bill_id INTEGER NOT NULL,
+            effective_year INTEGER NOT NULL,
+            effective_month INTEGER NOT NULL,
+            amount_pence INTEGER NOT NULL,
+            UNIQUE(bill_id, effective_year, effective_month),
+            FOREIGN KEY (bill_id) REFERENCES bills(id)
+        )
+        """)
+
     # Evolve an existing database to the current shape. Each step runs once, in
     # order, and any failure that is not "the column is already there" raises.
     apply_pending(cursor)

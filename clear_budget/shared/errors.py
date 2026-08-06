@@ -17,6 +17,10 @@ class InvalidCreditLimitChangeError(BudgetError):
     """Raised when a scheduled credit limit change has an invalid date."""
 
 
+class InvalidBillAmountChangeError(BudgetError):
+    """A scheduled change to a bill's amount is not a real month."""
+
+
 class BillNotFoundError(BudgetError):
     """Raised when a bill is not found."""
 
