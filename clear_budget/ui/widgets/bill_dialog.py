@@ -25,6 +25,11 @@ from clear_budget.ui.widgets._bill_amount_changes_section import (
     BillAmountChangesSectionMixin,
 )
 
+# Opened wide enough for the amount-change row (a full month name, an amount
+# and the Add button) to sit on one line without anything being squeezed.
+_DIALOG_WIDTH_PX = 620
+_DIALOG_HEIGHT_PX = 560
+
 
 class BillDialog(BillAmountChangesSectionMixin, QDialog):
     """Dialog for creating/editing a bill."""
@@ -69,7 +74,7 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
         # Size only, never position: (100, 100) is a fixed point in the
         # virtual desktop, so it pinned the dialog to one monitor wherever the
         # window that opened it was. Sized alone, Qt centres it on its parent.
-        self.resize(400, 300)
+        self.resize(_DIALOG_WIDTH_PX, _DIALOG_HEIGHT_PX)
         self.init_ui()
         if bill is not None:
             self.load_bill(bill)

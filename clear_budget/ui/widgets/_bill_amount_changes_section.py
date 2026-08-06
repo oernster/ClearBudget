@@ -29,7 +29,8 @@ from clear_budget.domain.value_objects.bill_amount_change import BillAmountChang
 from clear_budget.shared.errors import InvalidBillAmountChangeError
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 
-_MONTH_FORMAT = "MMM yyyy"
+# Matches the end-month field above it, which reads "August 2026".
+_MONTH_FORMAT = "MMMM yyyy"
 _FIRST_OF_MONTH = 1
 
 # Sized to its content rather than left to the layout, which squeezed the field
@@ -37,6 +38,25 @@ _FIRST_OF_MONTH = 1
 # is a measuring stick, not a limit: it is the widest amount worth planning for,
 # and the width comes from the font, so it holds at any scale or font size.
 _WIDEST_AMOUNT_SAMPLE = "123456.78"
+
+# The longest month name, so the dropdown never has to squeeze its own text
+# against the calendar button. September is the longest in English.
+_WIDEST_MONTH_SAMPLE = "September 2026"
+
+
+def _date_width(field: QDateEdit, sample: str) -> int:
+    """Width `field` needs to show `sample` beside its calendar button.
+
+    The chrome is derived from the widget itself, by taking what its own size
+    hint allows beyond the text it is currently showing, so the calendar
+    button, the frame and the spacing are all accounted for without any of
+    them being guessed at.
+    """
+    metrics = field.fontMetrics()
+    chrome = field.sizeHint().width() - metrics.horizontalAdvance(field.text())
+    # One character of the font's own width as breathing room, so the longest
+    # month does not sit flush against the calendar button.
+    return metrics.horizontalAdvance(sample) + chrome + metrics.averageCharWidth()
 
 
 def _text_width(field: QLineEdit, sample: str) -> int:
@@ -88,6 +108,9 @@ class BillAmountChangesSectionMixin:
         self.change_month_edit.setCalendarPopup(True)
         self.change_month_edit.setDate(
             QDate(self.current_month.year, self.current_month.month, _FIRST_OF_MONTH)
+        )
+        self.change_month_edit.setMinimumWidth(
+            _date_width(self.change_month_edit, _WIDEST_MONTH_SAMPLE)
         )
         entry.addWidget(self.change_month_edit)
         entry.addWidget(QLabel("costs"))
