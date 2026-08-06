@@ -22,7 +22,7 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import theme, ui_scale
 from clear_budget.ui.theme_tokens import STATE_RED, STATE_SAFE
-from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES, percentage
 
 # The native Windows 11 style draws a rounded frame around any styled QLabel; on the
 # dark card those frame corners show through as ugly "black notches". A stylesheet set
@@ -292,7 +292,7 @@ class CreditCardViewLoaderMixin:
             ("Limit", str(display_limit), None, limit_pills),
             ("Used", str(display_used), None, None),
             ("Available", str(display_available), None, None),
-            ("Util %", f"{display_util:.1f}%", None, None),
+            ("Util %", percentage(display_util), None, None),
             ("Due Day", str(card.payment_due_day), due_color, None),
             ("Interest %", interest_str, None, None),
             ("Fixed Min", fixed_min_str, None, None),

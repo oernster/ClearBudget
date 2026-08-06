@@ -2,13 +2,7 @@
 
 A standing reference to the project's outstanding technical debt. It records what is still open, weighs whether each item is worth doing and gives the rationale. Every item is a behaviour-preserving internal concern: nothing here proposes reverting a feature or changing any UI or UX behaviour. Scope is the whole repository (the `clear_budget` package, the bespoke installer, the delivery scripts for Windows, Linux and macOS, and the GitHub Pages site under `docs/`) read against `ARCHITECTURE.md` and the tests under `tests/structural/`.
 
----
-
-## 1. The UI layer is omitted from the gate in full
-
-`.coveragerc` omits `clear_budget/ui/*` wholesale. For painting, layout and Qt wiring that is correct and matches the rest of the portfolio.
-
-The item is that some of what sits in there is not presentation. `format_helpers.py` at 369 lines and `month_view.py` at 361 carry data shaping and formatting decisions, and formatting is where a budgeting application gets a number wrong in a way a user believes. `clear_budget/application` already holds the reporting DTOs and the projection series, so there is somewhere obvious for that logic to move to. This is continuous work, not a task with an end state; it is recorded so the omission is never read as "the UI has no logic".
+**There is no open technical debt in this repository.** Every numbered item has been resolved and deleted. The two sections below are standing decisions, not work: they record what is deliberately left alone and why, so that neither gets raised again as though it were debt.
 
 ---
 
@@ -30,3 +24,4 @@ These look like candidates but are correct as they stand; changing them would re
 - **The per-platform requirements split** (`requirements.txt`, `requirements-dev.txt` and the Flatpak and macOS variants driven by the build scripts). Native dependencies genuinely differ per platform.
 - **The three delivery paths being independent** (`buildexe.py` then `buildinstaller.py` on Windows, `build_flatpak.sh` on Linux, `builddmg.py` on macOS), with `cleanup_flatpak.sh` scoped only to Flatpak artefacts. That scoping is deliberate so one clean does not destroy another platform's build.
 - **The setup program's three injectable seams** (`CommandRunner`, `ProcessController` and `InstallerIdentity`). They read like ceremony around `subprocess` and `winreg` until you notice they are what lets the privileged half of the installer sit inside the coverage gate without a test ever spawning a process or writing to the user's own registry key.
+- **`.coveragerc` omitting `clear_budget/ui/*` wholesale.** Correct for painting, layout and Qt wiring, and it matches the rest of the portfolio. This was once recorded as debt on the grounds that some of what sat in there was not presentation, which was true of the money, percentage and category formatting: turning pence into a figure a person reads is where a budgeting application gets a number wrong in a way the user believes. That formatting now lives in `clear_budget/application/formatting.py`, inside the gate and covered, and the UI re-exports it so no call site moved. What remains under `ui/` is presentation, so the omission stands as a decision rather than an omission.

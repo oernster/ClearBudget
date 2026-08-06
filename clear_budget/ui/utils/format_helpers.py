@@ -2,6 +2,14 @@
 
 from pathlib import Path
 
+# Re-exported from the application layer, where they sit inside the coverage
+# gate. Turning pence into a figure a person reads is not presentation, so it
+# does not belong in a module excluded from that gate. They stay importable
+# from here so none of the sixty-two call sites had to move.
+from clear_budget.application.formatting import fmt, format_category, percentage
+
+__all__ = ["MONTH_NAMES", "fmt", "format_category", "percentage"]
+
 MONTH_NAMES = [
     "",
     "January",
@@ -344,26 +352,3 @@ def build_centered_nav_header(
     outer.setContentsMargins(inset, floatm, inset, floatm)
     outer.addWidget(tray)
     return header, month_lbl, icon_btn, theme_btn
-
-
-def fmt(amount: "int | float") -> str:
-    """Format as a currency string using the active symbol.
-
-    Pass pence as int (divided by 100 internally) or pounds as float (used directly).
-    """
-    from clear_budget.shared.currency import get_symbol
-
-    sym = get_symbol()
-    if isinstance(amount, int):
-        return f"{sym}{amount / 100:.2f}"
-    return f"{sym}{amount:.2f}"
-
-
-def format_category(category: str) -> str:
-    """Format category: replace underscores with spaces and capitalize."""
-    singular_map = {
-        "subscriptions": "subscription",
-        "utilities": "utility",
-    }
-    formatted = singular_map.get(category, category)
-    return formatted.replace("_", " ").title()

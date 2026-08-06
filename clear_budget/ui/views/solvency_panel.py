@@ -20,6 +20,7 @@ from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     build_centered_nav_header,
     fmt,
+    percentage,
 )
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
@@ -272,7 +273,7 @@ class SolvencyPanel(
             bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
             bar.setFormat(
                 f"{month_name} month-end: {fmt(closing_pence)}"
-                f" of {fmt(limit_pence)} ({util_pct:.1f}%)"
+                f" of {fmt(limit_pence)} ({percentage(util_pct)})"
             )
 
             colours = theme.colours()
