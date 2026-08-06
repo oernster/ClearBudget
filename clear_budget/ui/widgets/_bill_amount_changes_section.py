@@ -77,6 +77,28 @@ def _text_width(field: QLineEdit, sample: str) -> int:
     return field.fontMetrics().horizontalAdvance(sample) + chrome
 
 
+def parse_amount_change(
+    *, year: int, month: int, amount_text: str
+) -> BillAmountChange | None:
+    """The change an entry row describes, or None when it will not parse.
+
+    The caller establishes that the text is not blank before asking. Blank
+    means nothing is pending, which is a different answer from invalid: one
+    closes the dialog, the other has to keep it open.
+
+    Kept out of the widget so the rule can be tested without a QApplication,
+    which this repository deliberately does not run in its suite.
+    """
+    try:
+        return BillAmountChange(
+            effective_year=year,
+            effective_month=month,
+            new_amount=Amount.from_pounds(float(amount_text.strip())),
+        )
+    except (ValueError, InvalidBillAmountChangeError):
+        return None
+
+
 class BillAmountChangesSectionMixin:
     """Recording and removing a bill's scheduled amount changes."""
 
@@ -159,6 +181,23 @@ class BillAmountChangesSectionMixin:
             row_widget.setLayout(row)
             self.amount_changes_list_layout.addWidget(row_widget)
 
+    def _commit_pending_amount_change(self) -> bool:
+        """Fold an entry that was typed but never added into the list.
+
+        Returns False only when there is something in the box that will not
+        parse, which is the one case that has to keep the dialog open. An empty
+        box is nothing pending, so it succeeds.
+
+        This exists because an amount left in the box was silently discarded on
+        OK: the figure was on screen, so the change looked recorded and was
+        not. Constrain the bad state rather than expect the Add button to be
+        remembered.
+        """
+        if not self.change_amount_edit.text().strip():
+            return True
+        self._on_add_amount_change()
+        return not self.change_amount_edit.text().strip()
+
     def _on_add_amount_change(self) -> None:
         """Validate and append a change to the in-memory list."""
         self.change_warning_label.setVisible(False)
@@ -166,13 +205,10 @@ class BillAmountChangesSectionMixin:
         if not amount_str:
             return
         qdate = self.change_month_edit.date()
-        try:
-            change = BillAmountChange(
-                effective_year=qdate.year(),
-                effective_month=qdate.month(),
-                new_amount=Amount.from_pounds(float(amount_str)),
-            )
-        except (ValueError, InvalidBillAmountChangeError):
+        change = parse_amount_change(
+            year=qdate.year(), month=qdate.month(), amount_text=amount_str
+        )
+        if change is None:
             self.change_warning_label.setText("Enter a valid month and amount.")
             self.change_warning_label.setVisible(True)
             return

@@ -76,6 +76,9 @@ class MonthViewEditMixin:
             if col == 0:
                 u = dataclasses.replace(bill, name=v or bill.name)
             elif col == 1:
+                if bill.base_amount is not None:
+                    self._reject_inline_amount_edit(bill)
+                    return
                 u = dataclasses.replace(
                     bill, amount=Amount.from_pounds(float(v.lstrip(get_symbol())))
                 )
@@ -91,8 +94,42 @@ class MonthViewEditMixin:
         except (ValueError, AttributeError):
             QTimer.singleShot(0, self.view_model.refresh_month_summary)
 
+    @staticmethod
+    def _own_amount(bill):
+        """The bill as it must be WRITTEN, rather than as it is displayed.
+
+        A bill listed for a month on or after a scheduled increase carries that
+        month's amount in `amount` and its own in `base_amount`. Writing the
+        displayed figure back would make the increase the new base and restate
+        every earlier month, which is the one thing this feature exists to
+        prevent. The dialog already guards this by editing `base_amount`; an
+        inline edit of the name, category or day went straight past it.
+        """
+        if bill.base_amount is None:
+            return bill
+        return dataclasses.replace(bill, amount=bill.base_amount)
+
+    def _reject_inline_amount_edit(self, bill) -> None:
+        """Refuse an inline amount edit on a month a scheduled change governs.
+
+        Typing over the figure is ambiguous here: it could mean this month cost
+        something else, or that the standing amount has moved again. Rather
+        than guess, say where the amount lives and put the cell back.
+        """
+        from PySide6.QtWidgets import QMessageBox
+
+        QMessageBox.information(
+            self,
+            "Amount is scheduled",
+            f"'{bill.name}' has a scheduled amount change, so this month's"
+            " figure comes from that schedule.\n\nOpen the bill and use the"
+            " Amount changes section to alter it, or use 'This month only' for"
+            " a one-off difference.",
+        )
+        QTimer.singleShot(0, self.view_model.refresh_month_summary)
+
     def _inline_update_bill(self, before, after) -> None:
-        self.view_model.update_bill(bill=after)
+        self.view_model.update_bill(bill=self._own_amount(after))
         self._offer_apply_edited_bill(before, after)
 
     def _inline_update_income(self, before, after) -> None:

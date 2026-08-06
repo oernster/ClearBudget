@@ -246,6 +246,22 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
         self._amount_changes = list(bill.amount_changes)
         self._rebuild_amount_changes_list()
 
+    def accept(self) -> None:
+        """Commit a pending amount change, then close.
+
+        An amount typed into the "costs" box and left there was silently
+        dropped: the entry only counted once Add had been pressed, and nothing
+        said so. That reads as the feature not working at all, because the
+        figure was on screen when OK was pressed. Pressing OK now means the
+        same as pressing Add and then OK.
+
+        A pending entry that fails validation keeps the dialog open, with the
+        warning label already saying why, rather than closing and losing it.
+        """
+        if not self._commit_pending_amount_change():
+            return
+        super().accept()
+
     def get_bill(self) -> Bill | None:
         """Get bill from form (returns None if invalid)."""
         try:
