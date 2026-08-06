@@ -20,25 +20,13 @@ The size test itself has no danger-band tier: it fails over 400 and says nothing
 
 The UI is outside the coverage gate, so these are not hiding an untested failure path in the way the `ops` ones were. They are a readability item: a reader cannot tell which are deliberate and which are inherited. Narrow the ones that can be narrowed and give the rest a one-line reason, then consider whether the per-file ignore can be dropped.
 
-## 3. Schema migration is a sequence of try-and-ignore `ALTER` statements
-
-`clear_budget/infrastructure/sqlite/_schema.py` carries eight `except Exception: # noqa: S110, BLE001 (idempotent ALTER migration)` blocks. Each one attempts an `ALTER TABLE ... ADD COLUMN` and swallows the failure on the assumption that the column already exists.
-
-This is honest, commented and it works, and for a single-user local SQLite file it is a defensible choice. The debt is what it cannot do:
-
-- It cannot distinguish "column already present" from "the database is corrupt", "the file is locked" or "the disk is full". Every one of those becomes a silent no-op and the application continues against a schema it has not verified.
-- It has no notion of a schema version, so migrations cannot be ordered, cannot be skipped and cannot be reasoned about backwards.
-- The count only goes up. Eight blocks today is eight `ALTER` attempts on every single startup.
-
-The proportionate fix is a `schema_version` table and a numbered migration list applied in order, with each step failing loudly. It is a bounded piece of work and it removes eight broad exception handlers from the shipped code path at the same time.
-
-## 4. Two icon generators
+## 3. Two icon generators
 
 `create_icon.py` and `create_icons.py` are both tracked at root. The portfolio's rule is one master PNG and one `generate_icons.py` emitting the whole set. Two scripts with near-identical names mean nobody can tell which one produced the fourteen tracked PNGs, and the wrong one will eventually be run.
 
 Determine which is authoritative, delete the other and rename the survivor to `generate_icons.py` to match every other project here.
 
-## 5. The UI layer is omitted from the gate in full
+## 4. The UI layer is omitted from the gate in full
 
 `.coveragerc` omits `clear_budget/ui/*` wholesale. For painting, layout and Qt wiring that is correct and matches the rest of the portfolio.
 
@@ -52,7 +40,7 @@ The item is that some of what sits in there is not presentation. `_credit_card_v
 - The four files between 355 and 382 lines. Under the cap, clear of the danger band, nothing to do.
 - The two root `.spec` files (`ClearBudget.spec`, `ClearBudgetSetup.spec`) are PyInstaller artefacts and are untracked.
 - The `_leading_underscore.py` module naming inside `ui/views` and `application/services`. Unconventional, clear in intent (private to the package) and consistent.
-- The fourteen tracked PNG sizes plus the `.ico`. Emitted from a single master and consumed by named packaging paths. Item 4 is about which script emits them, not about the assets.
+- The fourteen tracked PNG sizes plus the `.ico`. Emitted from a single master and consumed by named packaging paths. Item 3 is about which script emits them, not about the assets.
 
 ## Not debt (do not "fix" these)
 
@@ -61,7 +49,6 @@ These look like candidates but are correct as they stand; changing them would re
 - **`VERSION` at root with `stamp_version.py` writing the delimited tokens.** The single-source-of-truth pattern, correctly implemented, with the build scripts calling the stamper so it cannot be forgotten. This is the reference the rest of the portfolio should copy.
 - **`tests/structural/test_data_dir_isolation.py`.** A structural test asserting the application never writes outside its own data directory. Exactly the right kind of invariant for a local-first app that holds someone's finances, and unusual enough to be worth naming.
 - **`tests/structural/test_auth_structure.py` and `test_layering_rules.py`.** Layer boundaries and the auth surface held by AST scan rather than by convention.
-- **The `_schema.py` handlers' `# noqa: S110, BLE001 (idempotent ALTER migration)` comments.** Item 3 proposes replacing the mechanism. Until that happens, these comments are the correct way to carry it: the reason is stated, so the decision is reviewable.
 - **The per-platform requirements split** (`requirements.txt`, `requirements-dev.txt` and the Flatpak and macOS variants driven by the build scripts). Native dependencies genuinely differ per platform.
 - **The three delivery paths being independent** (`buildexe.py` then `buildinstaller.py` on Windows, `build_flatpak.sh` on Linux, `builddmg.py` on macOS), with `cleanup_flatpak.sh` scoped only to Flatpak artefacts. That scoping is deliberate so one clean does not destroy another platform's build.
 - **The setup program's three injectable seams** (`CommandRunner`, `ProcessController` and `InstallerIdentity`). They read like ceremony around `subprocess` and `winreg` until you notice they are what lets the privileged half of the installer sit inside the coverage gate without a test ever spawning a process or writing to the user's own registry key.

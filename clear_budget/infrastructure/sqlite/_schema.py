@@ -1,26 +1,14 @@
-"""SQLite schema DDL and migrations - extracted from database.py for LOC limit."""
+"""SQLite baseline DDL.
 
+Holds the current shape of every table. Changing an existing database is the
+business of `_migrations.py`, applied at the end of `create_schema`.
+"""
 
-def _migrate_credit_cards_schema(cursor) -> None:
-    """Add new columns to credit_cards table if they don't exist."""
-    columns_to_add = [
-        ("interest_rate_apr", "REAL DEFAULT NULL"),
-        ("payment_due_day", "INTEGER DEFAULT 1"),
-        ("card_expiry_month", "INTEGER DEFAULT NULL"),
-        ("card_expiry_year", "INTEGER DEFAULT NULL"),
-        ("minimum_payment_pence", "INTEGER DEFAULT NULL"),
-        ("active", "INTEGER DEFAULT 1"),
-    ]
-
-    for col_name, col_def in columns_to_add:
-        try:
-            cursor.execute(f"ALTER TABLE credit_cards ADD COLUMN {col_name} {col_def}")
-        except Exception:  # noqa: S110, BLE001 (idempotent ALTER migration)
-            pass
+from clear_budget.infrastructure.sqlite._migrations import apply_pending
 
 
 def create_schema(conn) -> None:
-    """Create database schema and run migrations."""
+    """Create the baseline schema, then apply any pending migrations."""
     cursor = conn.cursor()
 
     # Payment methods table
@@ -144,9 +132,6 @@ def create_schema(conn) -> None:
         )
         """)
 
-    # Migrations: add columns to credit_cards if missing (existing databases)
-    _migrate_credit_cards_schema(cursor)
-
     # Settings table (for app configuration)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS settings (
@@ -168,72 +153,6 @@ def create_schema(conn) -> None:
             FOREIGN KEY (bill_id) REFERENCES bills(id)
         )
         """)
-
-    # The one_time category is retired: "This month only" on Add covers the
-    # one-off case. Recategorise any remaining bills into discretionary
-    # (archived month snapshots keep their historical label).
-    cursor.execute(
-        "UPDATE bills SET category = 'discretionary' WHERE category = 'one_time'"
-    )
-
-    # Migrate bills added with current-month start_ym to always-visible 2000-01.
-    # One-off bills (start == end, added via "This month only") are scoped to
-    # exactly their month on purpose and are left alone.
-    cursor.execute(
-        "UPDATE bills SET start_year = 2000, start_month = 1"
-        " WHERE start_year > 2000"
-        " AND (end_year IS NULL OR end_year <> start_year OR end_month <> start_month)"
-    )
-
-    # Add target_card_id to bills (links credit_payment bills to their card)
-    try:
-        cursor.execute(
-            "ALTER TABLE bills ADD COLUMN target_card_id INTEGER DEFAULT NULL"
-        )
-    except Exception:  # noqa: S110, BLE001 (idempotent ALTER migration)
-        pass
-
-    # Add day_of_month override to bill_month_overrides
-    try:
-        cursor.execute(
-            "ALTER TABLE bill_month_overrides"
-            " ADD COLUMN day_of_month INTEGER DEFAULT NULL"
-        )
-    except Exception:  # noqa: S110, BLE001 (idempotent ALTER migration)
-        pass
-
-    # Add per-card minimum payment percentage
-    try:
-        cursor.execute(
-            "ALTER TABLE credit_cards"
-            " ADD COLUMN minimum_payment_percent REAL DEFAULT NULL"
-        )
-    except Exception:  # noqa: S110, BLE001 (idempotent ALTER migration)
-        pass
-
-    # Track the last month folded into current_balance_used_pence
-    try:
-        cursor.execute(
-            "ALTER TABLE credit_cards"
-            " ADD COLUMN balance_applied_year INTEGER DEFAULT NULL"
-        )
-    except Exception:  # noqa: S110, BLE001 (idempotent ALTER migration)
-        pass
-    try:
-        cursor.execute(
-            "ALTER TABLE credit_cards"
-            " ADD COLUMN balance_applied_month INTEGER DEFAULT NULL"
-        )
-    except Exception:  # noqa: S110, BLE001 (idempotent ALTER migration)
-        pass
-    # Day-of-month a balance was manually set as-of (mid-month anchor)
-    try:
-        cursor.execute(
-            "ALTER TABLE credit_cards"
-            " ADD COLUMN balance_applied_day INTEGER DEFAULT NULL"
-        )
-    except Exception:  # noqa: S110, BLE001 (idempotent ALTER migration)
-        pass
 
     # Per-month bill skips (excludes a bill from one month without deleting it)
     cursor.execute("""
@@ -258,15 +177,6 @@ def create_schema(conn) -> None:
             is_reliable INTEGER NOT NULL
         )
         """)
-
-    # Add "received" flag directly to income_month_extras (independent rows)
-    try:
-        cursor.execute(
-            "ALTER TABLE income_month_extras"
-            " ADD COLUMN received INTEGER NOT NULL DEFAULT 0"
-        )
-    except Exception:  # noqa: S110, BLE001 (idempotent ALTER migration)
-        pass
 
     # Per-month income overrides (mirrors bill_month_overrides)
     cursor.execute("""
@@ -329,5 +239,9 @@ def create_schema(conn) -> None:
             amount_pence INTEGER NOT NULL
         )
         """)
+
+    # Evolve an existing database to the current shape. Each step runs once, in
+    # order, and any failure that is not "the column is already there" raises.
+    apply_pending(cursor)
 
     conn.commit()

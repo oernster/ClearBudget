@@ -257,7 +257,10 @@ class BillDialog(QDialog):
             target_card_id = self.pays_card_combo.currentData()
 
             end_ym = None
-            start_ym = self.bill.start_ym if self.bill else YearMonth(2000, 1)
+            # A new bill exists from the month it was created onward. Editing an
+            # existing one never moves its start, since that would restate what
+            # earlier months already reported.
+            start_ym = self.bill.start_ym if self.bill else self.current_month
             if self.bill is None and self.month_only_check.isChecked():
                 # One-off: scoped to exactly the viewed month.
                 start_ym = self.current_month

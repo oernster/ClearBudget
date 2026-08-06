@@ -120,8 +120,13 @@ class TestDatabaseGetOrCreateMonth:
         database.create_schema()  # second call hits except: pass for each ALTER TABLE
         database.close()
 
-    def test_start_ym_migration_spares_one_off_bills(self, db) -> None:
-        """Re-running the schema keeps one-off (start == end) bills scoped."""
+    def test_recurring_bill_start_month_is_preserved(self, db) -> None:
+        """Re-running the schema never moves a bill's start month backwards.
+
+        A bill exists from the month it was created onward. Rewriting that start
+        to the beginning of time, which the schema used to do on every startup,
+        made a new bill appear in months before it existed.
+        """
         db.conn.execute(
             "INSERT INTO bills (name, amount_pence, payment_method_id, category,"
             " bill_type, day_of_month, start_year, start_month, end_year, end_month)"
@@ -142,15 +147,20 @@ class TestDatabaseGetOrCreateMonth:
             ).fetchall()
         }
         assert rows["One-off"] == (2026, 9)
-        assert rows["Recurring"] == (2000, 1)
+        assert rows["Recurring"] == (2026, 9)
 
     def test_one_time_category_is_migrated_to_discretionary(self, db) -> None:
-        """The retired one_time category is recategorised on schema run."""
+        """A database predating the migration has one_time folded in.
+
+        The version is wound back so the step is pending, which is what an
+        older database looks like. It runs once rather than on every startup.
+        """
         db.conn.execute(
             "INSERT INTO bills (name, amount_pence, payment_method_id, category,"
             " bill_type, day_of_month, start_year, start_month)"
             " VALUES ('Gadget', 7900, 1, 'one_time', 'fixed', 12, 2000, 1)"
         )
+        db.conn.execute("UPDATE schema_version SET version = 0")
         db.conn.commit()
         db.create_schema()
         row = db.conn.execute(
