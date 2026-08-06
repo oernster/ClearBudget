@@ -98,9 +98,9 @@ what is deliberately left and what only looks like debt.
   projected balance for the rest of the month
 - Self-maintaining bank balance: dated bank bills are deducted from the balance
   at local midnight on their due day and dated income is added the same way;
-  days that pass while the app is closed are caught up at the next launch, and
+  days that pass while the app is closed are caught up at the next launch and
   applied items tick their Paid/Received flags so nothing is counted twice
-- Adding a bill or income dated today, or editing an existing item's day to
+- Adding a bill or income dated today or editing an existing item's day to
   today, offers to apply it to the balance immediately (decline if your
   balance already reflects it)
 - Deleting an item whose amount was applied automatically hands the amount
@@ -138,12 +138,12 @@ what is deliberately left and what only looks like debt.
   them, month end against the lowest point reached inside each month, with a
   table and a traffic light per month. Both files are self-contained (inline
   styles, inline SVG) in the dark theme, so they can be emailed and opened
-  offline, and both default to your Downloads folder
+  offline and both default to your Downloads folder
 - Full keyboard navigation: Tab or Right steps forward, Shift+Tab or Left
   steps back (wrapping); Up/Down walk table rows; Enter equals Space; focus
   and hover show a green ring, disabled controls a red one; nothing is focused
   on launch until the first keypress
-- The tab strip is walked tab by tab in the order shown, and marking a tab
+- The tab strip is walked tab by tab in the order shown and marking a tab
   never switches to it: Enter or Space does that. The tab you are already
   reading is skipped
 - The page itself is the last stop on each tab whenever it has more content
@@ -165,7 +165,7 @@ what is deliberately left and what only looks like debt.
 ## Application Tabs
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
-- **Solvency** - Financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months
+- **Solvency** - Financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months. The breakdown for the month on screen states its lowest point and the day it falls on, including when that low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
@@ -185,7 +185,7 @@ what is deliberately left and what only looks like debt.
 | Switch User | Return to login screen |
 | Exit | Close application |
 
-Read-only viewer accounts have most of these actions disabled, and the window title
+Read-only viewer accounts have most of these actions disabled and the window title
 shows "(Read-only)".
 
 ---
@@ -235,16 +235,16 @@ All amounts are held as integer pence. No financial figure in the application
 is ever a floating-point number, so nothing rounds away between the value you
 type and the value a projection uses.
 
-**What the login protects, and what it does not.** The username/password sign-in
+**What the login protects and what it does not.** The username/password sign-in
 is an access-control gate for the application: it stops another person who shares
 your computer from opening the app and casually reading or editing your budget.
-That is the threat it is designed to stop, and the only one.
+That is the threat it is designed to stop and the only one.
 
 The database files themselves are **not encrypted at rest**. A technically
 capable person with read access to your user folder can open
 `budget_<username>.db` directly with any SQLite tool and read its contents
 without going through Clear Budget at all. The bcrypt login does not prevent
-this, and is not intended to. For the common case - keeping a housemate, family
+this and is not intended to. For the common case - keeping a housemate, family
 member or colleague from idly browsing your finances inside the app - this is
 the right level of protection. If your threat model includes a determined local
 attacker, protect the files at rest with your operating system's own encryption
@@ -299,7 +299,7 @@ For each card:
 
 The Credit Cards tab shows each card as its own panel: active checkbox, name, status
 badge, an overview row (limit/used/available/utilisation/due day/interest/minimum
-payment/expiry), and a this-month row (charges/payment received/interest/minimum
+payment/expiry) and a this-month row (charges/payment received/interest/minimum
 payment due). Edits go through the Edit Card dialog; cards are deleted individually
 with confirmation.
 
@@ -324,6 +324,15 @@ or the bill template:
 Income sources have the same per-month flexibility (overrides, skips and a "received"
 flag that likewise ticks itself when a dated income is applied to the balance), plus
 "this month only" one-off entries for ad-hoc income not tied to a recurring template.
+
+A bill can also **change amount from a month onward**, which is what a rent
+increase is: say what it costs from a given month and that amount applies to
+that month and every month after it. Months before it keep the amount they
+actually had, so a report run for an earlier month still says what was really
+paid. A change is never retrospective. This is different from a single-month
+override, which says one month differed rather than that the cost has moved;
+where both apply to the same month, the override wins and the month after
+returns to the new standing amount.
 
 Beyond single-month tweaks, a bill can be given an **end month** so it stops after
 that month; deleting a bill offers two scopes: **stop from the viewed month**
@@ -364,7 +373,7 @@ File > Bank Account Settings opens a dialog to record an overdraft facility: a l
 shows:
 - An amber warning if the projected balance dips below zero but stays within the
   facility, including an estimated daily interest cost
-- A red warning if the dip would exceed the facility, or if no facility is set at all
+- A red warning if the dip would exceed the facility or if no facility is set at all
 
 ---
 
@@ -444,7 +453,7 @@ To set up a development environment or build an installable package on Linux
 ## Licence
 
 Distributed under the GNU Lesser General Public Licence v3.0.  
-See Help > View Licence in the application, or visit https://www.gnu.org/licenses/lgpl-3.0.html
+See Help > View Licence in the application or visit https://www.gnu.org/licenses/lgpl-3.0.html
 
 ### Open Source Credits
 
@@ -460,7 +469,7 @@ Bundled with the application, so their licences travel with it:
 - **bcrypt** - Nate Lawson, Perry Metzger (Apache-2.0)
 - **pywin32** - Mark Hammond (PSF Licence); Windows only, where it is actually shipped
 
-Used to build and test it, not shipped, but no less owed:
+Used to build and test it, not shipped but no less owed:
 
 - **PyInstaller** - PyInstaller contributors (GPL-2.0 + bootloader exception)
 - **Pillow** - Jeffrey A. Clark and contributors; builds the application icons (HPND)

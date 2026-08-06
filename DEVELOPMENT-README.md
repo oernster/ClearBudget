@@ -15,7 +15,7 @@ Clear Budget on each supported platform.
 Clear Budget targets **Python 3.11 or newer**.
 
 - **Windows** - install from [python.org](https://www.python.org/downloads/) and
-  tick "Add python.exe to PATH", or run `winget install Python.Python.3.12`.
+  tick "Add python.exe to PATH" or run `winget install Python.Python.3.12`.
 - **macOS** - the system Python is not suitable for building; install with
   Homebrew (`brew install python`) or from python.org.
 - **Linux** - usually preinstalled. On Ubuntu and Debian, make sure the venv and
@@ -58,7 +58,7 @@ Install it only if you are changing the artwork: `pip install pillow`.
 
 `ClearBudget.png`, 1024x1024 RGBA, is the master and every other icon asset is
 derived from it. `generate_icons.py` emits the seven PNG sizes and the
-multi-resolution `.ico`, and it reproduces all eight tracked files byte for
+multi-resolution `.ico`; it reproduces all eight tracked files byte for
 byte, so running it on a clean tree leaves `git status` empty. Change the
 artwork by replacing the master and re-running it.
 
@@ -73,7 +73,7 @@ ruff check .       # lint (wider default rule set)
 ```
 
 The suite is Qt-free and runs clean in one process: the fragile widget-level
-PySide6 tests were removed, and the UI layer is excluded from the coverage gate
+PySide6 tests were removed and the UI layer is excluded from the coverage gate
 (see `.coveragerc`). Pure UI-layer logic is still tested without a `QApplication`
 under `tests/ui_logic`. Tests use real implementations and hand-written fakes, no
 mock libraries.
@@ -83,12 +83,12 @@ line, so read the exit code rather than the tail of the output: `0` means the
 tests passed AND the gate was met.
 
 The gate is measured by BRANCH as well as by line (`branch = True` in
-`.coveragerc`, `--cov-fail-under=100`), and it spans three sources:
+`.coveragerc`, `--cov-fail-under=100`) and it spans three sources:
 `clear_budget`, `main` and the Qt-free half of the setup program under
 `installer/`. The setup program is in there because it does the most privileged
 work in the repository: registry writes, shortcut creation, per-user
 deployment, process termination and directory removal. `installer/app.py` and
-`installer/ui` are excluded on the same grounds as `clear_budget/ui`, and
+`installer/ui` are excluded on the same grounds as `clear_budget/ui` and
 `installer/build_payload.py` is a build script.
 
 Outside the gate: the `.coveragerc` omissions (UI, interfaces, `main.py`, build
@@ -100,7 +100,7 @@ says which parts sit outside it.
 ### Testing the setup program
 
 `tests/installer/` exercises everything under `installer/` except `app.py` and
-`installer/ui`. Nothing in it touches a real installation, and that is held in
+`installer/ui`. Nothing in it touches a real installation and that is held in
 place by four autouse fixtures in `tests/installer/conftest.py`, each closing
 one route to the real machine:
 
@@ -119,7 +119,7 @@ one route to the real machine:
 injectable seams (`CommandRunner`, `ProcessController` and the identity value).
 What can be exercised for real is: shortcuts are written through the same Shell
 Link COM interface the install uses, the registry round-trips through `winreg`
-against the scratch key and a full install deploys and registers a real bundle,
+against the scratch key; a full install deploys and registers a real bundle,
 all inside the redirected tree.
 
 Appearance is verified with throwaway offscreen probes rather than tests, since
@@ -138,8 +138,8 @@ $env:CLEARBUDGET_HOME = "$env:TEMP\cb-probe"
 
 This is not a style preference. A probe that calls `theme.apply_theme` to
 measure something persists that theme, because persisting is what the function
-is for, and the app then opens in the theme the probe used. The test suite sets
-the variable for itself through an autouse fixture in `tests/conftest.py`, and
+is for and the app then opens in the theme the probe used. The test suite sets
+the variable for itself through an autouse fixture in `tests/conftest.py` and
 `tests/structural/test_data_dir_isolation.py` fails if that ever stops
 happening.
 
@@ -184,7 +184,7 @@ Two helper scripts live in the repository root:
 
 `build_flatpak.sh` installs `flatpak` and `flatpak-builder` if they are missing
 (via apt, dnf or pacman), adds the Flathub remote, pulls the Freedesktop runtime,
-builds fully offline from pre-downloaded wheels, and writes **`clearbudget.flatpak`**
+builds fully offline from pre-downloaded wheels and writes **`clearbudget.flatpak`**
 for external deployment. Pass `--no-bundle` to build and install locally without
 producing the distributable bundle.
 

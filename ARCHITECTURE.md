@@ -147,7 +147,7 @@ Everything below this section explains how the code satisfies them.
   - `anchored_month_opening_pence()` - the start-of-month opening derived on the fly
     from a verbatim `current_balance_used` and its `balance_applied_day` anchor. For
     the anchor month it backs out the pre-anchor net (the part of the entered figure
-    already posted this month); for any other month, or a card with no day anchor, it
+    already posted this month); for any other month or a card with no day anchor, it
     returns the stored value unchanged. This is what lets "Used" equal exactly what
     you typed while the projection and solvency stay correctly anchored
 - `credit_limit_schedule.py` - effective credit limit over a card's scheduled
@@ -179,7 +179,7 @@ focused mixins to stay under the 400-LOC-per-file limit:
 - `BalanceApplicationMixin` (`_balance_application.py`) - same-day
   `apply_bill_to_balance_now` / `apply_income_to_balance_now` plus the
   `balance_applied` log helpers; deleting a bill or income (or ending a bill
-  from a month onward) reverses its logged applications, and a manual balance
+  from a month onward) reverses its logged applications and a manual balance
   entry clears the log because the typed figure supersedes them
 - `GraphSeriesMixin` (`_month_graph_series.py`) - month graph data:
   `get_bank_graph_series` (day-end projected bank balance across the viewed
@@ -197,7 +197,7 @@ Key methods:
   card from the as-of-today balance the user entered, stored verbatim and stamped with
   today's date as its `balance_applied` anchor. "Used" therefore equals exactly what
   was entered; the start-of-month opening is derived on the fly where the projection
-  needs it (`anchored_month_opening_pence`), and the same-month stamp makes the
+  needs it (`anchored_month_opening_pence`) and the same-month stamp makes the
   elapsed-date fold skip the freshly entered figure rather than overwrite it
 - `set_credit_limit_changes(card_id, changes)` - replace a card's scheduled limit
   changes (the dialog manages the list and persists it whole on save)
@@ -250,14 +250,20 @@ Key methods:
 ### Infrastructure Layer
 
 **Per-user database** (`~/.clearbudget/budget_<username>.db`):
-- `Database(db_path)` - SQLite connection and schema management (the DDL and
-  migrations live in `_schema.py`, split out for the LOC limit)
-- Schema - 17 application tables (plus SQLite's internal `sqlite_sequence`):
+- `Database(db_path)` - SQLite connection and schema management. `_schema.py`
+  holds the baseline DDL; `_migrations.py` holds the numbered migrations that
+  bring an existing database forward. A column is added only after reading
+  `PRAGMA table_info`, so "already present" is established by looking rather
+  than inferred from a swallowed exception; every other failure propagates
+- Schema - 19 application tables (plus SQLite's internal `sqlite_sequence`):
   1. `payment_methods` - id=1 is "Bank Account"
-  2. `bills` - templates; includes `target_card_id` (migration). Start months
-     are normalised to 2000-01 except one-off bills (start == end), which stay
-     scoped to their month; the retired `one_time` category is recategorised
-     to `discretionary` (both are idempotent launch migrations)
+  2. `bills` - templates; includes `target_card_id` (migration). A bill starts
+     in the month it was created and its start month is never moved afterwards,
+     since moving it would make the bill appear in months before it existed. The
+     retired `one_time` category is folded into `discretionary` by a numbered
+     migration that runs once rather than on every launch. `amount_pence` here
+     is only the ORIGINAL amount: what a bill costs in a given month comes from
+     table 18 via `domain.services.bill_amount_schedule`
   3. `income_sources`
   4. `months` - one row per archived month (written by auto-archive at launch)
   5. `month_bills` - archived per-month bill snapshot
@@ -280,6 +286,12 @@ Key methods:
       automatically (midnight fold or same-day prompt), one signed row per item
       per month; deleting an item reverses its rows, a manual balance entry
       clears the log
+  18. `bill_amount_changes` - what a bill costs from a month onward, one row per
+      change, unique per (bill, month). A change applies to its month and every
+      month after it and to no month before it, so raising the rent leaves
+      earlier months reporting what they actually cost
+  19. `schema_version` - a single row recording how far this database has been
+      migrated, so each migration runs once and in order
 
 **Repositories**:
 - `SQLiteBillRepository`
@@ -324,7 +336,7 @@ it is all under the coverage gate and testable without a QApplication.
 
 - `curve.py` - the monotone cubic (Fritsch-Carlson) curve maths. It lives here
   rather than beside the widget because BOTH the on-screen chart and the exported
-  SVG need it, and the UI layer is not something the application layer may import
+  SVG need it and the UI layer is not something the application layer may import
 - `chart_svg.py` - the bar and line charts as inline SVG, following the same rules
   as `_line_bar_chart.py` (curve in bar mode only, axis always includes zero, zero
   line only when the range crosses it). The export redraws the series rather than
@@ -334,18 +346,18 @@ it is all under the coverage gate and testable without a QApplication.
   application layer may not depend on the UI). Fixed rather than following the
   active theme, so an export does not change appearance depending on where the
   toggle happened to be. Each chart carries its own background rect so it reads
-  correctly wherever it is embedded, and the print rules keep the dark identity
+  correctly wherever it is embedded and the print rules keep the dark identity
   rather than dropping pale text onto a white page
 - `document.py` - the page shell. The stylesheet is inline and the charts are inline
   SVG, so an exported file references nothing outside itself and survives being
   emailed or moved (there is a test asserting no `src`, `href` or `@import`)
 - `month_report.py` - one month: both renderings plus the text saying what each is
-  for, and the four figures worth pulling out (opening, closing, change, the low
+  for and the four figures worth pulling out (opening, closing, change, the low
   and its day)
 - `projection_report.py` - a month range: a chart of two lines per month, the
   month-end balance and the LOWEST point inside that month, plus a table and a
   traffic light per month. The two lines are the point of it: a month that opens
-  and closes in credit can still bounce a payment mid-month, and a report drawn
+  and closes in credit can still bounce a payment mid-month and a report drawn
   from closing balances alone would show that month as healthy
 
 `ProjectionMonth` (`application/dto/projection_month.py`) carries one month's
@@ -379,14 +391,14 @@ bank statement. Both identities are tested.
   non-blank. The app never sets it: it exists so that anything running OUTSIDE
   the app (the test suite, a probe, a script) writes to a scratch directory
   instead of live user data. The directory holds both databases, the logs and
-  the saved theme, and a write into it is silent, so it surfaces later as a bug
+  the saved theme; a write into it is silent, so it surfaces later as a bug
   report against the app: an offscreen probe applied the light theme in order
   to measure it, `theme.apply_theme` persisted that choice as it is supposed
   to and the app opened light from then on. Constrain the bad state rather than
   remember to avoid it. The variable is read at call time and never cached; otherwise a
   test could not redirect it. `tests/structural/test_data_dir_isolation.py`
   holds the rules in place: the suite never resolves the real directory, no
-  other module in the package derives it, and the installer never names it at
+  other module in the package derives it and the installer never names it at
   all, so installing or reinstalling cannot disturb a saved setting
 
 **`Currency`** (`clear_budget/shared/currency.py`):
@@ -409,7 +421,7 @@ bank statement. Both identities are tested.
   computed once by the Solvency panel and broadcast to every tab via
   `SolvencyPanel.month_label_color_changed` so no tab can disagree. A month is
   red only when its own balance breaches the overdraft floor (below zero with no
-  facility, or beyond an agreed facility); dipping into an agreed facility but
+  facility or beyond an agreed facility); dipping into an agreed facility but
   staying within it is amber. A looming overdraft in a later month stays a
   banner warning and never colours the earlier month's title
 
@@ -433,8 +445,8 @@ bank statement. Both identities are tested.
 
 **`resources`** (`clear_budget/shared/resources.py`):
 - Runtime asset discovery for packaged builds: locates the app icon, the Qt
-  window/taskbar icon, and the splash image across PyInstaller onefile
-  (`sys._MEIPASS`), onedir (`_internal/`), beside-the-executable, dev repo layout,
+  window/taskbar icon and the splash image across PyInstaller onefile
+  (`sys._MEIPASS`), onedir (`_internal/`), beside-the-executable, dev repo layout
   and the working directory, with `.ico` preferred and `.png` fallbacks. Keeps
   icon and splash loading robust however the app was packaged.
 
@@ -498,16 +510,16 @@ bank statement. Both identities are tested.
   navigation tray) above the scroll area and zeroes the content's top margin so
   the tray stays full-width and centred on every tab. The indicators sit in a
   COLUMN of their own beside the page, laid out rather than positioned. They
-  used to float on top of the content, placed by hand, and a hand-placed
+  used to float on top of the content, placed by hand and a hand-placed
   overlay lands on whatever happens to be beneath it: measuring from the top of
   the whole tab put the up indicator inside the hoisted tray over the theme
-  toggle, and on a 900x580 window the down indicator sat on Monthly Budget's
+  toggle and on a 900x580 window the down indicator sat on Monthly Budget's
   Delete Income button, where a click scrolled instead of reaching the button.
   A column cannot overlap anything. It is ALWAYS present, even while both
   buttons are hidden: showing and hiding it would change the page width, which
   can change whether the page overflows, which decides whether the buttons
   show, a loop that flickers on content sitting near the boundary. This was the
-  only hand-placed child widget in the app; everything else is laid out, and a
+  only hand-placed child widget in the app; everything else is laid out and a
   layout cannot overlap its own children (verified by an overlap sweep over all
   four tabs at three window sizes and nine dialogs at two: zero)
 - `_preferences_flow.py` / `_bank_account_settings_flow.py` - dialog-orchestration
@@ -532,7 +544,7 @@ bank statement. Both identities are tested.
   - Curve maths is Qt-free and lives in `application/reporting/curve.py`, NOT
     beside the widget: the day-end totals (one curve however many series are
     plotted, so with a single series it IS that series), the inflection days
-    where direction changes and the Bezier segments. The chart imports it, and
+    where direction changes and the Bezier segments. The chart imports it and
     so does the SVG exporter, which is the reason it sits in the application
     layer rather than the UI one. Tested without a QApplication in
     `tests/application/reporting/test_curve.py`, under the coverage gate
@@ -571,7 +583,7 @@ bank statement. Both identities are tested.
   already on its FIRST stop: the first control in its own tab order that is
   enabled, visible and takes tab focus, found by walking Qt's focus chain so the
   answer is whatever the first Tab press would have reached. Disabled and hidden
-  controls are passed over, the same rule the ring applies everywhere else, and a
+  controls are passed over, the same rule the ring applies everywhere else and a
   dialog with nothing focusable simply focuses nothing rather than failing.
   Replaced the old `NeutralDialog`: the neutral start belongs to the MAIN WINDOW,
   which you look at before you act in it, not to a dialog you opened deliberately
@@ -601,7 +613,7 @@ bank statement. Both identities are tested.
   and Home/End by itself, so only the focus policy and the ring membership had
   to be added. Left and Right deliberately still STEP THE RING here rather than
   scrolling horizontally, unlike the general scrollable-region rule: nothing in
-  this app scrolls sideways, and Left/Right stepping everywhere is what stops
+  this app scrolls sideways and Left/Right stepping everywhere is what stops
   focus being trapped. The stop paints the same green ring on focus and none at
   rest (measured: 0 pixels at rest, ~2980 focused, both themes), with no hover
   rule, since the pointer sits over the page most of the time the app is open
@@ -620,7 +632,7 @@ bank statement. Both identities are tested.
 - The tab strip's cursor is SEPARATE from its selection (`NavTabBar`). Qt ties
   a `QTabBar`'s focus to its current tab, so a plainly focused bar can only
   ring the tab the user is already on, which is a dead stop. `NavTabBar` holds
-  its own cursor instead: the tab already showing is never a candidate, and
+  its own cursor instead: the tab already showing is never a candidate and
   only Enter or Space commits a switch. Stepping the ring therefore never
   changes which tab is shown. The
   cursor paints the green ring itself, on the pill geometry imported from
@@ -649,7 +661,7 @@ bank statement. Both identities are tested.
 
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
-  - File menu: New Budget, then "Import / Export" submenu (Export/Import Database,
+  - File menu: New Budget, then "Import / Export" submenu (Export/Import Database
     and Read-Only Viewer Package export/import, admin only), Preferences, Bank
     Account Settings, Switch User, Exit
   - Users menu (admin only): Manage Users (list, Add User, Delete Selected)
@@ -674,12 +686,12 @@ bank statement. Both identities are tested.
     placed on that screen, so on a multi-monitor desktop the app appears where it
     was started from instead of on whichever display Windows calls primary. The
     shell passes no launch monitor, so the pointer is a proxy, not an exact answer;
-    it is resolved once rather than per window, or a dialog would open on whichever
+    it is resolved once rather than per window or a dialog would open on whichever
     monitor the mouse was resting on. `installer/app.py` does the same before
     showing the setup window
   - Screen-aware UI scale (`ui_scale.init`): factor = the LAUNCH screen's available
     height / 1260, capped at 1.5x on tall/4K displays and floored at 0.5x, so the UI
-    scales *down* on short displays such as a 13in MacBook, and scales for the
+    scales *down* on short displays such as a 13in MacBook and scales for the
     monitor the app actually opens on
   - Default window geometry: 33% of available width x 92% of available height,
     centred, with absolute minimum floors (860 x 780 logical points, capped to the
@@ -689,11 +701,11 @@ bank statement. Both identities are tested.
     placement cannot be exercised on a one-screen machine. It works in virtual-desktop
     coordinates, so a monitor left of or above the primary one (negative x or y) needs
     no special case
-  - Centring positions the window's FRAME, not its client rect, and happens AFTER the
+  - Centring positions the window's FRAME, not its client rect and happens AFTER the
     window is shown. `setGeometry()` places the client rect while `move()` places the
     frame, so centring geometry alone leaves the window half a title bar high and half
     a border left (measured: a 23px title bar with 4+4px borders puts it 19px out).
-    Worse, a layout can insist on a larger size than the window was given, and a window
+    Worse, a layout can insist on a larger size than the window was given and a window
     centred before that happens is off centre by however much it grew. `launch_screen.centre`
     therefore places twice: once immediately, so the window is created on the right
     monitor and never jumps across displays, then again on the next event-loop turn
@@ -716,13 +728,13 @@ bank statement. Both identities are tested.
   apart in the first place. The font is applied as a WIDGET-level stylesheet,
   not `setFont`: the app stylesheet sets `font-size` on `QWidget` and any
   stylesheet rule beats `setFont`, so the size was silently ignored. A widget's
-  own sheet beats the application's, and setting only `font-size` leaves the
+  own sheet beats the application's and setting only `font-size` leaves the
   object-name ring rules intact (verified: 0 ring pixels at rest, 385 green on
   focus, 380 red when disabled). The rule MUST carry a selector
   (`QPushButton#ThemeToggleButton { ... }`): a bare `font-size` cascades to the
   widget's whole subtree and its TOOLTIP counts, which is what briefly rendered
   the hover text at the emoji's size
-- An emoji does not fill its em box, and no two fill it alike, so the font size
+- An emoji does not fill its em box and no two fill it alike, so the font size
   is MEASURED per glyph by `glyph_metrics.glyph_font_px_for_height`: the glyph
   is painted to a scratch canvas at the target height and the font is scaled by
   however far its opaque pixels missed. On Windows at a 42px font the sun paints
@@ -756,7 +768,7 @@ bank statement. Both identities are tested.
   pill geometry NavTabBar paints its cursor on), `_theme_inputs.py` (the fields
   the user types in), `_theme_menus.py`, `_theme_controls.py` and
   `_theme_labels.py`, each a pure string builder taking the token dict. The
-  split is what keeps every module under the LOC limit, and it is also what
+  split is what keeps every module under the LOC limit and it is also what
   makes the highlight rule testable: `build_qss` as a whole CANNOT run without
   a QApplication, since it resolves the system font and generates the spin-box
   arrow images, while the per-surface builders touch no Qt at all. The blocks
@@ -783,7 +795,7 @@ bank statement. Both identities are tested.
   selected one takes a panel fill with an accent border and hover gives the
   green ring. There is deliberately NO `QTabBar::tab:selected:focus` rule:
   the green ring belongs to `NavTabBar`'s keyboard cursor, which paints it on
-  whichever tab the cursor sits on, and a focus rule on the selected pill
+  whichever tab the cursor sits on and a focus rule on the selected pill
   would put a second green ring on the strip. (If one is ever reinstated, the
   subcontrol must come first: `QTabBar::tab:selected:focus` works while the
   widget-state-first form `QTabBar:focus::tab:selected` is silently ignored by
@@ -893,7 +905,7 @@ It is loaded from the DB immediately after opening the user session and activate
 module-level symbol in `shared.currency`. `Amount.__str__` and `fmt()` both call
 `get_symbol()` at render time, so all displayed values reflect the active currency
 without any additional wiring. On currency change (File > Preferences), the new code is
-saved to the DB, `set_currency()` is called, and `database_replaced` is emitted to
+saved to the DB, `set_currency()` is called and `database_replaced` is emitted to
 rebuild the window with updated labels.
 
 ## Cross-Platform Support and Packaging
@@ -934,7 +946,7 @@ The `installer` package follows the same shape as the application, for the same
 reason. `ops` holds the side effects (payload extraction, staging, shortcuts,
 process control, registration and the install, repair and uninstall sequences),
 `state` holds the HKCU registration, version comparison and the state model the
-window reads, `shared` holds resource resolution and logging and `ui` is the
+window reads, `shared` holds resource resolution and logging, while `ui` is the
 only Qt client. `app.py` is the composition root.
 
 Three seams keep the privileged work testable, which is what allows everything
@@ -1062,7 +1074,7 @@ an option that read as "remove my data" removed nothing.
 - `test_data_dir_isolation.py` - the suite cannot resolve the real
   `~/.clearbudget`, only `shared/config.py` derives it and the installer never
   names it. A `conftest.py` autouse fixture points `CLEARBUDGET_HOME` at a
-  scratch directory for EVERY test, and these assert that it is in force
+  scratch directory for EVERY test and these assert that it is in force
 
 ## Code Quality Standards
 
@@ -1079,7 +1091,7 @@ an option that read as "remove my data" removed nothing.
 - The setup program is inside the gate because it does the most privileged work
   in the repository: registry writes, shortcut creation, per-user deployment,
   process termination and directory removal. `installer/app.py` and
-  `installer/ui` are excluded on the same grounds as `clear_budget/ui`, and
+  `installer/ui` are excluded on the same grounds as `clear_budget/ui` and
   `installer/build_payload.py` is a build script
 - What the gate does NOT include, stated plainly so the number is not read as
   more than it is: besides the `.coveragerc` omissions above, every line marked
