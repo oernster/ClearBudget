@@ -46,6 +46,12 @@ class Bill:
     # `domain.services.bill_amount_schedule.effective_bill_amount_pence`, never
     # from reading `amount` directly, because `amount` is only the original.
     amount_changes: tuple[BillAmountChange, ...] = ()
+    # The bill's own amount before any scheduled change, set only when a
+    # change actually applied to the month being listed. `amount` is what the
+    # month costs; this is what the bill is worth editing. Without it, saving a
+    # bill viewed in a month after an increase would write the increased figure
+    # back as the base and restate every earlier month.
+    base_amount: Amount | None = None
 
     def is_active_in_month(self, year_month: YearMonth) -> bool:
         """Check if this bill is active in the given month."""

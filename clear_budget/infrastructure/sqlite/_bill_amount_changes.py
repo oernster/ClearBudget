@@ -38,6 +38,33 @@ class BillAmountChangesMixin:
         )
         self.conn.commit()
 
+    def set_amount_changes(
+        self, *, bill_id: int, changes: tuple[BillAmountChange, ...]
+    ) -> None:
+        """Replace every scheduled change for a bill with `changes`.
+
+        The dialog hands back the whole set it is holding, so this is a
+        replace rather than a merge; anything the user removed there has to
+        disappear here.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM bill_amount_changes WHERE bill_id = ?", (bill_id,))
+        cursor.executemany(
+            "INSERT INTO bill_amount_changes"
+            " (bill_id, effective_year, effective_month, amount_pence)"
+            " VALUES (?, ?, ?, ?)",
+            [
+                (
+                    bill_id,
+                    c.effective_year,
+                    c.effective_month,
+                    c.new_amount.pence,
+                )
+                for c in changes
+            ],
+        )
+        self.conn.commit()
+
     def delete_amount_change(self, *, bill_id: int, year_month: YearMonth) -> None:
         """Remove the change effective from `year_month`, if there is one."""
         cursor = self.conn.cursor()

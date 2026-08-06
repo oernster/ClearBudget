@@ -18,11 +18,15 @@ from PySide6.QtWidgets import (
 
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.bill_amount_change import BillAmountChange
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import label_roles
+from clear_budget.ui.widgets._bill_amount_changes_section import (
+    BillAmountChangesSectionMixin,
+)
 
 
-class BillDialog(QDialog):
+class BillDialog(BillAmountChangesSectionMixin, QDialog):
     """Dialog for creating/editing a bill."""
 
     CATEGORIES: ClassVar[list[str]] = [
@@ -58,6 +62,8 @@ class BillDialog(QDialog):
         self.bill = bill
         self.payment_method_repo = payment_method_repo
         self.current_month = current_month or YearMonth.today()
+        # Built before init_ui, which renders the section from this list.
+        self._amount_changes: list[BillAmountChange] = []
         self.setWindowTitle("Add Bill" if bill is None else "Edit Bill")
         self.setModal(True)
         # Size only, never position: (100, 100) is a fixed point in the
@@ -147,6 +153,8 @@ class BillDialog(QDialog):
         layout.addWidget(self.month_only_status)
         self.month_only_check.stateChanged.connect(self._on_month_only_changed)
 
+        layout.addWidget(self._build_amount_changes_section())
+
         btn_layout = QHBoxLayout()
         ok_btn = QPushButton("OK")
         cancel_btn = QPushButton("Cancel")
@@ -203,7 +211,11 @@ class BillDialog(QDialog):
     def load_bill(self, bill: Bill) -> None:
         """Load bill data into form."""
         self.name_edit.setText(bill.name)
-        self.amount_edit.setText(f"{bill.amount.pounds:.2f}")
+        # The bill's own amount, not what this month happens to cost: editing a
+        # bill viewed after an increase must not write the increased figure back
+        # as the base. The increase is shown in the Amount changes section.
+        editable_amount = bill.base_amount or bill.amount
+        self.amount_edit.setText(f"{editable_amount.pounds:.2f}")
 
         # Find payment method by ID
         for i in range(self.payment_method_combo.count()):
@@ -226,6 +238,8 @@ class BillDialog(QDialog):
             self.end_date_edit.setDate(QDate(bill.end_ym.year, bill.end_ym.month, 1))
         if bill.has_month_override:
             self.month_only_check.setChecked(True)
+        self._amount_changes = list(bill.amount_changes)
+        self._rebuild_amount_changes_list()
 
     def get_bill(self) -> Bill | None:
         """Get bill from form (returns None if invalid)."""

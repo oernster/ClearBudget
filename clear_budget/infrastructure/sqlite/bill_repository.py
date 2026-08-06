@@ -132,7 +132,13 @@ class SQLiteBillRepository(BillAmountChangesMixin):
             pence = effective_bill_amount_pence(
                 bill=with_changes, year=year_month.year, month=year_month.month
             )
-            resolved.append(replace(with_changes, amount=Amount(pence=pence)))
+            resolved.append(
+                replace(
+                    with_changes,
+                    amount=Amount(pence=pence),
+                    base_amount=bill.amount,
+                )
+            )
         return resolved
 
     def skip_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:

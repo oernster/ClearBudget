@@ -17,6 +17,12 @@ class BillOperationsMixin:
     def update_bill(self, *, bill: Bill) -> Bill:  # pragma: no cover
         return self.bill_repo.update(bill=bill)
 
+    def set_bill_amount_changes(
+        self, *, bill_id: int, changes
+    ) -> None:  # pragma: no cover
+        """Replace a bill's scheduled amount changes."""
+        self.bill_repo.set_amount_changes(bill_id=bill_id, changes=tuple(changes))
+
     def update_bill_for_month(
         self, *, bill: Bill, year_month: YearMonth
     ) -> None:  # pragma: no cover

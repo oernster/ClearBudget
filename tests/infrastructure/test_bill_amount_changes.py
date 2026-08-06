@@ -5,6 +5,8 @@ the rent from a month forward leaves every earlier month reporting what it
 actually cost.
 """
 
+from dataclasses import replace
+
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -150,4 +152,51 @@ class TestOverridesStillWin:
         db.conn.commit()
         assert _amount_in(repo, _SEPTEMBER) == _ONE_OFF
         # The month after is back on the schedule.
+        assert _amount_in(repo, _OCTOBER) == _INCREASED_RENT
+
+
+class TestEditingDoesNotRestateHistory:
+    """The trap this feature sets for itself.
+
+    `list_active_for_month` reports what the month costs, so a bill viewed in a
+    month after an increase carries the increased figure. Saving that straight
+    back as the bill's own amount would rewrite what every earlier month
+    reported, which is exactly what the forward-only rule forbids. The original
+    therefore travels alongside, for the edit path to write instead.
+    """
+
+    def test_a_bill_listed_after_an_increase_carries_its_original_amount(
+        self, db
+    ) -> None:
+        repo = SQLiteBillRepository(db.conn)
+        rent = _add_rent(repo)
+        repo.add_amount_change(
+            bill_id=rent.id,
+            year_month=_SEPTEMBER,
+            amount=Amount(pence=_INCREASED_RENT),
+        )
+        bill = repo.list_active_for_month(year_month=_OCTOBER)[0]
+        assert bill.amount.pence == _INCREASED_RENT
+        assert bill.base_amount.pence == _ORIGINAL_RENT
+
+    def test_a_bill_with_no_changes_has_no_separate_base(self, db) -> None:
+        repo = SQLiteBillRepository(db.conn)
+        _add_rent(repo)
+        assert repo.list_active_for_month(year_month=_OCTOBER)[0].base_amount is None
+
+    def test_saving_an_untouched_bill_leaves_every_month_as_it_was(self, db) -> None:
+        """The edit path end to end: open in October, save, change nothing."""
+        repo = SQLiteBillRepository(db.conn)
+        rent = _add_rent(repo)
+        repo.add_amount_change(
+            bill_id=rent.id,
+            year_month=_SEPTEMBER,
+            amount=Amount(pence=_INCREASED_RENT),
+        )
+        viewed = repo.list_active_for_month(year_month=_OCTOBER)[0]
+        editable = viewed.base_amount or viewed.amount
+        repo.update(bill=replace(viewed, amount=editable))
+
+        assert _amount_in(repo, _AUGUST) == _ORIGINAL_RENT
+        assert _amount_in(repo, _SEPTEMBER) == _INCREASED_RENT
         assert _amount_in(repo, _OCTOBER) == _INCREASED_RENT
