@@ -1,0 +1,47 @@
+# Deploys the static GitHub Pages site in docs/ via the official GitHub Actions Pages pipeline.
+#
+# This replaces the legacy "Deploy from a branch" pipeline (which intermittently fails the deploy step
+# with "Deployment failed, try again later" on a concurrency conflict). After merging this file, set
+# Settings > Pages > Build and deployment > Source to "GitHub Actions" so only this workflow deploys.
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+# Least-privilege token plus the OIDC claim the deploy action needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment at a time. A newer push queues behind the in-flight run rather than
+# cancelling it: cancelling a mid-flight deploy-pages can leave the Pages backend in a state that
+# fails the next run with "Deployment failed, try again later", which is why in-progress runs are
+# allowed to complete (this matches GitHub's official Pages workflow).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload docs/ as the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
