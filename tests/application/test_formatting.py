@@ -9,7 +9,13 @@ holding it.
 
 import pytest
 
-from clear_budget.application.formatting import fmt, format_category, percentage
+from clear_budget.application.formatting import (
+    fmt,
+    format_category,
+    money_from_pence,
+    money_from_pounds,
+    percentage,
+)
 from clear_budget.application.reporting.document import money
 from clear_budget.shared.currency import DEFAULT_CURRENCY, set_currency
 
@@ -49,25 +55,33 @@ class TestMoneyOnScreen:
         assert fmt(100) == "£1.00"
 
 
-class TestScreenAndReportDisagree:
-    """The two formats this application ships, recorded rather than discovered.
+class TestScreenAndReportAgree:
+    """One money format, for the screen and an exported report alike.
 
-    `reporting.document.money` groups thousands and puts the sign before the
-    symbol. The on-screen `fmt` does neither. The report's form is the correct
-    one; changing the screen to match is a visible change to every figure in
-    the application and so is a decision, not a refactor.
+    They used to differ: the screen printed no thousands separator and put a
+    negative's minus inside the symbol, so the same figure read two ways
+    depending on where you saw it.
     """
 
-    def test_the_screen_omits_the_thousands_separator(self) -> None:
+    def test_thousands_are_grouped_in_both(self) -> None:
         assert money(123456) == "£1,234.56"
-        assert fmt(123456) == "£1234.56"
+        assert fmt(123456) == money(123456)
 
-    def test_a_negative_renders_the_symbol_and_sign_the_other_way_round(self) -> None:
+    def test_the_sign_leads_the_symbol_in_both(self) -> None:
         assert money(-123456) == "-£1,234.56"
-        assert fmt(-123456) == "£-1234.56"
+        assert fmt(-123456) == money(-123456)
+
+    def test_a_negative_never_puts_the_symbol_outside_its_own_minus(self) -> None:
+        """The malformed form this unification removed."""
+        assert not fmt(-500).startswith("£-")
 
     def test_they_agree_on_a_small_positive_amount(self) -> None:
         assert money(5) == fmt(5)
+
+
+class TestUnitsAreNamedInNewCode:
+    def test_pence_and_whole_units_render_the_same_sum_identically(self) -> None:
+        assert money_from_pence(123456) == money_from_pounds(1234.56)
 
 
 class TestPercentage:

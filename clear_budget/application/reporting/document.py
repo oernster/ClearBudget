@@ -9,7 +9,7 @@ chart_svg.
 
 from __future__ import annotations
 
-from clear_budget.shared.currency import get_symbol
+from clear_budget.application.formatting import money_from_pence
 
 _STYLES = """
 :root { color-scheme: dark; }
@@ -69,10 +69,13 @@ def escape(text) -> str:
 
 
 def money(pence: int) -> str:
-    """Format pence in the active currency, with a sign for a negative."""
-    symbol = get_symbol()
-    sign = "-" if pence < 0 else ""
-    return f"{sign}{symbol}{abs(pence) / 100:,.2f}"
+    """Format pence in the active currency, with a sign for a negative.
+
+    An alias onto the one money formatter, kept here because the report modules
+    import it from this module. A report and the screen render a figure
+    identically; they used to differ.
+    """
+    return money_from_pence(pence)
 
 
 def document(*, title: str, subtitle: str, body: str) -> str:

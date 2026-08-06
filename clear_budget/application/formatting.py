@@ -8,19 +8,15 @@ and it was the one part of that file with nothing holding it.
 
 The UI still calls `fmt`; `format_helpers` re-exports it, so no call site moved.
 
-TWO MONEY FORMATS EXIST IN THIS APPLICATION AND THEY DISAGREE. This one is what
-the screen shows. `reporting.document.money` is what an exported report shows,
-and it groups thousands and puts the sign before the symbol:
+ONE MONEY FORMAT. This module is the single place money is rendered, for the
+screen and for an exported report alike; `reporting.document.money` is an alias
+onto it. They used to differ, the screen printing `GBP1234.56` and `GBP-1234.56`
+where a report printed `GBP1,234.56` and `-GBP1,234.56`, so the same figure read
+two ways depending on where you saw it and a negative on screen was malformed
+currency, the symbol sitting outside its own minus sign.
 
-    pence      report        screen
-    123456     GBP1,234.56   GBP1234.56
-    -123456    -GBP1,234.56  GBP-1234.56
-
-Both are pinned by tests so the difference is recorded rather than discovered.
-The report's form is the correct one, `GBP-1234.56` being malformed currency,
-but the screen's form is what ships today and changing it is a visible change
-to every figure in the application, so it is Oliver's call rather than a
-silent side effect of moving this code.
+`reporting.chart_svg._money` is deliberately NOT this: an axis tick is a bare
+grouped number with no symbol and no decimals, which is a different job.
 """
 
 from __future__ import annotations
@@ -37,20 +33,40 @@ _CATEGORY_SINGULARS = {
 }
 
 
+def _render(units: float) -> str:
+    """Render whole currency units: sign, then symbol, then grouped amount.
+
+    The sign leads. `-GBP5.00` is the readable form; `GBP-5.00` puts the symbol
+    outside the number it belongs to and is easy to misread as positive.
+    """
+    symbol = get_symbol()
+    sign = "-" if units < 0 else ""
+    return f"{sign}{symbol}{abs(units):,.2f}"
+
+
+def money_from_pence(pence: int) -> str:
+    """Format an integer number of pence."""
+    return _render(pence / _PENCE_PER_UNIT)
+
+
+def money_from_pounds(pounds: float) -> str:
+    """Format an amount already expressed in whole currency units."""
+    return _render(pounds)
+
+
 def fmt(amount: int | float) -> str:
     """Format as a currency string using the active symbol.
 
-    Pass pence as `int` (divided by 100 internally) or pounds as `float` (used
-    directly). That overload is a hazard worth stating plainly: `fmt(100)` is
-    one pound and `fmt(100.0)` is one hundred, so a caller passing the wrong
-    type is silently out by a factor of a hundred with no error anywhere. It is
-    preserved exactly as it was because sixty-two call sites depend on it; the
-    behaviour is pinned by tests so a change to it cannot be accidental.
+    Pass pence as `int` or whole units as `float`. That overload is a hazard
+    worth stating plainly: `fmt(100)` is one pound and `fmt(100.0)` is one
+    hundred, so a caller passing the wrong type is silently out by a factor of
+    a hundred with no error anywhere. It is preserved because sixty-two call
+    sites depend on it, and pinned by a test so it cannot change by accident.
+    Prefer `money_from_pence` in new code, where the unit is in the name.
     """
-    symbol = get_symbol()
     if isinstance(amount, int):
-        return f"{symbol}{amount / _PENCE_PER_UNIT:.2f}"
-    return f"{symbol}{amount:.2f}"
+        return money_from_pence(amount)
+    return money_from_pounds(amount)
 
 
 def percentage(value: float) -> str:
