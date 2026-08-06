@@ -17,6 +17,9 @@ _AT_RISK_BALANCE_PENCE = 20000
 _CAUTION_BALANCE_PENCE = 50000
 # Months of drain a balance must cover to count as comfortable rather than tight.
 _MONTHS_COVERAGE_FOR_SAFE = 2
+# Sentinel day for a low that sits at the opening balance, before any event.
+# Days of the month are 1-based, so 0 cannot collide with a real one.
+_LOW_AT_START = 0
 
 
 class SolvencyPanelNarrativeMixin:
@@ -221,12 +224,23 @@ class SolvencyPanelNarrativeMixin:
 
         lines = []
         balance = opening_pence
+        # The low is tracked across EVERY event, not just the income ones that
+        # get a line, because a month can be at its worst between two payslips.
+        # The opening is a candidate: a month that only ever rises is at its
+        # lowest before anything happens, reported as "at the start".
+        low_pence = opening_pence
+        low_day = _LOW_AT_START
         for day, delta, name, is_income in events:
             balance += delta
+            if balance < low_pence:
+                low_pence = balance
+                low_day = day
             if is_income:
                 lines.append(
                     f"Day {day}: {name} +{fmt(delta)} -> balance {fmt(balance)}"
                 )
+        when = "at the start" if low_day == _LOW_AT_START else f"day {low_day}"
+        lines.append(f"Lowest point ({when}): {fmt(low_pence)}")
         lines.append(f"Balance at end of month: {fmt(balance)}")
         return lines
 
