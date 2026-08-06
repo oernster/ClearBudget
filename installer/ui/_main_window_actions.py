@@ -30,6 +30,10 @@ if TYPE_CHECKING:  # pragma: no cover
 # Kept visible long enough for the user to see that something happened.
 _COMPLETION_LINGER_MS = 1200
 _AUTO_CLOSE_DELAY_MS = 600
+# Long enough for the completion message to have been seen before the window
+# goes. Derived from the two above rather than written as a third number, so
+# shortening the linger cannot leave the close landing before it.
+_FINISHED_CLOSE_DELAY_MS = _COMPLETION_LINGER_MS + _AUTO_CLOSE_DELAY_MS
 
 
 def connect_signals(window: InstallerMainWindow) -> None:
@@ -271,23 +275,48 @@ def on_operation_finished(
         # ImportError if Qt is unavailable, RuntimeError if the label is gone.
         pass
 
-    if result.ok and op in LAUNCHABLE_OPS:
-        _launch_if_wanted(window)
+    if result.ok:
+        if op in LAUNCHABLE_OPS:
+            _launch_if_wanted(window)
+        if _should_close_after(window, op):
+            _close_shortly(window)
         return
 
-    if op == Operation.UNINSTALL and result.ok:
-        # Only auto-close when we were explicitly launched as an uninstaller
-        # (from Windows Settings via UninstallString, say).
-        if getattr(window._cli_args, "uninstall", False):
-            try:
-                from PySide6.QtCore import QTimer
 
-                QTimer.singleShot(_AUTO_CLOSE_DELAY_MS, window.close)
-            except (ImportError, RuntimeError):
-                # Without a timer the close still has to happen, just now
-                # rather than after the delay.
-                window.close()
-        return
+def _should_close_after(window: InstallerMainWindow, op: Operation) -> bool:
+    """Whether the setup program should bow out after a successful `op`.
+
+    Every operation that leaves the machine in the state the user asked for
+    closes: there is nothing left to do and leaving the window sitting there
+    reads as though something is still pending. Install, upgrade, reinstall and
+    repair all did exactly that, because the launch branch returned without
+    closing and repair fell past the uninstall check entirely.
+
+    Uninstall keeps its existing rule. Launched from Windows Settings it closes,
+    but if the user opened setup themselves and chose Uninstall, the window
+    stays so the result is visible and another operation can follow.
+    """
+    if op != Operation.UNINSTALL:
+        return True
+    return bool(getattr(window._cli_args, "uninstall", False))
+
+
+def _close_shortly(window: InstallerMainWindow) -> None:
+    """Close the window once the current work has unwound.
+
+    Deferred rather than immediate, and not only so the completion message can
+    be read. The operation's worker thread is being retired around this call,
+    and closing from inside that teardown is how a setup program ends up
+    waiting on the thread it is running on.
+    """
+    try:
+        from PySide6.QtCore import QTimer
+
+        QTimer.singleShot(_FINISHED_CLOSE_DELAY_MS, window.close)
+    except (ImportError, RuntimeError):
+        # Without a timer the close still has to happen, just now rather than
+        # after the delay.
+        window.close()
 
 
 def _launch_if_wanted(window: InstallerMainWindow) -> None:
