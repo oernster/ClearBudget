@@ -416,7 +416,10 @@ bank statement. Both identities are tested.
 - Used throughout UI for all inline currency formatting not going through `Amount.__str__`
 - `build_centered_nav_header(...)` - the shared month/year navigation tray used
   by all four tabs (bordered, centred, hoisted above the scroll area by
-  `ScrollableTab`). `apply_nav_label_color` / `_nav_label_style` recolour the
+  `ScrollableTab`). The tray machinery itself (this builder, the app-icon
+  graph button, the theme toggle and the glyph sizing) lives in
+  `ui/utils/nav_header.py` and is re-exported from `format_helpers`, keeping
+  that module clear of the LOC band with no call site moved. `apply_nav_label_color` / `_nav_label_style` recolour the
   label; the colour is each month's OWN within-month solvency health (current
   month from its live balance, a future month from its Forward Projection),
   computed once by the Solvency panel and broadcast to every tab via
