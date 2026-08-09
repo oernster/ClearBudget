@@ -25,6 +25,8 @@ from __future__ import annotations
 import os
 import re
 from importlib import metadata
+
+from packaging.requirements import InvalidRequirement, Requirement
 import shutil
 import subprocess
 import sys
@@ -79,10 +81,15 @@ APPLE_ID = os.environ.get("APPLE_ID", "")
 APPLE_APP_PASSWORD = os.environ.get("APPLE_APP_PASSWORD", "")
 APPLE_TEAM_ID = os.environ.get("APPLE_TEAM_ID", "W7K465GKFJ")
 
-# Set by `xcrun notarytool store-credentials <name>`. Preferred over
-# APPLE_APP_PASSWORD because the secret stays in the keychain instead of sitting
-# in this process's arguments, which any other process can read via ps.
-APPLE_KEYCHAIN_PROFILE = os.environ.get("APPLE_KEYCHAIN_PROFILE", "")
+# Notarization credentials live in the keychain under one profile per app, each
+# holding its own app-specific password, so a leaked credential can be revoked
+# for a single app. The profile defaults to this app's name: running the build
+# from the repo picks up the right credential with nothing to export, and no
+# other app's profile can be used by accident. Set APPLE_KEYCHAIN_PROFILE to
+# override. Create it with:
+#   xcrun notarytool store-credentials ClearBudget \
+#     --apple-id <id> --team-id <team> --password <app-specific>
+NOTARY_PROFILE = os.environ.get("APPLE_KEYCHAIN_PROFILE", "") or APP_NAME
 
 # The notary service accepts only an app-specific password from appleid.apple.com
 # and rejects the Apple account password with HTTP 401. The shape is distinctive,
@@ -93,7 +100,10 @@ APP_SPECIFIC_PASSWORD_RE = re.compile(r"^[a-z]{4}-[a-z]{4}-[a-z]{4}-[a-z]{4}$")
 # an unnotarized DMG is rejected by Gatekeeper on every machine but the one that
 # signed it, and the failure is invisible at build time.
 ALLOW_UNNOTARIZED = os.environ.get("ALLOW_UNNOTARIZED", "") == "1"
-NOTARIZING = bool(APPLE_KEYCHAIN_PROFILE or (APPLE_ID and APPLE_APP_PASSWORD))
+
+# Notarization is the default and the keychain profile always resolves, so the
+# only way to skip it is to ask for that explicitly.
+NOTARIZING = not ALLOW_UNNOTARIZED
 
 # Minimal hardened-runtime entitlements. ClearBudget is a local-first SQLite
 # app with no network use and no JIT, so none of the relaxed memory/network
@@ -136,8 +146,9 @@ def check_notarization_credentials() -> None:
     costs seconds instead of a full PyInstaller run.
     """
     section("Notarization credentials")
-    if APPLE_KEYCHAIN_PROFILE:
-        print(f"  Notarizing with keychain profile {APPLE_KEYCHAIN_PROFILE}.")
+    if ALLOW_UNNOTARIZED:
+        print("  WARNING: ALLOW_UNNOTARIZED=1 set.")
+        print("  WARNING: this build is for local testing and must not be released.")
         return
     if APPLE_ID and APPLE_APP_PASSWORD:
         if not APP_SPECIFIC_PASSWORD_RE.match(APPLE_APP_PASSWORD):
@@ -147,28 +158,12 @@ def check_notarization_credentials() -> None:
                 "  An Apple account password is rejected by the notary service with\n"
                 "  'HTTP status code: 401. Invalid credentials'.\n"
                 "  Generate one at https://appleid.apple.com (Sign-In and Security,\n"
-                "  App-Specific Passwords), or avoid putting the secret in the\n"
-                "  environment at all:\n"
-                f"    xcrun notarytool store-credentials {APP_NAME} \\\n"
-                "      --apple-id you@example.com --team-id "
-                f"{APPLE_TEAM_ID} --password <app-specific>\n"
-                f"    export APPLE_KEYCHAIN_PROFILE={APP_NAME}"
+                "  App-Specific Passwords), or leave both variables unset and store\n"
+                f"  the credential in the keychain as profile {NOTARY_PROFILE}."
             )
         print(f"  Notarizing as {APPLE_ID} (team {APPLE_TEAM_ID}).")
         return
-    if ALLOW_UNNOTARIZED:
-        print("  WARNING: ALLOW_UNNOTARIZED=1 set.")
-        print("  WARNING: this build is for local testing and must not be released.")
-        return
-    sys.exit(
-        "ERROR: APPLE_ID and APPLE_APP_PASSWORD are required.\n"
-        "  Without notarization macOS refuses to launch the app with 'Apple could\n"
-        "  not verify this app is free of malware'. Create an app-specific\n"
-        "  password at https://appleid.apple.com (Sign-In and Security), then:\n"
-        "    export APPLE_ID='you@example.com'\n"
-        "    export APPLE_APP_PASSWORD='xxxx-xxxx-xxxx-xxxx'\n"
-        "  For a local test build only, set ALLOW_UNNOTARIZED=1."
-    )
+    print(f"  Notarizing with keychain profile {NOTARY_PROFILE}.")
 
 
 def check_runtime_dependencies() -> None:
@@ -195,14 +190,21 @@ def check_runtime_dependencies() -> None:
         # needed: PySide6 and pyobjc-framework-Cocoa both resolve here.
         if not line or line.startswith("-"):
             continue
-        name = re.split(r"[<>=!~;\[ ]", line, maxsplit=1)[0].strip()
-        if not name:
+        try:
+            requirement = Requirement(line)
+        except InvalidRequirement as error:
+            sys.exit(f"ERROR: cannot parse '{line}' in {requirements.name}: {error}")
+        # An environment marker such as sys_platform == "win32" means the package
+        # is not wanted on this platform, so its absence is correct rather than a
+        # fault. Evaluating the marker beats naming Windows packages here, which
+        # would go stale the moment the requirements change.
+        if requirement.marker is not None and not requirement.marker.evaluate():
             continue
         checked += 1
         try:
-            metadata.version(name)
+            metadata.version(requirement.name)
         except metadata.PackageNotFoundError:
-            missing.append(name)
+            missing.append(requirement.name)
 
     if missing:
         sys.exit(
@@ -217,17 +219,22 @@ def check_runtime_dependencies() -> None:
 
 
 def notarytool_credentials() -> list[str]:
-    """Authentication arguments for notarytool, keychain profile first."""
-    if APPLE_KEYCHAIN_PROFILE:
-        return ["--keychain-profile", APPLE_KEYCHAIN_PROFILE]
-    return [
-        "--apple-id",
-        APPLE_ID,
-        "--password",
-        APPLE_APP_PASSWORD,
-        "--team-id",
-        APPLE_TEAM_ID,
-    ]
+    """Authentication arguments for notarytool.
+
+    An explicit APPLE_ID and APPLE_APP_PASSWORD pair wins, for CI that has no
+    keychain. Otherwise the per-app profile is used, which keeps the secret out
+    of the process arguments where any other process could read it via ps.
+    """
+    if APPLE_ID and APPLE_APP_PASSWORD:
+        return [
+            "--apple-id",
+            APPLE_ID,
+            "--password",
+            APPLE_APP_PASSWORD,
+            "--team-id",
+            APPLE_TEAM_ID,
+        ]
+    return ["--keychain-profile", NOTARY_PROFILE]
 
 
 def redact(cmd: list[str]) -> str:
@@ -268,12 +275,17 @@ def notarytool_submit(target: Path) -> None:
         return
     sys.exit(
         "ERROR: notarization failed (notarytool output above).\n"
+        "  'No Keychain password item found' means this app has no stored\n"
+        "  credential yet. Generate an app-specific password at\n"
+        "  https://appleid.apple.com (Sign-In and Security), then:\n"
+        f"    xcrun notarytool store-credentials {NOTARY_PROFILE} \\\n"
+        "      --apple-id you@example.com --team-id "
+        f"{APPLE_TEAM_ID} --password <app-specific>\n"
         "  'HTTP status code: 401' means the credential is wrong: use an\n"
-        "  app-specific password from https://appleid.apple.com, not your Apple\n"
-        "  account password.\n"
+        "  app-specific password, not your Apple account password.\n"
         "  For an 'Invalid' verdict, the per-binary reasons are in:\n"
         "    xcrun notarytool log <submission-id> "
-        f"--apple-id {APPLE_ID or '<apple-id>'} --team-id {APPLE_TEAM_ID}"
+        f"--keychain-profile {NOTARY_PROFILE}"
     )
 
 
