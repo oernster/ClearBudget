@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import os
 import re
+from importlib import metadata
 import shutil
 import subprocess
 import sys
@@ -168,6 +169,51 @@ def check_notarization_credentials() -> None:
         "    export APPLE_APP_PASSWORD='xxxx-xxxx-xxxx-xxxx'\n"
         "  For a local test build only, set ALLOW_UNNOTARIZED=1."
     )
+
+
+def check_runtime_dependencies() -> None:
+    """Fail if anything in requirements.txt is absent from the build interpreter.
+
+    PyInstaller only warns when --collect-submodules names a package it cannot
+    find, so a stale venv yields a bundle that builds, signs and notarizes
+    cleanly and then dies at launch with ModuleNotFoundError. That is exactly how
+    a release shipped without keyring after the Remember me feature landed.
+    Checking the interpreter that is about to be frozen turns a silent runtime
+    failure into a build failure.
+    """
+    section("Runtime dependencies")
+    requirements = Path(__file__).parent / "requirements.txt"
+    if not requirements.exists():
+        sys.exit(f"ERROR: {requirements.name} not found beside builddmg.py.")
+
+    missing: list[str] = []
+    checked = 0
+    for raw in requirements.read_text(encoding="utf-8").splitlines():
+        line = raw.split("#")[0].strip()
+        # Skip blanks and pip options such as -r or --index-url. Distribution
+        # names are what requirements.txt lists, so no import-name mapping is
+        # needed: PySide6 and pyobjc-framework-Cocoa both resolve here.
+        if not line or line.startswith("-"):
+            continue
+        name = re.split(r"[<>=!~;\[ ]", line, maxsplit=1)[0].strip()
+        if not name:
+            continue
+        checked += 1
+        try:
+            metadata.version(name)
+        except metadata.PackageNotFoundError:
+            missing.append(name)
+
+    if missing:
+        sys.exit(
+            "ERROR: the build interpreter is missing "
+            f"{len(missing)} of {checked} requirements:\n"
+            + "".join(f"    {name}\n" for name in missing)
+            + "  PyInstaller would omit them and the app would crash at launch\n"
+            "  with ModuleNotFoundError. Install them first:\n"
+            f"    pip install -r {requirements.name}"
+        )
+    print(f"  All {checked} requirements present.")
 
 
 def notarytool_credentials() -> list[str]:
@@ -454,6 +500,7 @@ def main() -> int:
     print(f"Signing identity: {DEVELOPER_ID}")
 
     check_platform()
+    check_runtime_dependencies()
     check_notarization_credentials()
     clean()
 
