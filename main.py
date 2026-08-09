@@ -18,6 +18,10 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
+from clear_budget.application.services.update_service import (
+    UpdateService,
+    platform_key_for,
+)
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -29,9 +33,13 @@ from clear_budget.infrastructure.sqlite.income_source_repository import (
 from clear_budget.infrastructure.sqlite.payment_method_repository import (
     SQLitePaymentMethodRepository,
 )
+from clear_budget.infrastructure.update.github_release_source import (
+    GitHubReleaseSource,
+)
 from clear_budget.shared.config import Config
 from clear_budget.shared.currency import set_currency
 from clear_budget.ui._window_geometry import default_window_rect
+from clear_budget.version import __version__
 from clear_budget.ui.main_window import MainWindow
 from clear_budget.ui.theme import apply_theme, load_saved_theme
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
@@ -186,12 +194,18 @@ def _build_main_window(
     budget_service.auto_archive_elapsed_months(current_month=YearMonth.today())
     month_view_model = MonthViewModel(budget_service=budget_service)
     solvency_view_model = SolvencyViewModel(budget_service=budget_service)
+    update_service = UpdateService(
+        source=GitHubReleaseSource(),
+        current_version=__version__,
+        platform_key=platform_key_for(sys.platform),
+    )
     return MainWindow(
         month_view_model=month_view_model,
         solvency_view_model=solvency_view_model,
         current_user=current_user,
         user_store=user_store,
         db_path=database.db_path,
+        update_service=update_service,
     )
 
 
@@ -228,7 +242,7 @@ def main() -> int:
     _active_database: list[Database] = []
 
     def _show_window(user: "User", window: "MainWindow") -> None:
-        """Apply icon, geometry, signals, and show window."""
+        """Apply icon, geometry and signals, then show the window."""
         if icon_path:
             icon = QIcon(str(icon_path))
             if not icon.isNull():

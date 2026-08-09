@@ -1,9 +1,9 @@
 """Main application window with tab-based interface."""
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
@@ -23,11 +23,12 @@ from clear_budget.ui.views.archive_view import ArchiveView
 from clear_budget.ui.views.credit_card_view import CreditCardView
 from clear_budget.ui.views.month_view import MonthView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
+from clear_budget.ui.update_check import UpdateCheckController
 from clear_budget.ui.widgets.nav_tab_bar import NavTabBar
 from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 
-# GitHub releases page opened by Help > Check for Updates.
-RELEASES_URL = "https://github.com/oernster/ClearBudget/releases"
+if TYPE_CHECKING:
+    from clear_budget.application.services.update_service import UpdateService
 
 # Fire the day-rollover fold slightly after local midnight so date.today()
 # has definitely advanced when the handler runs.
@@ -49,6 +50,7 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         current_user: User,
         user_store: UserStore,
         db_path: Path,
+        update_service: "UpdateService",
     ) -> None:
         """Initialize main window and tabs."""
         super().__init__()
@@ -70,6 +72,9 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         self._midnight_timer.setSingleShot(True)
         self._midnight_timer.timeout.connect(self._on_midnight_fold)
         self._schedule_midnight_fold()
+        # Owns the launch, daily and manual update checks; prompts on a newer
+        # published release.
+        self._update_controller = UpdateCheckController(update_service, self)
 
     def _schedule_midnight_fold(self) -> None:
         """Arm the timer for just after the next local midnight."""
@@ -263,8 +268,8 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         AboutDialog(self).exec()
 
     def _on_check_updates(self) -> None:
-        """Open the GitHub releases page in the default browser."""
-        QDesktopServices.openUrl(QUrl(RELEASES_URL))
+        """Run a real update check and report the outcome."""
+        self._update_controller.check_manually()
 
     def _on_licence(self) -> None:
         from clear_budget.ui.widgets.about_dialog import LicenceDialog

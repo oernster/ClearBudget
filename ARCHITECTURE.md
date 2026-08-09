@@ -246,6 +246,21 @@ Key methods:
 - `MonthSummary` - `year_month`, `total_income`, `total_bills`, `bank_bills`, `balance`, `bills`, `all_bills`, `income_sources`, `all_income_sources`
 - `SolvencyReport` - `year_month`, `balance_pence: int` (signed), `deficit`, `buffer`, `forward_shortfall`, `is_solvent`, `first_negative_day`
 - `GraphSeries` - `label`, `values` (one signed pence value per day of month)
+- `ReleaseInfo` / `ReleaseAsset` / `UpdateStatus` (`dto/update_info.py`) - the
+  latest published release, its downloadable files and the outcome of an
+  update check
+
+**Update check**:
+- `ports/release_source.py` - `ReleaseSource` Protocol: the one seam through
+  which the application ever learns about releases; implemented in
+  infrastructure, faked in tests
+- `UpdateService` (`services/update_service.py`) - compares the running
+  version against the latest published release, honours a skipped version and
+  picks the download asset for the running platform by filename suffix
+  (`.exe` / `.dmg` / `.flatpak`); an unreachable source reports no update
+- `version_compare.is_newer` (`services/version_compare.py`) - pure dotted
+  semver comparison with an optional leading "v"; a malformed tag is never
+  newer, so it can never raise a spurious prompt
 
 ### Infrastructure Layer
 
@@ -301,6 +316,14 @@ Key methods:
 - `SQLiteIncomeSourceRepository`
 - `SQLitePaymentMethodRepository`
   - `set_card_active(card_id, active)` - soft-delete toggle
+
+**Update source** (`infrastructure/update/github_release_source.py`):
+- `GitHubReleaseSource` - implements the `ReleaseSource` port with a single
+  best-effort stdlib `urllib` GET against GitHub's latest-release endpoint
+  (published releases only, so drafts, prereleases and bare tags can never
+  prompt). Any failure yields None; the opener is injected so tests never
+  touch the network. This is the only outbound network call in the
+  application
 
 ### Auth Layer
 
@@ -469,6 +492,16 @@ bank statement. Both identities are tested.
 - `SolvencyPanel` - overdraft alert, mid-month alert, card bars, forward projection
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
+
+**Update check ui** (`ui/update_check.py`):
+- `UpdateCheckController` - owns the triggers (a delayed launch check, a daily
+  re-check and Help > Check for Updates) and runs each check on a worker
+  thread; the result crosses back through a queued signal to this ui-thread
+  QObject, so the network call can never stall the ui. A newer release
+  prompts with Download (the platform asset, falling back to the release
+  page), Skip This Version (persisted in `ui_settings.json`) and Later.
+  Automatic checks are silent on failure and when up to date; the manual
+  check reports both
 
 **Widgets**:
 - `LoginDialog` - username/password form; grid layout with "Forgot password?"

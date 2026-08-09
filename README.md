@@ -24,14 +24,18 @@ secure authentication.
   database behind a bcrypt sign-in; a snapshot can be handed to someone
   else as a read-only viewer package
 - People who want their finances to stay on their own machine, offline, with no
-  account to create and nothing phoning home
+  account to create and nothing phoning home. The one network request the app
+  ever makes is a daily check of this project's GitHub releases for a newer
+  version; it carries no data about you or your budget (see Update Checks
+  below)
 
 ## Who it is not for
 
 - Bookkeeping, invoicing, tax or double-entry accounting. There is no ledger,
   no reconciliation against a statement feed and no chart of accounts
 - Bank connections. Clear Budget never contacts a bank, an aggregator or any
-  other server; balances are entered and then maintained by the app itself
+  server other than the GitHub update check described below; balances are
+  entered and then maintained by the app itself
 - Investments, assets, loans amortisation or net worth. It models a current
   account, its income, its bills and its credit cards; nothing else
 - Shared or synchronised budgets across devices. There is no cloud, no sync and
@@ -237,9 +241,10 @@ machine under `~/.clearbudget/`:
   bcrypt hashes, never in plain text.
 - `budget_<username>.db` - one separate database per user. Accounts cannot read
   each other's budget data through the application.
-- `ui_settings.json` - the chosen theme and the remembered save-file location,
-  so the app opens the way you left it and Save goes back to the same file.
-  No budget data is kept here.
+- `ui_settings.json` - the chosen theme, the remembered save-file location and
+  any release version you told the update prompt to skip, so the app opens the
+  way you left it and Save goes back to the same file. No budget data is kept
+  here.
 
 Installing, upgrading, repairing and uninstalling do not touch any of this.
 They deal in program files, shortcuts and the registry entry only, so
@@ -265,6 +270,24 @@ member or colleague from idly browsing your finances inside the app - this is
 the right level of protection. If your threat model includes a determined local
 attacker, protect the files at rest with your operating system's own encryption
 (BitLocker on Windows, FileVault on macOS, LUKS on Linux).
+
+---
+
+## Update Checks
+
+The update check is the only network request Clear Budget ever makes. Shortly
+after launch, then once a day while running, the app asks GitHub's public
+releases API whether a newer version of Clear Budget has been published. The
+request carries nothing about you, your machine or your budget; it is a plain
+read of `api.github.com/repos/oernster/ClearBudget/releases/latest`.
+
+Only a formally published release can trigger the prompt: drafts, prereleases
+and bare tags are invisible to that endpoint. When a newer release exists, a
+dialog offers the download for your platform (the Windows installer, the macOS
+DMG or the Linux flatpak), a Skip This Version option that silences that
+release for good and Later. A failed check is silent; nothing retries in the
+background. Help > Check for Updates runs the same check on demand and also
+reports when you are already up to date.
 
 ---
 
@@ -406,8 +429,8 @@ shows:
 
 - **About Clear Budget** - version, author and the open source credits, split
   into what is bundled with the application and what is only used to build it
-- **Check for Updates** - opens the GitHub releases page in your browser. The
-  app does not download anything or contact any server on its own
+- **Check for Updates** - queries this project's GitHub releases and reports
+  whether a newer version exists, offering the download for your platform
 - **How It Works** - plain-English explanation of pro-rating, balances, archiving and
   tab behaviour, kept in sync with the calculation logic
 - **View Licence (LGPL-3.0)**

@@ -19,6 +19,9 @@ omit =
     main.py
     clear_budget/ui/*
     clear_budget/domain/interfaces/*
+    # Protocol-only port modules, imported solely under TYPE_CHECKING: there
+    # is nothing to execute, on the same grounds as domain/interfaces.
+    clear_budget/application/ports/*
     clear_budget/shared/resources.py
     */__pycache__/*
     */venv/*
