@@ -15,16 +15,18 @@ from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     build_centered_nav_header,
 )
+from clear_budget.ui.widgets._save_load_flow import build_save_load_buttons
 from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
 
 
 class ArchiveView(QWidget):
     """Displays historical month summaries and solvency trends."""
 
-    def __init__(self, budget_service: BudgetService) -> None:
+    def __init__(self, budget_service: BudgetService, read_only: bool = False) -> None:
         """Initialize archive view widget."""
         super().__init__()
         self.budget_service = budget_service
+        self.read_only = read_only
         self.current_year: int = 0
         self.available_years: list[int] = []
         self.months_by_row: dict = {}
@@ -37,8 +39,12 @@ class ArchiveView(QWidget):
 
         self.prev_year_btn = QPushButton("← Previous")
         self.next_year_btn = QPushButton("Next →")
+        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only)
         self.nav_header, self.year_label, _, self.theme_btn = build_centered_nav_header(
-            "", prev_btn=self.prev_year_btn, next_btn=self.next_year_btn
+            "",
+            prev_btn=self.prev_year_btn,
+            next_btn=self.next_year_btn,
+            leading=(self.load_btn, self.save_btn),
         )
 
         self.archive_table = QTableWidget()
@@ -106,6 +112,8 @@ class ArchiveView(QWidget):
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab."""
         return [
+            self.load_btn,
+            self.save_btn,
             self.prev_year_btn,
             self.next_year_btn,
             self.theme_btn,

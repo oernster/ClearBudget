@@ -31,6 +31,7 @@ from clear_budget.ui.views._credit_card_projection_strip import (
 from clear_budget.ui.views._credit_card_view_loaders import (
     CreditCardViewLoaderMixin,
 )
+from clear_budget.ui.widgets._save_load_flow import build_save_load_buttons
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 
 
@@ -59,6 +60,7 @@ class CreditCardView(
 
         self.prev_btn = QPushButton("← Previous")
         self.next_btn = QPushButton("Next →")
+        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only)
         (
             self.nav_header,
             self.month_label,
@@ -69,6 +71,7 @@ class CreditCardView(
             prev_btn=self.prev_btn,
             next_btn=self.next_btn,
             icon_action=self.on_show_graph,
+            leading=(self.load_btn, self.save_btn),
         )
         self._refresh_month_label()
 
@@ -170,6 +173,8 @@ class CreditCardView(
         """Ordered keyboard-ring stops for this tab."""
         card_buttons = self.cards_container.findChildren(QPushButton)
         return [
+            self.load_btn,
+            self.save_btn,
             self.graph_btn,
             self.prev_btn,
             self.next_btn,

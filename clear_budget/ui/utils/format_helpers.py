@@ -200,7 +200,7 @@ def _build_theme_toggle_button(glyph_height: int):
 
 
 def build_nav_month_widget(
-    initial_text: str, prev_btn=None, next_btn=None, icon_action=None
+    initial_text: str, prev_btn=None, next_btn=None, icon_action=None, leading=()
 ):
     """Return (QWidget, QLabel, icon_btn) - centered icon + month label for nav.
 
@@ -208,6 +208,7 @@ def build_nav_month_widget(
     month label so the navigation buttons flank the title. When `icon_action`
     is given the icon becomes a tabbable button wired to it (the month-graph
     opener); otherwise it stays a decorative label and icon_btn is None.
+    `leading` widgets (the load/save pair) are placed first, before prev_btn.
     """
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
@@ -216,6 +217,9 @@ def build_nav_month_widget(
     layout = QHBoxLayout(container)
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(8)
+
+    for widget in leading:
+        layout.addWidget(widget)
 
     if prev_btn is not None:
         layout.addWidget(prev_btn)
@@ -271,13 +275,15 @@ def build_centered_nav_header(
     next_btn=None,
     trailing_widget=None,
     icon_action=None,
+    leading=(),
 ):
     """Return (QWidget, QLabel, icon_btn, theme_btn): the centred nav cluster.
 
     `icon_action`, when given, turns the tray icon into a tabbable month-graph
-    button wired to it; icon_btn is then that button (else None). Every tray
-    also carries the sun/moon theme toggle (`theme_btn`) at its far right, in
-    line with the previous/next buttons.
+    button wired to it; icon_btn is then that button (else None). `leading`
+    widgets (the load/save pair) sit first in the cluster, before prev_btn.
+    Every tray also carries the sun/moon theme toggle (`theme_btn`) at its far
+    right, in line with the previous/next buttons.
 
     The returned widget is meant to be placed OUTSIDE the scroll area (see
     ScrollableTab), so it spans the full tab width and centres identically on
@@ -299,7 +305,11 @@ def build_centered_nav_header(
     from clear_budget.ui import ui_scale
 
     nav_center, month_lbl, icon_btn = build_nav_month_widget(
-        initial_text, prev_btn=prev_btn, next_btn=next_btn, icon_action=icon_action
+        initial_text,
+        prev_btn=prev_btn,
+        next_btn=next_btn,
+        icon_action=icon_action,
+        leading=leading,
     )
 
     # Bordered tray. WA_StyledBackground is required for a plain QWidget to paint

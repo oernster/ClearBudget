@@ -1,12 +1,10 @@
 """Main application window with tab-based interface."""
 
-import shutil
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QFileDialog,
     QMainWindow,
     QMessageBox,
     QTabWidget,
@@ -16,11 +14,9 @@ from PySide6.QtWidgets import (
 
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
-from clear_budget.shared.db_validation import validate_db
 from clear_budget.ui import ui_scale
 from clear_budget.ui._main_window_menus import MainWindowMenuMixin
 from clear_budget.ui._main_window_nav import MainWindowNavMixin
-from clear_budget.ui.ui_paths import default_downloads_dir
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.views.archive_view import ArchiveView
@@ -124,8 +120,16 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         )
         self.tabs.addTab(self._scrollable(credit_card_view), "Credit Cards")
 
-        archive_view = ArchiveView(self.month_view_model.budget_service)
+        archive_view = ArchiveView(
+            self.month_view_model.budget_service, read_only=self.read_only
+        )
         self.tabs.addTab(self._scrollable(archive_view), "Archive")
+
+        # Every tray carries the load/save pair; all of them drive the same
+        # window-level flows.
+        for _tray_view in (month_view, solvency_panel, credit_card_view, archive_view):
+            _tray_view.save_btn.clicked.connect(self._on_save_database)
+            _tray_view.load_btn.clicked.connect(self._on_load_database)
 
         layout.addWidget(self.tabs)
         central_widget.setLayout(layout)
@@ -178,7 +182,7 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
             self,
             "New Budget",
             "This will permanently delete ALL bills, income sources, credit cards,\n"
-            "overrides, and settings for this user.\n\n"
+            "overrides and settings for this user.\n\n"
             "This cannot be undone.  Are you sure you want to continue?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -263,34 +267,25 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
 
         LicenceDialog(self).exec()
 
-    def _validate_db(self, path: Path) -> str | None:
-        """Return an error string if path is not a valid ClearBudget db, else None."""
-        return validate_db(path)
+    def _on_save_database(self) -> None:
+        """Save the database to the remembered location (first time: Save As)."""
+        from clear_budget.ui.widgets._save_load_flow import run_save_flow
 
-    def _on_export_database(self) -> None:
-        """Copy the active database to a user-chosen backup location."""
-        dest, _ = QFileDialog.getSaveFileName(
-            self,
-            "Export Database",
-            str(default_downloads_dir() / "clearbudget_backup.db"),
-            "Clear Budget Database (*.db)",
-        )
-        if not dest:
-            return
-        dest_path = Path(dest)
-        if dest_path.suffix.lower() != ".db":
-            dest_path = dest_path.with_suffix(".db")
-        try:
-            shutil.copy2(self.db_path, dest_path)
-            box = QMessageBox(self)
-            box.setIcon(QMessageBox.Icon.Information)
-            box.setWindowTitle("Export Successful")
-            box.setText(f"Database exported to:\n{dest_path}")
-            label_w = ui_scale.px(460)
-            box.setStyleSheet(f"QLabel#qt_msgbox_label {{ min-width: {label_w}px; }}")
-            box.exec()
-        except OSError as exc:
-            QMessageBox.critical(self, "Export Failed", str(exc))
+        run_save_flow(self, self.db_path)
+
+    def _on_save_as_database(self) -> None:
+        """Prompt for a save file, remember it, then save the database."""
+        from clear_budget.ui.widgets._save_load_flow import run_save_as_flow
+
+        run_save_as_flow(self, self.db_path)
+
+    def _on_load_database(self) -> None:
+        """Replace the active database from a user-chosen save file."""
+        from clear_budget.ui.widgets._save_load_flow import run_load_flow
+
+        conn = self.month_view_model.budget_service.bill_repo.conn
+        if run_load_flow(self, self.db_path, conn):
+            self.database_replaced.emit()
 
     def _on_export_viewer_package(self) -> None:
         """Open the dialog to export a read-only viewer package."""
@@ -300,67 +295,6 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
 
         dlg = ExportViewerPackageDialog(self.db_path, parent=self)
         dlg.exec()
-
-    def _on_import_database(self) -> None:
-        """Replace the active database with a user-chosen backup file."""
-        src, _ = QFileDialog.getOpenFileName(
-            self,
-            "Import Database",
-            str(default_downloads_dir()),
-            "Clear Budget Database (*.db)",
-        )
-        if not src:
-            return
-        src_path = Path(src)
-        if src_path.resolve() == self.db_path.resolve():
-            QMessageBox.warning(
-                self,
-                "Import",
-                "Selected file is the active database - nothing to import.",
-            )
-            return
-
-        has_data = False
-        if self.db_path.exists():
-            try:
-                cursor = self.month_view_model.budget_service.bill_repo.conn.cursor()
-                cursor.execute("SELECT COUNT(*) FROM bills")
-                has_data = cursor.fetchone()[0] > 0
-            except Exception:  # noqa: BLE001 (any failure means assume data)
-                # Deliberately broad: if the count cannot be read for ANY
-                # reason, assume there is data so the user still gets the
-                # overwrite confirmation rather than losing it silently.
-                has_data = True
-
-        if has_data:
-            reply = QMessageBox.question(
-                self,
-                "Overwrite Existing Data?",
-                "The active database already contains data.\n\n"
-                "Importing will permanently replace all bills, income sources, "
-                "credit cards, "
-                "overrides and settings with the contents of the selected file.\n\n"
-                "This cannot be undone. Continue?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
-            )
-            if reply != QMessageBox.StandardButton.Yes:
-                return
-
-        validation_error = self._validate_db(src_path)
-        if validation_error:
-            QMessageBox.critical(
-                self,
-                "Invalid Database",
-                f"Cannot import - invalid Clear Budget database.\n\n{validation_error}",
-            )
-            return
-
-        try:
-            shutil.copy2(src_path, self.db_path)
-            self.database_replaced.emit()
-        except OSError as exc:
-            QMessageBox.critical(self, "Import Failed", str(exc))
 
     def _build_window_chrome(self) -> None:
         """Build the status bar and menus.

@@ -33,17 +33,20 @@ class MainWindowMenuMixin:
 
         file_menu.addSeparator()
 
-        import_export_menu = file_menu.addMenu("Import / &Export")
+        load_action = file_menu.addAction("&Load…")
+        load_action.triggered.connect(self._on_load_database)
+        load_action.setEnabled(not self.read_only)
 
-        export_action = import_export_menu.addAction("&Export Database…")
-        export_action.triggered.connect(self._on_export_database)
+        save_action = file_menu.addAction("&Save")
+        save_action.triggered.connect(self._on_save_database)
 
-        import_action = import_export_menu.addAction("&Import Database…")
-        import_action.triggered.connect(self._on_import_database)
-        import_action.setEnabled(not self.read_only)
+        save_as_action = file_menu.addAction("Save &As…")
+        save_as_action.triggered.connect(self._on_save_as_database)
 
         if self.current_user.is_admin:
-            import_export_menu.addSeparator()
+            file_menu.addSeparator()
+
+            import_export_menu = file_menu.addMenu("Import / &Export")
 
             export_viewer_action = import_export_menu.addAction(
                 "Export &Read-Only Viewer Package…"

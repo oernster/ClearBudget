@@ -436,12 +436,12 @@ bank statement. Both identities are tested.
 **`ui_paths.default_downloads_dir()`** (`clear_budget/ui/ui_paths.py`):
 - Cross-platform Downloads folder via `QStandardPaths.DownloadLocation`, falling
   back to `Path.home()`. Used as the default directory for all file dialogs
-  (Export/Import Database, Export/Import Viewer Package).
+  (Save As/Load Database, Export/Import Viewer Package).
 
 **`db_validation`** (`clear_budget/shared/db_validation.py`):
-- `REQUIRED_SCHEMA` + `validate_db(path)` - confirms an imported file is a genuine
+- `REQUIRED_SCHEMA` + `validate_db(path)` - confirms a loaded file is a genuine
   ClearBudget database (all required tables and columns present) before any
-  Import Database write touches the active database.
+  Load Database write touches the active database.
 
 **`resources`** (`clear_budget/shared/resources.py`):
 - Runtime asset discovery for packaged builds: locates the app icon, the Qt
@@ -661,8 +661,10 @@ bank statement. Both identities are tested.
 
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
-  - File menu: New Budget, then "Import / Export" submenu (Export/Import Database
-    and Read-Only Viewer Package export/import, admin only), Preferences, Bank
+  - File menu: New Budget, then Load / Save / Save As (Save goes to the
+    remembered save file, kept in `ui_settings.json`; every tab's nav tray also
+    carries load and save buttons), then the "Import / Export" submenu
+    (Read-Only Viewer Package export/import, admin only), Preferences, Bank
     Account Settings, Switch User, Exit
   - Users menu (admin only): Manage Users (list, Add User, Delete Selected)
   - Help menu: About, Check for Updates (opens the GitHub releases page in the

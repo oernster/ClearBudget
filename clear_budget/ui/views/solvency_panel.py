@@ -23,6 +23,7 @@ from clear_budget.ui.utils.format_helpers import (
     percentage,
 )
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
+from clear_budget.ui.widgets._save_load_flow import build_save_load_buttons
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
 from clear_budget.ui.views._solvency_panel_forward import SolvencyPanelForwardMixin
 from clear_budget.ui.views._solvency_panel_narratives import (
@@ -64,9 +65,13 @@ class SolvencyPanel(
 
         self.prev_btn = QPushButton("← Previous")
         self.next_btn = QPushButton("Next →")
+        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only)
         self.nav_header, self.month_label, _, self.theme_btn = (
             build_centered_nav_header(
-                "May 2026", prev_btn=self.prev_btn, next_btn=self.next_btn
+                "May 2026",
+                prev_btn=self.prev_btn,
+                next_btn=self.next_btn,
+                leading=(self.load_btn, self.save_btn),
             )
         )
 
@@ -146,7 +151,13 @@ class SolvencyPanel(
 
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab."""
-        return [self.prev_btn, self.next_btn, self.theme_btn]
+        return [
+            self.load_btn,
+            self.save_btn,
+            self.prev_btn,
+            self.next_btn,
+            self.theme_btn,
+        ]
 
     def connect_signals(self) -> None:
         """Connect ViewModel signals to view updates."""

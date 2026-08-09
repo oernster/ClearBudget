@@ -127,7 +127,8 @@ what is deliberately left and what only looks like debt.
   projections look ahead with the right limit and each change folds in
   automatically once its date passes
 - Dynamic payment methods: assign bills to bank account or specific credit cards
-- Database export and validated import (File menu)
+- Database save to a remembered location and validated load (File menu and the
+  diskette/folder buttons in every tab's navigation tray)
 - Display currency selection - 25 currencies covering English-speaking countries (File > Preferences)
 - Month graphs: the icon in the navigation tray opens the viewed month as a
   bar or line graph (a pilot button switches the style); Monthly Budget plots
@@ -176,8 +177,9 @@ what is deliberately left and what only looks like debt.
 | Action | Description |
 |--------|-------------|
 | New Budget... | Wipe all budget data and start fresh (double confirmation required) |
-| Import / Export > Export Database... | Copy active database to a chosen location |
-| Import / Export > Import Database... | Replace active database from a backup file (validated before write) |
+| Load... | Replace active database from a saved file (validated before write) |
+| Save | Copy the database to the remembered save file; the first save prompts for a filename, defaulting to Downloads |
+| Save As... | Choose a new save file; the location is remembered between runs |
 | Import / Export > Export Read-Only Viewer Package... (admin only) | Bundle a snapshot of the budget into a zip for a viewer account |
 | Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
 | Preferences... | Choose display currency |
@@ -342,10 +344,18 @@ to end something; the second is for entries added by mistake.
 
 ---
 
-## Database Import / Export
+## Database Save / Load
 
-- **Export** (File > Import / Export > Export Database...): Save As dialog, `.db` extension enforced, copies active database
-- **Import** (File > Import / Export > Import Database...): file validated as SQLite and verified to contain all required Clear Budget tables and columns before any write; confirmation required if active database has data; window reloads automatically after import - no restart needed
+- **Save** (File > Save or the diskette button in every tab's nav tray): copies
+  the active database to the remembered save file, asking before overwriting it.
+  The first ever save prompts for a filename, defaulting to the Downloads
+  folder; the chosen location is remembered between runs
+- **Save As** (File > Save As...): choose a new save file (`.db` extension
+  enforced); becomes the remembered location for future saves
+- **Load** (File > Load... or the folder button beside the diskette): file
+  validated as SQLite and verified to contain all required Clear Budget tables
+  and columns before any write; confirmation required if active database has
+  data; window reloads automatically after load - no restart needed
 
 ---
 

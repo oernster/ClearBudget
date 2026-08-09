@@ -240,6 +240,8 @@ class MonthView(
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab."""
         return [
+            self.load_btn,
+            self.save_btn,
             self.graph_btn,
             self.prev_btn,
             self.next_btn,
