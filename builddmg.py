@@ -7,12 +7,14 @@ Run from the repository root with the venv active:
 
 Notarization is mandatory. A Developer ID signature alone is not enough: since
 macOS 10.15 Gatekeeper rejects signed-but-unnotarized apps with "Apple could not
-verify ... is free of malware". APPLE_ID and APPLE_APP_PASSWORD must be set or
-the build stops before doing any work.
+verify ... is free of malware". Credentials come from this app's keychain
+profile (NOTARY_PROFILE), stored once with `xcrun notarytool store-credentials`,
+so nothing needs to be exported to run a release build.
 
 Env vars:
-    APPLE_ID                  : Apple ID for notarization (required)
-    APPLE_APP_PASSWORD        : app-specific password for notarization (required)
+    APPLE_KEYCHAIN_PROFILE    : override the per-app keychain profile
+    APPLE_ID                  : Apple ID, for CI that has no keychain
+    APPLE_APP_PASSWORD        : app-specific password, paired with APPLE_ID
     DEVELOPER_ID_APPLICATION  : override the default signing identity
     APPLE_TEAM_ID             : Team ID for notarization (defaults to W7K465GKFJ)
     ALLOW_UNNOTARIZED         : set to 1 to build without notarizing. The result
@@ -24,14 +26,14 @@ from __future__ import annotations
 
 import os
 import re
-from importlib import metadata
-
-from packaging.requirements import InvalidRequirement, Requirement
 import shutil
 import subprocess
 import sys
 import tempfile
+from importlib import metadata
 from pathlib import Path
+
+from packaging.requirements import InvalidRequirement, Requirement
 
 from build_utils import require, run, section
 from dmg_icon import png_to_icns, set_volume_icon
@@ -81,15 +83,15 @@ APPLE_ID = os.environ.get("APPLE_ID", "")
 APPLE_APP_PASSWORD = os.environ.get("APPLE_APP_PASSWORD", "")
 APPLE_TEAM_ID = os.environ.get("APPLE_TEAM_ID", "W7K465GKFJ")
 
-# Notarization credentials live in the keychain under one profile per app, each
-# holding its own app-specific password, so a leaked credential can be revoked
-# for a single app. The profile defaults to this app's name: running the build
-# from the repo picks up the right credential with nothing to export, and no
-# other app's profile can be used by accident. Set APPLE_KEYCHAIN_PROFILE to
-# override. Create it with:
+# The notarization credential for this app, created once with
 #   xcrun notarytool store-credentials ClearBudget \
 #     --apple-id <id> --team-id <team> --password <app-specific>
-NOTARY_PROFILE = os.environ.get("APPLE_KEYCHAIN_PROFILE", "") or APP_NAME
+# One profile per app means a leaked credential can be revoked for a single
+# app. Stated explicitly rather than derived from a display name: the profile
+# is a fact registered with Apple, and deriving it would silently change which
+# credential the build looks for if that name were ever edited.
+# APPLE_KEYCHAIN_PROFILE overrides it.
+NOTARY_PROFILE = os.environ.get("APPLE_KEYCHAIN_PROFILE", "") or "ClearBudget"
 
 # The notary service accepts only an app-specific password from appleid.apple.com
 # and rejects the Apple account password with HTTP 401. The shape is distinctive,
