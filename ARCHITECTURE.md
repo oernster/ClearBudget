@@ -414,7 +414,8 @@ bank statement. Both identities are tested.
   non-blank. The app never sets it: it exists so that anything running OUTSIDE
   the app (the test suite, a probe, a script) writes to a scratch directory
   instead of live user data. The directory holds both databases, the saved UI
-  settings (theme and remembered save-file location) and the generated
+  settings (theme, remembered save-file location and any skipped update
+  version) and the generated
   spin-arrow images; a write into it is silent, so it surfaces later as a bug
   report against the app: an offscreen probe applied the light theme in order
   to measure it, `theme.apply_theme` persisted that choice as it is supposed
@@ -737,9 +738,9 @@ bank statement. Both identities are tested.
     and diskette (Save) at the far left, a themed separator, then cog
     (Preferences) and bank (Bank Account); after the theme toggle at the far
     right, a blue information button opens How It Works
-  - Help menu: About, Check for Updates (opens the GitHub releases page in the
-    system browser; the app itself neither downloads nor phones home), How It
-    Works, View Licence
+  - Help menu: About, Check for Updates (runs the real update check via
+    `UpdateCheckController` and reports the outcome, Up to date and unreachable
+    included), How It Works, View Licence
   - Read-only accounts: window title shows "(Read-only)"; destructive/edit actions
     disabled across all views
 - `main.py` - composition root; manages full session lifecycle:
@@ -952,12 +953,19 @@ budget_service = BudgetService(
 month_view_model    = MonthViewModel(budget_service=budget_service)
 solvency_view_model = SolvencyViewModel(budget_service=budget_service)
 
+update_service = UpdateService(
+    source=GitHubReleaseSource(),
+    current_version=__version__,
+    platform_key=platform_key_for(sys.platform),
+)
+
 window = MainWindow(
     month_view_model=month_view_model,
     solvency_view_model=solvency_view_model,
     current_user=user,
     user_store=user_store,
     db_path=database.db_path,
+    update_service=update_service,
 )
 ```
 
