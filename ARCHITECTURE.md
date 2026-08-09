@@ -465,8 +465,16 @@ bank statement. Both identities are tested.
   by all four tabs (bordered, centred, hoisted above the scroll area by
   `ScrollableTab`). The tray machinery itself (this builder, the app-icon
   graph button, the theme toggle and the glyph sizing) lives in
-  `ui/utils/nav_header.py` and is re-exported from `format_helpers`, keeping
-  that module clear of the LOC band with no call site moved. `apply_nav_label_color` / `_nav_label_style` recolour the
+  `ui/utils/nav_header.py`, with the month/year label machinery in
+  `ui/utils/nav_label.py`; both are re-exported through `format_helpers`,
+  keeping every module clear of the LOC band with no call site moved. The
+  label carries its breathing room as a real `QLabel.setMargin` (never
+  stylesheet padding, which is painted but not reliably in the size hints)
+  and pins its minimum width to its text on every `setText` and recolour, so
+  a tray squeezed at the window's width floor sheds pixels from the stretch
+  space and the flanking buttons, never from the date (a 13in flatpak
+  install used to clip the year's last digit).
+  `apply_nav_label_color` / `_nav_label_style` recolour the
   label; the colour is each month's OWN within-month solvency health (current
   month from its live balance, a future month from its Forward Projection),
   computed once by the Solvency panel and broadcast to every tab via

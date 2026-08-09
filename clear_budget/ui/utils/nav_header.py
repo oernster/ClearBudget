@@ -1,12 +1,20 @@
 """The shared month/year navigation tray: builders, buttons and sizing.
 
-Everything the tray is made of lives here: the app-icon graph button, the
-sun/moon theme toggle, the glyph sizing rules, the label styling and the two
-builders every tab calls. The public names are re-exported by format_helpers,
-where the sixty-odd call sites already import them.
+Everything the tray is made of lives here or in nav_label.py (the month/year
+label): the app-icon graph button, the sun/moon theme toggle, the glyph
+sizing rules and the two builders every tab calls. The public names are
+re-exported by format_helpers, where the sixty-odd call sites already import
+them.
 """
 
 from pathlib import Path
+
+from clear_budget.ui.utils.nav_label import (  # noqa: F401 (re-exported names)
+    NAV_LABEL_DEFAULT_COLOR,
+    NAV_LABEL_MARGIN_PX,
+    NavLabel,
+    apply_nav_label_color,
+)
 
 
 def _resolve_app_icon() -> Path | None:
@@ -48,11 +56,6 @@ def _load_cropped_icon_pixmap():
     return _ICON_PIXMAP_CACHE
 
 
-# Neutral colour for a nav month/year label before any solvency-driven colour
-# is applied. The Solvency tab overrides this with a health colour and
-# broadcasts it so every tab's nav label stays consistent.
-NAV_LABEL_DEFAULT_COLOR = "#9ca3af"
-
 # Nav-icon height used when there is no Previous button to measure against.
 _FALLBACK_ICON_PX = 24
 # The nav icon buttons' chrome: 2px padding plus 2px border on each side (see
@@ -75,24 +78,6 @@ TOGGLE_TARGET_PROPERTY = "navGlyphTargetPx"
 # machinery still matters underneath this, since it is what puts the sun and
 # the moon on the same height as each other.
 TOGGLE_GLYPH_SCALE = 0.8
-
-
-def _nav_label_style(color: str) -> str:
-    """Return the standard nav month/year label stylesheet in `color`.
-
-    The base style (size/weight/padding) is fixed; only the colour varies, so
-    a label can be recoloured without dropping its other properties.
-    """
-    from clear_budget.ui import ui_scale
-
-    return ui_scale.style(
-        f"font-size: 20px; font-weight: bold; padding: 10px; color: {color};"
-    )
-
-
-def apply_nav_label_color(label, color: str) -> None:
-    """Recolour a nav month/year label, preserving its base style."""
-    label.setStyleSheet(_nav_label_style(color))
 
 
 def nav_glyph_height(prev_btn) -> int:
@@ -227,13 +212,13 @@ def build_nav_month_widget(
                     icon_height, Qt.TransformationMode.SmoothTransformation
                 )
             )
-            # Match the month label's own 10px padding, so the gap before the
-            # icon equals the gap after the year (before the next/prev buttons).
-            icon_lbl.setContentsMargins(10, 0, 0, 0)
+            # Match the month label's own margin, so the gap before the icon
+            # equals the gap after the year (before the next/prev buttons).
+            icon_lbl.setContentsMargins(NAV_LABEL_MARGIN_PX, 0, 0, 0)
             layout.addWidget(icon_lbl)
 
-    month_lbl = QLabel(initial_text)
-    month_lbl.setStyleSheet(_nav_label_style(NAV_LABEL_DEFAULT_COLOR))
+    month_lbl = NavLabel.create(initial_text)
+    apply_nav_label_color(month_lbl, NAV_LABEL_DEFAULT_COLOR)
     month_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
     layout.addWidget(month_lbl)
 
