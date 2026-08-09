@@ -72,8 +72,10 @@ paid by credit card never touch the bank balance.</p>
       as they end - there is no manual archive step.</li>
   <li><b>App icon (in the navigation tray)</b> - opens the viewed month as a
       graph: the bank balance day by day here or every card's balance on
-      the Credit Cards tab. A button in the graph switches between bar and
-      line styles. Hover a bar or one of the marked turning points on the
+      the Credit Cards tab. <b>&larr; Previous / Next &rarr;</b> inside the
+      graph step it between months without closing it, stopping at the same
+      earliest month the tray's own arrows do. A button in the graph switches
+      between bar and line styles. Hover a bar or one of the marked turning points on the
       line, to read out that day's balance. On the bar style a curve in a
       separate colour follows the shape of the month, passing through every
       day's figure (on the Credit Cards graph it follows the total across all

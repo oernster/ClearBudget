@@ -11,6 +11,9 @@ charting dependency; pure QPainter.
 Chrome colours, the series palette and the curve colour all come from the
 active theme (resolved per paint), so the chart follows the light/dark
 toggle: pastel series on the dark canvas, saturated mid-tones on the light.
+
+The axes chrome (measured y-axis margin, grid, day labels, legend) lives in
+_chart_axes and the hover readout in _chart_hover, one concern per file.
 """
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -23,28 +26,21 @@ from clear_budget.application.reporting.curve import (
     inflection_days,
 )
 from clear_budget.ui import ui_scale
-from clear_budget.ui.utils.format_helpers import fmt
+from clear_budget.ui.widgets._chart_axes import ChartAxesMixin
 from clear_budget.ui.widgets._chart_hover import ChartHoverMixin
 
 MODE_BAR = "bar"
 MODE_LINE = "line"
 
-_GRID_LINES = 4
-_X_TICK_STEP_DAYS = 5
 _BAR_SLOT_FILL = 0.8
 _RANGE_PAD_FRACTION = 0.05
 
-_MARGIN_LEFT = 78
 _MARGIN_RIGHT = 14
 _MARGIN_TOP = 14
 _MARGIN_BOTTOM = 30
 _LEGEND_ROW_HEIGHT = 22
-_LEGEND_SWATCH = 12
-_LEGEND_LABEL_WIDTH = 180
 
 _CURVE_PEN_PX = 3
-_CURVE_LABEL = "Curve"
-_CURVE_TOTAL_LABEL = "Curve (total)"
 # A marker sits on each direction change, so the hover readout has something
 # to aim at rather than the user hunting along a bare line.
 _INFLECTION_DOT_PX = 4
@@ -75,7 +71,7 @@ def _active_palette():
     return tokens_for(name), series_colours_for(name), curve_colour_for(name)
 
 
-class LineBarChart(ChartHoverMixin, QWidget):
+class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
     """Draws GraphSeries values as a line or grouped bar chart."""
 
     def __init__(self, parent=None) -> None:
@@ -137,12 +133,12 @@ class LineBarChart(ChartHoverMixin, QWidget):
         if not self._series or not self._series[0].values:
             return None
         top = ui_scale.px(_MARGIN_TOP) + ui_scale.px(_LEGEND_ROW_HEIGHT)
-        left = ui_scale.px(_MARGIN_LEFT)
+        low, high = self._value_range()
+        left = self._left_margin(low, high)
         plot_w = self.width() - left - ui_scale.px(_MARGIN_RIGHT)
         plot_h = self.height() - top - ui_scale.px(_MARGIN_BOTTOM)
         if plot_w <= 0 or plot_h <= 0:
             return None
-        low, high = self._value_range()
         return (left, top, plot_w, plot_h, len(self._series[0].values), low, high)
 
     @staticmethod
@@ -218,22 +214,6 @@ class LineBarChart(ChartHoverMixin, QWidget):
         self._draw_hover(painter, geom)
         painter.end()
 
-    def _draw_grid(self, painter, geom) -> None:
-        left, top, plot_w, plot_h, _days, low, high = geom
-        grid_pen = QPen(QColor(self._tokens["border"]), 1)
-        text_pen = QColor(self._tokens["text_muted"])
-        for i in range(_GRID_LINES + 1):
-            frac = i / _GRID_LINES
-            y = top + plot_h * frac
-            painter.setPen(grid_pen)
-            painter.drawLine(QPointF(left, y), QPointF(left + plot_w, y))
-            painter.setPen(text_pen)
-            painter.drawText(
-                QRectF(0, y - ui_scale.px(9), left - ui_scale.px(6), ui_scale.px(18)),
-                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
-                fmt(round(high - (high - low) * frac)),
-            )
-
     def _draw_lines(self, painter, geom) -> None:
         _left, _top, _plot_w, _plot_h, days, _low, _high = geom
         dot = ui_scale.px(_INFLECTION_DOT_PX)
@@ -303,47 +283,3 @@ class LineBarChart(ChartHoverMixin, QWidget):
             )
         )
         painter.drawPath(path)
-
-    def _draw_x_labels(self, painter, geom) -> None:
-        _left, top, _plot_w, plot_h, days, _low, _high = geom
-        base_y = top + plot_h
-        painter.setPen(QColor(self._tokens["text_muted"]))
-        ticks = {1, days} | set(range(_X_TICK_STEP_DAYS, days, _X_TICK_STEP_DAYS))
-        for day in sorted(ticks):
-            painter.drawText(
-                QRectF(
-                    self._x_at(geom, day) - ui_scale.px(14),
-                    base_y + ui_scale.px(4),
-                    ui_scale.px(28),
-                    ui_scale.px(18),
-                ),
-                Qt.AlignmentFlag.AlignCenter,
-                str(day),
-            )
-
-    def _draw_legend(self, painter, geom) -> None:
-        left = geom[0]
-        x = left
-        y = ui_scale.px(4)
-        swatch = ui_scale.px(_LEGEND_SWATCH)
-        entries = [
-            (self._series_colour(idx), series.label)
-            for idx, series in enumerate(self._series)
-        ]
-        if self._curve_shown():
-            curve_label = _CURVE_TOTAL_LABEL if len(self._series) > 1 else _CURVE_LABEL
-            entries.append((QColor(self._curve_colour), curve_label))
-        for colour, label in entries:
-            painter.fillRect(QRectF(x, y + 3, swatch, swatch), colour)
-            painter.setPen(QColor(self._tokens["text_muted"]))
-            painter.drawText(
-                QRectF(
-                    x + swatch + ui_scale.px(6),
-                    y,
-                    ui_scale.px(_LEGEND_LABEL_WIDTH),
-                    ui_scale.px(18),
-                ),
-                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                label,
-            )
-            x += swatch + ui_scale.px(_LEGEND_LABEL_WIDTH)

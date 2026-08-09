@@ -50,11 +50,19 @@ class CreditCardView(
         budget_service: BudgetService,
         current_month: YearMonth | None = None,
         read_only: bool = False,
+        base_month: YearMonth | None = None,
     ) -> None:
-        """Initialize credit card view widget."""
+        """Initialize credit card view widget.
+
+        `base_month` is the month the tray's Previous arrow stops at; the
+        month graph dialog inherits the same bound so the two navigations
+        agree. It defaults to the starting month, which is what the tray's
+        own wiring bounds it to when the app opens on today.
+        """
         super().__init__()
         self.budget_service = budget_service
         self.current_month = current_month or YearMonth.today()
+        self.base_month = base_month or self.current_month
         self.read_only = read_only
         self.init_ui()
         self.load_cards()
@@ -170,16 +178,21 @@ class CreditCardView(
         from clear_budget.ui.utils.format_helpers import MONTH_NAMES
         from clear_budget.ui.widgets.month_graph_dialog import MonthGraphDialog
 
-        ym = self.current_month
-        series = self.budget_service.get_card_graph_series(year_month=ym)
+        def series_for(ym):
+            """The per-card series for `ym`, derived fresh on each step."""
+            return (
+                f"{MONTH_NAMES[ym.month]} {ym.year}: card balances by day",
+                self.budget_service.get_card_graph_series(year_month=ym),
+            )
+
         # No budget_service here on purpose, so no projection button: the
         # multi-month projection is a BANK balance one and would be incoherent
         # offered from a graph of card balances.
         MonthGraphDialog(
             self,
-            title=f"{MONTH_NAMES[ym.month]} {ym.year}: card balances by day",
-            series=series,
-            month_label=f"{MONTH_NAMES[ym.month]} {ym.year}",
+            series_for=series_for,
+            start_month=self.current_month,
+            base_month=self.base_month,
         ).exec()
 
     def restyle(self) -> None:

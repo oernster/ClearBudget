@@ -21,6 +21,8 @@ includes zero and the zero line is drawn when the range crosses it.
 
 from __future__ import annotations
 
+from math import ceil
+
 from clear_budget.application.reporting.curve import bezier_segments, daily_totals
 
 # The app's dark palette, mirrored here because the application layer may not
@@ -34,7 +36,15 @@ SERIES = ("#60a5fa", "#34d399", "#fbbf24", "#c084fc", "#22d3ee", "#fb923c")
 
 WIDTH = 880
 HEIGHT = 380
-_MARGIN_LEFT = 96
+# The left margin grows to fit the widest y-axis label, mirroring the
+# on-screen chart's measured margin, so a large balance never truncates.
+# SVG has no font metrics at build time, so the width is estimated from the
+# label's character count: a digit in a 12px sans face is a touch over 7px
+# wide and the estimate rounds up so a label never overruns its estimate.
+_MARGIN_LEFT_MIN = 96
+_AXIS_CHAR_WIDTH = 7.2
+_AXIS_LABEL_GAP = 8
+_AXIS_LABEL_INSET = 4
 _MARGIN_RIGHT = 20
 _MARGIN_TOP = 16
 _MARGIN_BOTTOM = 40
@@ -85,7 +95,16 @@ class _Plot:
         pad = max(1, int((high - low) * _RANGE_PAD_FRACTION))
         self.low = low - pad if low < 0 else low
         self.high = high + pad
-        self.left = _MARGIN_LEFT
+        # The tick labels, top to bottom; the margin is sized to the widest.
+        self.y_labels = tuple(
+            _money(round(self.high - (self.high - self.low) * i / _GRID_LINES))
+            for i in range(_GRID_LINES + 1)
+        )
+        widest = max(len(label) for label in self.y_labels)
+        estimated = (
+            ceil(widest * _AXIS_CHAR_WIDTH) + _AXIS_LABEL_GAP + _AXIS_LABEL_INSET
+        )
+        self.left = max(_MARGIN_LEFT_MIN, estimated)
         self.top = _MARGIN_TOP + _LEGEND_HEIGHT
         self.width = WIDTH - self.left - _MARGIN_RIGHT
         self.height = HEIGHT - self.top - _MARGIN_BOTTOM
@@ -102,18 +121,19 @@ class _Plot:
 
 def _grid(plot: _Plot) -> list[str]:
     parts = []
-    for i in range(_GRID_LINES + 1):
+    # The same labels the margin was estimated from, so they always fit.
+    for i, label in enumerate(plot.y_labels):
         fraction = i / _GRID_LINES
         y = plot.top + plot.height * fraction
-        value = round(plot.high - (plot.high - plot.low) * fraction)
         parts.append(
             f'<line x1="{plot.left}" y1="{y:.1f}" '
             f'x2="{plot.left + plot.width}" y2="{y:.1f}" '
             f'stroke="{GRID}" stroke-width="1"/>'
         )
         parts.append(
-            f'<text x="{plot.left - 8}" y="{y + 4:.1f}" text-anchor="end" '
-            f'fill="{MUTED}" font-size="{_AXIS_FONT}">{_money(value)}</text>'
+            f'<text x="{plot.left - _AXIS_LABEL_GAP}" y="{y + 4:.1f}" '
+            f'text-anchor="end" '
+            f'fill="{MUTED}" font-size="{_AXIS_FONT}">{_escape(label)}</text>'
         )
     return parts
 

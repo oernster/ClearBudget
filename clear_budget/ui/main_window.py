@@ -117,6 +117,7 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
             read_only=self.read_only,
+            base_month=self.month_view_model.base_month,
         )
         self.tabs.addTab(self._scrollable(credit_card_view), "Credit Cards")
 

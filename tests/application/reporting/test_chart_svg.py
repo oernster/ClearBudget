@@ -15,6 +15,7 @@ from clear_budget.application.reporting.chart_svg import (
     HEIGHT,
     WIDTH,
     ZERO_LINE,
+    _MARGIN_LEFT_MIN,
     chart_svg,
 )
 
@@ -116,6 +117,22 @@ def test_everything_drawn_stays_inside_the_canvas(mode):
     for x, y in re.findall(r'(?:x|x1|x2)="(-?[\d.]+)" (?:y|y1|y2)="(-?[\d.]+)"', svg):
         assert 0 <= float(x) <= WIDTH
         assert 0 <= float(y) <= HEIGHT
+
+
+def _grid_left(svg):
+    """The x the grid lines start at, which is the measured left margin."""
+    return float(re.search(r'<line x1="(\d+)"', svg).group(1))
+
+
+def test_the_left_margin_keeps_its_floor_for_short_labels():
+    """Ordinary balances leave the margin at its minimum."""
+    assert _grid_left(_svg([_RISING], "line")) == _MARGIN_LEFT_MIN
+
+
+def test_the_left_margin_widens_to_fit_a_large_balance():
+    """A label wider than the floor grows the margin instead of truncating."""
+    huge = _Series("Bank balance", [999_999_999_900] * _DAYS)
+    assert _grid_left(_svg([huge], "line")) > _MARGIN_LEFT_MIN
 
 
 def test_a_label_with_markup_in_it_is_escaped():

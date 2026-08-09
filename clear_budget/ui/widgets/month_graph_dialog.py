@@ -1,15 +1,19 @@
 """MonthGraphDialog - bar/line graph of the month, opened from the nav icon.
 
-Shows the viewed month's day-by-day series for the page it was opened from
-(the bank balance on Monthly Budget, one series per card on Credit Cards).
-A pilot button switches between bar and line rendering. It opens focused on
-the pilot button (the chart itself takes no focus), Escape closes, and the
-ring is Tab/Right forward with the pilot, the export buttons and Close as
-the stops.
+Shows a month's day-by-day series for the page it was opened from (the bank
+balance on Monthly Budget, one series per card on Credit Cards). ← Previous
+and Next → step the graph between months without leaving the dialog, exactly
+as the tray's own arrows step the page: the caller supplies a `series_for`
+callback the dialog re-queries on each step and Previous stops at the same
+base month the tray stops at. A pilot button switches between bar and line
+rendering. The dialog opens focused on its first enabled button (the chart
+itself takes no focus), Escape closes and the ring is Tab/Right forward with
+the navigation, pilot, export and Close buttons as the stops.
 
-"Export HTML" writes THIS month as a standalone page carrying both renderings
-at once, since a page has room for both where the dialog has room for one. It
-is offered wherever the graph is, because it exports whatever is plotted.
+"Export HTML" writes the VIEWED month as a standalone page carrying both
+renderings at once, since a page has room for both where the dialog has room
+for one. It is offered wherever the graph is, because it exports whatever is
+plotted.
 
 "Export projection HTML" asks for a range of months and writes the BANK
 balance across them. It appears only when the caller supplies a
@@ -19,6 +23,7 @@ from a graph of card balances would claim to project what is on screen and
 would not.
 """
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -33,6 +38,7 @@ from clear_budget.application.reporting.projection_report import (
 )
 from clear_budget.ui import ui_scale
 from clear_budget.ui.ui_paths import default_downloads_dir
+from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 from clear_budget.ui.widgets._line_bar_chart import MODE_BAR, MODE_LINE, LineBarChart
 from clear_budget.ui.widgets.first_stop_dialog import FirstStopDialog
 from clear_budget.ui.widgets.month_range_dialog import MonthRangeDialog
@@ -40,6 +46,9 @@ from clear_budget.ui.widgets.month_range_dialog import MonthRangeDialog
 _DIALOG_MIN_WIDTH = 760
 _DIALOG_MIN_HEIGHT = 440
 
+# The same labels the tray's month arrows wear, so the two read as one control.
+_PREV_LABEL = "← Previous"
+_NEXT_LABEL = "Next →"
 _PILOT_TO_LINE = "Switch to line graph"
 _PILOT_TO_BAR = "Switch to bar graph"
 # Pairs with "Export HTML" so the two read as a set. What it projects is kept
@@ -51,43 +60,53 @@ _HTML_SUFFIX = ".html"
 
 
 class MonthGraphDialog(FirstStopDialog):
-    """Displays one month's series as a bar or line graph, and exports both."""
+    """Displays month series as a bar or line graph, navigable across months."""
 
     def __init__(
         self,
         parent=None,
         *,
-        title: str,
-        series,
-        month_label: str = "",
+        series_for,
+        start_month,
+        base_month=None,
         budget_service=None,
         anchor_month=None,
     ) -> None:
         """Build the dialog.
 
-        `budget_service` and `anchor_month` are what the projection export
-        needs; without them that button is not offered, so a caller that has
-        only a series still gets a working graph.
+        `series_for` is called with a YearMonth and returns (title, series
+        list) for that month; the dialog re-queries it on every navigation
+        step, so what is plotted is always freshly derived. `base_month` is
+        the lower bound Previous stops at, matching the tray; None leaves
+        Previous unbounded. `budget_service` and `anchor_month` are what the
+        projection export needs; without them that button is not offered, so
+        a caller that has only series still gets a working graph.
         """
         super().__init__(parent)
-        self.setWindowTitle(title)
         self.setModal(True)
         self.setMinimumSize(
             ui_scale.px(_DIALOG_MIN_WIDTH), ui_scale.px(_DIALOG_MIN_HEIGHT)
         )
-        self._series = list(series)
+        self._series_for = series_for
+        self._month = start_month
+        self._base_month = base_month
         self._mode = MODE_BAR
-        self._title = title
-        self._month_label = month_label or title
         self._budget_service = budget_service
         self._anchor_month = anchor_month
 
         layout = QVBoxLayout(self)
         self.chart = LineBarChart(self)
-        self.chart.set_data(self._series, self._mode)
         layout.addWidget(self.chart, 1)
 
         button_row = QHBoxLayout()
+        self.prev_btn = QPushButton(_PREV_LABEL)
+        self.prev_btn.clicked.connect(self._go_previous)
+        button_row.addWidget(self.prev_btn)
+
+        self.next_btn = QPushButton(_NEXT_LABEL)
+        self.next_btn.clicked.connect(self._go_next)
+        button_row.addWidget(self.next_btn)
+
         self.pilot_btn = QPushButton(_PILOT_TO_LINE)
         self.pilot_btn.clicked.connect(self._toggle_mode)
         button_row.addWidget(self.pilot_btn)
@@ -107,8 +126,34 @@ class MonthGraphDialog(FirstStopDialog):
         button_row.addWidget(close_btn)
         layout.addLayout(button_row)
 
+        self._show_month(start_month)
+
     def _can_project(self) -> bool:
         return self._budget_service is not None and self._anchor_month is not None
+
+    # ---- month navigation ---------------------------------------------------
+    def _show_month(self, year_month) -> None:
+        """Re-query the series for `year_month` and plot them."""
+        self._month = year_month
+        title, series = self._series_for(year_month)
+        self._series = list(series)
+        self._title = title
+        self._month_label = f"{MONTH_NAMES[year_month.month]} {year_month.year}"
+        self.setWindowTitle(title)
+        self.chart.set_data(self._series, self._mode)
+        at_base = self._base_month is not None and year_month <= self._base_month
+        self.prev_btn.setEnabled(not at_base)
+        # A stop that just disabled under the focus would strand the ring, so
+        # hand focus to the arrow that still works, as the tray's ring skips a
+        # dead stop.
+        if at_base and self.prev_btn.hasFocus():
+            self.next_btn.setFocus(Qt.FocusReason.TabFocusReason)
+
+    def _go_previous(self) -> None:
+        self._show_month(self._month.previous_month())
+
+    def _go_next(self) -> None:
+        self._show_month(self._month.next_month())
 
     def _toggle_mode(self) -> None:
         self._mode = MODE_LINE if self._mode == MODE_BAR else MODE_BAR

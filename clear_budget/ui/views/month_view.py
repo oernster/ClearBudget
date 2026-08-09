@@ -6,15 +6,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from clear_budget.domain.services.bank_cashflow import BankCashflowService
-from clear_budget.ui import label_roles
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     apply_nav_label_color,
-    fmt,
 )
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.views._month_view_apply_prompt import MonthViewApplyPromptMixin
+from clear_budget.ui.views._month_view_balance_mixin import MonthViewBalanceMixin
 from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
 from clear_budget.ui.views._month_view_delete_mixin import MonthViewDeleteMixin
 from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
@@ -42,12 +40,9 @@ _INCOME_SORT_KEYS = {
     4: lambda i: not i.active,
 }
 
-# A projected balance below this is shown as thin rather than healthy: one
-# hundred pounds of headroom, in pence.
-_THIN_BALANCE_PENCE = 10000
-
 
 class MonthView(
+    MonthViewBalanceMixin,
     MonthViewBuilderMixin,
     MonthViewTableMixin,
     MonthViewEditMixin,
@@ -139,81 +134,6 @@ class MonthView(
             reverse=not self.income_sort_ascending,
         )
 
-    def _get_balance_role(self, p: int) -> str:
-        """Severity role for a balance: negative, thin, or healthy."""
-        if p < 0:
-            return label_roles.DANGER
-        return label_roles.WARN if p < _THIN_BALANCE_PENCE else label_roles.GOOD
-
-    def _update_balance_display(self) -> None:
-        if summary := self.view_model.month_summary:
-            from datetime import datetime as _dt
-
-            from clear_budget.domain.value_objects.year_month import YearMonth as _YM
-
-            now = _dt.now()  # noqa: DTZ005 (app runs on naive local time)
-            today_ym = _YM(now.year, now.month)
-            if self.view_model.current_month == today_ym:
-                # Elapsed dated bills/income are folded into the stored
-                # balance at midnight (and at startup), so it is shown as-is.
-                pence = self.view_model.budget_service.get_bank_balance().pence
-                label = f"Balance: {fmt(pence)}"
-            else:
-                _svc = self.view_model.budget_service
-                pence = _svc.get_projected_month_end_balance_pence(
-                    year_month=self.view_model.current_month,
-                    summary=summary,
-                )
-                if pence >= 0:
-                    label = f"Projected end: {fmt(pence)}"
-                else:
-                    label = f"Projected end: -{fmt(abs(pence))} OVERDRAWN"
-            self.balance_label.setText(label)
-            label_roles.set_role(self.balance_label, self._get_balance_role(pence))
-            self._update_overdraft_warning(summary)
-
-    def _update_overdraft_warning(self, summary) -> None:
-        svc = self.view_model.budget_service
-        projection = svc.get_month_cashflow_projection(
-            year_month=self.view_model.current_month, summary=summary
-        )
-        overdraft_limit_pence = svc.get_overdraft_limit().pence
-        severity = projection.overdraft_severity(overdraft_limit_pence)
-        if severity == "none":
-            self.overdraft_warning_label.setVisible(False)
-            return
-
-        low = fmt(abs(projection.min_balance_pence))
-        day = projection.min_balance_day
-        if severity == "amber":
-            text = (
-                f"⚠ Balance dips to -{low} around day {day} (covered by your overdraft)"
-            )
-            daily_interest = (
-                BankCashflowService.estimate_daily_overdraft_interest_pence(
-                    abs(projection.min_balance_pence),
-                    svc.get_overdraft_apr_basis_points(),
-                )
-            )
-            if daily_interest > 0:
-                text += f" - ~{fmt(daily_interest)}/day interest"
-            role = label_roles.WARN_NOTE
-        elif overdraft_limit_pence > 0:
-            text = (
-                f"⚠ Balance may EXCEED your overdraft limit (-{low} around day {day})"
-            )
-            role = label_roles.DANGER_NOTE
-        else:
-            text = (
-                f"⚠ Balance may go OVERDRAWN to -{low} around day {day}"
-                " - no overdraft facility set"
-            )
-            role = label_roles.DANGER_NOTE
-
-        self.overdraft_warning_label.setText(text)
-        label_roles.set_role(self.overdraft_warning_label, role)
-        self.overdraft_warning_label.setVisible(True)
-
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
 
@@ -221,20 +141,23 @@ class MonthView(
         """Open the month graph for the viewed month's bank balance."""
         from clear_budget.ui.widgets.month_graph_dialog import MonthGraphDialog
 
-        summary = self.view_model.month_summary
-        if summary is None:
+        if self.view_model.month_summary is None:
             return
-        ym = self.view_model.current_month
-        series = self.view_model.budget_service.get_bank_graph_series(
-            year_month=ym, summary=summary
-        )
+        svc = self.view_model.budget_service
+
+        def series_for(ym):
+            """The bank series for `ym`, derived fresh so navigation is live."""
+            summary = svc.get_month_summary(year_month=ym)
+            series = svc.get_bank_graph_series(year_month=ym, summary=summary)
+            return f"{MONTH_NAMES[ym.month]} {ym.year}: bank balance by day", [series]
+
         MonthGraphDialog(
             self,
-            title=f"{MONTH_NAMES[ym.month]} {ym.year}: bank balance by day",
-            series=[series],
-            month_label=f"{MONTH_NAMES[ym.month]} {ym.year}",
-            budget_service=self.view_model.budget_service,
-            anchor_month=ym,
+            series_for=series_for,
+            start_month=self.view_model.current_month,
+            base_month=self.view_model.base_month,
+            budget_service=svc,
+            anchor_month=self.view_model.current_month,
         ).exec()
 
     def nav_targets(self) -> list:

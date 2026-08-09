@@ -550,10 +550,22 @@ bank statement. Both identities are tested.
   balance now?" offer for an item added dated today or edited to today's date
   (dialog or inline); fires only on a genuine transition to today and skips
   items already paid, received or skipped
+- `_month_view_balance_mixin.py` (`MonthViewBalanceMixin`) - the balance
+  label (stored balance for the month the user is in, projected month-end
+  for any other) and the overdraft warning strip under the nav row
 - `MonthGraphDialog` / `_line_bar_chart.py` (`LineBarChart`) - the month graph
   opened by the nav-tray icon button on Monthly Budget (bank balance by day)
   and Credit Cards (one series per card, with a legend); a pilot button
-  toggles bar vs line rendering, drawn with QPainter (no chart dependency)
+  toggles bar vs line rendering, drawn with QPainter (no chart dependency).
+  ← Previous / Next → inside the dialog step it between months without
+  closing it: the caller passes a `series_for(year_month)` callback the
+  dialog re-queries on each step, with Previous bounded by the same base
+  month the tray's own arrows stop at. The axes chrome lives in
+  `_chart_axes.py` (`ChartAxesMixin`): the y-axis left margin is MEASURED
+  per paint from the widest tick label via QFontMetrics (with a floor), so a
+  large balance widens the margin rather than truncating; the SVG exporter
+  mirrors the same rule with a character-count estimate, since SVG has no
+  font metrics at build time
   - Curve maths is Qt-free and lives in `application/reporting/curve.py`, NOT
     beside the widget: the day-end totals (one curve however many series are
     plotted, so with a single series it IS that series), the inflection days
