@@ -31,11 +31,17 @@ RUNTIME_VERSION="25.08"
 # path the launcher exports; keep it in sync with RUNTIME_VERSION.
 PYTHON_MM="3.13"
 
-# Wheels are tagged for the runtime's Python and glibc.  manylinux_2_34 is the
-# tag PySide6's cp-abi3 wheels use; pip expands it to also accept every lower
-# manylinux tag, so this single target covers PySide6, shiboken6 and bcrypt.
+# Wheels are tagged for the runtime's Python and glibc.  pip does NOT widen a
+# --platform tag to the older manylinux tags, so every tag we accept has to be
+# listed: PySide6/shiboken6/bcrypt/cryptography ship manylinux_2_34, while
+# cffi (pulled in via keyring -> secretstorage -> cryptography) only ships
+# manylinux_2_17.  The runtime's glibc is newer than all of them.
 WHEEL_PYTHON="3.13"
-WHEEL_PLATFORM="manylinux_2_34_x86_64"
+WHEEL_PLATFORMS=(
+    manylinux_2_34_x86_64
+    manylinux_2_28_x86_64
+    manylinux_2_17_x86_64
+)
 
 # The distributable bundle is the whole point of this script, so it is built by
 # default.  Pass --no-bundle to skip it and only build + install locally.
@@ -98,14 +104,17 @@ flatpak install --user --noninteractive flathub \
 # Downloading on the host avoids slow sandboxed network calls and lets the
 # sandbox install with --no-index (fully offline build).  Dependencies are
 # resolved here so PySide6's Essentials/Addons sub-wheels come along too.
-section "Pre-downloading wheels (Python ${WHEEL_PYTHON} / ${WHEEL_PLATFORM})"
+section "Pre-downloading wheels (Python ${WHEEL_PYTHON} / ${WHEEL_PLATFORMS[0]})"
 rm -rf .flatpak-wheels
 mkdir -p .flatpak-wheels
+
+platform_args=()
+for tag in "${WHEEL_PLATFORMS[@]}"; do platform_args+=(--platform "$tag"); done
 
 run_with_spinner "Downloading wheels for $(grep -cE '^[^#[:space:]]' requirements.txt) requirements" -- \
     pip download --only-binary :all: \
         --python-version "${WHEEL_PYTHON}" --implementation cp \
-        --platform "${WHEEL_PLATFORM}" \
+        "${platform_args[@]}" \
         -q -d .flatpak-wheels -r requirements.txt
 
 echo "  $(ls .flatpak-wheels/ | wc -l) distributions ready"
