@@ -4,14 +4,19 @@ The export cannot screenshot the QPainter widget, so it redraws the series as
 SVG. What matters is that the redraw obeys the same rules the widget does,
 because a report that disagreed with the screen would be worse than no report
 at all: bars in bar mode, a curve only in bar mode, a zero line only when the
-range crosses zero, and every value inside the plotting area.
+range crosses zero and every value inside the plotting area.
 """
 
 import re
 
 import pytest
 
-from clear_budget.application.reporting.chart_svg import HEIGHT, WIDTH, chart_svg
+from clear_budget.application.reporting.chart_svg import (
+    HEIGHT,
+    WIDTH,
+    ZERO_LINE,
+    chart_svg,
+)
 
 
 class _Series:
@@ -39,6 +44,18 @@ def test_bar_mode_draws_one_rectangle_per_day():
     """Plus two legend swatches: the series and the curve."""
     svg = _svg([_RISING], "bar")
     assert svg.count("<rect") == _DAYS + 2 + _CANVAS_RECTS
+
+
+def test_below_zero_days_fill_in_the_zero_lines_red():
+    """An overdrawn day's bar wears the danger colour, not the series one.
+
+    The zero line itself is a stroke, never a fill, so every danger FILL in
+    the markup is a bar.
+    """
+    svg = _svg([_CROSSES_ZERO], "bar")
+    negative_days = sum(1 for v in _CROSSES_ZERO.values if v < 0)
+    assert negative_days > 0
+    assert svg.count(f'fill="{ZERO_LINE}"') == negative_days
 
 
 def test_line_mode_draws_a_polyline_and_no_bars():

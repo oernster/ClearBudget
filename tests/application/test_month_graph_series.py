@@ -107,7 +107,12 @@ class TestBankGraphSeries:
 
     def test_current_month_passes_through_todays_balance(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
-        budget_service.add_income(income=_income("Salary", 20000, 5))
+        salary = budget_service.add_income(income=_income("Salary", 20000, 5))
+        # Marked Received, as the midnight fold leaves a landed income:
+        # whether something happened is read from the flag, not from its day.
+        budget_service.mark_income_received_for_month(
+            income_id=salary.id, year_month=_JULY
+        )
         budget_service.add_bill(bill=_bill("Water", 5000, 28))
         series = _bank_series(budget_service, _JULY)
         assert len(series.values) == 31
@@ -130,6 +135,61 @@ class TestBankGraphSeries:
         summary = budget_service.get_month_summary(year_month=_JULY)
         series = budget_service.get_bank_graph_series(year_month=_JULY, summary=summary)
         assert len(series.values) == 31
+
+    def test_card_bills_never_touch_the_bank_series(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=50000, iso="2026-07-26")
+        card = budget_service.payment_method_repo.add_credit_card(
+            card=CreditCard(
+                id=0,
+                name="Visa",
+                credit_limit=Amount(pence=100000),
+                current_balance_used=Amount(pence=0),
+            )
+        )
+        budget_service.add_bill(bill=_bill("Sub", 12345, 10, method=card.id))
+        series = _bank_series(budget_service, _JULY)
+        assert all(value == 50000 for value in series.values)
+
+    def test_a_bill_paid_early_is_not_charged_again(self, budget_service):
+        """A bill marked Paid before its due day is already inside the stored
+        balance, so the graph must not take it again when the day arrives."""
+        _seed_balance(budget_service.bill_repo.conn, pence=34282, iso="2026-07-26")
+        rent = budget_service.add_bill(bill=_bill("Rent", 135000, 28))
+        budget_service.mark_bill_paid_for_month(bill_id=rent.id, year_month=_JULY)
+        series = _bank_series(budget_service, _JULY)
+        assert series.values[25] == 34282  # today passes through stored balance
+        assert series.values[27] == 34282  # the due day takes nothing twice
+        assert series.values[30] == 34282
+
+    def test_a_bill_paid_on_a_past_day_still_shows_its_drop(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
+        water = budget_service.add_bill(bill=_bill("Water", 5000, 5))
+        budget_service.mark_bill_paid_for_month(bill_id=water.id, year_month=_JULY)
+        series = _bank_series(budget_service, _JULY)
+        assert series.values[3] == 105000  # before the due day
+        assert series.values[5] == 100000  # taken on day 5, as it really was
+        assert series.values[25] == 100000  # anchor still holds
+
+    def test_income_received_early_is_not_added_again(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=60000, iso="2026-07-26")
+        bonus = budget_service.add_income(income=_income("Bonus", 20000, 30))
+        budget_service.mark_income_received_for_month(
+            income_id=bonus.id, year_month=_JULY
+        )
+        series = _bank_series(budget_service, _JULY)
+        assert series.values[25] == 60000
+        assert series.values[29] == 60000  # day 30 adds nothing twice
+
+    def test_an_overdue_unpaid_bill_draws_no_phantom_history(self, budget_service):
+        """A dated bill that never got paid took no money on its day, so the
+        historical stretch of the curve must not show a drop for it, exactly
+        as the projected-balance rule already excludes it from still-due."""
+        _seed_balance(budget_service.bill_repo.conn, pence=40000, iso="2026-07-26")
+        budget_service.add_bill(bill=_bill("Missed", 10000, 4))
+        series = _bank_series(budget_service, _JULY)
+        assert series.values[0] == 40000
+        assert series.values[3] == 40000
+        assert series.values[25] == 40000
 
 
 class TestCardGraphSeries:

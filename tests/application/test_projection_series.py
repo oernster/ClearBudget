@@ -30,7 +30,7 @@ _BANK = 1
 _JULY = YearMonth(2026, 7)
 _SEPTEMBER = YearMonth(2026, 9)
 # Deliberately BEFORE July to September. Two things follow: no month in the
-# range is the anchored "current" one, and every month is still in the future,
+# range is the anchored "current" one and every month is still in the future,
 # which matters because the projection accrues forward from today and returns
 # the raw recorded balance for any month at or before it.
 _BEFORE_THE_RANGE = date(2026, 6, 15)
@@ -133,7 +133,7 @@ def test_the_projection_agrees_with_the_month_graph(budget_service):
     """Report and graph must never disagree about a month they both cover."""
     _seed(budget_service, income_pence=200_000, bill_pence=50_000, bill_day=15)
     summary = budget_service.get_month_summary(year_month=_JULY)
-    # No `today` override: the projection uses the real one, and the point of
+    # No `today` override: the projection uses the real one and the point of
     # the test is that both take the same path for the same month.
     series = budget_service.get_bank_graph_series(year_month=_JULY, summary=summary)
     month = budget_service.get_projection_months(start=_JULY, end=_JULY)[0]
@@ -150,7 +150,15 @@ def test_opening_plus_net_equals_the_close(budget_service):
     up.
     """
     _seed(budget_service, income_pence=200_000, bill_pence=50_000, bill_day=15)
-    for month in budget_service.get_projection_months(start=_JULY, end=_SEPTEMBER):
+    # Pinned before the range like the chain tests: in the anchored month the
+    # identity holds only while the Paid/Received flags agree with the
+    # calendar. An item actioned early or missed moves the close off the
+    # month's totals, which is exactly the drift the report exists to show
+    # (see test_a_bill_paid_early_moves_the_anchored_close below).
+    months = budget_service.get_projection_months(
+        start=_JULY, end=_SEPTEMBER, today=_BEFORE_THE_RANGE
+    )
+    for month in months:
         assert month.opening_pence + month.net_pence == month.closing_pence
 
 
@@ -180,8 +188,16 @@ def test_the_current_month_is_anchored_on_the_recorded_balance(budget_service):
     against the previous month's close is the drift the report exists to show.
     """
     _seed(budget_service, income_pence=200_000, bill_pence=50_000, bill_day=15)
-    # The 5th: income has landed on the 1st, the bill on the 15th has not.
+    # The 5th: income has landed on the 1st (and is marked Received, as the
+    # midnight fold would have left it), the bill on the 15th has not. The
+    # flag matters: whether something happened is read from the Paid and
+    # Received flags, not inferred from its day having passed.
     during_august = date(2026, 8, 5)
+    august_ym = YearMonth(2026, 8)
+    salary = budget_service.get_month_summary(year_month=august_ym).income_sources[0]
+    budget_service.mark_income_received_for_month(
+        income_id=salary.id, year_month=august_ym
+    )
 
     months = budget_service.get_projection_months(
         start=_JULY, end=_SEPTEMBER, today=during_august
@@ -191,6 +207,34 @@ def test_the_current_month_is_anchored_on_the_recorded_balance(budget_service):
     assert august.opening_pence != july.closing_pence
     # Recorded balance, less the income already received this month.
     assert august.opening_pence == budget_service.get_bank_balance().pence - 200_000
+
+
+def test_a_bill_paid_early_moves_the_anchored_close(budget_service):
+    """The deliberate identity break in the anchored month.
+
+    A bill marked Paid before its due day is already inside the recorded
+    balance, so the month's close is the balance plus only what is still to
+    come: charging the bill again on its due day would double-count it. The
+    row's income and bills columns still state the month's real totals, so
+    opening + net deliberately falls short of the close by the early payment,
+    which the series never takes again.
+    """
+    _seed(budget_service, income_pence=200_000, bill_pence=50_000, bill_day=15)
+    august_ym = YearMonth(2026, 8)
+    during_august = date(2026, 8, 5)
+    summary = budget_service.get_month_summary(year_month=august_ym)
+    budget_service.mark_income_received_for_month(
+        income_id=summary.income_sources[0].id, year_month=august_ym
+    )
+    budget_service.mark_bill_paid_for_month(
+        bill_id=summary.bills[0].id, year_month=august_ym
+    )
+    month = budget_service.get_projection_months(
+        start=_JULY, end=_SEPTEMBER, today=during_august
+    )[1]
+    # Nothing is still to come, so the month closes on the recorded balance.
+    assert month.closing_pence == budget_service.get_bank_balance().pence
+    assert month.opening_pence + month.net_pence == month.closing_pence - 50_000
 
 
 def test_months_outside_the_current_one_still_chain_when_today_is_inside(

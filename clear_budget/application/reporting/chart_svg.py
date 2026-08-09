@@ -3,12 +3,12 @@
 The on-screen graph is QPainter, which cannot go into a file anyone can open
 in a browser. Rather than screenshot the widget, the export redraws the same
 series with the same rules as vector SVG: it stays sharp at any zoom, weighs
-almost nothing, needs no image file beside the HTML and, being a pure string
-build, is testable without a QApplication.
+almost nothing, needs no image file beside the HTML and (being a pure string
+build) is testable without a QApplication.
 
 Fixed dark palette, matching the app's dark theme, rather than following
 whichever theme is active. An export that changed appearance depending on
-what the toggle happened to be set to would be unpredictable, and the app's
+what the toggle happened to be set to would be unpredictable and the app's
 own identity is the dark one. It carries its own background rather than
 relying on the page, so it reads correctly wherever it is embedded. Printing
 one will use ink; that is the accepted cost of matching the app.
@@ -159,9 +159,12 @@ def _bars(plot: _Plot) -> list[str]:
                 + bar_width * index
             )
             top, height = (y, zero_y - y) if value >= 0 else (zero_y, y - zero_y)
+            # A below-zero day fills in the zero line's red, matching the
+            # on-screen chart: an overdrawn stretch must read as a warning.
+            bar_fill = ZERO_LINE if value < 0 else colour
             parts.append(
                 f'<rect x="{x:.1f}" y="{top:.1f}" width="{bar_width:.1f}" '
-                f'height="{max(0.0, height):.1f}" fill="{colour}"/>'
+                f'height="{max(0.0, height):.1f}" fill="{bar_fill}"/>'
             )
     return parts
 

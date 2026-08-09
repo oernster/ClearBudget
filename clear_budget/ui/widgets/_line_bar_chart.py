@@ -129,7 +129,7 @@ class LineBarChart(ChartHoverMixin, QWidget):
 
     # ---- geometry -----------------------------------------------------------
     def _geometry(self):
-        """Return (left, top, plot_w, plot_h, days, low, high), or None.
+        """Return (left, top, plot_w, plot_h, days, low, high) or None.
 
         Shared by painting and hit-testing, so a hover lands on exactly the
         point that was drawn.
@@ -266,10 +266,15 @@ class LineBarChart(ChartHoverMixin, QWidget):
     def _draw_bars(self, painter, geom) -> None:
         _left, _top, _plot_w, _plot_h, days, _low, _high = geom
         painter.setPen(Qt.PenStyle.NoPen)
-        for idx in range(len(self._series)):
+        # A day the balance is below zero paints in the danger colour, the
+        # same red the zero line wears, so an overdrawn stretch reads as a
+        # warning rather than one more healthy-looking bar.
+        danger = QColor(self._tokens["danger"])
+        for idx, series in enumerate(self._series):
             colour = self._series_colour(idx)
             for day in range(1, days + 1):
-                painter.fillRect(self._bar_rect(geom, idx, day), colour)
+                bar_colour = danger if series.values[day - 1] < 0 else colour
+                painter.fillRect(self._bar_rect(geom, idx, day), bar_colour)
 
     def _draw_curve(self, painter, geom) -> None:
         """Overlay a smooth curve FOLLOWING the totals, in the curve colour.
