@@ -17,8 +17,13 @@ from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     build_centered_nav_header,
     fmt,
+    nav_glyph_height,
 )
-from clear_budget.ui.widgets._save_load_flow import build_save_load_buttons
+from clear_budget.ui.widgets._save_load_flow import (
+    build_info_button,
+    build_save_load_buttons,
+    build_settings_bank_buttons,
+)
 
 INCOME_VISIBLE_ROWS = 5
 
@@ -30,7 +35,12 @@ class MonthViewBuilderMixin:
         header_layout = QVBoxLayout()
         self.prev_btn = QPushButton("← Previous")
         next_btn = self.next_btn = QPushButton("Next →")
-        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only)
+        _glyph_h = nav_glyph_height(self.prev_btn)
+        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
+        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
+            self.read_only, _glyph_h
+        )
+        self.info_btn = build_info_button(_glyph_h)
         _ym = self.view_model.current_month
         (
             self.nav_header,
@@ -42,7 +52,14 @@ class MonthViewBuilderMixin:
             prev_btn=self.prev_btn,
             next_btn=next_btn,
             icon_action=self.on_show_graph,
-            leading=(self.load_btn, self.save_btn),
+            leading=(
+                self.load_btn,
+                self.save_btn,
+                _sep,
+                self.settings_btn,
+                self.bank_btn,
+            ),
+            trailing=(self.info_btn,),
         )
 
         self.solvency_hint_label = QLabel(

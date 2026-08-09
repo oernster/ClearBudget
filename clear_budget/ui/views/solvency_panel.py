@@ -20,10 +20,15 @@ from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     build_centered_nav_header,
     fmt,
+    nav_glyph_height,
     percentage,
 )
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
-from clear_budget.ui.widgets._save_load_flow import build_save_load_buttons
+from clear_budget.ui.widgets._save_load_flow import (
+    build_info_button,
+    build_save_load_buttons,
+    build_settings_bank_buttons,
+)
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
 from clear_budget.ui.views._solvency_panel_forward import SolvencyPanelForwardMixin
 from clear_budget.ui.views._solvency_panel_narratives import (
@@ -65,13 +70,25 @@ class SolvencyPanel(
 
         self.prev_btn = QPushButton("← Previous")
         self.next_btn = QPushButton("Next →")
-        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only)
+        _glyph_h = nav_glyph_height(self.prev_btn)
+        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
+        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
+            self.read_only, _glyph_h
+        )
+        self.info_btn = build_info_button(_glyph_h)
         self.nav_header, self.month_label, _, self.theme_btn = (
             build_centered_nav_header(
                 "May 2026",
                 prev_btn=self.prev_btn,
                 next_btn=self.next_btn,
-                leading=(self.load_btn, self.save_btn),
+                leading=(
+                    self.load_btn,
+                    self.save_btn,
+                    _sep,
+                    self.settings_btn,
+                    self.bank_btn,
+                ),
+                trailing=(self.info_btn,),
             )
         )
 
@@ -154,9 +171,12 @@ class SolvencyPanel(
         return [
             self.load_btn,
             self.save_btn,
+            self.settings_btn,
+            self.bank_btn,
             self.prev_btn,
             self.next_btn,
             self.theme_btn,
+            self.info_btn,
         ]
 
     def connect_signals(self) -> None:
@@ -185,7 +205,7 @@ class SolvencyPanel(
 
     def _build_limit_change_pills(self, card, displayed, outlook):
         """Build a pill row for the card's scheduled limit changes falling within
-        the displayed-to-outlook window (one pill per transition), or None."""
+        the displayed-to-outlook window (one pill per transition) or None."""
         lo = (displayed.year, displayed.month)
         hi = (outlook.year, outlook.month)
         running = card.credit_limit.pence

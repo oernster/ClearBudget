@@ -125,11 +125,14 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         )
         self.tabs.addTab(self._scrollable(archive_view), "Archive")
 
-        # Every tray carries the load/save pair; all of them drive the same
-        # window-level flows.
+        # Every tray carries the same icon shortcuts; all of them drive the
+        # same window-level flows their menu items do.
         for _tray_view in (month_view, solvency_panel, credit_card_view, archive_view):
             _tray_view.save_btn.clicked.connect(self._on_save_database)
             _tray_view.load_btn.clicked.connect(self._on_load_database)
+            _tray_view.settings_btn.clicked.connect(self._on_preferences)
+            _tray_view.bank_btn.clicked.connect(self._on_bank_account_settings)
+            _tray_view.info_btn.clicked.connect(self._on_how_it_works)
 
         layout.addWidget(self.tabs)
         central_widget.setLayout(layout)

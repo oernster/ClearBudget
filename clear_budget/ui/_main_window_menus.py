@@ -60,29 +60,28 @@ class MainWindowMenuMixin:
 
         file_menu.addSeparator()
 
-        prefs_action = file_menu.addAction("&Preferences…")
-        prefs_action.triggered.connect(self._on_preferences)
-        prefs_action.setEnabled(not self.read_only)
-
-        bank_action = file_menu.addAction("&Bank Account Settings…")
-        bank_action.triggered.connect(self._on_bank_account_settings)
-        bank_action.setEnabled(not self.read_only)
-
-        file_menu.addSeparator()
-
-        logout_action = file_menu.addAction("&Switch User")
-        logout_action.triggered.connect(self._on_logout)
-
-        file_menu.addSeparator()
-
         exit_action = file_menu.addAction("E&xit")
         exit_action.triggered.connect(self.close)
 
-        # Users menu (admin only)
+        # Settings menu, adjacent to File.
+        settings_menu = self.menuBar().addMenu("&Settings")
+
+        prefs_action = settings_menu.addAction("&Preferences…")
+        prefs_action.triggered.connect(self._on_preferences)
+        prefs_action.setEnabled(not self.read_only)
+
+        bank_action = settings_menu.addAction("&Bank Account")
+        bank_action.triggered.connect(self._on_bank_account_settings)
+        bank_action.setEnabled(not self.read_only)
+
+        # Users menu: Switch User for everyone, management for admins only.
+        users_menu = self.menuBar().addMenu("&Users")
         if self.current_user.is_admin:
-            users_menu = self.menuBar().addMenu("&Users")
             manage_action = users_menu.addAction("&Manage Users…")
             manage_action.triggered.connect(self._on_manage_users)
+            users_menu.addSeparator()
+        logout_action = users_menu.addAction("&Switch User")
+        logout_action.triggered.connect(self._on_logout)
 
         # Help menu
         help_menu = self.menuBar().addMenu("&Help")

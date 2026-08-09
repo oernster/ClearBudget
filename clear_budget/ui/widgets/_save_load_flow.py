@@ -16,7 +16,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton
+from PySide6.QtWidgets import QFileDialog, QFrame, QMessageBox, QPushButton
 
 from clear_budget.shared.db_validation import validate_db
 from clear_budget.ui import label_roles, ui_scale
@@ -27,28 +27,78 @@ from clear_budget.ui.ui_paths import default_downloads_dir
 _DEFAULT_SAVE_NAME = "clearbudget_backup.db"
 _DB_FILTER = "Clear Budget Database (*.db)"
 
-# Match the tray's other icon actions (the balance pencil) so the pair reads
-# as part of the same control family.
-_ICON_BTN_MAX_WIDTH = 32
-_ICON_BTN_MAX_HEIGHT = 26
+# The nav graph button's chrome: 2px padding plus 2px border on each side
+# (see QPushButton#NavGraphButton in _theme_controls). Adding it to the glyph
+# height gives the same overall button size as the app-icon button; fixing
+# the size is what stops Qt's default push-button minimum width making an
+# icon-sized control 80-odd pixels wide.
+_BTN_CHROME_PX = 8
 
 
-def build_save_load_buttons(read_only: bool) -> tuple[QPushButton, QPushButton]:
+def _tray_icon_button(glyph: str, tooltip: str, glyph_height: int) -> QPushButton:
+    """One emoji icon button for the nav tray's far-left group.
+
+    IconAction-styled so it carries the standard three-state ring. The glyph
+    is measured and scaled to paint at `glyph_height`, the same height the
+    tray's app-icon button is scaled to, so the group reads as one matched
+    family. The font goes on as a widget-level stylesheet WITH a selector,
+    for the same reasons as the theme toggle: a stylesheet rule beats setFont
+    and a bare font-size would cascade to the tooltip. The size is fixed to
+    the glyph plus the ring chrome, because Qt's default push-button minimum
+    would otherwise make an icon-sized control 80-odd pixels wide.
+    """
+    from clear_budget.ui.utils.glyph_metrics import glyph_font_px_for_height
+
+    btn = QPushButton(glyph)
+    btn.setToolTip(tooltip)
+    btn.setObjectName(label_roles.ICON_ACTION)
+    glyph_px = glyph_font_px_for_height(glyph, glyph_height)
+    btn.setStyleSheet(f"QPushButton#IconAction {{ font-size: {glyph_px}px; }}")
+    side = glyph_height + _BTN_CHROME_PX
+    btn.setFixedSize(side, side)
+    return btn
+
+
+def build_save_load_buttons(
+    read_only: bool, glyph_height: int
+) -> tuple[QPushButton, QPushButton]:
     """Return (load_btn, save_btn) for a nav tray, in visual order.
 
-    Both are IconAction-styled so they carry the standard three-state ring.
     Load is disabled for read-only viewers, exactly as the Load menu item is.
     """
-    load_btn = QPushButton("📂")
-    load_btn.setToolTip("Load database…")
-    save_btn = QPushButton("💾")
-    save_btn.setToolTip("Save database")
-    for btn in (load_btn, save_btn):
-        btn.setObjectName(label_roles.ICON_ACTION)
-        btn.setMaximumWidth(_ICON_BTN_MAX_WIDTH)
-        btn.setMaximumHeight(_ICON_BTN_MAX_HEIGHT)
+    load_btn = _tray_icon_button("📂", "Load database…", glyph_height)
+    save_btn = _tray_icon_button("💾", "Save database", glyph_height)
     load_btn.setEnabled(not read_only)
     return load_btn, save_btn
+
+
+def build_settings_bank_buttons(
+    read_only: bool, glyph_height: int
+) -> tuple[QFrame, QPushButton, QPushButton]:
+    """Return (separator, settings_btn, bank_btn) for a nav tray.
+
+    The separator is a themed vertical rule dividing the database actions
+    (load/save) from the settings shortcuts (Preferences, Bank Account),
+    which mirror the Settings menu. Both buttons are disabled for read-only
+    viewers, exactly as their menu items are.
+    """
+    separator = QFrame()
+    separator.setObjectName(label_roles.SEPARATOR)
+    separator.setFrameShape(QFrame.Shape.VLine)
+    separator.setFixedHeight(glyph_height)
+    settings_btn = _tray_icon_button("⚙️", "Preferences…", glyph_height)
+    bank_btn = _tray_icon_button("🏦", "Bank account", glyph_height)
+    for btn in (settings_btn, bank_btn):
+        btn.setEnabled(not read_only)
+    return separator, settings_btn, bank_btn
+
+
+def build_info_button(glyph_height: int) -> QPushButton:
+    """Return the How It Works button shown right of the theme toggle.
+
+    Always enabled: the help text is read-only, so viewers get it too.
+    """
+    return _tray_icon_button("ℹ️", "How it works", glyph_height)
 
 
 def _report_saved(parent, dest: Path) -> None:

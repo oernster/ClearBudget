@@ -14,8 +14,13 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     build_centered_nav_header,
+    nav_glyph_height,
 )
-from clear_budget.ui.widgets._save_load_flow import build_save_load_buttons
+from clear_budget.ui.widgets._save_load_flow import (
+    build_info_button,
+    build_save_load_buttons,
+    build_settings_bank_buttons,
+)
 from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
 
 
@@ -39,12 +44,24 @@ class ArchiveView(QWidget):
 
         self.prev_year_btn = QPushButton("← Previous")
         self.next_year_btn = QPushButton("Next →")
-        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only)
+        _glyph_h = nav_glyph_height(self.prev_year_btn)
+        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
+        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
+            self.read_only, _glyph_h
+        )
+        self.info_btn = build_info_button(_glyph_h)
         self.nav_header, self.year_label, _, self.theme_btn = build_centered_nav_header(
             "",
             prev_btn=self.prev_year_btn,
             next_btn=self.next_year_btn,
-            leading=(self.load_btn, self.save_btn),
+            leading=(
+                self.load_btn,
+                self.save_btn,
+                _sep,
+                self.settings_btn,
+                self.bank_btn,
+            ),
+            trailing=(self.info_btn,),
         )
 
         self.archive_table = QTableWidget()
@@ -114,9 +131,12 @@ class ArchiveView(QWidget):
         return [
             self.load_btn,
             self.save_btn,
+            self.settings_btn,
+            self.bank_btn,
             self.prev_year_btn,
             self.next_year_btn,
             self.theme_btn,
+            self.info_btn,
             self.archive_table,
         ]
 

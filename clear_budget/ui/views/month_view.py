@@ -242,10 +242,13 @@ class MonthView(
         return [
             self.load_btn,
             self.save_btn,
+            self.settings_btn,
+            self.bank_btn,
             self.graph_btn,
             self.prev_btn,
             self.next_btn,
             self.theme_btn,
+            self.info_btn,
             self.edit_balance_btn,
             self.bills_table,
             self.add_bill_btn,

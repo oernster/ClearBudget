@@ -23,6 +23,7 @@ from clear_budget.ui.theme_tokens import STATE_CAUTION, STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     build_centered_nav_header,
+    nav_glyph_height,
 )
 from clear_budget.ui.views._credit_card_projection_strip import (
     _PROJECTION_MONTHS,
@@ -31,7 +32,11 @@ from clear_budget.ui.views._credit_card_projection_strip import (
 from clear_budget.ui.views._credit_card_view_loaders import (
     CreditCardViewLoaderMixin,
 )
-from clear_budget.ui.widgets._save_load_flow import build_save_load_buttons
+from clear_budget.ui.widgets._save_load_flow import (
+    build_info_button,
+    build_save_load_buttons,
+    build_settings_bank_buttons,
+)
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 
 
@@ -60,7 +65,12 @@ class CreditCardView(
 
         self.prev_btn = QPushButton("← Previous")
         self.next_btn = QPushButton("Next →")
-        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only)
+        _glyph_h = nav_glyph_height(self.prev_btn)
+        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
+        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
+            self.read_only, _glyph_h
+        )
+        self.info_btn = build_info_button(_glyph_h)
         (
             self.nav_header,
             self.month_label,
@@ -71,7 +81,14 @@ class CreditCardView(
             prev_btn=self.prev_btn,
             next_btn=self.next_btn,
             icon_action=self.on_show_graph,
-            leading=(self.load_btn, self.save_btn),
+            leading=(
+                self.load_btn,
+                self.save_btn,
+                _sep,
+                self.settings_btn,
+                self.bank_btn,
+            ),
+            trailing=(self.info_btn,),
         )
         self._refresh_month_label()
 
@@ -175,10 +192,13 @@ class CreditCardView(
         return [
             self.load_btn,
             self.save_btn,
+            self.settings_btn,
+            self.bank_btn,
             self.graph_btn,
             self.prev_btn,
             self.next_btn,
             self.theme_btn,
+            self.info_btn,
             *card_buttons,
             self.add_btn,
             self.projection_table,

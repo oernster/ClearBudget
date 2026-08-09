@@ -46,7 +46,7 @@ _ICON_LOAD_ATTEMPTED = False
 
 
 def _load_cropped_icon_pixmap():
-    """Return the app icon pixmap cropped to its opaque bounding box, or None."""
+    """Return the app icon pixmap cropped to its opaque bounding box or None."""
     global _ICON_PIXMAP_CACHE, _ICON_LOAD_ATTEMPTED
     if _ICON_LOAD_ATTEMPTED:
         return _ICON_PIXMAP_CACHE
@@ -75,7 +75,7 @@ NAV_LABEL_DEFAULT_COLOR = "#9ca3af"
 _FALLBACK_ICON_PX = 24
 # Dynamic property carrying the height a toggle button's glyph must paint at.
 # Stored on the button because the glyph changes with the theme long after the
-# tray was built, and the refresh has only the button to work from.
+# tray was built and the refresh has only the button to work from.
 TOGGLE_TARGET_PROPERTY = "navGlyphTargetPx"
 # The toggle glyph's painted height as a fraction of the nav icon's.
 #
@@ -149,17 +149,17 @@ def apply_toggle_glyph(btn, glyph: str) -> None:
 
     Called on build and again after every theme switch, because the glyph
     changes with the theme and each one paints a different fraction of its em
-    box: sizing the sun and then swapping in the moon leaves the moon short,
+    box: sizing the sun and then swapping in the moon leaves the moon short
     and sizing the moon leaves the sun oversized against the nav icon. The font
     size is therefore derived from THIS glyph every time, by measuring it.
 
     The font is set as a WIDGET-level stylesheet, not setFont: the app
-    stylesheet sets a font-size on QWidget, and a stylesheet rule beats setFont
-    however specific the font is. A widget's own sheet beats the application's,
+    stylesheet sets a font-size on QWidget and a stylesheet rule beats setFont
+    however specific the font is. A widget's own sheet beats the application's
     and setting only font-size leaves the object-name ring rules intact.
 
     SELECTOR REQUIRED. A bare `font-size: 42px` cascades to everything in the
-    widget's subtree, and a tooltip counts: the hover text came out in the
+    widget's subtree and a tooltip counts: the hover text came out in the
     emoji's size. Scoping it to the button means nothing else can inherit it.
     """
     from clear_budget.ui.utils.glyph_metrics import glyph_font_px_for_height
@@ -200,7 +200,7 @@ def _build_theme_toggle_button(glyph_height: int):
 
 
 def build_nav_month_widget(
-    initial_text: str, prev_btn=None, next_btn=None, icon_action=None, leading=()
+    initial_text: str, prev_btn=None, next_btn=None, icon_action=None
 ):
     """Return (QWidget, QLabel, icon_btn) - centered icon + month label for nav.
 
@@ -208,7 +208,6 @@ def build_nav_month_widget(
     month label so the navigation buttons flank the title. When `icon_action`
     is given the icon becomes a tabbable button wired to it (the month-graph
     opener); otherwise it stays a decorative label and icon_btn is None.
-    `leading` widgets (the load/save pair) are placed first, before prev_btn.
     """
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
@@ -217,9 +216,6 @@ def build_nav_month_widget(
     layout = QHBoxLayout(container)
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(8)
-
-    for widget in leading:
-        layout.addWidget(widget)
 
     if prev_btn is not None:
         layout.addWidget(prev_btn)
@@ -273,17 +269,18 @@ def build_centered_nav_header(
     initial_text: str,
     prev_btn=None,
     next_btn=None,
-    trailing_widget=None,
     icon_action=None,
     leading=(),
+    trailing=(),
 ):
     """Return (QWidget, QLabel, icon_btn, theme_btn): the centred nav cluster.
 
     `icon_action`, when given, turns the tray icon into a tabbable month-graph
     button wired to it; icon_btn is then that button (else None). `leading`
-    widgets (the load/save pair) sit first in the cluster, before prev_btn.
-    Every tray also carries the sun/moon theme toggle (`theme_btn`) at its far
-    right, in line with the previous/next buttons.
+    widgets (the load/save pair and the settings shortcuts) sit at the tray's
+    FAR LEFT, mirroring the theme toggle at its far right; `trailing` widgets
+    (the How It Works button) sit AFTER that sun/moon toggle (`theme_btn`),
+    all in line with the previous/next buttons.
 
     The returned widget is meant to be placed OUTSIDE the scroll area (see
     ScrollableTab), so it spans the full tab width and centres identically on
@@ -294,10 +291,10 @@ def build_centered_nav_header(
     symmetrically top and bottom so the cluster stays vertically centred inside
     the border. The cluster is laid out in the centre column of a three-column
     grid whose outer columns carry equal stretch, so it sits at the exact tray
-    midpoint on every tab. `trailing_widget`, if given, is placed in the right
-    column (so its button aligns vertically with the nav cluster) without moving
-    the cluster, since the centre column's position depends only on the equal
-    outer-column stretch, not on the trailing widget's width.
+    midpoint on every tab. The outer cells are placed in the side columns (so
+    their buttons align vertically with the nav cluster) without moving the
+    cluster, since the centre column's position depends only on the equal
+    outer-column stretch, not on either cell's width.
     """
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
@@ -305,11 +302,7 @@ def build_centered_nav_header(
     from clear_budget.ui import ui_scale
 
     nav_center, month_lbl, icon_btn = build_nav_month_widget(
-        initial_text,
-        prev_btn=prev_btn,
-        next_btn=next_btn,
-        icon_action=icon_action,
-        leading=leading,
+        initial_text, prev_btn=prev_btn, next_btn=next_btn, icon_action=icon_action
     )
 
     # Bordered tray. WA_StyledBackground is required for a plain QWidget to paint
@@ -334,23 +327,31 @@ def build_centered_nav_header(
     row.setColumnStretch(2, 1)
     align_v = Qt.AlignmentFlag.AlignVCenter
     row.addWidget(nav_center, 0, 1, Qt.AlignmentFlag.AlignHCenter | align_v)
-    # Right column: the optional trailing widget, then the theme toggle at
-    # the far right of the tray, in line with the prev/next buttons.
+    # Right column: the theme toggle at the far right of the tray, in line
+    # with the prev/next buttons, then any trailing widgets after it.
     right_cell = QWidget()
     right_layout = QHBoxLayout(right_cell)
     right_layout.setContentsMargins(0, 0, 0, 0)
     right_layout.setSpacing(8)
-    if trailing_widget is not None:
-        right_layout.addWidget(trailing_widget)
     theme_btn = _build_theme_toggle_button(nav_glyph_height(prev_btn))
     right_layout.addWidget(theme_btn)
+    for widget in trailing:
+        right_layout.addWidget(widget)
     row.addWidget(right_cell, 0, 2, Qt.AlignmentFlag.AlignRight | align_v)
-    # A left balance of equal width keeps both outer columns matched even
-    # when space is tight, so the centre column never gets squeezed off
-    # the midpoint.
-    left_balance = QWidget()
-    left_balance.setFixedWidth(right_cell.sizeHint().width())
-    row.addWidget(left_balance, 0, 0, Qt.AlignmentFlag.AlignLeft | align_v)
+    # Left column: the leading widgets (the load/save pair) at the tray's far
+    # left, mirroring the toggle. Both outer cells take the same minimum width
+    # so they stay matched even when space is tight and the centre column
+    # never gets squeezed off the midpoint.
+    left_cell = QWidget()
+    left_layout = QHBoxLayout(left_cell)
+    left_layout.setContentsMargins(0, 0, 0, 0)
+    left_layout.setSpacing(8)
+    for widget in leading:
+        left_layout.addWidget(widget)
+    row.addWidget(left_cell, 0, 0, Qt.AlignmentFlag.AlignLeft | align_v)
+    balance_w = max(left_cell.sizeHint().width(), right_cell.sizeHint().width())
+    left_cell.setMinimumWidth(balance_w)
+    right_cell.setMinimumWidth(balance_w)
 
     # Full-width header that insets the tray from the tab edges and lets it float
     # with a symmetric gap above and below, keeping the cluster centred in the
