@@ -55,6 +55,7 @@ Everything below this section explains how the code satisfies them.
 ┌─────────────────────────────────────────────────────────────┐
 │       Auth Layer (User Identity - cross-cutting)            │
 │    UserStore → users.db   User, UserManagementDialog        │
+│    RememberedLogin → OS credential store + sidecar file     │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -352,6 +353,27 @@ Separate from budget infrastructure. Manages user identity and credentials.
 **`User`** model (`clear_budget/auth/models.py`):
 - `id`, `username`, `is_admin`, `is_read_only` (default `False`)
 
+**`RememberedLogin`** (`clear_budget/auth/remembered_login.py`):
+- Backs the sign-in screen's Remember me checkbox. The password lives in the
+  operating system's credential store (Windows Credential Manager, macOS
+  Keychain, Linux Secret Service) via the `keyring` package under the service
+  name `ClearBudget`; only the remembered USERNAME is written to disk, as
+  `remembered_login.json` in the app directory, so the next launch knows which
+  credential-store entry to look up
+- `remember(username, password)` - keychain first, sidecar second, so a failed
+  keychain write never leaves a dangling half-state
+- `recall()` → `(username, password) | None`
+- `forget()` - deletes the keychain entry and the sidecar; still removes the
+  sidecar when the keychain is unavailable
+- Every keychain failure (no backend, locked, denied) degrades to "nothing
+  remembered": sign-in never crashes or blocks on the credential store
+- The keyring boundary is an injected `SecretBackend` Protocol; tests use a
+  hand-written in-memory fake and the module sits inside the coverage gate
+- Constructed in `main.py` with `Config.app_dir()` and passed to `LoginDialog`;
+  the UI ticks the box and prefills both fields when `recall()` returns
+  credentials, forgets on untick and remembers (or forgets) on a successful
+  sign-in according to the box
+
 ### Reporting (`clear_budget/application/reporting/`)
 
 Pure string building for the HTML exports: no Qt, no file access, no clock, so
@@ -416,7 +438,8 @@ bank statement. Both identities are tested.
   instead of live user data. The directory holds both databases, the saved UI
   settings (theme, remembered save-file location and any skipped update
   version) and the generated
-  spin-arrow images; a write into it is silent, so it surfaces later as a bug
+  spin-arrow images and the Remember me sidecar
+  (`remembered_login.json`); a write into it is silent, so it surfaces later as a bug
   report against the app: an offscreen probe applied the light theme in order
   to measure it, `theme.apply_theme` persisted that choice as it is supposed
   to and the app opened light from then on. Constrain the bad state rather than
@@ -505,7 +528,10 @@ bank statement. Both identities are tested.
   check reports both
 
 **Widgets**:
-- `LoginDialog` - username/password form; grid layout with "Forgot password?"
+- `LoginDialog` - username/password form; a Remember me checkbox under the
+  password field (prefills both fields and ticks itself when `RememberedLogin`
+  recalls credentials; unticking forgets them immediately; a successful sign-in
+  stores or forgets according to the box); grid layout with "Forgot password?"
   (opens `ResetPasswordDialog`) and Sign In on one row, "Import Viewer Package..."
   (opens the viewer-package import flow) and "Create Account..." (opens
   `CreateUserDialog`, non-admin) on the row below
@@ -917,7 +943,8 @@ main()
   └── _session_loop()                        # fires on first event loop tick
         └── _run_login_flow()
               └── first run? → CreateUserDialog(is_first_user=True) → RecoveryCodeDialog
-              └── else       → LoginDialog
+              └── else       → LoginDialog (prefilled from RememberedLogin
+                               when Remember me was ticked last time)
                     └── Create Account...     → CreateUserDialog(is_first_user=False)
                     └── Import Viewer Package → viewer-package import flow
               └── X button   → app.quit() → process exits
@@ -975,6 +1002,7 @@ window = MainWindow(
 |------|------|---------|
 | `users.db` | `~/.clearbudget/users.db` | Central user accounts (all users) |
 | `budget_<username>.db` | `~/.clearbudget/budget_<username>.db` | Per-user budget data |
+| `remembered_login.json` | `~/.clearbudget/remembered_login.json` | The Remember me username (the password is in the OS credential store, never on disk) |
 
 Username is sanitised to lowercase alphanumeric + `_-` before use in filename.
 
@@ -1109,6 +1137,8 @@ an option that read as "remove my data" removed nothing.
 ### Auth Layer
 - Real SQLite via `tmp_path` fixture
 - bcrypt round-trip tested
+- `RememberedLogin` tested against a hand-written in-memory keychain fake,
+  including keychain-failure degradation and sidecar corruption
 
 ### Shared Layer
 - `test_config.py` - path construction and safe username

@@ -152,6 +152,9 @@ def build_app_bundle(entitlements_path: Path, icns_path: Path | None = None) -> 
         # Pull in every clear_budget submodule, including any reached only via
         # function-level deferred imports in the composition root.
         "--collect-submodules=clear_budget",
+        # keyring discovers its OS backends via entry points, which PyInstaller
+        # cannot see statically; collect them all so Remember me works frozen.
+        "--collect-submodules=keyring",
     ]
 
     for spec in add_data:

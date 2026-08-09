@@ -32,14 +32,18 @@ _ICON_PATH: Path | None = _resolve_about_icon()
 
 # True only on Windows, where pywin32 is an actual runtime dependency. On macOS
 # and Linux it is neither bundled nor used, so its attribution is omitted there.
+# The same per-platform rule covers keyring's backends: pywin32-ctypes ships
+# only on Windows, SecretStorage/Jeepney/cryptography only on Linux; the macOS
+# backend is pure ctypes against the system Security framework.
 _IS_WINDOWS = sys.platform == "win32"
+_IS_LINUX = sys.platform.startswith("linux")
 
 # Open source credits as discrete HTML <li> items so platform-specific entries
 # (pywin32) can be filtered and so no stray source comments leak into the
 # rendered dialog text.
 # Components SHIPPED inside the application, listed first because these are
 # the ones whose licences travel with the binary. Checked against what the
-# build actually bundles (PySide6, shiboken6, bcrypt and the native
+# build actually bundles (PySide6, shiboken6, bcrypt, keyring and the native
 # sqlite3/libcrypto/libssl/libffi libraries), not against requirements.txt,
 # which lists neither the transitive native libraries nor shiboken6.
 _SHIPPED: list[str] = [
@@ -72,11 +76,37 @@ _SHIPPED: list[str] = [
         "<li><b>bcrypt</b> - Copyright &copy; Nate Lawson, Perry Metzger and "
         "contributors. Licensed under the Apache Licence 2.0.</li>"
     ),
+    (
+        "<li><b>keyring</b> - Copyright &copy; Jason R. Coombs and "
+        "contributors. Stores the remembered sign-in in the operating "
+        "system's own credential store. Licensed under the MIT Licence.</li>"
+    ),
 ]
 if _IS_WINDOWS:
     _SHIPPED.append(
         "<li><b>pywin32</b> - Copyright &copy; Mark Hammond. Licensed under "
         "the PSF Licence.</li>"
+    )
+    _SHIPPED.append(
+        "<li><b>pywin32-ctypes</b> - Copyright &copy; Enthought, Inc. The "
+        "Windows Credential Manager binding keyring uses. Licensed under a "
+        "BSD-style licence.</li>"
+    )
+if _IS_LINUX:
+    _SHIPPED.append(
+        "<li><b>SecretStorage</b> - Copyright &copy; Dmitry Shachnev and "
+        "contributors. The Secret Service binding keyring uses. Licensed "
+        "under the BSD-3-Clause Licence.</li>"
+    )
+    _SHIPPED.append(
+        "<li><b>Jeepney</b> - Copyright &copy; Thomas Kluyver and "
+        "contributors. The DBus transport SecretStorage is built on. "
+        "Licensed under the MIT Licence.</li>"
+    )
+    _SHIPPED.append(
+        "<li><b>cryptography</b> - Copyright &copy; The Python Cryptographic "
+        "Authority and contributors. Used by SecretStorage. Licensed under "
+        "Apache-2.0 or BSD-3-Clause.</li>"
     )
 
 # Tools used to BUILD and verify the application. They are not shipped, so
@@ -193,6 +223,7 @@ _THIRD_PARTY_LICENCES: list[str] = [
     ),
     "SQLite - Public Domain\n  https://www.sqlite.org/copyright.html\n",
     "bcrypt - Apache Licence 2.0\n  https://www.apache.org/licenses/LICENSE-2.0\n",
+    "keyring - MIT Licence\n  https://opensource.org/licenses/MIT\n",
     "pytest - MIT Licence\n  https://opensource.org/licenses/MIT\n",
     "black - MIT Licence\n  https://opensource.org/licenses/MIT\n",
 ]

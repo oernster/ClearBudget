@@ -52,6 +52,9 @@ def build_exe() -> int:
         "--add-data=ClearBudget.ico:.",
         "--add-data=ClearBudget.png:.",
         "--add-data=VERSION:.",
+        # keyring discovers its OS backends via entry points, which PyInstaller
+        # cannot see statically; collect them all so Remember me works frozen.
+        "--collect-submodules=keyring",
         "--noconfirm",
         "--distpath=dist-pyinstaller",
         "main.py",

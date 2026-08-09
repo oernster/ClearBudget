@@ -5,6 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QFrame,
     QGridLayout,
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.auth.models import User
+from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.widgets._viewer_package_import_flow import (
@@ -30,14 +32,21 @@ class LoginDialog(QDialog):
     On accepted, ``authenticated_user`` holds the logged-in User.
     """
 
-    def __init__(self, user_store: UserStore, parent=None) -> None:
+    def __init__(
+        self,
+        user_store: UserStore,
+        remembered_login: RememberedLogin | None = None,
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.user_store = user_store
+        self.remembered_login = remembered_login
         self.authenticated_user: User | None = None
         self.setWindowTitle("Clear Budget - Sign In")
         self.setMinimumWidth(ui_scale.px(380))
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowCloseButtonHint)
         self._build_ui()
+        self._prefill_remembered()
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -90,6 +99,14 @@ class LoginDialog(QDialog):
         self.password_edit.setStyleSheet(self._input_style())
         self.password_edit.returnPressed.connect(self._on_login)
         layout.addWidget(self.password_edit)
+
+        # Remember me - unticking forgets the stored credentials immediately.
+        self.remember_check = QCheckBox("Remember me")
+        self.remember_check.setStyleSheet(ui_scale.style("font-size: 13px;"))
+        self.remember_check.toggled.connect(self._on_remember_toggled)
+        if self.remembered_login is None:
+            self.remember_check.setVisible(False)
+        layout.addWidget(self.remember_check)
 
         # Error label (hidden until needed)
         self.error_label = QLabel("")
@@ -169,6 +186,23 @@ class LoginDialog(QDialog):
             "}"
         )
 
+    def _prefill_remembered(self) -> None:
+        """Fill both fields from a remembered login, ticking the box to match."""
+        if self.remembered_login is None:
+            return
+        credentials = self.remembered_login.recall()
+        if credentials is None:
+            return
+        username, password = credentials
+        self.username_edit.setText(username)
+        self.password_edit.setText(password)
+        self.remember_check.setChecked(True)
+        self.login_btn.setFocus()
+
+    def _on_remember_toggled(self, checked: bool) -> None:
+        if self.remembered_login is not None and not checked:
+            self.remembered_login.forget()
+
     def _on_login(self) -> None:
         username = self.username_edit.text().strip()
         password = self.password_edit.text()
@@ -181,6 +215,11 @@ class LoginDialog(QDialog):
             self.password_edit.clear()
             self.password_edit.setFocus()
             return
+        if self.remembered_login is not None:
+            if self.remember_check.isChecked():
+                self.remembered_login.remember(user.username, password)
+            else:
+                self.remembered_login.forget()
         self.authenticated_user = user
         self.accept()
 

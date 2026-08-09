@@ -196,6 +196,10 @@ finish-args:
   # ClearBudget stores its databases under ~/.clearbudget and reads/writes
   # user-chosen files for import/export, so it needs home access.
   - --filesystem=home
+  # Remember me stores the password in the desktop keyring via the Secret
+  # Service DBus API; without this the sandbox blocks the keychain and the
+  # feature silently degrades to "not remembered".
+  - --talk-name=org.freedesktop.secrets
 
 modules:
 

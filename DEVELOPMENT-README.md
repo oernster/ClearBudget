@@ -47,7 +47,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt -r requirements-dev.txt
 ```
 
-`requirements.txt` holds the runtime dependencies (PySide6, bcrypt).
+`requirements.txt` holds the runtime dependencies (PySide6, bcrypt, keyring).
 `requirements-dev.txt` adds the build and quality tooling (PyInstaller, pytest,
 pytest-cov, coverage, black, flake8, ruff).
 
@@ -129,8 +129,9 @@ substitutes Qt's own font database, so a font size tuned there does not match
 what ships. Measure those on the real platform.
 
 **Always point a probe at a scratch data directory.** `~/.clearbudget` holds
-live user data: both databases and the saved UI settings (theme, remembered
-save-file location and any skipped update version). Set
+live user data: both databases, the saved UI settings (theme, remembered
+save-file location and any skipped update version) and the Remember me
+sidecar (`remembered_login.json`). Set
 `CLEARBUDGET_HOME` and every path the app resolves moves with it:
 
 ```powershell

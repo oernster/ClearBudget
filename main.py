@@ -23,6 +23,7 @@ from clear_budget.application.services.update_service import (
     platform_key_for,
 )
 from clear_budget.auth.models import User
+from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
@@ -129,7 +130,9 @@ def _acquire_single_instance_lock():
     return lock_file
 
 
-def _run_login_flow(user_store: UserStore) -> User | None:
+def _run_login_flow(
+    user_store: UserStore, remembered_login: RememberedLogin
+) -> User | None:
     """Show first-run or login dialog.  Returns authenticated User or None (quit)."""
     from clear_budget.ui import launch_screen
     from clear_budget.ui.widgets.create_user_dialog import CreateUserDialog
@@ -145,7 +148,7 @@ def _run_login_flow(user_store: UserStore) -> User | None:
         # First user just created - log them in directly.
         return dlg.created_user
 
-    dlg = LoginDialog(user_store)
+    dlg = LoginDialog(user_store, remembered_login)
     launch_screen.centre(dlg)
     if dlg.exec() != LoginDialog.Accepted:
         return None
@@ -238,6 +241,7 @@ def main() -> int:
 
     Config.app_dir().mkdir(parents=True, exist_ok=True)
     user_store = UserStore(Config.users_db_path())
+    remembered_login = RememberedLogin(Config.app_dir())
 
     _active_database: list[Database] = []
 
@@ -279,7 +283,7 @@ def main() -> int:
 
     def _session_loop() -> None:
         """Run login → main window → (optional) re-login cycle."""
-        user = _run_login_flow(user_store)
+        user = _run_login_flow(user_store, remembered_login)
         if user is None:
             app.quit()
             return

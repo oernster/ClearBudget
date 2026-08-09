@@ -83,6 +83,10 @@ what is deliberately left and what only looks like debt.
 ## Features
 
 - Multi-user login with bcrypt password hashing and recovery codes
+- Remember me on the sign-in screen: your username and password are prefilled
+  at the next launch, with the password held in the operating system's own
+  credential store (Windows Credential Manager, macOS Keychain, Linux Secret
+  Service), never in a plain file; unticking the box forgets them immediately
 - Create an account from the sign-in screen at any time, not just on first
   launch (only the very first account ever created is an admin)
 - Read-only viewer accounts: export a snapshot of a budget as a "viewer
@@ -215,6 +219,9 @@ ever an admin. A one-time recovery code is displayed and must be acknowledged be
 the wizard completes.
 
 Subsequent launches show a login screen with username/password fields plus:
+- **Remember me** - prefill these credentials at the next launch. The password
+  goes into the operating system's credential store, not a file; untick the box
+  and the stored credentials are forgotten immediately
 - **Forgot password?** - reset using the recovery code
 - **Import Viewer Package...** - import a read-only viewer account from a package file
 - **Create Account...** - create a new (non-admin) account at any time, without
@@ -245,6 +252,13 @@ machine under `~/.clearbudget/`:
   any release version you told the update prompt to skip, so the app opens the
   way you left it and Save goes back to the same file. No budget data is kept
   here.
+- `remembered_login.json` - present only while Remember me is ticked: the
+  username whose password is being remembered, so the app knows which
+  credential-store entry to look up. The password itself is never in this file;
+  it lives in the operating system's credential store (Windows Credential
+  Manager, macOS Keychain, Linux Secret Service), encrypted and managed by the
+  OS. Unticking Remember me deletes both the file and the credential-store
+  entry.
 
 Installing, upgrading, repairing and uninstalling do not touch any of this.
 They deal in program files, shortcuts and the registry entry only, so
@@ -475,6 +489,7 @@ python main.py
 - Python 3.11+
 - PySide6 >= 6.8.0
 - bcrypt
+- keyring
 
 ## Tests
 
@@ -515,7 +530,13 @@ Bundled with the application, so their licences travel with it:
   links against (Apache-2.0)
 - **libffi** - Anthony Green and contributors (MIT-style licence)
 - **bcrypt** - Nate Lawson, Perry Metzger (Apache-2.0)
+- **keyring** - Jason R. Coombs and contributors (MIT); stores the remembered
+  sign-in in the OS credential store
 - **pywin32** - Mark Hammond (PSF Licence); Windows only, where it is actually shipped
+- **pywin32-ctypes** - Enthought, Inc. (BSD-style); Windows only, keyring's
+  Credential Manager binding
+- **SecretStorage**, **Jeepney** and **cryptography** - Linux only, keyring's
+  Secret Service stack (BSD-3-Clause, MIT and Apache-2.0/BSD-3-Clause)
 
 Used to build and test it, not shipped but no less owed:
 
