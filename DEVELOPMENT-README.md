@@ -129,7 +129,8 @@ substitutes Qt's own font database, so a font size tuned there does not match
 what ships. Measure those on the real platform.
 
 **Always point a probe at a scratch data directory.** `~/.clearbudget` holds
-live user data: both databases, the logs and the saved theme. Set
+live user data: both databases and the saved UI settings (theme and
+remembered save-file location). Set
 `CLEARBUDGET_HOME` and every path the app resolves moves with it:
 
 ```powershell

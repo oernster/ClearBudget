@@ -12,7 +12,7 @@ A standing reference to the project's outstanding technical debt. It records wha
 - The seven files between 351 and 376 lines. Under the cap, clear of the 381 to 399 danger band, nothing to do. Both halves of that rule are now asserted in `tests/structural/test_loc_limits.py`, so this is held by the suite rather than by eye.
 - The two root `.spec` files (`ClearBudget.spec`, `ClearBudgetSetup.spec`) are PyInstaller artefacts and are untracked.
 - The `_leading_underscore.py` module naming inside `ui/views` and `application/services`. Unconventional, clear in intent (private to the package) and consistent.
-- The fourteen tracked PNG sizes plus the `.ico`. Emitted from a single master and consumed by named packaging paths. They are derived from `ClearBudget.png`, the 1024x1024 master, by `generate_icons.py`, which reproduces all eight byte for byte.
+- The fourteen tracked PNG files plus the `.ico`. The seven sized root PNGs and the `.ico` are derived from `ClearBudget.png`, the 1024x1024 master, by `generate_icons.py`, which reproduces all eight byte for byte; the six under `docs/` are the site's favicons, consumed by named paths in its HTML.
 
 ## Not debt (do not "fix" these)
 

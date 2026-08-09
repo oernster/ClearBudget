@@ -128,8 +128,10 @@ what is deliberately left and what only looks like debt.
   automatically once its date passes
 - Dynamic payment methods: assign bills to bank account or specific credit cards
 - Database save to a remembered location and validated load (File menu and the
-  diskette/folder buttons in every tab's navigation tray)
-- Display currency selection - 25 currencies covering English-speaking countries (File > Preferences)
+  folder/diskette buttons at the far left of every tab's navigation tray, with
+  cog and bank buttons beside them for Preferences and Bank Account and a blue
+  information button at the far right opening How It Works)
+- Display currency selection - 25 currencies covering English-speaking countries (Settings > Preferences)
 - Month graphs: the icon in the navigation tray opens the viewed month as a
   bar or line graph (a pilot button switches the style); Monthly Budget plots
   the bank balance day by day, Credit Cards plots every card on one chart
@@ -172,20 +174,26 @@ what is deliberately left and what only looks like debt.
 
 ---
 
-## File Menu
+## Menus
 
-| Action | Description |
-|--------|-------------|
-| New Budget... | Wipe all budget data and start fresh (double confirmation required) |
-| Load... | Replace active database from a saved file (validated before write) |
-| Save | Copy the database to the remembered save file; the first save prompts for a filename, defaulting to Downloads |
-| Save As... | Choose a new save file; the location is remembered between runs |
-| Import / Export > Export Read-Only Viewer Package... (admin only) | Bundle a snapshot of the budget into a zip for a viewer account |
-| Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
-| Preferences... | Choose display currency |
-| Bank Account Settings... | Configure an overdraft facility (limit and APR) |
-| Switch User | Return to login screen |
-| Exit | Close application |
+| Menu | Action | Description |
+|------|--------|-------------|
+| File | New Budget... | Wipe all budget data and start fresh (double confirmation required) |
+| File | Load... | Replace active database from a saved file (validated before write) |
+| File | Save | Copy the database to the remembered save file; the first save prompts for a filename, defaulting to Downloads |
+| File | Save As... | Choose a new save file; the location is remembered between runs |
+| File | Import / Export > Export Read-Only Viewer Package... (admin only) | Bundle a snapshot of the budget into a zip for a viewer account |
+| File | Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
+| File | Exit | Close application |
+| Settings | Preferences... | Choose display currency |
+| Settings | Bank Account | Configure an overdraft facility (limit and APR) |
+| Users | Switch User | Return to login screen |
+| Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
+
+Load, Save, Preferences and Bank Account are also one click away in every
+tab's navigation tray: the folder and diskette buttons sit at its far left,
+then a separator, then the cog (Preferences) and the bank. At the far right,
+after the theme toggle, a blue information button opens How It Works.
 
 Read-only viewer accounts have most of these actions disabled and the window title
 shows "(Read-only)".
@@ -204,11 +212,12 @@ Subsequent launches show a login screen with username/password fields plus:
 - **Create Account...** - create a new (non-admin) account at any time, without
   needing an admin
 
-Admin users have access to a **Users** menu for adding and removing accounts (added
+The **Users** menu offers Switch User to every account; for admins it also
+carries **Manage Users...** for adding and removing accounts (added
 accounts are also non-admin). Admins cannot delete their own account. Deleting a user
 account always permanently deletes that user's budget data too (two confirmations
 required) - there is no way to keep an orphaned data file after the account's
-credentials are destroyed. Non-admin users do not see the Users menu.
+credentials are destroyed. Non-admin users see only Switch User in the Users menu.
 
 A **read-only viewer account** can sign in to browse a snapshot of someone else's
 budget but cannot edit anything.
@@ -224,7 +233,8 @@ machine under `~/.clearbudget/`:
   bcrypt hashes, never in plain text.
 - `budget_<username>.db` - one separate database per user. Accounts cannot read
   each other's budget data through the application.
-- `ui_settings.json` - the chosen theme, so the app opens the way you left it.
+- `ui_settings.json` - the chosen theme and the remembered save-file location,
+  so the app opens the way you left it and Save goes back to the same file.
   No budget data is kept here.
 
 Installing, upgrading, repairing and uninstalling do not touch any of this.
@@ -256,7 +266,7 @@ attacker, protect the files at rest with your operating system's own encryption
 
 ## Display Currency
 
-File > Preferences opens a currency picker. 25 currencies are supported:
+Settings > Preferences opens a currency picker. 25 currencies are supported:
 
 GBP, USD, EUR, AUD, CAD, NZD, ZAR, SGD, HKD, INR, NGN, GHS, KES, PHP, PKR, BDT,
 JMD, TTD, NAD, BWP, ZMW, BZD, GYD, FJD, PGK
@@ -376,9 +386,10 @@ projections."
 
 ---
 
-## Bank Account Settings
+## Bank Account
 
-File > Bank Account Settings opens a dialog to record an overdraft facility: a limit
+Settings > Bank Account (or the bank button in the navigation tray) opens a
+dialog to record an overdraft facility: a limit
 (in the active currency) and an APR. With a facility recorded, the Monthly Budget tab
 shows:
 - An amber warning if the projected balance dips below zero but stays within the

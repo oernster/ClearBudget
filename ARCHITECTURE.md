@@ -390,8 +390,9 @@ bank statement. Both identities are tested.
   honours the `CLEARBUDGET_HOME` environment variable when it is set and
   non-blank. The app never sets it: it exists so that anything running OUTSIDE
   the app (the test suite, a probe, a script) writes to a scratch directory
-  instead of live user data. The directory holds both databases, the logs and
-  the saved theme; a write into it is silent, so it surfaces later as a bug
+  instead of live user data. The directory holds both databases, the saved UI
+  settings (theme and remembered save-file location) and the generated
+  spin-arrow images; a write into it is silent, so it surfaces later as a bug
   report against the app: an offscreen probe applied the light theme in order
   to measure it, `theme.apply_theme` persisted that choice as it is supposed
   to and the app opened light from then on. Constrain the bad state rather than
@@ -479,9 +480,10 @@ bank statement. Both identities are tested.
 - `UserManagementDialog` - admin-only; lists users, Add User, Delete Selected
   (disabled when own row selected); deleting a user always deletes their budget
   data file too (double confirmation)
-- `CurrencyDialog` - combobox of 25 currencies; opened via File > Preferences
+- `CurrencyDialog` - combobox of 25 currencies; opened via Settings >
+  Preferences or the tray's cog button
 - `BankAccountSettingsDialog` - configure overdraft facility limit and APR; opened
-  via File > Bank Account Settings
+  via Settings > Bank Account or the tray's bank button
 - `ExportViewerPackageDialog` - admin: bundle a snapshot of the budget DB into a zip
   for a read-only viewer account
 - `_viewer_package_import_flow.py` - shared import flow used by both the login
@@ -524,6 +526,14 @@ bank statement. Both identities are tested.
   four tabs at three window sizes and nine dialogs at two: zero)
 - `_preferences_flow.py` / `_bank_account_settings_flow.py` - dialog-orchestration
   helpers extracted from `MainWindow` to stay under the LOC limit
+- `_save_load_flow.py` - the Save / Save As / Load flows behind the File menu
+  and the tray buttons, plus the builders for the tray's icon buttons (load,
+  save, cog, bank, info) and their separator. Save copies the database to the
+  remembered location (first save prompts, defaulting to Downloads, then asks
+  before overwriting); Load validates via `db_validation` and confirms before
+  replacing data. The remembered location persists in `ui_settings.json`
+  through `clear_budget/ui/save_location.py`, which shares the file with the
+  theme without disturbing it (`tests/ui_logic/test_save_location.py`)
 - `_main_window_menus.py` (`MainWindowMenuMixin`) - status-bar and File/Users/Help
   menu construction, extracted from `MainWindow` to stay under the LOC limit
 - `_month_view_builders.py` (`MonthViewBuilderMixin`) - builds the `MonthView`
@@ -662,11 +672,18 @@ bank statement. Both identities are tested.
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
   - File menu: New Budget, then Load / Save / Save As (Save goes to the
-    remembered save file, kept in `ui_settings.json`; every tab's nav tray also
-    carries load and save buttons), then the "Import / Export" submenu
-    (Read-Only Viewer Package export/import, admin only), Preferences, Bank
-    Account Settings, Switch User, Exit
-  - Users menu (admin only): Manage Users (list, Add User, Delete Selected)
+    remembered save file, kept in `ui_settings.json`), then the
+    "Import / Export" submenu (Read-Only Viewer Package export/import, admin
+    only), Exit
+  - Settings menu (adjacent to File): Preferences, Bank Account
+  - Users menu: Switch User for every account; admins also get Manage Users
+    (list, Add User, Delete Selected)
+  - Every tab's nav tray mirrors the common actions as icon buttons, built by
+    `_save_load_flow.build_save_load_buttons` / `build_settings_bank_buttons` /
+    `build_info_button` and sized against the app-icon button: folder (Load)
+    and diskette (Save) at the far left, a themed separator, then cog
+    (Preferences) and bank (Bank Account); after the theme toggle at the far
+    right, a blue information button opens How It Works
   - Help menu: About, Check for Updates (opens the GitHub releases page in the
     system browser; the app itself neither downloads nor phones home), How It
     Works, View Licence
@@ -906,9 +923,9 @@ Currency is stored per-user in the `settings` table (`key='currency'`, `value='G
 It is loaded from the DB immediately after opening the user session and activates the
 module-level symbol in `shared.currency`. `Amount.__str__` and `fmt()` both call
 `get_symbol()` at render time, so all displayed values reflect the active currency
-without any additional wiring. On currency change (File > Preferences), the new code is
-saved to the DB, `set_currency()` is called and `database_replaced` is emitted to
-rebuild the window with updated labels.
+without any additional wiring. On currency change (Settings > Preferences), the new
+code is saved to the DB, `set_currency()` is called and `database_replaced` is emitted
+to rebuild the window with updated labels.
 
 ## Cross-Platform Support and Packaging
 
