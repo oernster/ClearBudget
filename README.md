@@ -134,7 +134,11 @@ what is deliberately left and what only looks like debt.
 - Display currency selection - 25 currencies covering English-speaking countries (Settings > Preferences)
 - Month graphs: the icon in the navigation tray opens the viewed month as a
   bar or line graph (a pilot button switches the style); Monthly Budget plots
-  the bank balance day by day, Credit Cards plots every card on one chart
+  the bank balance day by day, Credit Cards plots every card on one chart.
+  Previous/Next buttons inside the graph step it between months without
+  closing it, stopping at the same earliest month the tray does; hovering a
+  bar or a marked point reads out that day's balance; any day the balance
+  sits below zero paints in red, on screen and in the export alike
 - Export the graph as a single HTML file: one page carrying both the bar and
   the line rendering with text explaining what each shows. On Monthly Budget
   a second export takes a range of months and charts your bank balance across

@@ -9,10 +9,10 @@ A standing reference to the project's outstanding technical debt. It records wha
 ## Looks like debt, not worth touching
 
 - The delivery scripts (`buildexe.py`, `buildinstaller.py`, `builddmg.py`, `dmg_icon.py`, `build_utils.py`, `build_flatpak.sh`, `cleanup_flatpak.sh`, `stamp_version.py`). Linear recipes, exempt from the module cap by design. Do not raise length against them.
-- The seven files between 351 and 376 lines. Under the cap, clear of the 381 to 399 danger band, nothing to do. Both halves of that rule are now asserted in `tests/structural/test_loc_limits.py`, so this is held by the suite rather than by eye.
+- The five source and test files between 351 and 376 lines. Under the cap, clear of the 381 to 399 danger band, nothing to do. Both halves of that rule are asserted in `tests/structural/test_loc_limits.py`, so this is held by the suite rather than by eye.
 - The two root `.spec` files (`ClearBudget.spec`, `ClearBudgetSetup.spec`) are PyInstaller artefacts and are untracked.
 - The `_leading_underscore.py` module naming inside `ui/views` and `application/services`. Unconventional, clear in intent (private to the package) and consistent.
-- The fourteen tracked PNG files plus the `.ico`. The seven sized root PNGs and the `.ico` are derived from `ClearBudget.png`, the 1024x1024 master, by `generate_icons.py`, which reproduces all eight byte for byte; the six under `docs/` are the site's favicons, consumed by named paths in its HTML.
+- The fourteen tracked PNG files plus the two `.ico` files. The seven sized root PNGs and the root `.ico` are derived from `ClearBudget.png`, the 1024x1024 master, by `generate_icons.py`, which reproduces all eight byte for byte; the six PNGs and `favicon.ico` under `docs/` are the site's favicons, consumed by named paths in its HTML.
 
 ## Not debt (do not "fix" these)
 
