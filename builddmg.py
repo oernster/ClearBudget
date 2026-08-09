@@ -5,16 +5,25 @@ Requires macOS with Xcode command-line tools and Homebrew.
 Run from the repository root with the venv active:
     python builddmg.py
 
-Optional env vars:
+Notarization is mandatory. A Developer ID signature alone is not enough: since
+macOS 10.15 Gatekeeper rejects signed-but-unnotarized apps with "Apple could not
+verify ... is free of malware". APPLE_ID and APPLE_APP_PASSWORD must be set or
+the build stops before doing any work.
+
+Env vars:
+    APPLE_ID                  : Apple ID for notarization (required)
+    APPLE_APP_PASSWORD        : app-specific password for notarization (required)
     DEVELOPER_ID_APPLICATION  : override the default signing identity
-    APPLE_ID                  : Apple ID for notarization (skipped if not set)
-    APPLE_APP_PASSWORD        : app-specific password for notarization
     APPLE_TEAM_ID             : Team ID for notarization (defaults to W7K465GKFJ)
+    ALLOW_UNNOTARIZED         : set to 1 to build without notarizing. The result
+                                is for local testing only and must never be
+                                published as a release artifact.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -69,6 +78,22 @@ APPLE_ID = os.environ.get("APPLE_ID", "")
 APPLE_APP_PASSWORD = os.environ.get("APPLE_APP_PASSWORD", "")
 APPLE_TEAM_ID = os.environ.get("APPLE_TEAM_ID", "W7K465GKFJ")
 
+# Set by `xcrun notarytool store-credentials <name>`. Preferred over
+# APPLE_APP_PASSWORD because the secret stays in the keychain instead of sitting
+# in this process's arguments, which any other process can read via ps.
+APPLE_KEYCHAIN_PROFILE = os.environ.get("APPLE_KEYCHAIN_PROFILE", "")
+
+# The notary service accepts only an app-specific password from appleid.apple.com
+# and rejects the Apple account password with HTTP 401. The shape is distinctive,
+# so it is checked before the build rather than discovered after it.
+APP_SPECIFIC_PASSWORD_RE = re.compile(r"^[a-z]{4}-[a-z]{4}-[a-z]{4}-[a-z]{4}$")
+
+# Escape hatch for local test builds. Distribution builds must never set this:
+# an unnotarized DMG is rejected by Gatekeeper on every machine but the one that
+# signed it, and the failure is invisible at build time.
+ALLOW_UNNOTARIZED = os.environ.get("ALLOW_UNNOTARIZED", "") == "1"
+NOTARIZING = bool(APPLE_KEYCHAIN_PROFILE or (APPLE_ID and APPLE_APP_PASSWORD))
+
 # Minimal hardened-runtime entitlements. ClearBudget is a local-first SQLite
 # app with no network use and no JIT, so none of the relaxed memory/network
 # entitlements are required. disable-library-validation lets the hardened
@@ -101,6 +126,109 @@ def check_platform() -> None:
     require("create-dmg", "create-dmg")
     require("codesign")
     print("  All tools present.")
+
+
+def check_notarization_credentials() -> None:
+    """Fail before the build starts if the release cannot be notarized.
+
+    Checked up front rather than at the notarization step so a missing password
+    costs seconds instead of a full PyInstaller run.
+    """
+    section("Notarization credentials")
+    if APPLE_KEYCHAIN_PROFILE:
+        print(f"  Notarizing with keychain profile {APPLE_KEYCHAIN_PROFILE}.")
+        return
+    if APPLE_ID and APPLE_APP_PASSWORD:
+        if not APP_SPECIFIC_PASSWORD_RE.match(APPLE_APP_PASSWORD):
+            sys.exit(
+                "ERROR: APPLE_APP_PASSWORD is not an app-specific password.\n"
+                "  Expected four lowercase groups of four, like abcd-efgh-ijkl-mnop.\n"
+                "  An Apple account password is rejected by the notary service with\n"
+                "  'HTTP status code: 401. Invalid credentials'.\n"
+                "  Generate one at https://appleid.apple.com (Sign-In and Security,\n"
+                "  App-Specific Passwords), or avoid putting the secret in the\n"
+                "  environment at all:\n"
+                f"    xcrun notarytool store-credentials {APP_NAME} \\\n"
+                "      --apple-id you@example.com --team-id "
+                f"{APPLE_TEAM_ID} --password <app-specific>\n"
+                f"    export APPLE_KEYCHAIN_PROFILE={APP_NAME}"
+            )
+        print(f"  Notarizing as {APPLE_ID} (team {APPLE_TEAM_ID}).")
+        return
+    if ALLOW_UNNOTARIZED:
+        print("  WARNING: ALLOW_UNNOTARIZED=1 set.")
+        print("  WARNING: this build is for local testing and must not be released.")
+        return
+    sys.exit(
+        "ERROR: APPLE_ID and APPLE_APP_PASSWORD are required.\n"
+        "  Without notarization macOS refuses to launch the app with 'Apple could\n"
+        "  not verify this app is free of malware'. Create an app-specific\n"
+        "  password at https://appleid.apple.com (Sign-In and Security), then:\n"
+        "    export APPLE_ID='you@example.com'\n"
+        "    export APPLE_APP_PASSWORD='xxxx-xxxx-xxxx-xxxx'\n"
+        "  For a local test build only, set ALLOW_UNNOTARIZED=1."
+    )
+
+
+def notarytool_credentials() -> list[str]:
+    """Authentication arguments for notarytool, keychain profile first."""
+    if APPLE_KEYCHAIN_PROFILE:
+        return ["--keychain-profile", APPLE_KEYCHAIN_PROFILE]
+    return [
+        "--apple-id",
+        APPLE_ID,
+        "--password",
+        APPLE_APP_PASSWORD,
+        "--team-id",
+        APPLE_TEAM_ID,
+    ]
+
+
+def redact(cmd: list[str]) -> str:
+    """Render a command with the value after --password masked.
+
+    build_utils.run echoes every command it runs, and CalledProcessError repeats
+    the whole argument list in its traceback. Both would otherwise copy the
+    app-specific password into build logs and CI output.
+    """
+    parts: list[str] = []
+    mask_next = False
+    for arg in (str(c) for c in cmd):
+        parts.append("********" if mask_next else arg)
+        mask_next = arg == "--password"
+    return " ".join(parts)
+
+
+def notarytool_submit(target: Path) -> None:
+    """Submit target to Apple and wait for the verdict.
+
+    A failed submission stops the build rather than producing an artifact that
+    looks distributable. subprocess is called directly instead of through run()
+    so that neither the echoed command nor the failure path exposes the
+    password. Stapling is a separate step because the submitted file and the
+    file that carries the ticket differ for a .app (a zip is submitted, the
+    bundle is stapled).
+    """
+    cmd = [
+        "xcrun",
+        "notarytool",
+        "submit",
+        str(target),
+        *notarytool_credentials(),
+        "--wait",
+    ]
+    print(f"  $ {redact(cmd)}")
+    if subprocess.run(cmd, check=False).returncode == 0:
+        return
+    sys.exit(
+        "ERROR: notarization failed (notarytool output above).\n"
+        "  'HTTP status code: 401' means the credential is wrong: use an\n"
+        "  app-specific password from https://appleid.apple.com, not your Apple\n"
+        "  account password.\n"
+        "  For an 'Invalid' verdict, the per-binary reasons are in:\n"
+        "    xcrun notarytool log <submission-id> "
+        f"--apple-id {APPLE_ID or '<apple-id>'} --team-id {APPLE_TEAM_ID}"
+    )
 
 
 def clean() -> None:
@@ -209,6 +337,27 @@ def sign_bundle(app_path: Path, entitlements_path: Path) -> None:
     print("  Signature verified.")
 
 
+def notarize_bundle(app_path: Path) -> None:
+    """Notarize and staple the .app before it is placed in the DMG.
+
+    Stapling only the DMG leaves the copied-out .app with no local ticket, so
+    Gatekeeper falls back to an online check and the app fails to launch for a
+    user who is offline or behind a restrictive network. notarytool only accepts
+    archives, so the bundle is zipped with ditto first (ditto preserves the
+    symlinks and metadata the embedded signature depends on); the ticket is then
+    stapled to the bundle itself, since a zip cannot carry one.
+    """
+    if not NOTARIZING:
+        return
+    section("Notarize .app bundle")
+    with tempfile.TemporaryDirectory() as tmp:
+        archive = Path(tmp) / f"{APP_NAME}.zip"
+        run(["ditto", "-c", "-k", "--keepParent", str(app_path), str(archive)])
+        notarytool_submit(archive)
+    run(["xcrun", "stapler", "staple", str(app_path)])
+    print("  Bundle notarized and stapled.")
+
+
 def create_dmg(app_path: Path) -> None:
     section("Create DMG")
 
@@ -266,28 +415,10 @@ def sign_dmg() -> None:
 
 
 def notarize_dmg() -> None:
-    if not APPLE_ID or not APPLE_APP_PASSWORD:
-        print(
-            "\n  Notarization skipped (set APPLE_ID and APPLE_APP_PASSWORD to enable)."
-        )
+    if not NOTARIZING:
         return
-
     section("Notarize DMG")
-    run(
-        [
-            "xcrun",
-            "notarytool",
-            "submit",
-            FINAL_DMG,
-            "--apple-id",
-            APPLE_ID,
-            "--password",
-            APPLE_APP_PASSWORD,
-            "--team-id",
-            APPLE_TEAM_ID,
-            "--wait",
-        ]
-    )
+    notarytool_submit(Path(FINAL_DMG))
     run(["xcrun", "stapler", "staple", FINAL_DMG])
     print("  Notarization complete and stapled.")
 
@@ -295,8 +426,17 @@ def notarize_dmg() -> None:
 def verify_dmg() -> None:
     section("Verify DMG")
     run(["codesign", "--verify", FINAL_DMG])
+    if not NOTARIZING:
+        size_mb = os.path.getsize(FINAL_DMG) / (1024 * 1024)
+        print(f"  {FINAL_DMG}  ({size_mb:.1f} MB): UNNOTARIZED, local testing only")
+        return
+    # stapler validate proves a ticket is attached; spctl replays the check
+    # Gatekeeper performs on the end user's machine. Together they catch the
+    # silent case where signing succeeded but notarization never happened.
+    run(["xcrun", "stapler", "validate", FINAL_DMG])
+    run(["spctl", "--assess", "--type", "install", "-vv", FINAL_DMG])
     size_mb = os.path.getsize(FINAL_DMG) / (1024 * 1024)
-    print(f"  {FINAL_DMG}  ({size_mb:.1f} MB): ready for distribution")
+    print(f"  {FINAL_DMG}  ({size_mb:.1f} MB): notarized, ready for distribution")
 
 
 def apply_file_icon(png_path: Path) -> None:
@@ -314,6 +454,7 @@ def main() -> int:
     print(f"Signing identity: {DEVELOPER_ID}")
 
     check_platform()
+    check_notarization_credentials()
     clean()
 
     with tempfile.NamedTemporaryFile(
@@ -336,14 +477,17 @@ def main() -> int:
             app_path = build_app_bundle(entitlements_path, icns_path)
             strip_build_artifacts(app_path)
             sign_bundle(app_path, entitlements_path)
+            notarize_bundle(app_path)
             create_dmg(app_path)
+            # Both icon steps rewrite the DMG, so they run before it is signed
+            # and notarized. Doing either afterwards would modify a file that
+            # Gatekeeper has already been told the hash of.
             if icns_path:
                 set_volume_icon(icns_path, FINAL_DMG, RW_DMG)
+                apply_file_icon(png_path)
             sign_dmg()
             notarize_dmg()
             verify_dmg()
-            if icns_path:
-                apply_file_icon(png_path)
         finally:
             entitlements_path.unlink(missing_ok=True)
 
