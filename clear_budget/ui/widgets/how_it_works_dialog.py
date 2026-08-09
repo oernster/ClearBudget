@@ -40,13 +40,14 @@ each day even before the bill is paid in full - not just the
 
 <hr>
 <h3>Your bank balance</h3>
-<p>You set your balance once with the pencil icon (the dialog opens with the
-figure selected, so you can type straight over it); Clear Budget then keeps
+<p>You set your balance once with the &#128221; button beside the balance
+figure (the dialog opens with the figure selected, so you can type straight
+over it); Clear Budget then keeps
 it up to date. When a bank bill with a due day reaches that day, its amount
 is deducted from your balance at midnight and its <b>Paid</b> box is ticked;
 income with an arrival day is added the same way and marked <b>Received</b>.
 Days that pass while the app is closed are caught up the next time it opens.
-Adding a bill or income dated today or editing an existing item's day to
+Adding a bill or income dated today, like editing an existing item's day to
 today, asks whether to apply it to the balance straight away - say No if
 your balance already reflects it. Deleting a bill
 or income whose amount was applied automatically hands the amount back and
@@ -65,10 +66,10 @@ paid by credit card never touch the bank balance.</p>
 <h3>Monthly Budget tab</h3>
 <ul>
   <li><b>&larr; Previous / Next &rarr;</b> - move between months.</li>
-  <li><b>&#128221; (pencil icon)</b> - set your current bank account balance;
-      from then on it is kept up to date automatically (see "Your bank
-      balance" above). Past months are archived automatically as they end -
-      there is no manual archive step.</li>
+  <li><b>&#128221; button (beside the balance figure)</b> - set your current
+      bank account balance; from then on it is kept up to date automatically
+      (see "Your bank balance" above). Past months are archived automatically
+      as they end - there is no manual archive step.</li>
   <li><b>App icon (in the navigation tray)</b> - opens the viewed month as a
       graph: the bank balance day by day here or every card's balance on
       the Credit Cards tab. A button in the graph switches between bar and
@@ -85,9 +86,10 @@ paid by credit card never touch the bank balance.</p>
       where a bank projection would have nothing to do with the cards on
       screen. Both save to your Downloads folder and open in any browser with
       no internet connection.</li>
-  <li><b>Sun / moon button (far right of the tray, every tab)</b> - switches
-      between light and dark mode. The whole app restyles immediately and
-      your choice is remembered for next time.</li>
+  <li><b>Sun / moon button (right side of the tray, every tab, before the
+      information button)</b> - switches between light and dark mode. The
+      whole app restyles immediately and your choice is remembered for next
+      time.</li>
   <li><b>Overdraft warning</b> - if your projected balance dips below zero at
       any point this month, a warning appears under the nav row: amber if the
       dip stays within your overdraft facility (with an estimated daily
@@ -95,7 +97,11 @@ paid by credit card never touch the bank balance.</p>
       set. Configure your facility via Settings &gt; Bank Account or the bank
       button in the navigation tray.</li>
   <li><b>Add Bill</b> - opens a form to create a new bill.</li>
-  <li><b>Delete Bill</b> - removes the selected bill (asks for confirmation).</li>
+  <li><b>Delete Bill</b> - offers two scopes for the selected bill:
+      <b>Stop from the viewed month</b> drops it from that month onward while
+      earlier and archived months keep it (the history-safe way to end
+      something), while <b>Delete entirely</b> removes it from every month,
+      including history, for entries added by mistake.</li>
   <li><b>Active</b> checkbox (bills/income) - tick to include this item in
       calculations; untick to keep it without it affecting your budget.</li>
   <li><b>Skip</b> checkbox (bills/income) - tick to leave this item out of
@@ -126,8 +132,15 @@ paid by credit card never touch the bank balance.</p>
       fixed day (it will then be pro-rated, as explained above).</li>
   <li><b>Pays Card</b> - for credit card payment bills, which card the
       payment goes towards.</li>
+  <li><b>This bill ends (set a final month)</b> - give a subscription or a
+      credit payment its last month; earlier months are untouched.</li>
   <li><b>This month only</b> - tick to add this as a one-off for the current
       month, without changing your normal recurring bill.</li>
+  <li><b>Amount changes</b> (when editing) - record what the bill costs from
+      a month onward, which is what a rent increase is. The new amount
+      applies to that month and every month after it; months before it keep
+      what they actually cost. A single-month override still wins in its own
+      month.</li>
   <li><b>OK / Cancel</b> - save or discard your changes.</li>
 </ul>
 
@@ -158,43 +171,61 @@ paid by credit card never touch the bank balance.</p>
       <b>Paid</b> are excluded.</li>
   <li><b>Still due (cards)</b> - credit card bills left to pay this month,
       pro-rated the same way. Bills marked <b>Paid</b> are excluded.</li>
+  <li>The balance breakdown also names the lowest point the month reaches
+      and the day it falls on, even when that low lands on a bill day.</li>
+  <li><b>Credit Card Status</b> - one progress bar per card showing current
+      balance against limit, with the month's charges, payment, interest and
+      minimum due inline.</li>
   <li><b>Forward Projection</b> - a look-ahead at your balance over the next
       couple of months.</li>
 </ul>
 
 <h3>Credit Cards tab</h3>
 <ul>
-  <li><b>&larr; Previous / Next &rarr;</b> - move between months.</li>
+  <li><b>&larr; Previous / Next &rarr;</b> - move between months; future
+      months show each card's projected closing balance.</li>
+  <li>Each card is its own panel: an <b>Active</b> checkbox (include the card
+      in calculations), a status badge, an overview row (limit, used,
+      available, utilisation, due day, interest, minimum payment, expiry)
+      and a this-month row (charges, payment received, interest, minimum
+      payment due), with <b>Edit</b> and <b>Delete</b> buttons on the panel.
+      Delete asks for confirmation.</li>
   <li><b>Add Card</b> - opens a form to create a new credit card.</li>
-  <li><b>Edit Card</b> - opens a form to change the selected card's details.</li>
-  <li><b>Delete Card</b> - removes the selected card (asks for confirmation).</li>
-  <li><b>Active</b> checkbox - tick to include this card in calculations.</li>
-  <li>Table columns show each card's limit, balance used, available
-      credit, utilisation %, payment due day, interest rate, minimum
-      payment, expiry and this month's charges/payments/interest.</li>
+  <li>The <b>projection strip</b> beneath the cards shows six months of
+      projected balances per card, colour-coded by how much headroom is
+      left.</li>
 </ul>
 
 <h3>Credit Card dialog (Add/Edit Card)</h3>
 <ul>
   <li><b>Card Name</b> - what the card is called.</li>
   <li><b>Credit Limit</b> - the card's total credit limit.</li>
-  <li><b>Current Balance</b> - how much is currently owed on the card.</li>
+  <li><b>Current Balance</b> - how much is owed on the card as of today.
+      It is stored exactly as you type it; the projections work out the
+      month's opening figure from it behind the scenes.</li>
   <li><b>Interest Rate</b> - the card's APR percentage.</li>
   <li><b>Payment Due Day</b> - the day the card payment is due each month.</li>
   <li><b>Card has expiry date</b> - tick if this card expires; reveals the
       Expiry Month/Year fields.</li>
-  <li><b>Minimum Payment (fixed)</b> - a fixed pound amount for the minimum
-      payment, used if no percentage is set.</li>
+  <li><b>Minimum Payment (fixed)</b> - a fixed amount for the minimum
+      payment, used if no percentage is set (the percentage below overrides
+      it).</li>
   <li><b>Min Payment %</b> - a percentage of the balance used as the
       minimum payment instead of a fixed amount.</li>
   <li><b>Active</b> - tick to include this card in calculations.</li>
+  <li><b>Scheduled limit changes</b> - record dated future changes to the
+      card's limit (any number, with Add change and Remove). Projections
+      look ahead with the right limit and each change folds in by itself
+      once its date passes.</li>
   <li><b>OK / Cancel</b> - save or discard your changes.</li>
 </ul>
 
 <h3>Archive tab</h3>
 <ul>
   <li><b>&larr; Previous / Next &rarr;</b> - move between years.</li>
-  <li>Click a month row to see its full details (bills and income for that month).</li>
+  <li>Click the &#128221; icon at the start of a month's row to see its full
+      details (bills and income for that month). Only fully-completed months
+      appear here.</li>
 </ul>
 
 <h3>File menu</h3>
