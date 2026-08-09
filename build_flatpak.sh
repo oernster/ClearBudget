@@ -189,6 +189,10 @@ finish-args:
   - --socket=fallback-x11
   - --socket=wayland
   - --device=dri
+  # The update check is the app's one outbound call (GitHub's latest-release
+  # endpoint); without network access the sandbox blocks it and every check
+  # reports unreachable.
+  - --share=network
   # ClearBudget stores its databases under ~/.clearbudget and reads/writes
   # user-chosen files for import/export, so it needs home access.
   - --filesystem=home
