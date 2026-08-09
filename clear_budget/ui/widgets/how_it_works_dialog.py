@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.ui import ui_scale
+from clear_budget.ui.widgets.auto_scroller import AutoScroller
 
 _HOW_IT_WORKS_TEXT = """\
 <h2>How Clear Budget Works</h2>
@@ -17,7 +18,7 @@ _HOW_IT_WORKS_TEXT = """\
 <p>Some bills have no fixed day of the month - for example "Food",
 where you spend a bit every day rather than paying it all at once.
 For these bills, Clear Budget assumes the cost is spread evenly across
-the month, and only counts the part that is still ahead of you.</p>
+the month and only counts the part that is still ahead of you.</p>
 <p><b>Equation:</b></p>
 <ul>
   <li><b>days_in_month</b> = number of days in the current month</li>
@@ -45,10 +46,10 @@ it up to date. When a bank bill with a due day reaches that day, its amount
 is deducted from your balance at midnight and its <b>Paid</b> box is ticked;
 income with an arrival day is added the same way and marked <b>Received</b>.
 Days that pass while the app is closed are caught up the next time it opens.
-Adding a bill or income dated today, or editing an existing item's day to
+Adding a bill or income dated today or editing an existing item's day to
 today, asks whether to apply it to the balance straight away - say No if
 your balance already reflects it. Deleting a bill
-or income whose amount was applied automatically hands the amount back, and
+or income whose amount was applied automatically hands the amount back and
 setting the balance yourself supersedes everything applied before it. Bills
 paid by credit card never touch the bank balance.</p>
 
@@ -69,9 +70,9 @@ paid by credit card never touch the bank balance.</p>
       balance" above). Past months are archived automatically as they end -
       there is no manual archive step.</li>
   <li><b>App icon (in the navigation tray)</b> - opens the viewed month as a
-      graph: the bank balance day by day here, or every card's balance on
+      graph: the bank balance day by day here or every card's balance on
       the Credit Cards tab. A button in the graph switches between bar and
-      line styles. Hover a bar, or one of the marked turning points on the
+      line styles. Hover a bar or one of the marked turning points on the
       line, to read out that day's balance. On the bar style a curve in a
       separate colour follows the shape of the month, passing through every
       day's figure (on the Credit Cards graph it follows the total across all
@@ -91,7 +92,8 @@ paid by credit card never touch the bank balance.</p>
       any point this month, a warning appears under the nav row: amber if the
       dip stays within your overdraft facility (with an estimated daily
       interest cost), red if it would exceed your facility or you have none
-      set. Configure your facility via File &gt; Bank Account Settings.</li>
+      set. Configure your facility via Settings &gt; Bank Account or the bank
+      button in the navigation tray.</li>
   <li><b>Add Bill</b> - opens a form to create a new bill.</li>
   <li><b>Delete Bill</b> - removes the selected bill (asks for confirmation).</li>
   <li><b>Active</b> checkbox (bills/income) - tick to include this item in
@@ -118,7 +120,7 @@ paid by credit card never touch the bank balance.</p>
   <li><b>Amount</b> - how much the bill costs.</li>
   <li><b>Payment Method</b> - which bank account or credit card pays this bill.</li>
   <li><b>Category</b> - groups the bill (housing, utilities, subscriptions, etc).</li>
-  <li><b>Type</b> - fixed (same every month), variable (can change), or expiring
+  <li><b>Type</b> - fixed (same every month), variable (can change) or expiring
       (stops on its own at some point).</li>
   <li><b>Day of Month</b> - the day this bill is due. Set to 0 if it has no
       fixed day (it will then be pro-rated, as explained above).</li>
@@ -169,7 +171,7 @@ paid by credit card never touch the bank balance.</p>
   <li><b>Active</b> checkbox - tick to include this card in calculations.</li>
   <li>Table columns show each card's limit, balance used, available
       credit, utilisation %, payment due day, interest rate, minimum
-      payment, expiry, and this month's charges/payments/interest.</li>
+      payment, expiry and this month's charges/payments/interest.</li>
 </ul>
 
 <h3>Credit Card dialog (Add/Edit Card)</h3>
@@ -199,27 +201,49 @@ paid by credit card never touch the bank balance.</p>
 <ul>
   <li><b>New Budget</b> - permanently wipes all your data and starts fresh
       (asks twice to confirm).</li>
-  <li><b>Import / Export</b> - submenu containing:
+  <li><b>Load</b> - replaces your data from a saved file. The file is checked
+      first and you are asked before existing data is overwritten.</li>
+  <li><b>Save</b> - copies your data to your save file, asking before
+      overwriting it. The very first save asks where the file should go,
+      offering your Downloads folder; the choice is remembered between
+      runs.</li>
+  <li><b>Save As</b> - picks a new save file and remembers it from then
+      on.</li>
+  <li><b>Import / Export</b> (admin only) - submenu containing:
     <ul>
-      <li><b>Export Database</b> - saves a backup copy of your data to a file.</li>
-      <li><b>Import Database</b> - replaces your data with a backup file.</li>
-      <li><b>Export Read-Only Viewer Package</b> (admin only) - choose a
+      <li><b>Export Read-Only Viewer Package</b> - choose a
           username and password for someone you want to give read-only
           access to your data, e.g. a family member. This bundles a snapshot
           of your database and those credentials into a single file you can
           hand over (USB, email, etc).</li>
-      <li><b>Import Read-Only Viewer Package</b> (admin only) - import a
+      <li><b>Import Read-Only Viewer Package</b> - import a
           viewer package on this computer, creating or refreshing a
           read-only account.</li>
     </ul>
   </li>
-  <li><b>Preferences</b> - change the display currency.</li>
-  <li><b>Bank Account Settings</b> - record an overdraft facility (limit and
-      APR) so the Monthly Budget tab can warn you accurately about mid-month
-      dips below zero.</li>
-  <li><b>Switch User</b> - log out and return to the login screen.</li>
   <li><b>Exit</b> - close Clear Budget.</li>
 </ul>
+
+<h3>Settings menu</h3>
+<ul>
+  <li><b>Preferences</b> - change the display currency.</li>
+  <li><b>Bank Account</b> - record an overdraft facility (limit and
+      APR) so the Monthly Budget tab can warn you accurately about mid-month
+      dips below zero.</li>
+</ul>
+
+<h3>Users menu</h3>
+<ul>
+  <li><b>Switch User</b> - log out and return to the login screen.</li>
+  <li><b>Manage Users</b> (admin only) - add and remove accounts.</li>
+</ul>
+
+<h3>Navigation tray shortcuts</h3>
+<p>Every tab's navigation tray carries the common actions as buttons. At the
+far left: the folder (Load) and the diskette (Save), then a separator, then
+the cog (Preferences) and the bank (Bank Account). At the far right: the
+sun/moon theme toggle, then the blue information button that opens this
+help.</p>
 
 <h3>Keyboard navigation</h3>
 <ul>
@@ -227,7 +251,7 @@ paid by credit card never touch the bank balance.</p>
       and the controls on the current tab, wrapping around at the end.</li>
   <li><b>Shift+Tab or Left arrow</b> - move backward, wrapping the other
       way.</li>
-  <li><b>Up / Down</b> - walk the rows inside a table, or switch tabs while
+  <li><b>Up / Down</b> - walk the rows inside a table or switch tabs while
       the tab bar is highlighted. A table is a single stop: Tab or the
       horizontal arrows leave it in one press rather than visiting every
       cell.</li>
@@ -246,8 +270,8 @@ paid by credit card never touch the bank balance.</p>
 sets up a read-only account on your computer using the username and password
 you were given.</p>
 <p>Signing in with a read-only account shows "(Read-only)" in the window
-title. You can view all tabs and figures, but cannot add, edit, delete,
-archive, change settings, or import/export data. To get updated figures
+title. You can view all tabs and figures and save a copy of the data but
+cannot add, edit, delete, change settings or load data. To get updated figures
 later, ask the admin to re-export the package and import it again - this
 refreshes the same account with the latest data.</p>
 """
@@ -266,6 +290,7 @@ class HowItWorksDialog(QDialog):
         body.setOpenExternalLinks(True)
         body.setHtml(_HOW_IT_WORKS_TEXT)
         layout.addWidget(body)
+        self._scroller = AutoScroller(body)
 
         btn_row = QHBoxLayout()
         close_btn = QPushButton("Close")

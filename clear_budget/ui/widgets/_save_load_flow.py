@@ -23,16 +23,12 @@ from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.save_location import load_save_location, store_save_location
 from clear_budget.ui.ui_paths import default_downloads_dir
 
+# One source for the icon-button chrome, shared with the theme toggle.
+from clear_budget.ui.utils.format_helpers import NAV_ICON_BTN_CHROME_PX
+
 # Default backup filename offered the first time the user saves.
 _DEFAULT_SAVE_NAME = "clearbudget_backup.db"
 _DB_FILTER = "Clear Budget Database (*.db)"
-
-# The nav graph button's chrome: 2px padding plus 2px border on each side
-# (see QPushButton#NavGraphButton in _theme_controls). Adding it to the glyph
-# height gives the same overall button size as the app-icon button; fixing
-# the size is what stops Qt's default push-button minimum width making an
-# icon-sized control 80-odd pixels wide.
-_BTN_CHROME_PX = 8
 
 
 def _tray_icon_button(glyph: str, tooltip: str, glyph_height: int) -> QPushButton:
@@ -54,7 +50,7 @@ def _tray_icon_button(glyph: str, tooltip: str, glyph_height: int) -> QPushButto
     btn.setObjectName(label_roles.ICON_ACTION)
     glyph_px = glyph_font_px_for_height(glyph, glyph_height)
     btn.setStyleSheet(f"QPushButton#IconAction {{ font-size: {glyph_px}px; }}")
-    side = glyph_height + _BTN_CHROME_PX
+    side = glyph_height + NAV_ICON_BTN_CHROME_PX
     btn.setFixedSize(side, side)
     return btn
 

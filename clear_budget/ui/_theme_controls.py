@@ -4,7 +4,7 @@ Split from theme_qss to keep each module under the 400-LOC limit.
 `control_qss` styles spin buttons, the date edit and the calendar popup;
 `widget_extras_qss` carries the object-name rules for app-specific widgets
 (nav tray, nav graph button, theme toggle, status-bar date label) so those
-widgets need no inline colour styles of their own, and appends the semantic
+widgets need no inline colour styles of their own and appends the semantic
 label roles from `_theme_labels`.
 """
 
@@ -65,7 +65,7 @@ QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {{
 
 /* The arrows are images, not CSS triangles. Qt's stylesheet engine does not
    implement the `width: 0` plus transparent-border triangle idiom: it honours
-   the zero size, draws nothing, and leaves the button box behind, which is
+   the zero size, draws nothing and leaves the button box behind, which is
    what showed two empty rectangles. image: url() is Qt's only stylesheet route
    to a glyph here; spin_arrows draws and caches one per colour. */
 QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
@@ -172,12 +172,9 @@ QPushButton#NavGraphButton, QPushButton#ThemeToggleButton {{
     padding: 2px;
 }}
 
-/* No font-size here on purpose: a stylesheet rule beats setFont, and the
-   toggle's glyph is sized in code from the nav icon's height so the two match.
-   See _build_theme_toggle_button. */
-QPushButton#ThemeToggleButton {{
-    padding: 2px 6px;
-}}
+/* No font-size on the toggle on purpose: a stylesheet rule beats setFont and
+   the toggle's glyph is sized in code from the nav icon's height so the two
+   match. See _build_theme_toggle_button, which also fixes its square size. */
 
 QPushButton#NavGraphButton:enabled:hover,
 QPushButton#NavGraphButton:enabled:focus,
@@ -194,7 +191,7 @@ QPushButton#ThemeToggleButton:disabled {{
 /* The page body is a ring stop when it overflows, so it needs the same green
    ring every other stop shows; without one the keyboard would be on it with
    nothing to say so. Only :focus, never :hover: the pointer is over this
-   surface most of the time the app is open, and a ring following the mouse
+   surface most of the time the app is open and a ring following the mouse
    around the page would be noise rather than a signal. */
 QScrollArea#TabScrollArea {{
     border: 2px solid transparent;
@@ -205,7 +202,7 @@ QScrollArea#TabScrollArea:enabled:focus {{
     border: 2px solid {t["ring"]};
 }}
 
-/* Tooltips were unstyled, so they took the platform default and, worse, any
+/* Tooltips were unstyled, so they took the platform default and (worse) any
    font-size a widget's own stylesheet happened to set (the theme toggle's
    emoji size leaked into its hover text). Sizing and theming them here gives
    every tooltip in the app one appearance. */

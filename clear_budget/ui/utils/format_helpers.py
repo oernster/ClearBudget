@@ -73,6 +73,12 @@ NAV_LABEL_DEFAULT_COLOR = "#9ca3af"
 
 # Nav-icon height used when there is no Previous button to measure against.
 _FALLBACK_ICON_PX = 24
+# The nav icon buttons' chrome: 2px padding plus 2px border on each side (see
+# QPushButton#NavGraphButton in _theme_controls). Added to the glyph height it
+# gives every emoji tray button the same overall size as the app-icon button;
+# fixing the size is what stops Qt's default push-button minimum width making
+# an icon-sized control 80-odd pixels wide.
+NAV_ICON_BTN_CHROME_PX = 8
 # Dynamic property carrying the height a toggle button's glyph must paint at.
 # Stored on the button because the glyph changes with the theme long after the
 # tray was built and the refresh has only the button to work from.
@@ -191,6 +197,10 @@ def _build_theme_toggle_button(glyph_height: int):
     current = theme.current_theme(QApplication.instance())
     btn = QPushButton()
     btn.setObjectName("ThemeToggleButton")
+    # Fixed square, like every other emoji tray button: without it Qt's
+    # default push-button minimum width leaves a ring far wider than the sun.
+    side = glyph_height + NAV_ICON_BTN_CHROME_PX
+    btn.setFixedSize(side, side)
     btn.setProperty(TOGGLE_TARGET_PROPERTY, glyph_height)
     apply_toggle_glyph(btn, theme.toggle_glyph(current))
     btn.setToolTip(theme.toggle_tooltip(current))

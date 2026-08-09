@@ -600,9 +600,14 @@ bank statement. Both identities are tested.
   to do one thing. Making a dialog wait for a Tab press costs a keystroke and
   tells the user nothing. Plain `QDialog` subclasses already behave this way
   through Qt's own default, so the rule holds across all 20 dialog classes
-- `AboutDialog` credits auto-scroll (`_CreditsAutoScroller`) - the About text
-  scrolls to the bottom at reading pace, pauses, rewinds faster and repeats;
-  any manual interaction stops it
+- `auto_scroller.py` (`AutoScroller`) - gentle auto-scroll shared by the About
+  credits and the How It Works text: the surface holds still on open, reads
+  down slowly (one step every second tick), holds at the bottom, rewinds fast
+  and repeats. Any manual input (wheel, click, keys, the scrollbar or keyboard
+  focus entering the surface) only SUSPENDS it; after a moment of stillness it
+  resumes from wherever the reader left it. A modal above the surface freezes
+  the cycle in place. One set of pace constants for the whole app, on the
+  class, never per dialog
 
 **Keyboard navigation** (`keyboard_nav.py` + `_main_window_nav.py`):
 - One application-level `KeyboardNavigator` event filter drives an explicit

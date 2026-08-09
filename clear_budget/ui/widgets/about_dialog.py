@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QObject, Qt, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.ui import ui_scale
+from clear_budget.ui.widgets.auto_scroller import AutoScroller
 from clear_budget.ui.widgets.first_stop_dialog import FirstStopDialog
 from clear_budget.version import __version__ as _APP_VERSION
 
@@ -34,11 +35,11 @@ _ICON_PATH: Path | None = _resolve_about_icon()
 _IS_WINDOWS = sys.platform == "win32"
 
 # Open source credits as discrete HTML <li> items so platform-specific entries
-# (pywin32) can be filtered, and so no stray source comments leak into the
+# (pywin32) can be filtered and so no stray source comments leak into the
 # rendered dialog text.
 # Components SHIPPED inside the application, listed first because these are
 # the ones whose licences travel with the binary. Checked against what the
-# build actually bundles (PySide6, shiboken6, bcrypt, and the native
+# build actually bundles (PySide6, shiboken6, bcrypt and the native
 # sqlite3/libcrypto/libssl/libffi libraries), not against requirements.txt,
 # which lists neither the transitive native libraries nor shiboken6.
 _SHIPPED: list[str] = [
@@ -79,7 +80,7 @@ if _IS_WINDOWS:
     )
 
 # Tools used to BUILD and verify the application. They are not shipped, so
-# they are courtesy rather than obligation, but the work is no less owed.
+# they are courtesy rather than obligation but the work is no less owed.
 _TOOLING: list[str] = [
     (
         "<li><b>PyInstaller</b> - Copyright &copy; 2010&ndash;2025 PyInstaller "
@@ -140,7 +141,7 @@ and their communities:</p>
 <ul>
 {_SHIPPED_HTML}
 </ul>
-<p><b>Used to build and test it</b>, not shipped, but no less owed:</p>
+<p><b>Used to build and test it</b>, not shipped but no less owed:</p>
 <ul>
 {_TOOLING_HTML}
 </ul>
@@ -168,7 +169,7 @@ _LGPL3_NOTICE_HEAD = (
     "    https://www.gnu.org/licenses/lgpl-3.0.html\n"
     "\n"
     "Key terms summary:\n"
-    "  • You may use, copy, modify, and distribute this software under LGPL-3.0.\n"
+    "  • You may use, copy, modify and distribute this software under LGPL-3.0.\n"
     "  • If you distribute modified versions of this software, you must make the modified source available under the same licence.\n"
     "  • You must allow end users to replace or relink the LGPL-licensed libraries (PySide6 / Qt) used by this application.\n"
     "  • There is NO WARRANTY for this program, to the extent permitted by law.\n"
@@ -208,111 +209,8 @@ _THIRD_PARTY_LICENCES.append(
 _LGPL3_NOTICE = _LGPL3_NOTICE_HEAD + "\n".join(_THIRD_PARTY_LICENCES)
 
 
-class _CreditsAutoScroller(QObject):
-    """Cycles the About credits: read down slowly, pause, rewind fast, repeat.
-
-    The text begins scrolling as soon as the dialog opens, with no hold before
-    anything moves; it holds at the bottom for a few seconds so the tail can be
-    read, rewinds to the top at a faster pace, holds briefly and starts over.
-
-    Manual scrolling (wheel, click, dragging the scrollbar or the arrow keys)
-    only SUSPENDS the cycle. Once the reader has been still for a moment it
-    picks up from wherever they left it, so taking over by hand never switches
-    the feature off for the rest of the dialog's life.
-    """
-
-    _TICK_MS = 40
-    _DOWN_STEP_PX = 1
-    _UP_STEP_PX = 6
-    _BOTTOM_PAUSE_MS = 4000
-    _TOP_PAUSE_MS = 2000
-    # Stillness required after a manual scroll before the cycle resumes.
-    _RESUME_AFTER_MS = 2500
-
-    _DOWN = "down"
-    _UP = "up"
-    _PAUSE_TOP = "pause_top"
-    _PAUSE_BOTTOM = "pause_bottom"
-    _MANUAL = "manual"
-    _WAITING = (_PAUSE_TOP, _PAUSE_BOTTOM, _MANUAL)
-    _MANUAL_EVENTS = (
-        QEvent.Type.Wheel,
-        QEvent.Type.MouseButtonPress,
-        QEvent.Type.KeyPress,
-    )
-
-    def __init__(self, browser: QTextBrowser) -> None:
-        super().__init__(browser)
-        self._bar = browser.verticalScrollBar()
-        # Straight into the first descent: nothing is held back on opening.
-        self._phase = self._DOWN
-        self._wait_ms = 0
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._tick)
-        self._timer.start(self._TICK_MS)
-        # The viewport sees the wheel and clicks, the browser sees the keys.
-        browser.installEventFilter(self)
-        browser.viewport().installEventFilter(self)
-        self._bar.sliderPressed.connect(self.suspend)
-        self._bar.sliderReleased.connect(self.suspend)
-        self._bar.sliderMoved.connect(self._on_slider_moved)
-
-    def suspend(self) -> None:
-        """Hand the credits to the reader and start counting down to resume."""
-        self._phase = self._MANUAL
-        self._wait_ms = self._RESUME_AFTER_MS
-
-    def _on_slider_moved(self, _value: int) -> None:
-        """Dragging the scrollbar counts as reading by hand."""
-        self.suspend()
-
-    def eventFilter(self, obj, event) -> bool:
-        if event.type() in self._MANUAL_EVENTS:
-            self.suspend()
-        return False
-
-    def _tick(self) -> None:
-        maximum = self._bar.maximum()
-        if maximum <= 0:
-            return
-        if self._phase in self._WAITING:
-            self._wait_ms -= self._TICK_MS
-            if self._wait_ms <= 0:
-                self._phase = self._resumed_phase(maximum)
-            return
-        if self._phase == self._DOWN:
-            value = self._bar.value() + max(1, ui_scale.px(self._DOWN_STEP_PX))
-            if value >= maximum:
-                self._bar.setValue(maximum)
-                self._phase = self._PAUSE_BOTTOM
-                self._wait_ms = self._BOTTOM_PAUSE_MS
-            else:
-                self._bar.setValue(value)
-            return
-        value = self._bar.value() - max(1, ui_scale.px(self._UP_STEP_PX))
-        if value <= 0:
-            self._bar.setValue(0)
-            self._phase = self._PAUSE_TOP
-            self._wait_ms = self._TOP_PAUSE_MS
-        else:
-            self._bar.setValue(value)
-
-    def _resumed_phase(self, maximum: int) -> str:
-        """The direction to travel once a wait ends.
-
-        After the bottom hold the cycle rewinds. After a manual scroll it reads
-        onward from wherever the reader stopped, unless they are already at the
-        end, in which case rewinding is the only way to carry on.
-        """
-        if self._phase == self._PAUSE_BOTTOM:
-            return self._UP
-        if self._phase == self._MANUAL and self._bar.value() >= maximum:
-            return self._UP
-        return self._DOWN
-
-
 class AboutDialog(FirstStopDialog):
-    """About ClearBudget dialog showing author, icon, and library credits."""
+    """About ClearBudget dialog showing author, icon and library credits."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -339,7 +237,7 @@ class AboutDialog(FirstStopDialog):
         body.setMinimumHeight(ui_scale.px(340))
         body.setStyleSheet("QTextBrowser { border: none; background: transparent; }")
         layout.addWidget(body)
-        self._credits_scroller = _CreditsAutoScroller(body)
+        self._credits_scroller = AutoScroller(body)
 
         btn_row = QHBoxLayout()
         close_btn = QPushButton("Close")
