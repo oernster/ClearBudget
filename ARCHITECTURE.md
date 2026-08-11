@@ -1233,10 +1233,13 @@ an option that read as "remove my data" removed nothing.
 
 - **Black** 88-char line length
 - **Flake8** no violations
-- **Ruff** clean under its default rule set (`ruff check .`), run alongside
-  black and flake8 rather than replacing either. A genuine false positive is
-  suppressed with a targeted `# noqa: <RULE>` and a reason, never by changing
-  behaviour; where ruff and black disagree on formatting, black wins
+- **Ruff** clean (`ruff check .`) under its default rules plus the three
+  blind-handler rules (`BLE001`, `S110`, `S112`) enabled repo-wide in
+  `pyproject.toml`, so a new blind exception handler fails the lint rather
+  than waiting to be noticed. Run alongside black and flake8 rather than
+  replacing either. A genuine false positive is suppressed with a targeted
+  `# noqa: <RULE>` and a reason, never by changing behaviour; where ruff and
+  black disagree on formatting, black wins
 - **100% line and branch coverage** (`pytest -v --cov`, gated at
   `--cov-fail-under=100` with `branch = True`) over `clear_budget`, `main` and
   the Qt-free half of the setup program, excluding UI, interfaces, main.py and

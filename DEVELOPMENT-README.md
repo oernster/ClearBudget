@@ -69,7 +69,7 @@ python main.py     # launch the app
 pytest -v --cov    # run the full suite (100% line and branch gate enforced)
 black .            # format (line length 88)
 flake8             # lint
-ruff check .       # lint (wider default rule set)
+ruff check .       # lint (default rules plus the blind-handler rules)
 ```
 
 The suite is Qt-free and runs clean in one process: the fragile widget-level
