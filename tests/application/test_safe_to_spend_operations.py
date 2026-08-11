@@ -59,12 +59,14 @@ def _seed_balance(conn, *, pence: int, iso: str) -> None:
     conn.commit()
 
 
-def _bill(name: str, pence: int, day, *, start: YearMonth | None = None) -> Bill:
+def _bill(
+    name: str, pence: int, day, *, start: YearMonth | None = None, method: int = 1
+) -> Bill:
     return Bill(
         id=0,
         name=name,
         amount=Amount(pence=pence),
-        payment_method_id=1,
+        payment_method_id=method,
         category="utilities",
         bill_type="fixed",
         day_of_month=day,
@@ -198,6 +200,48 @@ class TestSafeToSpend:
         result = budget_service.get_safe_to_spend()
         assert isinstance(result, SafeToSpendResult)
         assert result.amount_pence == 0
+
+    def test_current_month_runs_on_the_still_due_convention(self, budget_service):
+        """The chain's current-month close equals the Solvency panel's figure.
+
+        An undated bill counts at its prorated REMAINING portion, because the
+        elapsed portion is already inside the stored balance. Charging the
+        full amount again (the raw month-graph convention) understated every
+        later month's opening and called days unsafe that the panel's own
+        timeline showed as safe. A card bill never touches the chain.
+        """
+        from datetime import timedelta
+
+        from clear_budget.domain.entities.credit_card import CreditCard
+        from clear_budget.domain.services._prorating import (
+            days_in_month,
+            prorate_remaining_pence,
+        )
+
+        _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
+        budget_service.add_bill(bill=_bill("Food", 31000, None))
+        budget_service.add_bill(bill=_bill("Water", 5000, 28))
+        card = budget_service.payment_method_repo.add_credit_card(
+            card=CreditCard(
+                id=0,
+                name="Visa",
+                credit_limit=Amount(pence=100000),
+                current_balance_used=Amount(pence=0),
+            )
+        )
+        budget_service.add_bill(bill=_bill("Sub", 9999, 27, method=card.id))
+        budget_service.add_income(income=_income("Bonus", 20000, 30))
+
+        projection, _ = budget_service._build_safe_to_spend_inputs(_TODAY)
+        assert projection[0].day == _TODAY
+        total_days = days_in_month(2026, 7)
+        remaining_food = prorate_remaining_pence(31000, _TODAY.day, total_days)
+        expected_close = 100000 + 20000 - 5000 - remaining_food
+        july_close = next(d for d in projection if d.day == date(2026, 7, total_days))
+        assert july_close.balance_pence == expected_close
+        # August then opens exactly where July closed.
+        aug_first = next(d for d in projection if d.day == date(2026, 8, 1))
+        assert aug_first.day - july_close.day == timedelta(days=1)
 
     def test_determinism_two_identical_calls_agree(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=90000, iso="2026-07-26")

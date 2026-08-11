@@ -201,12 +201,18 @@ focused mixins to stay under the 400-LOC-per-file limit:
   reusing the same projection day conventions as the rest of the app
 - `SafeToSpendOperationsMixin` (`_safe_to_spend_operations.py`) - the Safe to
   Spend Today adapter and its settings. `get_safe_to_spend(today=None)` builds
-  the per-day projection across the forecast window (the current month from
-  the same anchored graph series, later months chained day by day from its
-  close, the window the same 24 months the overdraft runway walks) plus the
-  income event dates (an income already marked Received cannot end the
-  horizon), then calls the pure domain calculation with the stored floor and
-  horizon strategy
+  the per-day projection across the forecast window plus the income event
+  dates (an income already marked Received cannot end the horizon), then
+  calls the pure domain calculation with the stored floor and horizon
+  strategy. The current month runs from today's stored balance over the same
+  still-due items the Solvency panel's timeline shows, an undated bill
+  counted at its prorated REMAINING portion because its elapsed portion is
+  already inside the stored balance (the raw month-graph convention charges
+  the full undated amount again near month end, which double-counted elapsed
+  spending and made the headline disagree with the panel it sits on); its
+  close therefore equals the panel's projected end-of-month figure. Later
+  months chain day by day from that close, over the same 24-month window the
+  overdraft runway walks
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
