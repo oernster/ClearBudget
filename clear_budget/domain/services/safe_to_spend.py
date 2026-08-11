@@ -52,12 +52,19 @@ class SafeToSpendResult:
         binding_day: The minimum-balance day that determined the result.
         horizon_end: The last day considered.
         floor_pence: The safety floor the amount was measured against.
+        first_breach_day: The first day the projection sits below the floor
+            within the horizon, or None when it never does. This is when
+            trouble STARTS; binding_day is when it is at its worst. The two
+            differ in a budget that erodes month on month, where the deepest
+            dip sits at the far end of the window but the first breach may be
+            weeks away.
     """
 
     amount_pence: int
     binding_day: date
     horizon_end: date
     floor_pence: int
+    first_breach_day: date | None
 
 
 def safe_to_spend(
@@ -66,7 +73,7 @@ def safe_to_spend(
     today: date,
     income_days: Sequence[date] = (),
     floor_pence: int = 0,
-    horizon: HorizonStrategy = HorizonStrategy.UNTIL_NEXT_INCOME,
+    horizon: HorizonStrategy = HorizonStrategy.FULL_FORECAST,
 ) -> SafeToSpendResult:
     """The most that could be spent today without breaching the floor.
 
@@ -79,9 +86,13 @@ def safe_to_spend(
             after today matter: income landing today is already inside
             P(today) and does not end the horizon.
         floor_pence: Safety floor the balance must not drop below.
-        horizon: UNTIL_NEXT_INCOME ends the horizon the day before the next
-            income event (degrading to the full window when no future income
-            exists); FULL_FORECAST always uses the whole projection.
+        horizon: FULL_FORECAST (the default) uses the whole projection, so
+            the answer holds for every future day the forecast covers: money
+            spent today lowers every later day, so a horizon that stops at
+            the next payday overstates safety whenever a later month does not
+            pay for itself. UNTIL_NEXT_INCOME ends the horizon the day before
+            the next income event (degrading to the full window when no
+            future income exists), for those who budget payday to payday.
 
     Returns:
         SafeToSpendResult with the signed amount and the binding day.
@@ -105,9 +116,13 @@ def safe_to_spend(
 
     in_horizon = [d for d in future if d.day <= horizon_end]
     binding = min(in_horizon, key=lambda d: d.balance_pence)
+    first_breach = next(
+        (d.day for d in in_horizon if d.balance_pence < floor_pence), None
+    )
     return SafeToSpendResult(
         amount_pence=binding.balance_pence - floor_pence,
         binding_day=binding.day,
         horizon_end=horizon_end,
         floor_pence=floor_pence,
+        first_breach_day=first_breach,
     )

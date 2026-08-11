@@ -119,13 +119,14 @@ what is deliberately left and what only looks like debt.
 - Per-month income flexibility: per-month overrides, per-month skips, a
   "received" flag and "this month only" one-off income entries
 - Safe to Spend Today: the headline of the Solvency tab is the single number
-  you could spend today without any projected day dropping below your safety
-  floor, named with the day that constrains it ("Constrained by 23 Aug"); a
-  shortfall is shown as how much short you are and by when, never as a
-  negative allowance
+  you could spend today without ANY projected day across the whole forecast
+  dropping below your safety floor, named with the day that constrains it
+  ("Constrained by 23 Aug"); a shortfall is shown as how much short you are
+  and the first day you would be under, never as a negative allowance
 - Configurable safety floor (keep a chosen reserve untouched) and horizon for
-  Safe to Spend Today: until your next income lands (default) or across the
-  whole forecast window (Settings > Bank Account)
+  Safe to Spend Today: the whole forecast window (default, so spending the
+  number leaves no future month going under) or only until your next income
+  lands (Settings > Bank Account)
 - Solvency analysis with forward cashflow projections (next 2 months)
 - Runway warnings: a deficit month shows how fast savings are falling per month
   and the first month you would go overdrawn (a mid-month dip counts even when the
@@ -422,12 +423,15 @@ to end something; the second is for entries added by mistake.
 
 - **Safe to Spend Today**: the headline number, the most you could spend today
   without any projected day within the horizon dropping below your safety
-  floor. Positive shows the amount with the constraining day ("Constrained by
-  23 Aug"); zero shows "Nothing safe to spend today"; a projected breach shows
-  the shortfall and its date instead, never a negative allowance. A non-zero
-  floor is named ("keeping £100.00 in reserve"). The horizon runs to the day
-  before your next income by default; a setting widens it to the whole
-  forecast window (Settings > Bank Account)
+  floor. A spend today lowers every later day, so by default the horizon is
+  the whole forecast window: the number holds for every future month, not
+  just the current pay period. Positive shows the amount with the
+  constraining day ("Constrained by 23 Aug"); zero shows "Nothing safe to
+  spend today"; a projected breach shows the shortfall dated from the first
+  day you would be under, with the worst point named beneath, never a
+  negative allowance. A non-zero floor is named ("keeping £100.00 in
+  reserve"). A setting narrows the horizon to your next income for
+  payday-to-payday budgeting (Settings > Bank Account)
 - **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected
   balance; a deficit month names how fast savings are falling per month and the
   first month you would go overdrawn; it also flags "no overdraft facility" when
@@ -455,8 +459,7 @@ shows:
 
 The same dialog holds the Safe to Spend Today settings: the safety floor (a
 balance the number will never plan to go below, default zero) and the horizon
-(until your next income lands by default or across the whole forecast
-window).
+(the whole forecast window by default or narrowed to your next income).
 
 ---
 

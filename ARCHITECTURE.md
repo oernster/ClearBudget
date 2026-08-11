@@ -137,12 +137,15 @@ Everything below this section explains how the code satisfies them.
 - `safe_to_spend.py` - the Safe to Spend Today calculation, pure over its
   inputs: `safe_to_spend(projection, today, income_days, floor_pence, horizon)`
   returns a `SafeToSpendResult` (signed `amount_pence`, the `binding_day` that
-  set the minimum, `horizon_end`, the floor echoed back). `today` is a
+  set the minimum, the `first_breach_day` the projection first sits below the
+  floor or None, `horizon_end`, the floor echoed back). `today` is a
   parameter, never read from the clock; a negative result is the shortfall and
   is deliberately not clamped here (presentation is the UI's job).
-  `HorizonStrategy` is `UNTIL_NEXT_INCOME` (ends the day before the next
-  income event strictly after today, degrading to the full window when none
-  exists) or `FULL_FORECAST`
+  `HorizonStrategy` defaults to `FULL_FORECAST` (the whole projection: a
+  spend today lowers every later day, so a shorter horizon overstates safety
+  whenever a later month does not pay for itself); `UNTIL_NEXT_INCOME` ends
+  the day before the next income event strictly after today, degrading to the
+  full window when none exists
 - `_prorating.py` - shared pro-rating helpers (`days_in_month`,
   `prorate_remaining_pence`) used by live card projection and balance projection
 - `CardMonthlyCalculator.calculate_card_monthly_state()` - Per-card monthly cashflow
@@ -244,7 +247,7 @@ Key methods:
 - `get_safe_to_spend_floor()` / `set_safe_to_spend_floor(amount)` - the safety
   floor (default zero)
 - `get_safe_to_spend_horizon()` / `set_safe_to_spend_horizon(horizon)` - the
-  `HorizonStrategy`, defaulting to `UNTIL_NEXT_INCOME` for an unset or
+  `HorizonStrategy`, defaulting to `FULL_FORECAST` for an unset or
   unrecognised stored value
 - `get_overdraft_limit()` / `set_overdraft_limit(amount)` - overdraft facility limit
 - `get_overdraft_apr_basis_points()` / `set_overdraft_apr_basis_points(basis_points)` -
@@ -550,8 +553,9 @@ bank statement. Both identities are tested.
 - `SolvencyPanel` - Safe to Spend Today headline (rendered by
   `_solvency_panel_display._update_safe_to_spend` from
   `BudgetService.get_safe_to_spend`, reusing the banner's traffic-light state
-  property; a shortfall shows the amount short and its date, never a negative
-  allowance), overdraft alert, mid-month alert, card bars, forward projection
+  property; a shortfall shows the amount short dated from the first day under
+  the floor with the worst point named beneath, never a negative allowance),
+  overdraft alert, mid-month alert, card bars, forward projection
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
 

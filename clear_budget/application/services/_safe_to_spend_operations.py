@@ -67,7 +67,12 @@ class SafeToSpendOperationsMixin:
         set_safe_to_spend_floor_pence(self.bill_repo.conn, amount.pence)
 
     def get_safe_to_spend_horizon(self) -> HorizonStrategy:
-        """Stored horizon strategy, defaulting to UNTIL_NEXT_INCOME."""
+        """Stored horizon strategy, defaulting to FULL_FORECAST.
+
+        The default is the whole forecast because a spend today lowers every
+        later day: a horizon stopping at the next payday overstates safety
+        whenever a later month does not pay for itself.
+        """
         from clear_budget.application.services._settings_operations import (
             get_safe_to_spend_horizon,
         )
@@ -76,7 +81,7 @@ class SafeToSpendOperationsMixin:
         try:
             return HorizonStrategy(stored)
         except ValueError:
-            return HorizonStrategy.UNTIL_NEXT_INCOME
+            return HorizonStrategy.FULL_FORECAST
 
     def set_safe_to_spend_horizon(
         self, *, horizon: HorizonStrategy

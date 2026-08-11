@@ -86,16 +86,16 @@ class TestSettings:
         budget_service.set_safe_to_spend_floor(amount=Amount(pence=10000))
         assert budget_service.get_safe_to_spend_floor() == Amount(pence=10000)
 
-    def test_horizon_defaults_to_until_next_income_and_round_trips(
-        self, budget_service
-    ):
+    def test_horizon_defaults_to_full_forecast_and_round_trips(self, budget_service):
+        assert (
+            budget_service.get_safe_to_spend_horizon() is HorizonStrategy.FULL_FORECAST
+        )
+        budget_service.set_safe_to_spend_horizon(
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME
+        )
         assert (
             budget_service.get_safe_to_spend_horizon()
             is HorizonStrategy.UNTIL_NEXT_INCOME
-        )
-        budget_service.set_safe_to_spend_horizon(horizon=HorizonStrategy.FULL_FORECAST)
-        assert (
-            budget_service.get_safe_to_spend_horizon() is HorizonStrategy.FULL_FORECAST
         )
 
 
@@ -104,6 +104,9 @@ class TestSafeToSpend:
         _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
         budget_service.add_income(income=_income("Salary", 200000, 1))
         budget_service.add_bill(bill=_bill("Water", 30000, 28))
+        budget_service.set_safe_to_spend_horizon(
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME
+        )
         result = budget_service.get_safe_to_spend(today=_TODAY)
         # Horizon runs to 31 July, the day before the August salary; the
         # water bill on the 28th sets the minimum.
@@ -117,6 +120,9 @@ class TestSafeToSpend:
         _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
         budget_service.add_income(income=_income("Salary", 50000, 1))
         budget_service.add_bill(bill=_bill("Rent", 140000, 10, start=_AUGUST))
+        budget_service.set_safe_to_spend_horizon(
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME
+        )
         until_income = budget_service.get_safe_to_spend(today=_TODAY)
         assert until_income.amount_pence == 100000
         assert until_income.horizon_end == date(2026, 7, 31)
@@ -125,6 +131,7 @@ class TestSafeToSpend:
         full = budget_service.get_safe_to_spend(today=_TODAY)
         assert full.amount_pence < until_income.amount_pence
         assert full.binding_day >= date(2026, 8, 10)
+        assert full.first_breach_day is not None
 
     def test_floor_reduces_the_amount_by_exactly_the_floor(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=80000, iso="2026-07-26")
@@ -141,6 +148,9 @@ class TestSafeToSpend:
         budget_service.mark_income_received_for_month(
             income_id=bonus.id, year_month=_JULY
         )
+        budget_service.set_safe_to_spend_horizon(
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME
+        )
         result = budget_service.get_safe_to_spend(today=_TODAY)
         # The 28 July bonus is already inside the stored balance, so the next
         # income event is the August one; the horizon runs to the day before.
@@ -149,12 +159,18 @@ class TestSafeToSpend:
     def test_a_pending_income_later_this_month_ends_the_horizon(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=60000, iso="2026-07-26")
         budget_service.add_income(income=_income("Bonus", 20000, 28))
+        budget_service.set_safe_to_spend_horizon(
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME
+        )
         result = budget_service.get_safe_to_spend(today=_TODAY)
         assert result.horizon_end == date(2026, 7, 27)
 
     def test_undated_income_counts_on_day_one(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=50000, iso="2026-07-26")
         budget_service.add_income(income=_income("Odd jobs", 10000, None))
+        budget_service.set_safe_to_spend_horizon(
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME
+        )
         result = budget_service.get_safe_to_spend(today=_TODAY)
         # The next undated income lands 1 August, so the horizon is July's end.
         assert result.horizon_end == date(2026, 7, 31)

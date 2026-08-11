@@ -20,8 +20,8 @@ _BASIS_POINTS_PER_PERCENT = 100
 
 # Combo rows for the safe-to-spend horizon, in display order.
 _HORIZON_CHOICES = (
-    ("Until next income (default)", HorizonStrategy.UNTIL_NEXT_INCOME),
-    ("Full forecast window", HorizonStrategy.FULL_FORECAST),
+    ("Whole forecast, no month goes under (default)", HorizonStrategy.FULL_FORECAST),
+    ("Until next income only", HorizonStrategy.UNTIL_NEXT_INCOME),
 )
 
 
@@ -35,7 +35,7 @@ class BankAccountSettingsDialog(QDialog):
         overdraft_limit: Amount | None = None,
         overdraft_apr_basis_points: int = 0,
         safe_to_spend_floor: Amount | None = None,
-        safe_to_spend_horizon: HorizonStrategy = HorizonStrategy.UNTIL_NEXT_INCOME,
+        safe_to_spend_horizon: HorizonStrategy = HorizonStrategy.FULL_FORECAST,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Bank Account Settings")
@@ -97,8 +97,9 @@ class BankAccountSettingsDialog(QDialog):
 
         sts_info = QLabel(
             "The safety floor is the balance Safe to Spend Today will never"
-            " plan to go below. The horizon decides how far ahead it looks:"
-            " until your next income lands, or across the whole forecast."
+            " plan to go below. By default it looks across the whole forecast,"
+            " so spending the number today leaves no future month going under;"
+            " it can be narrowed to look only until your next income lands."
         )
         sts_info.setWordWrap(True)
         sts_info.setObjectName(label_roles.SUBTLE)

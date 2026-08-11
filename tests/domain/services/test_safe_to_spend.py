@@ -106,10 +106,23 @@ class TestHorizon:
         balances += [10000] * 10  # big bill after the income event
         return _projection(_TODAY, balances), [income_day]
 
-    def test_until_next_income_ignores_a_bill_after_the_income(self):
+    def test_the_default_horizon_is_the_full_forecast(self):
+        # A spend today lowers every later day, so by default the answer must
+        # hold for the whole window even when income lands in between.
         projection, income_days = self._income_then_big_bill()
         result = safe_to_spend(
             projection=projection, today=_TODAY, income_days=income_days
+        )
+        assert result.amount_pence == 10000
+        assert result.horizon_end == _TODAY + timedelta(days=24)
+
+    def test_until_next_income_ignores_a_bill_after_the_income(self):
+        projection, income_days = self._income_then_big_bill()
+        result = safe_to_spend(
+            projection=projection,
+            today=_TODAY,
+            income_days=income_days,
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME,
         )
         assert result.amount_pence == 30000
         assert result.horizon_end == _TODAY + timedelta(days=9)
@@ -133,13 +146,19 @@ class TestHorizon:
             projection=projection,
             today=_TODAY,
             income_days=[_TODAY, _TODAY + timedelta(days=3)],
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME,
         )
         assert result.horizon_end == _TODAY + timedelta(days=2)
         assert result.amount_pence == 60000
 
     def test_no_future_income_degrades_to_the_full_window(self):
         projection = _projection(_TODAY, [40000, 35000, 30000])
-        result = safe_to_spend(projection=projection, today=_TODAY, income_days=[])
+        result = safe_to_spend(
+            projection=projection,
+            today=_TODAY,
+            income_days=[],
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME,
+        )
         assert result.horizon_end == _TODAY + timedelta(days=2)
         assert result.amount_pence == 30000
 
@@ -149,6 +168,7 @@ class TestHorizon:
             projection=projection,
             today=_TODAY,
             income_days=[_TODAY + timedelta(days=90)],
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME,
         )
         assert result.horizon_end == _TODAY + timedelta(days=1)
 
@@ -211,6 +231,26 @@ class TestMonotonicity:
         before = safe_to_spend(projection=base, today=_TODAY)
         after = safe_to_spend(projection=extra_income, today=_TODAY)
         assert after.amount_pence >= before.amount_pence
+
+
+class TestFirstBreachDay:
+    def test_none_while_the_projection_stays_at_or_above_the_floor(self):
+        projection = _projection(_TODAY, [40000, 20000, 30000])
+        result = safe_to_spend(projection=projection, today=_TODAY)
+        assert result.first_breach_day is None
+
+    def test_names_the_first_day_under_not_the_deepest(self):
+        # Breach starts at offset 2; the deepest dip is later, at offset 4.
+        projection = _projection(_TODAY, [20000, 5000, -1000, -500, -9000])
+        result = safe_to_spend(projection=projection, today=_TODAY)
+        assert result.first_breach_day == _TODAY + timedelta(days=2)
+        assert result.binding_day == _TODAY + timedelta(days=4)
+        assert result.amount_pence == -9000
+
+    def test_measured_against_the_floor_not_zero(self):
+        projection = _projection(_TODAY, [20000, 8000, 15000])
+        result = safe_to_spend(projection=projection, today=_TODAY, floor_pence=10000)
+        assert result.first_breach_day == _TODAY + timedelta(days=1)
 
 
 class TestCurrencyPrecision:

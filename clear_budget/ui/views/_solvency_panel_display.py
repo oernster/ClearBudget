@@ -50,6 +50,19 @@ class SolvencyPanelDisplayMixin:
         if getattr(self, "_last_report", None) is not None:
             self.update_display(self._last_report)
 
+    @staticmethod
+    def _sts_day(day) -> str:
+        """A short day label ("28 Aug"), with the year when it is not this one.
+
+        The full-forecast horizon can bind years out, where "10 Jun" alone
+        would read as this year's June.
+        """
+        label = f"{day.day} {MONTH_NAMES[day.month][:3]}"
+        today = _date.today()  # noqa: DTZ011 (local date)
+        if day.year != today.year:
+            label += f" {day.year}"
+        return label
+
     def _update_safe_to_spend(self) -> None:
         """Render the Safe to Spend Today headline from the live projection.
 
@@ -59,11 +72,15 @@ class SolvencyPanelDisplayMixin:
         shown as a shortfall, never as a negative "safe to spend".
         """
         result = self.view_model.budget_service.get_safe_to_spend()
-        day = f"{result.binding_day.day} {MONTH_NAMES[result.binding_day.month][:3]}"
+        day = self._sts_day(result.binding_day)
         if result.amount_pence < 0:
+            # Trouble is dated from when it STARTS (the first day under the
+            # floor), not from the deepest dip, which in an eroding budget
+            # sits at the far end of the window and reads as far-off noise.
+            breach = self._sts_day(result.first_breach_day or result.binding_day)
             self.sts_banner.setText(
                 f"SHORTFALL: {money_from_pence(abs(result.amount_pence))}"
-                f" short by {day}"
+                f" short, under from {breach}"
             )
             state = STATE_RED
         elif result.amount_pence == 0:
@@ -74,7 +91,10 @@ class SolvencyPanelDisplayMixin:
                 f"{money_from_pence(result.amount_pence)} safe to spend today"
             )
             state = STATE_SAFE
-        detail = f"Constrained by {day}"
+        if result.amount_pence < 0:
+            detail = f"Worst point {day}"
+        else:
+            detail = f"Constrained by {day}"
         if result.floor_pence > 0:
             detail += f", keeping {money_from_pence(result.floor_pence)} in reserve"
         self.sts_detail.setText(detail)
