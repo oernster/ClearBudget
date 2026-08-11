@@ -62,9 +62,8 @@ class BankAccountSettingsDialog(QDialog):
         layout.addWidget(title)
 
         info = QLabel(
-            "If your bank account has an agreed overdraft, enter the limit and"
-            " APR here. Clear Budget will use this to judge whether a mid-month"
-            " dip below zero is covered by your facility."
+            "Used to judge whether a mid-month dip below zero is covered"
+            " by an agreed facility."
         )
         info.setWordWrap(True)
         info.setObjectName(label_roles.SUBTLE)
@@ -96,10 +95,7 @@ class BankAccountSettingsDialog(QDialog):
         layout.addWidget(sts_title)
 
         sts_info = QLabel(
-            "The buffer is the balance Safe to Spend Today will never plan"
-            " to go below, so the number always leaves you that much in"
-            " hand. By default it looks across the whole forecast; it can"
-            " be narrowed to look only until your next income lands."
+            "The buffer is the balance Safe to Spend Today never plans to go below."
         )
         sts_info.setWordWrap(True)
         sts_info.setObjectName(label_roles.SUBTLE)
