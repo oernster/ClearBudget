@@ -184,7 +184,9 @@ what is deliberately left and what only looks like debt.
 - Opens on the monitor you started it from, centred, rather than on whichever
   display the system calls primary; dialogs open over the window that raised
   them, focused on their first usable control
-- Built-in "How It Works" help screen explaining pro-rating, balances and archiving
+- Built-in "How It Works" help screen explaining the concepts (pro-rating,
+  the self-maintaining balance, Safe to Spend Today, archiving), not a
+  button-by-button inventory
 - SQLite storage: per-user budget database + shared users database
 
 ---
@@ -475,8 +477,10 @@ narrowed to your next income).
   into what is bundled with the application and what is only used to build it
 - **Check for Updates** - queries this project's GitHub releases and reports
   whether a newer version exists, offering the download for your platform
-- **How It Works** - plain-English explanation of pro-rating, balances, archiving and
-  tab behaviour, kept in sync with the calculation logic
+- **How It Works** - plain-English explanation of the concepts the screens
+  cannot say for themselves (pro-rating, the self-maintaining balance, Safe
+  to Spend Today, archiving, viewer packages), kept in sync with the
+  calculation logic
 - **View Licence (LGPL-3.0)**
 
 ---

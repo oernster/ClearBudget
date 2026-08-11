@@ -621,7 +621,10 @@ bank statement. Both identities are tested.
 - `BalanceDialog` - edit current bank balance; opens with the figure focused
   and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
-- `HowItWorksDialog` - Help menu explanation of pro-rating, balances, archiving
+- `HowItWorksDialog` - Help menu explanation of the concepts the screens
+  cannot say for themselves (pro-rating, the self-maintaining balance, Safe
+  to Spend Today, archiving, viewer packages); deliberately not a
+  button-by-button inventory, which was tried and read as a wall of text
 - `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text. The credits are
   two lists, not one: what is BUNDLED with the application (whose licences
   travel with the binary, which is what LGPL-3.0 compliance turns on) and what
