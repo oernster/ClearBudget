@@ -109,6 +109,10 @@
 
             <div class="grid">
                 <div class="card">
+                    <h3>Safe to Spend Today</h3>
+                    <p>One actionable number at the top of the Solvency tab: the most you could spend today without any projected day dropping below your safety floor, named with the day that constrains it. A projected breach shows the shortfall and its date instead. The floor and the horizon (until your next income or the whole forecast) are yours to set.</p>
+                </div>
+                <div class="card">
                     <h3>Forward solvency</h3>
                     <p>Projects the next two months and answers the only operational question that matters: will the balance hold?</p>
                 </div>
@@ -167,7 +171,7 @@
                 </div>
                 <div class="card">
                     <h3>Solvency</h3>
-                    <p>Overdraft status, a day-by-day forward projection for the next two months and per-card utilisation bars.</p>
+                    <p>The Safe to Spend Today headline, overdraft status, a day-by-day forward projection for the next two months and per-card utilisation bars.</p>
                 </div>
                 <div class="card">
                     <h3>Credit Cards</h3>
@@ -198,7 +202,9 @@
     </main>
 
     <p class="sr-only">
-        Clear Budget is a free, private, local-first desktop budget planner for Windows, macOS and Linux. It models
+        Clear Budget is a free, private, local-first desktop budget planner for Windows, macOS and Linux. It leads
+        with a Safe to Spend Today figure: the most you could spend today without any projected day dropping below
+        your chosen safety floor, named with the day that constrains it. It models
         forward solvency for the next two months, detects mid-month overdrafts when bills cluster before income,
         tracks credit card utilisation and interest with a six-month balance projection and supports multiple
         users with bcrypt sign-in and isolated per-user databases. The month can be viewed as a graph and exported
@@ -255,7 +261,7 @@
             "installUrl": "https://github.com/oernster/ClearBudget/releases",
             "releaseNotes": "https://github.com/oernster/ClearBudget/releases",
             "softwareHelp": "https://github.com/oernster/ClearBudget#readme",
-            "softwareVersion": "4.3.1",
+            "softwareVersion": "4.4.0",
             "inLanguage": "en-GB",
             "image": "https://ernster.dev/ClearBudget/clearbudget-512.png",
             "isAccessibleForFree": true,
@@ -265,6 +271,7 @@
             "publisher": { "@id": "https://ernster.dev/ClearBudget/#oliver" },
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" },
             "featureList": [
+                "Safe to Spend Today: the most you could spend today without breaching a chosen safety floor, with the constraining day named and a configurable horizon",
                 "Forward solvency projection for the next two months",
                 "Mid-month overdraft detection",
                 "Runway warning naming the first overdrawn month and the monthly drain",

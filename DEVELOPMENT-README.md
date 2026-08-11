@@ -205,10 +205,18 @@ Requires macOS with the Xcode command-line tools and Homebrew.
 python builddmg.py
 ```
 
-This produces **`clearbudget.dmg`** for installation on macOS. Code signing and
-notarization are applied automatically when the matching environment variables
-are set (`DEVELOPER_ID_APPLICATION`, `APPLE_ID`, `APPLE_APP_PASSWORD`,
-`APPLE_TEAM_ID`); without them the build still completes, unsigned.
+This produces **`clearbudget.dmg`** for installation on macOS. Signing and
+notarization are the default, not an option: credentials come from a
+`notarytool` keychain profile (`ClearBudget`, override with
+`APPLE_KEYCHAIN_PROFILE`) or from `APPLE_ID` with an app-specific
+`APPLE_APP_PASSWORD` for CI; the signing identity and `APPLE_TEAM_ID` have
+defaults that env vars can override. Credentials are checked before the build
+starts where possible (a malformed app-specific password fails in seconds
+rather than after a full PyInstaller run) and a failed notarization stops the
+build outright, because an unnotarized DMG is rejected by Gatekeeper on every
+machine but the one that signed it and that failure is invisible at build
+time. Set `ALLOW_UNNOTARIZED=1` to build a local-testing image that must not
+be released.
 
 ### Windows - Installer (`dist-installer\ClearBudgetSetup.exe`)
 

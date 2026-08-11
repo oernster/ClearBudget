@@ -134,6 +134,15 @@ Everything below this section explains how the code satisfies them.
     `"none" | "amber" | "red"`
   - `estimate_daily_overdraft_interest_pence(overdrawn_pence, apr_basis_points)` -
     daily interest estimate from APR stored in basis points
+- `safe_to_spend.py` - the Safe to Spend Today calculation, pure over its
+  inputs: `safe_to_spend(projection, today, income_days, floor_pence, horizon)`
+  returns a `SafeToSpendResult` (signed `amount_pence`, the `binding_day` that
+  set the minimum, `horizon_end`, the floor echoed back). `today` is a
+  parameter, never read from the clock; a negative result is the shortfall and
+  is deliberately not clamped here (presentation is the UI's job).
+  `HorizonStrategy` is `UNTIL_NEXT_INCOME` (ends the day before the next
+  income event strictly after today, degrading to the full window when none
+  exists) or `FULL_FORECAST`
 - `_prorating.py` - shared pro-rating helpers (`days_in_month`,
   `prorate_remaining_pence`) used by live card projection and balance projection
 - `CardMonthlyCalculator.calculate_card_monthly_state()` - Per-card monthly cashflow
@@ -187,6 +196,14 @@ focused mixins to stay under the 400-LOC-per-file limit:
   month, anchored through today's stored balance for the current month) and
   `get_card_graph_series` (one day-end balance series per active card),
   reusing the same projection day conventions as the rest of the app
+- `SafeToSpendOperationsMixin` (`_safe_to_spend_operations.py`) - the Safe to
+  Spend Today adapter and its settings. `get_safe_to_spend(today=None)` builds
+  the per-day projection across the forecast window (the current month from
+  the same anchored graph series, later months chained day by day from its
+  close, the window the same 24 months the overdraft runway walks) plus the
+  income event dates (an income already marked Received cannot end the
+  horizon), then calls the pure domain calculation with the stored floor and
+  horizon strategy
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
@@ -221,6 +238,14 @@ Key methods:
 - `adjust_bank_balance(delta_pence)` - signed delta to the stored balance,
   stamped as-of today (backs the same-day "update balance now?" prompt when an
   item dated today is added)
+- `get_safe_to_spend(today=None)` → `SafeToSpendResult` - Safe to Spend Today
+  from the stored floor and horizon; `today` is injectable so the result is
+  decided by its inputs rather than by the day the code runs
+- `get_safe_to_spend_floor()` / `set_safe_to_spend_floor(amount)` - the safety
+  floor (default zero)
+- `get_safe_to_spend_horizon()` / `set_safe_to_spend_horizon(horizon)` - the
+  `HorizonStrategy`, defaulting to `UNTIL_NEXT_INCOME` for an unset or
+  unrecognised stored value
 - `get_overdraft_limit()` / `set_overdraft_limit(amount)` - overdraft facility limit
 - `get_overdraft_apr_basis_points()` / `set_overdraft_apr_basis_points(basis_points)` -
   overdraft APR, stored as basis points (1bp = 0.01%)
@@ -288,7 +313,8 @@ Key methods:
   8. `settings` - key/value store (`bank_balance`, `bank_balance_day`,
      `bank_balance_date` (the fold baseline; legacy databases without it fall
      back to `bank_balance_day`), `currency`,
-     `overdraft_limit`, `overdraft_apr_bp`)
+     `overdraft_limit`, `overdraft_apr_bp`, `safe_to_spend_floor`,
+     `safe_to_spend_horizon`)
   9. `bill_month_overrides` - per-month bill amount/day override (`day_of_month` is a migration)
   10. `bill_month_skips` - per-month bill exclusion
   11. `bill_month_paid` - per-month bill "paid" flag (excludes it from "still due")
@@ -521,7 +547,11 @@ bank statement. Both identities are tested.
 - `MonthView` - bill/income tables with inline editing; balance display adapts
   to current vs future month; composed of mixins (builders, table, edit, delete,
   apply-prompt) to stay under the LOC limit
-- `SolvencyPanel` - overdraft alert, mid-month alert, card bars, forward projection
+- `SolvencyPanel` - Safe to Spend Today headline (rendered by
+  `_solvency_panel_display._update_safe_to_spend` from
+  `BudgetService.get_safe_to_spend`, reusing the banner's traffic-light state
+  property; a shortfall shows the amount short and its date, never a negative
+  allowance), overdraft alert, mid-month alert, card bars, forward projection
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
 
@@ -553,7 +583,8 @@ bank statement. Both identities are tested.
   data file too (double confirmation)
 - `CurrencyDialog` - combobox of 25 currencies; opened via Settings >
   Preferences or the tray's cog button
-- `BankAccountSettingsDialog` - configure overdraft facility limit and APR; opened
+- `BankAccountSettingsDialog` - configure the overdraft facility (limit and
+  APR) plus the Safe to Spend Today safety floor and horizon strategy; opened
   via Settings > Bank Account or the tray's bank button
 - `ExportViewerPackageDialog` - admin: bundle a snapshot of the budget DB into a zip
   for a read-only viewer account
@@ -1048,7 +1079,7 @@ Each platform produces one distributable artefact from this shared codebase:
 | Platform | Built by | Produces |
 |----------|----------|----------|
 | Windows | `buildexe.py` (PyInstaller) then `buildinstaller.py` | `ClearBudgetSetup.exe`, a single-file per-user installer |
-| macOS | `builddmg.py` | `clearbudget.dmg` (signed and notarized when Apple credentials are configured) |
+| macOS | `builddmg.py` | `clearbudget.dmg` (signed and notarized; the build fails rather than produce an unnotarized release, with `ALLOW_UNNOTARIZED=1` as a local-testing escape hatch) |
 | Linux | `build_flatpak.sh` (+ `cleanup_flatpak.sh`) | `clearbudget.flatpak`, on the Freedesktop runtime |
 
 The Windows installer is itself a small PySide6 application under `installer/`

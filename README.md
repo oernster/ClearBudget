@@ -59,7 +59,7 @@ secure authentication.
 | Tests | pytest with a 100% line and branch coverage gate; real implementations and hand-written fakes, no mock libraries |
 | Quality | black (88 columns), flake8, ruff, a 400-line file limit |
 | Windows packaging | PyInstaller plus a bespoke per-user setup program written in PySide6 |
-| macOS packaging | `.dmg` disk image, signed and notarized when Apple credentials are configured |
+| macOS packaging | `.dmg` disk image, signed and notarized; the build fails rather than produce an unnotarized release (a local-only escape hatch exists for development) |
 | Linux packaging | Flatpak on the Freedesktop runtime |
 
 ---
@@ -118,6 +118,14 @@ what is deliberately left and what only looks like debt.
   type straight over
 - Per-month income flexibility: per-month overrides, per-month skips, a
   "received" flag and "this month only" one-off income entries
+- Safe to Spend Today: the headline of the Solvency tab is the single number
+  you could spend today without any projected day dropping below your safety
+  floor, named with the day that constrains it ("Constrained by 23 Aug"); a
+  shortfall is shown as how much short you are and by when, never as a
+  negative allowance
+- Configurable safety floor (keep a chosen reserve untouched) and horizon for
+  Safe to Spend Today: until your next income lands (default) or across the
+  whole forecast window (Settings > Bank Account)
 - Solvency analysis with forward cashflow projections (next 2 months)
 - Runway warnings: a deficit month shows how fast savings are falling per month
   and the first month you would go overdrawn (a mid-month dip counts even when the
@@ -180,7 +188,7 @@ what is deliberately left and what only looks like debt.
 ## Application Tabs
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
-- **Solvency** - Financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months. The breakdown for the month on screen states its lowest point and the day it falls on, including when that low lands on a bill day rather than a payday
+- **Solvency** - Safe to Spend Today headline, financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months. The breakdown for the month on screen states its lowest point and the day it falls on, including when that low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
@@ -198,7 +206,7 @@ what is deliberately left and what only looks like debt.
 | File | Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
 | File | Exit | Close application |
 | Settings | Preferences... | Choose display currency |
-| Settings | Bank Account | Configure an overdraft facility (limit and APR) |
+| Settings | Bank Account | Configure an overdraft facility (limit and APR) plus the Safe to Spend Today safety floor and horizon |
 | Users | Switch User | Return to login screen |
 | Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
 
@@ -412,6 +420,14 @@ to end something; the second is for entries added by mistake.
 
 ## Solvency Panel
 
+- **Safe to Spend Today**: the headline number, the most you could spend today
+  without any projected day within the horizon dropping below your safety
+  floor. Positive shows the amount with the constraining day ("Constrained by
+  23 Aug"); zero shows "Nothing safe to spend today"; a projected breach shows
+  the shortfall and its date instead, never a negative allowance. A non-zero
+  floor is named ("keeping £100.00 in reserve"). The horizon runs to the day
+  before your next income by default; a setting widens it to the whole
+  forecast window (Settings > Bank Account)
 - **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected
   balance; a deficit month names how fast savings are falling per month and the
   first month you would go overdrawn; it also flags "no overdraft facility" when
@@ -436,6 +452,11 @@ shows:
 - An amber warning if the projected balance dips below zero but stays within the
   facility, including an estimated daily interest cost
 - A red warning if the dip would exceed the facility or if no facility is set at all
+
+The same dialog holds the Safe to Spend Today settings: the safety floor (a
+balance the number will never plan to go below, default zero) and the horizon
+(until your next income lands by default or across the whole forecast
+window).
 
 ---
 
