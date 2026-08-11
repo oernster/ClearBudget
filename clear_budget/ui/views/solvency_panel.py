@@ -34,6 +34,9 @@ from clear_budget.ui.views._solvency_panel_forward import SolvencyPanelForwardMi
 from clear_budget.ui.views._solvency_panel_narratives import (
     SolvencyPanelNarrativeMixin,
 )
+from clear_budget.ui.views._solvency_panel_safe_to_spend import (
+    SolvencyPanelSafeToSpendMixin,
+)
 
 # Section headings on this tab share one QSS role (see _theme_controls).
 _HEADING_ROLE = "SolvencySectionHeading"
@@ -48,6 +51,7 @@ class SolvencyPanel(
     SolvencyPanelDisplayMixin,
     SolvencyPanelForwardMixin,
     SolvencyPanelNarrativeMixin,
+    SolvencyPanelSafeToSpendMixin,
     QWidget,
 ):
     """Displays account solvency status with three critical sections."""

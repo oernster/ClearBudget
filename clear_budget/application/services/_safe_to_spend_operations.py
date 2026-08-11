@@ -146,7 +146,13 @@ class SafeToSpendOperationsMixin:
             nominal = min(bill.day_of_month or _UNDATED_BILL_DAY, days)
             per_day[max(nominal, today.day)] -= bill.amount.pence
 
-        balance = self.get_bank_balance().pence
+        # Raw signed pence, never Amount: an overdrawn account is a real
+        # (negative) starting point the projection must carry, not an error.
+        from clear_budget.application.services._settings_operations import (
+            get_bank_balance_pence,
+        )
+
+        balance = get_bank_balance_pence(getattr(self.bill_repo, "conn", None))
         projection = []
         for day in range(today.day, days + 1):
             balance += per_day[day]

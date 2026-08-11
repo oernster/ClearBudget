@@ -8,7 +8,7 @@ dropping below the configured safety floor.
 
 where P(d) is the projected end-of-day balance assuming no discretionary
 spend today, H is the horizon (today through the day before the next income
-event, or the whole forecast window) and F is the safety floor.
+event or the whole forecast window) and F is the safety floor.
 
 The result is signed: a negative value is the shortfall and is NOT clamped
 here. Presentation of a shortfall is the UI's job.
@@ -52,12 +52,12 @@ class SafeToSpendResult:
         binding_day: The minimum-balance day that determined the result.
         horizon_end: The last day considered.
         floor_pence: The safety floor the amount was measured against.
-        first_breach_day: The first day the projection sits below the floor
-            within the horizon, or None when it never does. This is when
-            trouble STARTS; binding_day is when it is at its worst. The two
-            differ in a budget that erodes month on month, where the deepest
-            dip sits at the far end of the window but the first breach may be
-            weeks away.
+        first_breach_day: The first day the baseline projection (no spend
+            today) sits below the floor within the strategy horizon; None
+            when it never does. Days from it onward are excluded from the
+            calculation: they are already below the floor regardless of what
+            is spent today, so they can say nothing about today's spending.
+            The UI warns about them separately.
     """
 
     amount_pence: int
@@ -93,6 +93,9 @@ def safe_to_spend(
             pay for itself. UNTIL_NEXT_INCOME ends the horizon the day before
             the next income event (degrading to the full window when no
             future income exists), for those who budget payday to payday.
+            Either way the horizon then self-truncates at the first day the
+            baseline projection is already below the floor (see
+            SafeToSpendResult.first_breach_day).
 
     Returns:
         SafeToSpendResult with the signed amount and the binding day.
@@ -115,14 +118,25 @@ def safe_to_spend(
             horizon_end = min(horizon_end, upcoming[0] - timedelta(days=1))
 
     in_horizon = [d for d in future if d.day <= horizon_end]
-    binding = min(in_horizon, key=lambda d: d.balance_pence)
     first_breach = next(
         (d.day for d in in_horizon if d.balance_pence < floor_pence), None
     )
+    # The horizon self-truncates at the first day the baseline is already
+    # below the floor: from there on nothing is safe to spend regardless, so
+    # accumulating that stretch into the minimum would report a meaningless
+    # multi-month depth as though it were owed today. The number is what can
+    # be spent without breaking the stretch that is healthy anyway. When
+    # today itself is under the floor, the healthy stretch is empty and the
+    # result is today's own (negative) gap.
+    considered = in_horizon
+    if first_breach is not None:
+        healthy = [d for d in in_horizon if d.day < first_breach]
+        considered = healthy or [in_horizon[0]]
+    binding = min(considered, key=lambda d: d.balance_pence)
     return SafeToSpendResult(
         amount_pence=binding.balance_pence - floor_pence,
         binding_day=binding.day,
-        horizon_end=horizon_end,
+        horizon_end=considered[-1].day,
         floor_pence=floor_pence,
         first_breach_day=first_breach,
     )

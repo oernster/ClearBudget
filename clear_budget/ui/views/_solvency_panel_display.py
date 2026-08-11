@@ -7,9 +7,8 @@ from clear_budget.domain.services._prorating import (
     prorate_remaining_pence,
 )
 from clear_budget.ui import theme, ui_scale
-from clear_budget.application.formatting import money_from_pence
 from clear_budget.ui.label_roles import set_role as _repolish_role
-from clear_budget.ui.theme_tokens import STATE_AT_RISK, STATE_RED, STATE_SAFE
+from clear_budget.ui.theme_tokens import STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     fmt,
@@ -29,8 +28,8 @@ class SolvencyPanelDisplayMixin:
     ) -> str:
         """Parenthetical runway note for a deficit month.
 
-        States the monthly drain and, when a future overdraft lands further out
-        than next month, the month it first dips into one (a mid-month dip
+        States the monthly drain and also names the month a future overdraft
+        first lands in when that is further out than next month (a mid-month dip
         counts even if later income lifts the close back positive). A next-month
         dip is named by the banner itself, so it is omitted here. Empty when
         income covers the bills.
@@ -49,57 +48,6 @@ class SolvencyPanelDisplayMixin:
         """Re-render after a theme switch, so code-set colours follow it."""
         if getattr(self, "_last_report", None) is not None:
             self.update_display(self._last_report)
-
-    @staticmethod
-    def _sts_day(day) -> str:
-        """A short day label ("28 Aug"), with the year when it is not this one.
-
-        The full-forecast horizon can bind years out, where "10 Jun" alone
-        would read as this year's June.
-        """
-        label = f"{day.day} {MONTH_NAMES[day.month][:3]}"
-        today = _date.today()  # noqa: DTZ011 (local date)
-        if day.year != today.year:
-            label += f" {day.year}"
-        return label
-
-    def _update_safe_to_spend(self) -> None:
-        """Render the Safe to Spend Today headline from the live projection.
-
-        Always about today, whichever month is being viewed: the number is
-        what could leave the account now without any projected day within
-        the horizon dropping below the safety floor. A negative result is
-        shown as a shortfall, never as a negative "safe to spend".
-        """
-        result = self.view_model.budget_service.get_safe_to_spend()
-        day = self._sts_day(result.binding_day)
-        if result.amount_pence < 0:
-            # Trouble is dated from when it STARTS (the first day under the
-            # floor), not from the deepest dip, which in an eroding budget
-            # sits at the far end of the window and reads as far-off noise.
-            breach = self._sts_day(result.first_breach_day or result.binding_day)
-            self.sts_banner.setText(
-                f"SHORTFALL: {money_from_pence(abs(result.amount_pence))}"
-                f" short, under from {breach}"
-            )
-            state = STATE_RED
-        elif result.amount_pence == 0:
-            self.sts_banner.setText("Nothing safe to spend today")
-            state = STATE_AT_RISK
-        else:
-            self.sts_banner.setText(
-                f"{money_from_pence(result.amount_pence)} safe to spend today"
-            )
-            state = STATE_SAFE
-        if result.amount_pence < 0:
-            detail = f"Worst point {day}"
-        else:
-            detail = f"Constrained by {day}"
-        if result.floor_pence > 0:
-            detail += f", keeping {money_from_pence(result.floor_pence)} in reserve"
-        self.sts_detail.setText(detail)
-        self.sts_banner.setProperty("state", state)
-        _repolish(self.sts_banner)
 
     def update_display(self, report) -> None:
         if not report:
@@ -348,7 +296,7 @@ class SolvencyPanelDisplayMixin:
         the same _build_month_cashflow_summary engine that colours the
         projection rows, so the title matches the paragraph the user saw for
         that month. Red is reserved for breaching the overdraft floor (below
-        zero with no facility, or beyond an agreed one); staying positive or
+        zero with no facility or beyond an agreed one); staying positive or
         dipping only within a facility is amber.
 
         The CURRENT month is judged on its live/actual balance instead. It is

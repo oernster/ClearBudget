@@ -137,15 +137,20 @@ Everything below this section explains how the code satisfies them.
 - `safe_to_spend.py` - the Safe to Spend Today calculation, pure over its
   inputs: `safe_to_spend(projection, today, income_days, floor_pence, horizon)`
   returns a `SafeToSpendResult` (signed `amount_pence`, the `binding_day` that
-  set the minimum, the `first_breach_day` the projection first sits below the
-  floor or None, `horizon_end`, the floor echoed back). `today` is a
-  parameter, never read from the clock; a negative result is the shortfall and
-  is deliberately not clamped here (presentation is the UI's job).
-  `HorizonStrategy` defaults to `FULL_FORECAST` (the whole projection: a
-  spend today lowers every later day, so a shorter horizon overstates safety
-  whenever a later month does not pay for itself); `UNTIL_NEXT_INCOME` ends
-  the day before the next income event strictly after today, degrading to the
-  full window when none exists
+  set the minimum, the `first_breach_day` the baseline projection first sits
+  below the floor or None, `horizon_end`, the floor echoed back). `today` is
+  a parameter, never read from the clock. `HorizonStrategy` defaults to
+  `FULL_FORECAST` (the whole projection: a spend today lowers every later
+  day, so a shorter horizon overstates safety whenever a later month does
+  not pay for itself); `UNTIL_NEXT_INCOME` ends the day before the next
+  income event strictly after today, degrading to the full window when none
+  exists. Either way the horizon then SELF-TRUNCATES at the first day the
+  baseline is already below the floor: from there on nothing is safe to
+  spend regardless of today, so accumulating that stretch into the minimum
+  would report a meaningless multi-month depth as though it were owed today.
+  The amount is the minimum over the still-healthy stretch; it is negative
+  only when today itself is under the floor and is not clamped
+  (presentation is the UI's job)
 - `_prorating.py` - shared pro-rating helpers (`days_in_month`,
   `prorate_remaining_pence`) used by live card projection and balance projection
 - `CardMonthlyCalculator.calculate_card_monthly_state()` - Per-card monthly cashflow
@@ -557,11 +562,13 @@ bank statement. Both identities are tested.
   to current vs future month; composed of mixins (builders, table, edit, delete,
   apply-prompt) to stay under the LOC limit
 - `SolvencyPanel` - Safe to Spend Today headline (rendered by
-  `_solvency_panel_display._update_safe_to_spend` from
+  `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` from
   `BudgetService.get_safe_to_spend`, reusing the banner's traffic-light state
-  property; a shortfall shows the amount short dated from the first day under
-  the floor with the worst point named beneath, never a negative allowance),
-  overdraft alert, mid-month alert, card bars, forward projection
+  property; a later baseline breach turns the tone amber and is named on the
+  secondary line, "the forecast goes under from 14 Oct regardless", never
+  summed into the amount; "NOTHING SAFE TO SPEND" appears only when today is
+  already under the floor), overdraft alert, mid-month alert, card bars,
+  forward projection
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
 

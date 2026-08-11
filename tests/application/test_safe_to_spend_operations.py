@@ -177,24 +177,41 @@ class TestSafeToSpend:
         # The next undated income lands 1 August, so the horizon is July's end.
         assert result.horizon_end == date(2026, 7, 31)
 
-    def test_shortfall_is_signed_not_clamped(self, budget_service):
+    def test_the_healthy_stretch_bounds_the_amount_before_a_breach(
+        self, budget_service
+    ):
+        # The rent on the 28th takes the baseline under regardless of any
+        # spend today, so the amount is what the days before it can spare
+        # and the breach day is reported for the warning line.
         _seed_balance(budget_service.bill_repo.conn, pence=10000, iso="2026-07-26")
         budget_service.add_income(income=_income("Salary", 200000, 1))
         budget_service.add_bill(bill=_bill("Rent", 45000, 28))
         result = budget_service.get_safe_to_spend(today=_TODAY)
-        assert result.amount_pence == -35000
-        assert result.binding_day == date(2026, 7, 28)
+        assert result.amount_pence == 10000
+        assert result.binding_day == _TODAY
+        assert result.first_breach_day == date(2026, 7, 28)
 
-    def test_multi_month_chain_binds_in_a_later_month(self, budget_service):
-        # A standing deficit: the balance erodes month on month, so under
-        # FULL_FORECAST the binding day sits deep in the window.
+    def test_today_already_under_reports_a_negative_amount(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=-5000, iso="2026-07-26")
+        result = budget_service.get_safe_to_spend(today=_TODAY)
+        assert result.amount_pence == -5000
+        assert result.first_breach_day == _TODAY
+
+    def test_an_eroding_chain_stops_at_its_first_underwater_month(self, budget_service):
+        # A standing deficit erodes the balance month on month. The amount
+        # comes from the lowest day BEFORE the first underwater day, never
+        # from the depths beyond it.
         _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
         budget_service.add_income(income=_income("Salary", 50000, 1))
         budget_service.add_bill(bill=_bill("Rent", 80000, 10))
         budget_service.set_safe_to_spend_horizon(horizon=HorizonStrategy.FULL_FORECAST)
         result = budget_service.get_safe_to_spend(today=_TODAY)
-        assert result.amount_pence < 0
-        assert result.binding_day.year > 2026 or result.binding_day.month > 8
+        # Monthly net is -30000 from August: lows run 70000 (Aug), 40000
+        # (Sep), 10000 (Oct), then November goes under on the 10th.
+        assert result.amount_pence == 10000
+        assert result.binding_day == date(2026, 10, 10)
+        assert result.first_breach_day == date(2026, 11, 10)
+        assert result.horizon_end == date(2026, 11, 9)
 
     def test_default_today_argument(self, budget_service):
         result = budget_service.get_safe_to_spend()

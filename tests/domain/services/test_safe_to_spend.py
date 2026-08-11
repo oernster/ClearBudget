@@ -69,19 +69,32 @@ class TestBoundaryExactness:
         assert second.amount_pence == 0
 
 
-class TestShortfall:
-    def test_negative_result_equals_the_worst_dip_below_the_floor(self):
+class TestBaselineBreachTruncation:
+    def test_the_horizon_stops_where_the_baseline_first_goes_under(self):
+        # From the bill day onward the projection is under REGARDLESS of any
+        # spend today, so those days say nothing about today's spending: the
+        # amount is what the healthy stretch before them can spare.
         projection = _flat_month_with_bill(
             opening=20000, bill=45000, bill_day_offset=3, length=10
         )
         result = safe_to_spend(projection=projection, today=_TODAY)
-        assert result.amount_pence == -25000
-        assert result.binding_day == _TODAY + timedelta(days=3)
+        assert result.amount_pence == 20000
+        assert result.binding_day == _TODAY
+        assert result.horizon_end == _TODAY + timedelta(days=2)
+        assert result.first_breach_day == _TODAY + timedelta(days=3)
 
-    def test_shortfall_is_not_clamped_when_a_floor_is_set(self):
+    def test_today_already_under_reports_todays_own_gap(self):
+        projection = _projection(_TODAY, [-2000, 5000, 5000])
+        result = safe_to_spend(projection=projection, today=_TODAY)
+        assert result.amount_pence == -2000
+        assert result.binding_day == _TODAY
+        assert result.first_breach_day == _TODAY
+
+    def test_today_under_the_floor_is_not_clamped(self):
         projection = _projection(_TODAY, [5000, 5000, 5000])
         result = safe_to_spend(projection=projection, today=_TODAY, floor_pence=8000)
         assert result.amount_pence == -3000
+        assert result.first_breach_day == _TODAY
 
 
 class TestFloor:
@@ -239,18 +252,22 @@ class TestFirstBreachDay:
         result = safe_to_spend(projection=projection, today=_TODAY)
         assert result.first_breach_day is None
 
-    def test_names_the_first_day_under_not_the_deepest(self):
-        # Breach starts at offset 2; the deepest dip is later, at offset 4.
+    def test_names_the_first_day_under_and_binds_before_it(self):
+        # Breach starts at offset 2; the amount comes from the healthy
+        # stretch before it, not from the deeper dips beyond it.
         projection = _projection(_TODAY, [20000, 5000, -1000, -500, -9000])
         result = safe_to_spend(projection=projection, today=_TODAY)
         assert result.first_breach_day == _TODAY + timedelta(days=2)
-        assert result.binding_day == _TODAY + timedelta(days=4)
-        assert result.amount_pence == -9000
+        assert result.binding_day == _TODAY + timedelta(days=1)
+        assert result.amount_pence == 5000
+        assert result.horizon_end == _TODAY + timedelta(days=1)
 
     def test_measured_against_the_floor_not_zero(self):
         projection = _projection(_TODAY, [20000, 8000, 15000])
         result = safe_to_spend(projection=projection, today=_TODAY, floor_pence=10000)
         assert result.first_breach_day == _TODAY + timedelta(days=1)
+        assert result.amount_pence == 10000
+        assert result.binding_day == _TODAY
 
 
 class TestCurrencyPrecision:
