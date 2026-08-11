@@ -212,7 +212,7 @@ what is deliberately left and what only looks like debt.
 | File | Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
 | File | Exit | Close application |
 | Settings | Preferences... | Choose display currency |
-| Settings | Bank Account | Configure an overdraft facility (limit and APR) plus the Safe to Spend Today safety floor and horizon |
+| Settings | Bank Account | Configure an overdraft facility (limit and APR) plus the Safe to Spend Today buffer and horizon |
 | Users | Switch User | Return to login screen |
 | Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
 

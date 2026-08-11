@@ -604,7 +604,7 @@ bank statement. Both identities are tested.
 - `CurrencyDialog` - combobox of 25 currencies; opened via Settings >
   Preferences or the tray's cog button
 - `BankAccountSettingsDialog` - configure the overdraft facility (limit and
-  APR) plus the Safe to Spend Today safety floor and horizon strategy; opened
+  APR) plus the Safe to Spend Today buffer and horizon strategy; opened
   via Settings > Bank Account or the tray's bank button
 - `ExportViewerPackageDialog` - admin: bundle a snapshot of the budget DB into a zip
   for a read-only viewer account
