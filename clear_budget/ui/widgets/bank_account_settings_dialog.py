@@ -96,16 +96,16 @@ class BankAccountSettingsDialog(QDialog):
         layout.addWidget(sts_title)
 
         sts_info = QLabel(
-            "The safety floor is the balance Safe to Spend Today will never"
-            " plan to go below. By default it looks across the whole forecast,"
-            " so spending the number today leaves no future month going under;"
-            " it can be narrowed to look only until your next income lands."
+            "The buffer is the balance Safe to Spend Today will never plan"
+            " to go below, so the number always leaves you that much in"
+            " hand. By default it looks across the whole forecast; it can"
+            " be narrowed to look only until your next income lands."
         )
         sts_info.setWordWrap(True)
         sts_info.setObjectName(label_roles.SUBTLE)
         layout.addWidget(sts_info)
 
-        layout.addWidget(QLabel(f"Safety floor ({get_symbol()}):"))
+        layout.addWidget(QLabel(f"Buffer ({get_symbol()}):"))
         self._floor_edit = QLineEdit()
         self._floor_edit.setText(f"{self._safe_to_spend_floor.pounds:.2f}")
         self._floor_edit.setPlaceholderText("0.00")
@@ -169,20 +169,20 @@ class BankAccountSettingsDialog(QDialog):
 
     @property
     def overdraft_limit(self) -> Amount | None:
-        """New overdraft limit, or None if dialog was cancelled/invalid."""
+        """New overdraft limit; None if the dialog was cancelled or invalid."""
         return self._new_overdraft_limit
 
     @property
     def overdraft_apr_basis_points(self) -> int | None:
-        """New overdraft APR in basis points, or None if cancelled/invalid."""
+        """New overdraft APR in basis points; None if cancelled or invalid."""
         return self._new_overdraft_apr_basis_points
 
     @property
     def safe_to_spend_floor(self) -> Amount | None:
-        """New safety floor, or None if dialog was cancelled/invalid."""
+        """New buffer; None if the dialog was cancelled or invalid."""
         return self._new_safe_to_spend_floor
 
     @property
     def safe_to_spend_horizon(self) -> HorizonStrategy | None:
-        """New horizon strategy, or None if dialog was cancelled/invalid."""
+        """New horizon strategy; None if the dialog was cancelled or invalid."""
         return self._new_safe_to_spend_horizon

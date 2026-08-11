@@ -255,8 +255,11 @@ Key methods:
 - `get_safe_to_spend(today=None)` → `SafeToSpendResult` - Safe to Spend Today
   from the stored floor and horizon; `today` is injectable so the result is
   decided by its inputs rather than by the day the code runs
-- `get_safe_to_spend_floor()` / `set_safe_to_spend_floor(amount)` - the safety
-  floor (default zero)
+- `get_safe_to_spend_floor()` / `set_safe_to_spend_floor(amount)` - the
+  floor, which the UI calls the Safe to Spend "buffer" (the naming split:
+  floor is the domain term the calculation uses, buffer is what a user
+  reads). Defaults to 20.00 in the active currency when never set; an
+  explicitly saved zero is honoured as zero
 - `get_safe_to_spend_horizon()` / `set_safe_to_spend_horizon(horizon)` - the
   `HorizonStrategy`, defaulting to `FULL_FORECAST` for an unset or
   unrecognised stored value

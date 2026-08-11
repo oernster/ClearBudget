@@ -120,15 +120,16 @@ what is deliberately left and what only looks like debt.
   "received" flag and "this month only" one-off income entries
 - Safe to Spend Today: the headline of the Solvency tab is the single number
   you could spend today without pushing ANY day of the still-healthy
-  forecast below your safety floor, named with the day that constrains it
+  forecast below your buffer, named with the day that constrains it
   ("Constrained by 23 Aug"). Months the forecast already has going under are
   a warning of their own, named beneath the number ("the forecast goes under
   from 14 Oct regardless"), never summed into it: a dip accumulated across
   future months would read as a debt owed today, which it is not
-- Configurable safety floor (keep a chosen reserve untouched) and horizon for
-  Safe to Spend Today: the whole forecast window (default, so spending the
-  number leaves no future month going under) or only until your next income
-  lands (Settings > Bank Account)
+- User-editable Safe to Spend buffer (a reserve the number always leaves in
+  hand, £20 by default; set it to zero to plan to the wire) and a horizon
+  setting: the whole forecast window (default, so spending the number leaves
+  no future month going under) or only until your next income lands
+  (Settings > Bank Account)
 - Solvency analysis with forward cashflow projections (next 2 months)
 - Runway warnings: a deficit month shows how fast savings are falling per month
   and the first month you would go overdrawn (a mid-month dip counts even when the
@@ -424,18 +425,18 @@ to end something; the second is for entries added by mistake.
 ## Solvency Panel
 
 - **Safe to Spend Today**: the headline number, the most you could spend today
-  without pushing any day of the still-healthy forecast below your safety
-  floor. A spend today lowers every later day, so by default the horizon is
-  the whole forecast window; it then stops at the first day the forecast is
-  already under REGARDLESS of spending, because from there on nothing is
-  safe to spend anyway and those months can say nothing about today. A
-  positive amount shows with the constraining day ("Constrained by 14 Sep");
-  when the forecast goes under later it shows that warning beside it in amber
-  ("the forecast goes under from 14 Oct regardless"); "Nothing safe to
-  spend" appears when today itself is already at or under the floor. A
-  non-zero floor is named ("keeping £100.00 in reserve"). A setting narrows
-  the horizon to your next income for payday-to-payday budgeting
-  (Settings > Bank Account)
+  without pushing any day of the still-healthy forecast below your buffer
+  (£20 by default, editable in Settings > Bank Account, zero if you want to
+  plan to the wire). A spend today lowers every later day, so by default the
+  horizon is the whole forecast window; it then stops at the first day the
+  forecast is already under REGARDLESS of spending, because from there on
+  nothing is safe to spend anyway and those months can say nothing about
+  today. A positive amount shows with the constraining day ("Constrained by
+  14 Sep"); when the forecast goes under later it shows that warning beside
+  it in amber ("the forecast goes under from 14 Oct regardless"); "Nothing
+  safe to spend" appears when today itself is already at or under the
+  buffer, which is named ("keeping a £20.00 buffer in hand"). A setting
+  narrows the horizon to your next income for payday-to-payday budgeting
 - **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected
   balance; a deficit month names how fast savings are falling per month and the
   first month you would go overdrawn; it also flags "no overdraft facility" when
@@ -461,9 +462,10 @@ shows:
   facility, including an estimated daily interest cost
 - A red warning if the dip would exceed the facility or if no facility is set at all
 
-The same dialog holds the Safe to Spend Today settings: the safety floor (a
-balance the number will never plan to go below, default zero) and the horizon
-(the whole forecast window by default or narrowed to your next income).
+The same dialog holds the Safe to Spend Today settings: the buffer (a balance
+the number will never plan to go below, £20 by default; an explicit zero
+plans to the wire) and the horizon (the whole forecast window by default or
+narrowed to your next income).
 
 ---
 

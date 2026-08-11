@@ -47,7 +47,7 @@ class SolvencyPanelSafeToSpendMixin:
             if result.floor_pence > 0:
                 self.sts_banner.setText(
                     f"NOTHING SAFE TO SPEND: already below your"
-                    f" {money_from_pence(result.floor_pence)} floor"
+                    f" {money_from_pence(result.floor_pence)} buffer"
                 )
             else:
                 self.sts_banner.setText("NOTHING SAFE TO SPEND: already under")
@@ -79,9 +79,13 @@ class SolvencyPanelSafeToSpendMixin:
         """
         detail = f"Constrained by {self._sts_day(result.binding_day)}"
         if result.floor_pence > 0:
-            detail += f", keeping {money_from_pence(result.floor_pence)} in reserve"
+            detail += (
+                f", keeping a {money_from_pence(result.floor_pence)} buffer in hand"
+            )
         if result.first_breach_day is not None:
-            under = "drops below your floor" if result.floor_pence > 0 else "goes under"
+            under = (
+                "drops below your buffer" if result.floor_pence > 0 else "goes under"
+            )
             detail += (
                 f"; the forecast {under} from"
                 f" {self._sts_day(result.first_breach_day)} regardless"

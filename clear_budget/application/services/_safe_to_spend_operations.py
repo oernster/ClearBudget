@@ -34,6 +34,12 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 # FULL_FORECAST and the runway always agree on how far ahead the app looks.
 _FORECAST_WINDOW_MONTHS = _DEFAULT_HORIZON_MONTHS
 
+# The default Safe to Spend buffer: 20.00 in the active currency's minor
+# units. A budget that has never chosen its own buffer keeps this much clear
+# rather than planning to land on exactly zero; an explicitly saved zero is
+# honoured as zero (the UI calls the floor a "buffer").
+_DEFAULT_BUFFER_PENCE = 2000
+
 
 def _income_dates(summary, year_month: YearMonth) -> list[date]:
     """Dates a FUTURE month's income events land on, as the projection counts them."""
@@ -53,14 +59,14 @@ class SafeToSpendOperationsMixin:
 
     __slots__ = ()
 
-    def get_safe_to_spend_floor(self) -> Amount:  # pragma: no cover
+    def get_safe_to_spend_floor(self) -> Amount:
+        """The Safe to Spend buffer, defaulting to 20.00 when never set."""
         from clear_budget.application.services._settings_operations import (
             get_safe_to_spend_floor_pence,
         )
 
-        return Amount(
-            pence=get_safe_to_spend_floor_pence(getattr(self.bill_repo, "conn", None))
-        )
+        stored = get_safe_to_spend_floor_pence(getattr(self.bill_repo, "conn", None))
+        return Amount(pence=_DEFAULT_BUFFER_PENCE if stored is None else stored)
 
     def set_safe_to_spend_floor(self, *, amount: Amount) -> None:  # pragma: no cover
         from clear_budget.application.services._settings_operations import (

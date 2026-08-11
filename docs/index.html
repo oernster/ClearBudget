@@ -110,7 +110,7 @@
             <div class="grid">
                 <div class="card">
                     <h3>Safe to Spend Today</h3>
-                    <p>One actionable number at the top of the Solvency tab: the most you could spend today without pushing any day of the still-healthy forecast below your safety floor, named with the day that constrains it. When the forecast goes under later regardless, that is a named warning beside the number, never summed into it. The floor and the horizon (the whole forecast by default or only until your next income) are yours to set.</p>
+                    <p>One actionable number at the top of the Solvency tab: the most you could spend today without pushing any day of the still-healthy forecast below your buffer, named with the day that constrains it. When the forecast goes under later regardless, that is a named warning beside the number, never summed into it. The buffer (twenty by default, zero if you plan to the wire) and the horizon (the whole forecast by default or only until your next income) are yours to set.</p>
                 </div>
                 <div class="card">
                     <h3>Forward solvency</h3>
@@ -204,7 +204,7 @@
     <p class="sr-only">
         Clear Budget is a free, private, local-first desktop budget planner for Windows, macOS and Linux. It leads
         with a Safe to Spend Today figure: the most you could spend today without any projected day across the
-        whole forecast dropping below your chosen safety floor, named with the day that constrains it. It models
+        whole forecast dropping below your chosen buffer, named with the day that constrains it. It models
         forward solvency for the next two months, detects mid-month overdrafts when bills cluster before income,
         tracks credit card utilisation and interest with a six-month balance projection and supports multiple
         users with bcrypt sign-in and isolated per-user databases. The month can be viewed as a graph and exported
@@ -271,7 +271,7 @@
             "publisher": { "@id": "https://ernster.dev/ClearBudget/#oliver" },
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" },
             "featureList": [
-                "Safe to Spend Today: the most you could spend today without any future day across the forecast breaching a chosen safety floor, with the constraining day named and a configurable horizon",
+                "Safe to Spend Today: the most you could spend today without any future day across the forecast breaching a chosen buffer, with the constraining day named and a configurable horizon",
                 "Forward solvency projection for the next two months",
                 "Mid-month overdraft detection",
                 "Runway warning naming the first overdrawn month and the monthly drain",

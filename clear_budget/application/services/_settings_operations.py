@@ -68,13 +68,15 @@ def set_overdraft_limit_pence(conn, pence: int) -> None:  # pragma: no cover
     conn.commit()
 
 
-def get_safe_to_spend_floor_pence(conn) -> int:  # pragma: no cover
+def get_safe_to_spend_floor_pence(conn) -> int | None:  # pragma: no cover
+    """Stored floor pence; None when never set (the caller applies the
+    default buffer; an explicitly saved zero is honoured as zero)."""
     if conn is None:
-        return 0
+        return None
     cursor = conn.cursor()
     cursor.execute("SELECT value FROM settings WHERE key = ?", ("safe_to_spend_floor",))
     row = cursor.fetchone()
-    return int(row["value"]) if row else 0
+    return int(row["value"]) if row else None
 
 
 def set_safe_to_spend_floor_pence(conn, pence: int) -> None:  # pragma: no cover

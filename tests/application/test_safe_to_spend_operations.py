@@ -83,10 +83,14 @@ def _income(name: str, pence: int, day) -> IncomeSource:
 
 
 class TestSettings:
-    def test_floor_defaults_to_zero_and_round_trips(self, budget_service):
-        assert budget_service.get_safe_to_spend_floor() == Amount(pence=0)
+    def test_buffer_defaults_to_twenty_and_round_trips(self, budget_service):
+        assert budget_service.get_safe_to_spend_floor() == Amount(pence=2000)
         budget_service.set_safe_to_spend_floor(amount=Amount(pence=10000))
         assert budget_service.get_safe_to_spend_floor() == Amount(pence=10000)
+
+    def test_an_explicit_zero_buffer_is_honoured_not_defaulted(self, budget_service):
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
+        assert budget_service.get_safe_to_spend_floor() == Amount(pence=0)
 
     def test_horizon_defaults_to_full_forecast_and_round_trips(self, budget_service):
         assert (
@@ -109,12 +113,24 @@ class TestSafeToSpend:
         budget_service.set_safe_to_spend_horizon(
             horizon=HorizonStrategy.UNTIL_NEXT_INCOME
         )
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
         result = budget_service.get_safe_to_spend(today=_TODAY)
         # Horizon runs to 31 July, the day before the August salary; the
         # water bill on the 28th sets the minimum.
         assert result.horizon_end == date(2026, 7, 31)
         assert result.binding_day == date(2026, 7, 28)
         assert result.amount_pence == 70000
+
+    def test_the_default_buffer_reduces_the_amount_by_twenty(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
+        budget_service.add_income(income=_income("Salary", 200000, 1))
+        budget_service.add_bill(bill=_bill("Water", 30000, 28))
+        budget_service.set_safe_to_spend_horizon(
+            horizon=HorizonStrategy.UNTIL_NEXT_INCOME
+        )
+        result = budget_service.get_safe_to_spend(today=_TODAY)
+        assert result.floor_pence == 2000
+        assert result.amount_pence == 68000
 
     def test_a_bill_after_the_next_income_is_seen_only_by_full_forecast(
         self, budget_service
@@ -125,6 +141,7 @@ class TestSafeToSpend:
         budget_service.set_safe_to_spend_horizon(
             horizon=HorizonStrategy.UNTIL_NEXT_INCOME
         )
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
         until_income = budget_service.get_safe_to_spend(today=_TODAY)
         assert until_income.amount_pence == 100000
         assert until_income.horizon_end == date(2026, 7, 31)
@@ -139,6 +156,7 @@ class TestSafeToSpend:
         _seed_balance(budget_service.bill_repo.conn, pence=80000, iso="2026-07-26")
         budget_service.add_income(income=_income("Salary", 200000, 1))
         budget_service.add_bill(bill=_bill("Water", 20000, 28))
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
         without = budget_service.get_safe_to_spend(today=_TODAY)
         budget_service.set_safe_to_spend_floor(amount=Amount(pence=15000))
         with_floor = budget_service.get_safe_to_spend(today=_TODAY)
@@ -186,6 +204,7 @@ class TestSafeToSpend:
         _seed_balance(budget_service.bill_repo.conn, pence=10000, iso="2026-07-26")
         budget_service.add_income(income=_income("Salary", 200000, 1))
         budget_service.add_bill(bill=_bill("Rent", 45000, 28))
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
         result = budget_service.get_safe_to_spend(today=_TODAY)
         assert result.amount_pence == 10000
         assert result.binding_day == _TODAY
@@ -193,6 +212,7 @@ class TestSafeToSpend:
 
     def test_today_already_under_reports_a_negative_amount(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=-5000, iso="2026-07-26")
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
         result = budget_service.get_safe_to_spend(today=_TODAY)
         assert result.amount_pence == -5000
         assert result.first_breach_day == _TODAY
@@ -205,6 +225,7 @@ class TestSafeToSpend:
         budget_service.add_income(income=_income("Salary", 50000, 1))
         budget_service.add_bill(bill=_bill("Rent", 80000, 10))
         budget_service.set_safe_to_spend_horizon(horizon=HorizonStrategy.FULL_FORECAST)
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
         result = budget_service.get_safe_to_spend(today=_TODAY)
         # Monthly net is -30000 from August: lows run 70000 (Aug), 40000
         # (Sep), 10000 (Oct), then November goes under on the 10th.
@@ -214,9 +235,12 @@ class TestSafeToSpend:
         assert result.horizon_end == date(2026, 11, 9)
 
     def test_default_today_argument(self, budget_service):
+        # A fresh empty budget sits at zero, which is under the default
+        # twenty-unit buffer: nothing is safe to spend.
         result = budget_service.get_safe_to_spend()
         assert isinstance(result, SafeToSpendResult)
-        assert result.amount_pence == 0
+        assert result.amount_pence == -2000
+        assert result.floor_pence == 2000
 
     def test_current_month_runs_on_the_still_due_convention(self, budget_service):
         """The chain's current-month close equals the Solvency panel's figure.
