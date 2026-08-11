@@ -11,6 +11,8 @@ def run_bank_account_settings_flow(parent, budget_service) -> None:
         parent,
         overdraft_limit=budget_service.get_overdraft_limit(),
         overdraft_apr_basis_points=budget_service.get_overdraft_apr_basis_points(),
+        safe_to_spend_floor=budget_service.get_safe_to_spend_floor(),
+        safe_to_spend_horizon=budget_service.get_safe_to_spend_horizon(),
     )
     if dlg.exec() != BankAccountSettingsDialog.DialogCode.Accepted:
         return
@@ -20,3 +22,7 @@ def run_bank_account_settings_flow(parent, budget_service) -> None:
         budget_service.set_overdraft_apr_basis_points(
             basis_points=dlg.overdraft_apr_basis_points
         )
+    if dlg.safe_to_spend_floor is not None:
+        budget_service.set_safe_to_spend_floor(amount=dlg.safe_to_spend_floor)
+    if dlg.safe_to_spend_horizon is not None:
+        budget_service.set_safe_to_spend_horizon(horizon=dlg.safe_to_spend_horizon)

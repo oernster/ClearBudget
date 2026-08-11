@@ -92,6 +92,20 @@ class SolvencyPanel(
             )
         )
 
+        # SECTION 0: SAFE TO SPEND TODAY (Headline - the actionable number)
+        sts_heading = QLabel("Safe to Spend Today")
+        sts_heading.setObjectName(_HEADING_ROLE)
+        layout.addWidget(sts_heading)
+
+        self.sts_banner = QLabel("")
+        self.sts_banner.setObjectName("SolvencyBanner")
+        layout.addWidget(self.sts_banner)
+
+        self.sts_detail = QLabel("")
+        self.sts_detail.setWordWrap(True)
+        self.sts_detail.setObjectName("SolvencyCommitted")
+        layout.addWidget(self.sts_detail)
+
         # SECTION 1: OVERDRAFT ALERT (Top - Prominent)
         alert_label = QLabel("Overdraft Status")
         alert_label.setObjectName(_HEADING_ROLE)

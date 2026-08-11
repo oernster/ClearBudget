@@ -2,6 +2,7 @@
 
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -10,11 +11,18 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from clear_budget.domain.services.safe_to_spend import HorizonStrategy
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.shared.currency import get_symbol
 from clear_budget.ui import label_roles, ui_scale
 
 _BASIS_POINTS_PER_PERCENT = 100
+
+# Combo rows for the safe-to-spend horizon, in display order.
+_HORIZON_CHOICES = (
+    ("Until next income (default)", HorizonStrategy.UNTIL_NEXT_INCOME),
+    ("Full forecast window", HorizonStrategy.FULL_FORECAST),
+)
 
 
 class BankAccountSettingsDialog(QDialog):
@@ -26,14 +34,20 @@ class BankAccountSettingsDialog(QDialog):
         *,
         overdraft_limit: Amount | None = None,
         overdraft_apr_basis_points: int = 0,
+        safe_to_spend_floor: Amount | None = None,
+        safe_to_spend_horizon: HorizonStrategy = HorizonStrategy.UNTIL_NEXT_INCOME,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Bank Account Settings")
         self.setMinimumWidth(ui_scale.px(420))
         self._overdraft_limit = overdraft_limit or Amount(pence=0)
         self._overdraft_apr_basis_points = overdraft_apr_basis_points
+        self._safe_to_spend_floor = safe_to_spend_floor or Amount(pence=0)
+        self._safe_to_spend_horizon = safe_to_spend_horizon
         self._new_overdraft_limit: Amount | None = None
         self._new_overdraft_apr_basis_points: int | None = None
+        self._new_safe_to_spend_floor: Amount | None = None
+        self._new_safe_to_spend_horizon: HorizonStrategy | None = None
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -77,6 +91,33 @@ class BankAccountSettingsDialog(QDialog):
 
         self._on_toggled(self._has_overdraft_check.isChecked())
 
+        sts_title = QLabel("Safe to Spend Today")
+        sts_title.setStyleSheet(ui_scale.style("font-size: 16px; font-weight: bold;"))
+        layout.addWidget(sts_title)
+
+        sts_info = QLabel(
+            "The safety floor is the balance Safe to Spend Today will never"
+            " plan to go below. The horizon decides how far ahead it looks:"
+            " until your next income lands, or across the whole forecast."
+        )
+        sts_info.setWordWrap(True)
+        sts_info.setObjectName(label_roles.SUBTLE)
+        layout.addWidget(sts_info)
+
+        layout.addWidget(QLabel(f"Safety floor ({get_symbol()}):"))
+        self._floor_edit = QLineEdit()
+        self._floor_edit.setText(f"{self._safe_to_spend_floor.pounds:.2f}")
+        self._floor_edit.setPlaceholderText("0.00")
+        layout.addWidget(self._floor_edit)
+
+        layout.addWidget(QLabel("Horizon:"))
+        self._horizon_combo = QComboBox()
+        for text, strategy in _HORIZON_CHOICES:
+            self._horizon_combo.addItem(text, strategy)
+            if strategy is self._safe_to_spend_horizon:
+                self._horizon_combo.setCurrentIndex(self._horizon_combo.count() - 1)
+        layout.addWidget(self._horizon_combo)
+
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         cancel_btn = QPushButton("Cancel")
@@ -93,6 +134,8 @@ class BankAccountSettingsDialog(QDialog):
         self._apr_edit.setEnabled(checked)
 
     def _on_save(self) -> None:
+        if not self._read_safe_to_spend_inputs():
+            return
         if not self._has_overdraft_check.isChecked():
             self._new_overdraft_limit = Amount(pence=0)
             self._new_overdraft_apr_basis_points = 0
@@ -111,6 +154,18 @@ class BankAccountSettingsDialog(QDialog):
         )
         self.accept()
 
+    def _read_safe_to_spend_inputs(self) -> bool:
+        """Validate and stage the safe-to-spend fields; False keeps the dialog."""
+        try:
+            floor_pounds = float(self._floor_edit.text().strip() or "0")
+        except ValueError:
+            return False
+        if floor_pounds < 0:
+            return False
+        self._new_safe_to_spend_floor = Amount.from_pounds(floor_pounds)
+        self._new_safe_to_spend_horizon = self._horizon_combo.currentData()
+        return True
+
     @property
     def overdraft_limit(self) -> Amount | None:
         """New overdraft limit, or None if dialog was cancelled/invalid."""
@@ -120,3 +175,13 @@ class BankAccountSettingsDialog(QDialog):
     def overdraft_apr_basis_points(self) -> int | None:
         """New overdraft APR in basis points, or None if cancelled/invalid."""
         return self._new_overdraft_apr_basis_points
+
+    @property
+    def safe_to_spend_floor(self) -> Amount | None:
+        """New safety floor, or None if dialog was cancelled/invalid."""
+        return self._new_safe_to_spend_floor
+
+    @property
+    def safe_to_spend_horizon(self) -> HorizonStrategy | None:
+        """New horizon strategy, or None if dialog was cancelled/invalid."""
+        return self._new_safe_to_spend_horizon

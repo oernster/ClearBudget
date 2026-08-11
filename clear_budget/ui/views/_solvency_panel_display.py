@@ -7,8 +7,9 @@ from clear_budget.domain.services._prorating import (
     prorate_remaining_pence,
 )
 from clear_budget.ui import theme, ui_scale
+from clear_budget.application.formatting import money_from_pence
 from clear_budget.ui.label_roles import set_role as _repolish_role
-from clear_budget.ui.theme_tokens import STATE_RED, STATE_SAFE
+from clear_budget.ui.theme_tokens import STATE_AT_RISK, STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     fmt,
@@ -49,10 +50,42 @@ class SolvencyPanelDisplayMixin:
         if getattr(self, "_last_report", None) is not None:
             self.update_display(self._last_report)
 
+    def _update_safe_to_spend(self) -> None:
+        """Render the Safe to Spend Today headline from the live projection.
+
+        Always about today, whichever month is being viewed: the number is
+        what could leave the account now without any projected day within
+        the horizon dropping below the safety floor. A negative result is
+        shown as a shortfall, never as a negative "safe to spend".
+        """
+        result = self.view_model.budget_service.get_safe_to_spend()
+        day = f"{result.binding_day.day} {MONTH_NAMES[result.binding_day.month][:3]}"
+        if result.amount_pence < 0:
+            self.sts_banner.setText(
+                f"SHORTFALL: {money_from_pence(abs(result.amount_pence))}"
+                f" short by {day}"
+            )
+            state = STATE_RED
+        elif result.amount_pence == 0:
+            self.sts_banner.setText("Nothing safe to spend today")
+            state = STATE_AT_RISK
+        else:
+            self.sts_banner.setText(
+                f"{money_from_pence(result.amount_pence)} safe to spend today"
+            )
+            state = STATE_SAFE
+        detail = f"Constrained by {day}"
+        if result.floor_pence > 0:
+            detail += f", keeping {money_from_pence(result.floor_pence)} in reserve"
+        self.sts_detail.setText(detail)
+        self.sts_banner.setProperty("state", state)
+        _repolish(self.sts_banner)
+
     def update_display(self, report) -> None:
         if not report:
             return
         self._last_report = report
+        self._update_safe_to_spend()
 
         month_name = MONTH_NAMES[report.year_month.month]
         self.month_label.setText(f"{month_name} {report.year_month.year}")
