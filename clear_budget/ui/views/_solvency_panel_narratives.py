@@ -113,7 +113,9 @@ class SolvencyPanelNarrativeMixin:
         Simulates events in day order. Returns (display_text, color, clarion).
         ``clarion`` is True when the month goes overdrawn with no facility or
         beyond it, so the caller can render it as a stark warning.
-        monthly_drain_pence used for amber/red thresholds.
+        monthly_drain_pence is the month's bills minus its income: it picks the
+        amber/red thresholds AND is stated outright as what the month needs to
+        hold flat.
         """
         events = []
         for inc in summary.income_sources:

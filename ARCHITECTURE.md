@@ -117,6 +117,16 @@ Everything below this section explains how the code satisfies them.
 - `Amount(pence: int)` - Non-negative currency; `__str__` uses `get_symbol()` from `shared.currency`
 - `YearMonth(year, month)` - Date validation with arithmetic
 - `SolvencyResult` - Outcome of solvency calculation
+- `MonthGap(income_pence, bank_bills_pence, card_interest_pence)` - what one
+  month costs against what it brings in. `needed_pence` derives the shortfall
+  (positive) or the headroom (negative) and `holds_flat` reads it. Whole-month
+  arithmetic on both sides deliberately, so it describes the SHAPE of the month
+  rather than how far through it we are: "what does a month like this need" is
+  a structural question, so the answer must not move simply because time
+  passed. Card interest is carried alongside and never folded into
+  `needed_pence`, because it accrues on the cards and never leaves the bank
+  account, so adding it would overstate the gap by money that was never going
+  to move (`tests/domain/value_objects/test_month_gap.py` asserts exactly that)
 - `CardExhaustionWarning` - Credit card exhaustion analysis
 - `CreditLimitChange(effective_year, effective_month, effective_day, new_limit)` -
   one scheduled credit-limit change; validates its date is a real calendar date
@@ -200,7 +210,9 @@ focused mixins to stay under the 400-LOC-per-file limit:
 - `IncomeOperationsMixin` (`_income_operations.py`) - income CRUD, per-month
   skip/override/received, "this month only" extras
 - `OverdraftOperationsMixin` (`_overdraft_operations.py`) - overdraft facility
-  settings, `get_month_cashflow_projection()` and `first_overdrawn_month()`
+  settings, `get_month_gap()` (the month's bank shortfall and its card
+  interest, as a `MonthGap`), `get_month_cashflow_projection()` and
+  `first_overdrawn_month()`
   (the runway: first future month to dip into the red, delegating to
   `_overdraft_projection.py`)
 - `CardOperationsMixin` (`_card_operations.py`) - credit-card pass-throughs and
@@ -283,6 +295,9 @@ Key methods:
 - `get_overdraft_limit()` / `set_overdraft_limit(amount)` - overdraft facility limit
 - `get_overdraft_apr_basis_points()` / `set_overdraft_apr_basis_points(basis_points)` -
   overdraft APR, stored as basis points (1bp = 0.01%)
+- `get_month_gap(year_month)` → `MonthGap` - the month's full bank bills against
+  its full income, plus the interest accruing across its active cards; drives
+  the Solvency "needs X more to hold flat" line
 - `get_month_cashflow_projection(year_month, summary)` → `MonthCashflowProjection` -
   drives the Monthly Budget mid-month overdraft warning
 - `first_overdrawn_month(from_year_month, from_balance_pence)` → `YearMonth | None` -
@@ -594,10 +609,19 @@ bank statement. Both identities are tested.
   (`_solvency_panel_card_bars.SolvencyPanelCardBarsMixin`: the per-card
   utilisation bar, its scheduled-limit-change pills and the within-month
   movement line), forward projection. Every month it shows states its low
-  point on a line of its own, in one shape, whether or not that month is in
-  trouble: a low printed only for a month in difficulty makes the healthy
-  months look as though they have none and leaves nothing to compare a
-  worsening month against
+  point on a line of its own, plus what that month needs to hold flat, in one
+  shape, whether or not the month is in trouble: a figure printed only for a
+  month in difficulty makes the healthy months look as though they have none
+  and leaves nothing to compare a worsening month against. A month can close
+  in credit while running at a loss, which is precisely what a closing balance
+  alone hides. The Overall Health line and every Forward Projection block
+  render that figure through ONE shared `_gap_clause()` helper
+  (`_solvency_panel_narratives.py`), so the wording and the sign convention
+  cannot drift apart between the two surfaces; each caller supplies its own
+  subject, since one sits under a month heading already and the other does
+  not. The forward blocks already had the number in hand as
+  `monthly_drain_pence`, which until then only ever chose a traffic-light
+  colour
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
 

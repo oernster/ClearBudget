@@ -133,6 +133,16 @@ what is deliberately left and what only looks like debt.
   the whole forecast, so waiting never conjures money a later month needs
   back; a month whose figure never moves shows nothing rather than repeating
   the headline
+- What a month needs to hold flat: every month on the Solvency tab states the
+  difference between its full bills and its full income ("October needs
+  £666.87 more to hold flat" or "September pays for itself, £120.00 to
+  spare"). Whole-month arithmetic on both sides, so the answer describes the
+  shape of the month rather than how far through it you are and does not move
+  as the month elapses. A month can close in credit while still running at a
+  loss, which is exactly what a closing balance alone hides
+- Credit card interest is reported beside that figure, never inside it: it
+  accrues on the cards and never leaves the bank account, so adding the two
+  together would claim money that was never going to move
 - User-editable Safe to Spend buffer (a reserve the number always leaves in
   hand, £20 by default; set it to zero to plan to the wire) and a horizon
   setting: the whole forecast window (default, so spending the number leaves
@@ -202,7 +212,7 @@ what is deliberately left and what only looks like debt.
 ## Application Tabs
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
-- **Solvency** - Safe to Spend Today headline, financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months. Every month on the page states its low point and the day it falls on, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
+- **Solvency** - Safe to Spend Today headline, financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
@@ -454,6 +464,10 @@ to end something; the second is for entries added by mistake.
   figure down, which is often in a LATER month: that is the point of it, since
   a bigger balance later this month does not mean a bigger balance to spend
   when September has to survive too
+- **What the month needs**: the gap between the month's full bank bills and
+  its full income, stated for every month the page shows. Credit card interest
+  is reported on its own line beneath it and is never added in, because it
+  accrues on the cards rather than leaving the bank account
 - **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected
   balance; a deficit month names how fast savings are falling per month and the
   first month you would go overdrawn; it also flags "no overdraft facility" when
@@ -461,8 +475,9 @@ to end something; the second is for entries added by mistake.
 - **Mid-month alert**: detects temporary overdraft when bills cluster before the last income payment of the month
 - **Credit Card Status**: one progress bar per card showing current balance vs limit; projected month-end closing balance, charges, payment, interest, minimum due and net direction all shown inline
 - **Forward Projection**: day-by-day cashflow narrative for the next two months
-  including card state, each opening with that month's low point and the day it
-  falls on; a dip within an agreed overdraft reads calmly, while going
+  including card state, each stating that month's low point and the day it
+  falls on plus what it needs to hold flat; a dip within an agreed overdraft
+  reads calmly, while going
   overdrawn with no facility (or beyond it) is rendered as a stark clarion
 
 The Monthly Budget tab also links here via "See the Solvency tab for full balance
