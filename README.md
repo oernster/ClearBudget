@@ -122,9 +122,17 @@ what is deliberately left and what only looks like debt.
   you could spend today without pushing ANY day of the still-healthy
   forecast below your buffer, named with the day that constrains it
   ("Constrained by 23 Aug"). Months the forecast already has going under are
-  a warning of their own, named beneath the number ("the forecast goes under
-  from 14 Oct regardless"), never summed into it: a dip accumulated across
-  future months would read as a debt owed today, which it is not
+  a warning of their own, named beneath the number ("the forecast drops below
+  your buffer from 14 Oct regardless"), never summed into it: a dip
+  accumulated across future months would read as a debt owed today, which it
+  is not
+- What you could spend if you wait: today is often the tightest day of the
+  month, so beneath the headline a short schedule gives the figure from each
+  later day money lands ("From 19 Aug: £108.04", "From 20 Aug: £443.31"),
+  each naming the day still holding it down. Every line is measured across
+  the whole forecast, so waiting never conjures money a later month needs
+  back; a month whose figure never moves shows nothing rather than repeating
+  the headline
 - User-editable Safe to Spend buffer (a reserve the number always leaves in
   hand, £20 by default; set it to zero to plan to the wire) and a horizon
   setting: the whole forecast window (default, so spending the number leaves
@@ -194,7 +202,7 @@ what is deliberately left and what only looks like debt.
 ## Application Tabs
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
-- **Solvency** - Safe to Spend Today headline, financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months. The breakdown for the month on screen states its lowest point and the day it falls on, including when that low lands on a bill day rather than a payday
+- **Solvency** - Safe to Spend Today headline, financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months. Every month on the page states its low point and the day it falls on, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
@@ -435,10 +443,17 @@ to end something; the second is for entries added by mistake.
   nothing is safe to spend anyway and those months can say nothing about
   today. A positive amount shows with the constraining day ("Constrained by
   14 Sep"); when the forecast goes under later it shows that warning beside
-  it in amber ("the forecast goes under from 14 Oct regardless"); "Nothing
-  safe to spend" appears when today itself is already at or under the
-  buffer, which is named ("keeping a £20.00 buffer in hand"). A setting
-  narrows the horizon to your next income for payday-to-payday budgeting
+  it in amber ("the forecast drops below your buffer from 14 Oct
+  regardless"); "Nothing safe to spend" appears when today itself is already
+  at or under the buffer, which is named ("keeping a £20.00 buffer in
+  hand"). A setting narrows the horizon to your next income for
+  payday-to-payday budgeting
+- **If you wait**: the same figure from each later day of the month, one line
+  per change, so an income landing on the 20th has a number against it
+  instead of leaving you to guess. Each line names the day still holding the
+  figure down, which is often in a LATER month: that is the point of it, since
+  a bigger balance later this month does not mean a bigger balance to spend
+  when September has to survive too
 - **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected
   balance; a deficit month names how fast savings are falling per month and the
   first month you would go overdrawn; it also flags "no overdraft facility" when
@@ -446,7 +461,8 @@ to end something; the second is for entries added by mistake.
 - **Mid-month alert**: detects temporary overdraft when bills cluster before the last income payment of the month
 - **Credit Card Status**: one progress bar per card showing current balance vs limit; projected month-end closing balance, charges, payment, interest, minimum due and net direction all shown inline
 - **Forward Projection**: day-by-day cashflow narrative for the next two months
-  including card state; a dip within an agreed overdraft reads calmly, while going
+  including card state, each opening with that month's low point and the day it
+  falls on; a dip within an agreed overdraft reads calmly, while going
   overdrawn with no facility (or beyond it) is rendered as a stark clarion
 
 The Monthly Budget tab also links here via "See the Solvency tab for full balance

@@ -150,7 +150,19 @@ Everything below this section explains how the code satisfies them.
   would report a meaningless multi-month depth as though it were owed today.
   The amount is the minimum over the still-healthy stretch; it is negative
   only when today itself is under the floor and is not clamped
-  (presentation is the UI's job)
+  (presentation is the UI's job).
+  `spending_capacity(...)` answers the rest of the month rather than one
+  day: `tuple[CapacityStep, ...]`, one step per CHANGE in the figure, each
+  carrying `from_day`, the signed `amount_pence` from that day onward and
+  the `binding_day` that set it. Each step is a suffix minimum over the same
+  window, so waiting past a tight day raises what a day can carry while
+  every step stays measured against the whole forecast; a month whose
+  figure never moves returns a single step. Only days in today's own
+  calendar month are reported, because the question is what THIS month can
+  carry. Both functions take their window from one shared
+  `_considered_days()` helper, which owns the horizon rules and the
+  self-truncation, so the headline and the schedule cannot disagree about
+  what they are measured over and the first step always equals the headline
 - `_prorating.py` - shared pro-rating helpers (`days_in_month`,
   `prorate_remaining_pence`) used by live card projection and balance projection
 - `CardMonthlyCalculator.calculate_card_monthly_state()` - Per-card monthly cashflow
@@ -217,7 +229,9 @@ focused mixins to stay under the 400-LOC-per-file limit:
   spending and made the headline disagree with the panel it sits on); its
   close therefore equals the panel's projected end-of-month figure. Later
   months chain day by day from that close, over the same 24-month window the
-  overdraft runway walks
+  overdraft runway walks. `get_spending_capacity(today=None)` runs the
+  capacity schedule over that same projection, floor and horizon, so it and
+  the headline are two readings of one forecast rather than two forecasts
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
@@ -255,6 +269,9 @@ Key methods:
 - `get_safe_to_spend(today=None)` → `SafeToSpendResult` - Safe to Spend Today
   from the stored floor and horizon; `today` is injectable so the result is
   decided by its inputs rather than by the day the code runs
+- `get_spending_capacity(today=None)` → `tuple[CapacityStep, ...]` - what could
+  be spent from each remaining day of this month onward, one entry per change;
+  the first entry always equals `get_safe_to_spend`
 - `get_safe_to_spend_floor()` / `set_safe_to_spend_floor(amount)` - the
   floor, which the UI calls the Safe to Spend "buffer" (the naming split:
   floor is the domain term the calculation uses, buffer is what a user
@@ -570,8 +587,17 @@ bank statement. Both identities are tested.
   property; a later baseline breach turns the tone amber and is named on the
   secondary line, "the forecast goes under from 14 Oct regardless", never
   summed into the amount; "NOTHING SAFE TO SPEND" appears only when today is
-  already under the floor), overdraft alert, mid-month alert, card bars,
-  forward projection
+  already under the floor), the capacity schedule beneath it ("If you wait:"
+  and one line per change, from `get_spending_capacity`, hidden entirely when
+  the figure never moves so a flat month does not restate the headline),
+  overdraft alert, mid-month alert, card bars
+  (`_solvency_panel_card_bars.SolvencyPanelCardBarsMixin`: the per-card
+  utilisation bar, its scheduled-limit-change pills and the within-month
+  movement line), forward projection. Every month it shows states its low
+  point on a line of its own, in one shape, whether or not that month is in
+  trouble: a low printed only for a month in difficulty makes the healthy
+  months look as though they have none and leaves nothing to compare a
+  worsening month against
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
 

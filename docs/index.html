@@ -111,6 +111,7 @@
                 <div class="card">
                     <h3>Safe to Spend Today</h3>
                     <p>One actionable number at the top of the Solvency tab: the most you could spend today without pushing any day of the still-healthy forecast below your buffer, named with the day that constrains it. When the forecast goes under later regardless, that is a named warning beside the number, never summed into it. The buffer (twenty by default, zero if you plan to the wire) and the horizon (the whole forecast by default or only until your next income) are yours to set.</p>
+                    <p>Today is often the tightest day of the month, so beneath it a short schedule gives the figure from each later day money lands, each line naming the day still holding it down. That day is frequently in a later month, which is the point of it: a bigger balance later this month does not mean more to spend when next month has to survive too.</p>
                 </div>
                 <div class="card">
                     <h3>Forward solvency</h3>
@@ -171,7 +172,7 @@
                 </div>
                 <div class="card">
                     <h3>Solvency</h3>
-                    <p>The Safe to Spend Today headline, overdraft status, a day-by-day forward projection for the next two months and per-card utilisation bars.</p>
+                    <p>The Safe to Spend Today headline and what you could spend if you wait, overdraft status, a day-by-day forward projection for the next two months with every month stating its low point and per-card utilisation bars.</p>
                 </div>
                 <div class="card">
                     <h3>Credit Cards</h3>
@@ -204,7 +205,8 @@
     <p class="sr-only">
         Clear Budget is a free, private, local-first desktop budget planner for Windows, macOS and Linux. It leads
         with a Safe to Spend Today figure: the most you could spend today without any projected day across the
-        whole forecast dropping below your chosen buffer, named with the day that constrains it. It models
+        whole forecast dropping below your chosen buffer, named with the day that constrains it, followed by
+        what you could spend from each later day of the month as income lands. It models
         forward solvency for the next two months, detects mid-month overdrafts when bills cluster before income,
         tracks credit card utilisation and interest with a six-month balance projection and supports multiple
         users with bcrypt sign-in and isolated per-user databases. The month can be viewed as a graph and exported
@@ -261,7 +263,7 @@
             "installUrl": "https://github.com/oernster/ClearBudget/releases",
             "releaseNotes": "https://github.com/oernster/ClearBudget/releases",
             "softwareHelp": "https://github.com/oernster/ClearBudget#readme",
-            "softwareVersion": "4.4.0",
+            "softwareVersion": "4.5.0",
             "inLanguage": "en-GB",
             "image": "https://ernster.dev/ClearBudget/clearbudget-512.png",
             "isAccessibleForFree": true,
@@ -280,7 +282,8 @@
                 "Scheduled credit-limit changes",
                 "Per-month bill and income overrides, skips and one-off entries",
                 "Bill amounts that change from a month onward, leaving earlier months as they were",
-                "Lowest point and the day it falls on for the month on screen",
+                "Spending capacity from each later day of the month, one line per change, each naming the day that constrains it",
+                "Low point and the day it falls on for every month shown, whether or not that month is in trouble",
                 "Self-maintaining bank balance: dated items applied at local midnight and reversed on delete",
                 "End-dated bills and history-safe delete",
                 "Multiple users with bcrypt sign-in and isolated per-user databases",
