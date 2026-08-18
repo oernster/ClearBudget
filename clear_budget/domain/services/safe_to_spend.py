@@ -67,6 +67,21 @@ class SafeToSpendResult:
     first_breach_day: date | None
 
 
+@dataclass(frozen=True, slots=True)
+class CapacityStep:
+    """What could be spent from `from_day` onward, and what limits it.
+
+    Attributes:
+        from_day: The first day this figure applies to.
+        amount_pence: Signed spendable value from that day on.
+        binding_day: The minimum-balance day that set the figure.
+    """
+
+    from_day: date
+    amount_pence: int
+    binding_day: date
+
+
 def safe_to_spend(
     *,
     projection: Sequence[DayProjection],
@@ -104,6 +119,46 @@ def safe_to_spend(
         SafeToSpendError: If the floor is negative or the projection does
             not include today.
     """
+    considered, first_breach = _considered_days(
+        projection=projection,
+        today=today,
+        income_days=income_days,
+        floor_pence=floor_pence,
+        horizon=horizon,
+    )
+    binding = min(considered, key=lambda d: d.balance_pence)
+    return SafeToSpendResult(
+        amount_pence=binding.balance_pence - floor_pence,
+        binding_day=binding.day,
+        horizon_end=considered[-1].day,
+        floor_pence=floor_pence,
+        first_breach_day=first_breach,
+    )
+
+
+def _considered_days(
+    *,
+    projection: Sequence[DayProjection],
+    today: date,
+    income_days: Sequence[date],
+    floor_pence: int,
+    horizon: HorizonStrategy,
+) -> tuple[list[DayProjection], date | None]:
+    """The days a spendable figure may be measured over, and the first breach.
+
+    Shared by every spendable figure so they cannot disagree about the window.
+    The horizon self-truncates at the first day the baseline is already below
+    the floor: from there on nothing is safe to spend regardless, so
+    accumulating that stretch into a minimum would report a meaningless
+    multi-month depth as though it were owed today. The figure is what can be
+    spent without breaking the stretch that is healthy anyway. When today
+    itself is under the floor, the healthy stretch is empty and the window is
+    today alone, so the result is today's own (negative) gap.
+
+    Raises:
+        SafeToSpendError: If the floor is negative or the projection does not
+            include today.
+    """
     if floor_pence < 0:
         raise SafeToSpendError("Safety floor cannot be negative")
 
@@ -121,22 +176,57 @@ def safe_to_spend(
     first_breach = next(
         (d.day for d in in_horizon if d.balance_pence < floor_pence), None
     )
-    # The horizon self-truncates at the first day the baseline is already
-    # below the floor: from there on nothing is safe to spend regardless, so
-    # accumulating that stretch into the minimum would report a meaningless
-    # multi-month depth as though it were owed today. The number is what can
-    # be spent without breaking the stretch that is healthy anyway. When
-    # today itself is under the floor, the healthy stretch is empty and the
-    # result is today's own (negative) gap.
     considered = in_horizon
     if first_breach is not None:
         healthy = [d for d in in_horizon if d.day < first_breach]
         considered = healthy or [in_horizon[0]]
-    binding = min(considered, key=lambda d: d.balance_pence)
-    return SafeToSpendResult(
-        amount_pence=binding.balance_pence - floor_pence,
-        binding_day=binding.day,
-        horizon_end=considered[-1].day,
+    return considered, first_breach
+
+
+def spending_capacity(
+    *,
+    projection: Sequence[DayProjection],
+    today: date,
+    income_days: Sequence[date] = (),
+    floor_pence: int = 0,
+    horizon: HorizonStrategy = HorizonStrategy.FULL_FORECAST,
+) -> tuple[CapacityStep, ...]:
+    """What could be spent from each remaining day of today's month onward.
+
+    Safe to Spend Today answers one day. This answers the rest of the month:
+    waiting for money to land raises what a day can carry, so the figure for
+    the 20th is not the figure for the 18th. Each step is a suffix minimum,
+
+        capacity(d) = min(P(x) for x in W, x >= d) - F
+
+    over the same window W that Safe to Spend uses, so the first step always
+    equals the headline and the two can never disagree.
+
+    Only days in today's own calendar month are reported: the question is
+    what this month can carry. The window itself still runs to the end of the
+    forecast, because money spent on the 20th lowers every later day too.
+
+    Returns:
+        One step per CHANGE in capacity, in date order, starting with today.
+        A month whose capacity never moves returns a single step.
+    """
+    considered, _ = _considered_days(
+        projection=projection,
+        today=today,
+        income_days=income_days,
         floor_pence=floor_pence,
-        first_breach_day=first_breach,
+        horizon=horizon,
     )
+    steps: list[CapacityStep] = []
+    for index, day in enumerate(considered):
+        if day.day.month != today.month or day.day.year != today.year:
+            break
+        rest = considered[index:]
+        binding = min(rest, key=lambda d: d.balance_pence)
+        amount = binding.balance_pence - floor_pence
+        if steps and steps[-1].amount_pence == amount:
+            continue
+        steps.append(
+            CapacityStep(from_day=day.day, amount_pence=amount, binding_day=binding.day)
+        )
+    return tuple(steps)

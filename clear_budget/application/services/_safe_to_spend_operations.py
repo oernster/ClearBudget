@@ -22,10 +22,12 @@ from clear_budget.application.services._overdraft_projection import (
 )
 from clear_budget.domain.services._prorating import days_in_month
 from clear_budget.domain.services.safe_to_spend import (
+    CapacityStep,
     DayProjection,
     HorizonStrategy,
     SafeToSpendResult,
     safe_to_spend,
+    spending_capacity,
 )
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -110,6 +112,25 @@ class SafeToSpendOperationsMixin:
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
         projection, income_days = self._build_safe_to_spend_inputs(today)
         return safe_to_spend(
+            projection=projection,
+            today=today,
+            income_days=income_days,
+            floor_pence=self.get_safe_to_spend_floor().pence,
+            horizon=self.get_safe_to_spend_horizon(),
+        )
+
+    def get_spending_capacity(
+        self, *, today: date | None = None
+    ) -> tuple[CapacityStep, ...]:
+        """What could be spent from each remaining day of this month onward.
+
+        Same projection, floor and horizon as Safe to Spend Today, so the
+        first step always equals the headline. Later steps rise as the days
+        holding the figure down fall behind.
+        """
+        today = today or date.today()  # noqa: DTZ011 (naive local dates)
+        projection, income_days = self._build_safe_to_spend_inputs(today)
+        return spending_capacity(
             projection=projection,
             today=today,
             income_days=income_days,

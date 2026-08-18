@@ -41,6 +41,7 @@ class SolvencyPanelSafeToSpendMixin:
         read as a debt owed today, which it is not.
         """
         result = self.view_model.budget_service.get_safe_to_spend()
+        self._update_capacity()
         if result.amount_pence < 0:
             # Today itself is already under the floor; the answer to "what
             # can I spend today" is nothing, so say that.
@@ -69,6 +70,32 @@ class SolvencyPanelSafeToSpendMixin:
         self.sts_detail.setVisible(bool(detail))
         self.sts_banner.setProperty("state", state)
         _repolish_role(self.sts_banner, self.sts_banner.objectName())
+
+    def _update_capacity(self) -> None:
+        """Show how the spendable figure moves as money lands this month.
+
+        The headline is about today, and today is often the worst day of the
+        month: waiting for an income to land raises what the account can
+        carry. Each row is the figure from that day onward, so a row answers
+        "what could I spend if I wait until then". The first step always
+        repeats the headline, so it is dropped: only the changes are news.
+
+        Every row is still measured across the whole forecast window, so
+        waiting does not conjure money that a later month needs back.
+        """
+        steps = self.view_model.budget_service.get_spending_capacity()
+        rows = [
+            f"From {self._sts_day(step.from_day)}:"
+            f" {money_from_pence(step.amount_pence)}"
+            f" (held down by {self._sts_day(step.binding_day)})"
+            for step in steps[1:]
+        ]
+        if not rows:
+            self.sts_capacity.setText("")
+            self.sts_capacity.setVisible(False)
+            return
+        self.sts_capacity.setText("If you wait:\n" + "\n".join(rows))
+        self.sts_capacity.setVisible(True)
 
     def _sts_detail_line(self, result) -> str:
         """Secondary line under a non-negative headline.

@@ -70,7 +70,7 @@ class TestLowestPointIsReported:
             ],
         )
         # Day 5 leaves 20,000; day 10 lifts it to 70,000; day 20 closes at 40,000.
-        assert f"Lowest point (day 5): {fmt(20_000)}" in lines
+        assert f"Low point: {fmt(20_000)} on day 5" in lines
         assert f"Balance at end of month: {fmt(40_000)}" in lines
 
     def test_a_month_that_only_rises_is_lowest_at_its_opening(self) -> None:
@@ -79,7 +79,7 @@ class TestLowestPointIsReported:
             [_income(name="Salary", pence=50_000, day=10)],
             [],
         )
-        assert f"Lowest point (at the start): {fmt(_OPENING_PENCE)}" in lines
+        assert f"Low point: {fmt(_OPENING_PENCE)} at the start" in lines
 
     def test_a_negative_low_is_reported_rather_than_hidden(self) -> None:
         lines = _build(
@@ -87,7 +87,7 @@ class TestLowestPointIsReported:
             [_income(name="Salary", pence=200_000, day=25)],
             [_bill(name="Rent", pence=150_000, day=3)],
         )
-        assert f"Lowest point (day 3): {fmt(-50_000)}" in lines
+        assert f"Low point: -{fmt(50_000)} on day 3" in lines
         assert f"Balance at end of month: {fmt(150_000)}" in lines
 
     def test_the_low_is_stated_immediately_before_the_closing_balance(self) -> None:
@@ -96,5 +96,5 @@ class TestLowestPointIsReported:
             [_income(name="Salary", pence=50_000, day=10)],
             [_bill(name="Rent", pence=80_000, day=5)],
         )
-        assert lines[-2].startswith("Lowest point (")
+        assert lines[-2].startswith("Low point: ")
         assert lines[-1].startswith("Balance at end of month:")

@@ -291,3 +291,57 @@ class TestSafeToSpend:
         first = budget_service.get_safe_to_spend(today=_TODAY)
         second = budget_service.get_safe_to_spend(today=_TODAY)
         assert first == second
+
+
+class TestSpendingCapacity:
+    def test_the_first_step_repeats_the_headline(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
+        budget_service.add_income(income=_income("Salary", 200000, 28))
+        budget_service.add_bill(bill=_bill("Water", 30000, 27))
+        steps = budget_service.get_spending_capacity(today=_TODAY)
+        headline = budget_service.get_safe_to_spend(today=_TODAY)
+        assert steps[0].from_day == _TODAY
+        assert steps[0].amount_pence == headline.amount_pence
+        assert steps[0].binding_day == headline.binding_day
+
+    def test_waiting_past_the_low_day_raises_the_figure(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=50000, iso="2026-07-26")
+        # The bill on the 27th is the low; the salary on the 28th lifts it.
+        budget_service.add_bill(bill=_bill("Water", 40000, 27))
+        budget_service.add_income(income=_income("Salary", 200000, 28))
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
+        steps = budget_service.get_spending_capacity(today=_TODAY)
+        assert [s.amount_pence for s in steps] == sorted(s.amount_pence for s in steps)
+        assert steps[0].amount_pence == 10000
+        assert steps[-1].from_day > steps[0].from_day
+        assert steps[-1].amount_pence > steps[0].amount_pence
+
+    def test_a_flat_month_reports_a_single_step(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
+        # Nothing lands and nothing leaves before month end, so the figure
+        # never moves and there is nothing to report beyond the headline.
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
+        steps = budget_service.get_spending_capacity(today=_TODAY)
+        assert len(steps) == 1
+        assert steps[0].from_day == _TODAY
+
+    def test_steps_never_leave_the_current_month(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
+        budget_service.add_income(income=_income("Salary", 200000, 28))
+        steps = budget_service.get_spending_capacity(today=_TODAY)
+        assert all(s.from_day.month == _JULY.month for s in steps)
+        assert all(s.from_day.year == _JULY.year for s in steps)
+
+    def test_a_later_month_still_holds_every_step_down(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=50000, iso="2026-07-26")
+        budget_service.add_income(income=_income("Salary", 200000, 28))
+        # A big August bill outlives the July salary, so once the July low is
+        # behind, the figure is set outside this month: waiting stops helping
+        # because the constraint has moved to a month waiting cannot reach.
+        budget_service.add_bill(bill=_bill("Insurance", 190000, 15, start=_AUGUST))
+        budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
+        steps = budget_service.get_spending_capacity(today=_TODAY)
+        assert steps[-1].binding_day.month == _AUGUST.month
+        # And the August constraint caps it: the July salary is 200000, but
+        # the step it buys is worth far less than that.
+        assert steps[-1].amount_pence == 60000

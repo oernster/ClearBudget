@@ -150,11 +150,18 @@ class SolvencyPanelNarrativeMixin:
         color = self._health_color(min_balance, monthly_drain_pence)
         clarion = False
 
+        # Every month reports its low, whether or not it is alarming: a low
+        # shown only when a month is in trouble makes the healthy months look
+        # as though they have no low at all, and leaves nothing to compare a
+        # worsening month against.
+        when = f"on day {min_day}" if min_day != _LOW_AT_START else "at the start"
+        if min_balance < 0:
+            lines.append(f"Low point: -{fmt(abs(min_balance))} {when}")
+        else:
+            lines.append(f"Low point: {fmt(min_balance)} {when}")
+
         if first_negative_day is not None:
-            lines.append(
-                f"OVERDRAWN by day {first_negative_day}  "
-                f"(low: -{fmt(abs(min_balance))})"
-            )
+            lines.append(f"OVERDRAWN by day {first_negative_day}")
             if rescue_event:
                 rday, ramt, rname = rescue_event
                 lines.append(f"Rescued day {rday}: {rname} +{fmt(ramt)}")
@@ -164,8 +171,6 @@ class SolvencyPanelNarrativeMixin:
                 min_balance, overdraft_limit_pence
             )
             lines.append(note)
-        elif min_day and min_balance < monthly_drain_pence:
-            lines.append(f"Low point: {fmt(min_balance)} on day {min_day}")
 
         if closing_pence >= 0:
             lines.append(f"Closes: {fmt(closing_pence)}")
@@ -239,8 +244,13 @@ class SolvencyPanelNarrativeMixin:
                 lines.append(
                     f"Day {day}: {name} +{fmt(delta)} -> balance {fmt(balance)}"
                 )
-        when = "at the start" if low_day == _LOW_AT_START else f"day {low_day}"
-        lines.append(f"Lowest point ({when}): {fmt(low_pence)}")
+        # Same shape as the forward months' line, so the three months of the
+        # page read as one series rather than as three separate reports.
+        when = "at the start" if low_day == _LOW_AT_START else f"on day {low_day}"
+        if low_pence < 0:
+            lines.append(f"Low point: -{fmt(abs(low_pence))} {when}")
+        else:
+            lines.append(f"Low point: {fmt(low_pence)} {when}")
         lines.append(f"Balance at end of month: {fmt(balance)}")
         return lines
 
