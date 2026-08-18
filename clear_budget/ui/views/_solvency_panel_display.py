@@ -285,7 +285,45 @@ class SolvencyPanelDisplayMixin:
         else:
             self.month_breakdown_label.setText("")
 
+        self._update_month_gap(report.year_month)
         self._render_forward_projection(report, overdraft_limit_pence, is_current_month)
+
+    def _update_month_gap(self, year_month) -> None:
+        """State what the month needs to hold flat and what its cards cost.
+
+        Shown for EVERY month including the one in progress. The banner's
+        runway note is deliberately future-months-only, because it is about
+        savings draining from here; this is a different question, about the
+        shape of the month itself; the answer does not change as the
+        month elapses. It is the figure that turns "this month does not hold
+        together" into something with a size.
+
+        The two lines are never added together. The gap is the bank
+        account's; the interest accrues on the cards and never leaves the
+        bank, so a combined total would claim money that was never going to
+        move.
+        """
+        gap = self.view_model.budget_service.get_month_gap(year_month=year_month)
+        month_name = MONTH_NAMES[year_month.month]
+        if gap.holds_flat:
+            spare = abs(gap.needed_pence)
+            self.gap_label.setText(
+                f"{month_name} pays for itself, with {fmt(spare)} to spare"
+                if spare
+                else f"{month_name} pays for itself exactly"
+            )
+        else:
+            self.gap_label.setText(
+                f"A month like this needs {fmt(gap.needed_pence)} more to hold flat"
+            )
+        if gap.card_interest_pence:
+            self.card_interest_label.setText(
+                f"Card interest adds {fmt(gap.card_interest_pence)} to your card"
+                f" balances this month (it does not leave your bank account)"
+            )
+        else:
+            self.card_interest_label.setText("")
+        self.card_interest_label.setVisible(bool(gap.card_interest_pence))
 
     def _title_health_color(
         self, report, is_current_month: bool, overdraft_limit_pence: int

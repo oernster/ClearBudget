@@ -146,6 +146,19 @@ class SolvencyPanel(
         self.month_breakdown_label.setObjectName("SolvencyBreakdown")
         layout.addWidget(self.month_breakdown_label)
 
+        # What the month needs to hold flat plus what the cards cost it. Two
+        # separate drains: the gap belongs to the bank account while the
+        # interest belongs to the cards, so they are never added together.
+        self.gap_label = QLabel("")
+        self.gap_label.setWordWrap(True)
+        self.gap_label.setObjectName("SolvencyCommitted")
+        layout.addWidget(self.gap_label)
+
+        self.card_interest_label = QLabel("")
+        self.card_interest_label.setWordWrap(True)
+        self.card_interest_label.setObjectName("SolvencyCommitted")
+        layout.addWidget(self.card_interest_label)
+
         cards_header = QLabel("Credit Card Status")
         cards_header.setObjectName(_HEADING_ROLE)
         layout.addWidget(cards_header)

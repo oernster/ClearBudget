@@ -8,13 +8,46 @@ from clear_budget.domain.services.bank_cashflow import (
     MonthCashflowProjection,
 )
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.month_gap import MonthGap
 from clear_budget.domain.value_objects.year_month import YearMonth
+
+# Bills paid from the bank account rather than from a card; only these can
+# widen or close the bank gap.
+_BANK_PAYMENT_METHOD_ID = 1
 
 
 class OverdraftOperationsMixin:
     """Overdraft facility settings and month cashflow projection."""
 
     __slots__ = ()
+
+    def get_month_gap(self, *, year_month: YearMonth) -> MonthGap:
+        """What this month costs against what it brings in.
+
+        Whole-month figures on both sides, so the answer describes the SHAPE
+        of the month rather than how far through it we are. That is the point
+        of it: the still-due total and the projected close already answer
+        "where am I now"; neither says what a month like this needs.
+
+        Card interest is gathered here too but kept separate on the value
+        object, because it accrues on the cards and never leaves the bank
+        account.
+        """
+        summary = self.get_month_summary(year_month=year_month)
+        bank_bills = sum(
+            b.amount.pence
+            for b in summary.bills
+            if b.payment_method_id == _BANK_PAYMENT_METHOD_ID
+        )
+        card_interest = sum(
+            state.monthly_interest.pence
+            for state in self.get_card_monthly_states(year_month=year_month)
+        )
+        return MonthGap(
+            income_pence=summary.total_income.pence,
+            bank_bills_pence=bank_bills,
+            card_interest_pence=card_interest,
+        )
 
     def get_overdraft_limit(self) -> Amount:  # pragma: no cover
         from clear_budget.application.services._settings_operations import (
