@@ -182,6 +182,36 @@ def curve_colour_for(theme_name: str) -> str:
     return CURVE_LIGHT if theme_name == THEME_LIGHT else CURVE_DARK
 
 
+# How far an ASSUMED figure's colour is blended toward the page background.
+# Assumed data has to read as provisional at a glance without changing what it
+# means, so the hue is kept and only the presence is reduced: the same traffic
+# light, spoken more quietly. Derived rather than hand-picked, so the muted set
+# cannot drift from the real one if a state colour is ever changed; it also
+# keeps new colour literals out of the file.
+_ASSUMED_BLEND = 0.45
+
+
+def _blend(colour: str, toward: str, fraction: float) -> str:
+    """Mix `colour` toward `toward` by `fraction`, as a #rrggbb string."""
+    a = tuple(int(colour[i : i + 2], 16) for i in (1, 3, 5))
+    b = tuple(int(toward[i : i + 2], 16) for i in (1, 3, 5))
+    mixed = (round(x + (y - x) * fraction) for x, y in zip(a, b))
+    return "#" + "".join(f"{value:02x}" for value in mixed)
+
+
+def assumed_state_colours_for(theme_name: str) -> dict[str, str]:
+    """The traffic-light palette for figures that depend on assumed income.
+
+    Same hues as `state_colours_for`, blended toward the page background so an
+    assumed figure never competes with a known one for attention.
+    """
+    background = tokens_for(theme_name)["window_bg"]
+    return {
+        state: _blend(colour, background, _ASSUMED_BLEND)
+        for state, colour in state_colours_for(theme_name).items()
+    }
+
+
 def state_colours_for(theme_name: str) -> dict[str, str]:
     """Return the solvency state palette for `theme_name`, defaulting to dark."""
     return _STATES_BY_THEME.get(theme_name, STATES_DARK)

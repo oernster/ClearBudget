@@ -286,6 +286,7 @@ class SolvencyPanelDisplayMixin:
             self.month_breakdown_label.setText("")
 
         self._update_month_gap(report.year_month)
+        self._update_assumed(report)
         self._render_forward_projection(report, overdraft_limit_pence, is_current_month)
 
     def _update_month_gap(self, year_month) -> None:

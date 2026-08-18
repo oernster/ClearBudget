@@ -87,7 +87,7 @@ class TestBudgetServiceMonthSummary:
 
         summary = service.get_month_summary(year_month=YearMonth(2026, 6))
 
-        # Balance would be negative, but stored as 0
+        # Balance would be negative; stored as 0
         assert summary.total_income.pence == 150000
         assert summary.total_bills.pence == 200000
 
@@ -175,7 +175,7 @@ class TestBudgetServiceIncomeMonthExtras:
                 id=0,
                 name="Tax Refund",
                 amount=Amount(pence=30000),
-                is_reliable=False,
+                is_reliable=True,
                 day_of_month=10,
             ),
             year_month=ym,
@@ -202,7 +202,7 @@ class TestBudgetServiceIncomeMonthExtras:
                 id=0,
                 name="Tax Refund",
                 amount=Amount(pence=30000),
-                is_reliable=False,
+                is_reliable=True,
                 day_of_month=10,
             ),
             year_month=ym,
@@ -221,7 +221,7 @@ class TestBudgetServiceIncomeMonthExtras:
                 id=0,
                 name="Tax Refund",
                 amount=Amount(pence=30000),
-                is_reliable=False,
+                is_reliable=True,
                 day_of_month=10,
             ),
             year_month=ym,
@@ -232,7 +232,7 @@ class TestBudgetServiceIncomeMonthExtras:
                 id=added.id,
                 name="Tax Refund (Updated)",
                 amount=Amount(pence=40000),
-                is_reliable=False,
+                is_reliable=True,
                 day_of_month=12,
                 is_month_only=True,
             ),
@@ -253,7 +253,7 @@ class TestBudgetServiceIncomeMonthExtras:
                 id=0,
                 name="Tax Refund",
                 amount=Amount(pence=30000),
-                is_reliable=False,
+                is_reliable=True,
                 day_of_month=10,
             ),
             year_month=ym,

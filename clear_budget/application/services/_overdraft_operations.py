@@ -21,7 +21,9 @@ class OverdraftOperationsMixin:
 
     __slots__ = ()
 
-    def get_month_gap(self, *, year_month: YearMonth) -> MonthGap:
+    def get_month_gap(
+        self, *, year_month: YearMonth, include_assumed: bool = False
+    ) -> MonthGap:
         """What this month costs against what it brings in.
 
         Whole-month figures on both sides, so the answer describes the SHAPE
@@ -33,7 +35,9 @@ class OverdraftOperationsMixin:
         object, because it accrues on the cards and never leaves the bank
         account.
         """
-        summary = self.get_month_summary(year_month=year_month)
+        summary = self.get_month_summary(
+            year_month=year_month, include_assumed=include_assumed
+        )
         bank_bills = sum(
             b.amount.pence
             for b in summary.bills

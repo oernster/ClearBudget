@@ -79,6 +79,17 @@ class SolvencyPanelLayoutMixin:
         self.sts_capacity.hide()
         layout.addWidget(self.sts_capacity)
 
+        # The second reading, hidden until something is marked as expected.
+        self.assumed_heading = _heading("If the expected income arrives")
+        self.assumed_heading.hide()
+        layout.addWidget(self.assumed_heading)
+        self.sts_assumed = _line("SolvencyCommitted")
+        self.sts_assumed.hide()
+        layout.addWidget(self.sts_assumed)
+        self.assumed_gaps_label = _line("SolvencyCommitted")
+        self.assumed_gaps_label.hide()
+        layout.addWidget(self.assumed_gaps_label)
+
         layout.addWidget(_heading("Overdraft Status"))
         self.overdraft_alert = _line(
             "SolvencyBanner", f"SAFE: {fmt(0)} buffer", wrap=False

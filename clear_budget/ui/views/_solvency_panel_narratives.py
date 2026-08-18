@@ -101,6 +101,51 @@ class SolvencyPanelNarrativeMixin:
             return states[STATE_SAFE]
         return states[STATE_CAUTION]
 
+    @staticmethod
+    def _walk_month(opening_pence: int, summary) -> dict:
+        """Simulate one month day by day and report what it did.
+
+        The numeric core of a month's story, separated from the telling of it
+        so the full narrative and the shorter assumed-income line are two
+        renderings of ONE simulation rather than two simulations that could
+        disagree about the same month.
+        """
+        events = []
+        for inc in summary.income_sources:
+            events.append((inc.day_of_month or 1, inc.amount.pence, inc.name))
+        for bill in summary.bills:
+            if bill.payment_method_id == 1:
+                events.append((bill.day_of_month or 28, -bill.amount.pence, bill.name))
+        # Income before bills on same day (positive delta sorts first)
+        events.sort(key=lambda e: (e[0], -e[1]))
+
+        balance = opening_pence
+        min_balance = opening_pence
+        min_day = _LOW_AT_START
+        first_negative_day = None
+        rescue_event = None
+        for day, delta, name in events:
+            balance += delta
+            if balance < min_balance:
+                min_balance = balance
+                min_day = day
+            if balance < 0 and first_negative_day is None:
+                first_negative_day = day
+            if (
+                first_negative_day is not None
+                and rescue_event is None
+                and delta > 0
+                and balance >= 0
+            ):
+                rescue_event = (day, delta, name)
+        return {
+            "min_balance": min_balance,
+            "min_day": min_day,
+            "first_negative_day": first_negative_day,
+            "rescue_event": rescue_event,
+            "closing": balance,
+        }
+
     def _build_month_cashflow_summary(
         self,
         opening_pence: int,
@@ -117,37 +162,12 @@ class SolvencyPanelNarrativeMixin:
         amber/red thresholds AND is stated outright as what the month needs to
         hold flat.
         """
-        events = []
-        for inc in summary.income_sources:
-            events.append((inc.day_of_month or 1, inc.amount.pence, inc.name))
-        for bill in summary.bills:
-            if bill.payment_method_id == 1:
-                events.append((bill.day_of_month or 28, -bill.amount.pence, bill.name))
-        # Income before bills on same day (positive delta sorts first)
-        events.sort(key=lambda e: (e[0], -e[1]))
-
-        balance = opening_pence
-        min_balance = opening_pence
-        min_day = 0
-        first_negative_day = None
-        rescue_event = None
-
-        for day, delta, name in events:
-            balance += delta
-            if balance < min_balance:
-                min_balance = balance
-                min_day = day
-            if balance < 0 and first_negative_day is None:
-                first_negative_day = day
-            if (
-                first_negative_day is not None
-                and rescue_event is None
-                and delta > 0
-                and balance >= 0
-            ):
-                rescue_event = (day, delta, name)
-
-        closing_pence = balance
+        walk = self._walk_month(opening_pence, summary)
+        min_balance = walk["min_balance"]
+        min_day = walk["min_day"]
+        first_negative_day = walk["first_negative_day"]
+        rescue_event = walk["rescue_event"]
+        closing_pence = walk["closing"]
         lines = [f"Opens: {fmt(opening_pence)}"]
         color = self._health_color(min_balance, monthly_drain_pence)
         clarion = False

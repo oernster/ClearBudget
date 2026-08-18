@@ -14,6 +14,9 @@ from clear_budget.application.services._income_operations import (
     IncomeOperationsMixin,
 )
 from clear_budget.application.services._month_graph_series import GraphSeriesMixin
+from clear_budget.application.services._month_summary_builder import (
+    MonthSummaryBuilderMixin,
+)
 from clear_budget.application.services._month_mappers import (
     bills_to_month_bills as _bills_to_month_bills,
 )
@@ -56,6 +59,7 @@ class BudgetService(
     CardOperationsMixin,
     BalanceApplicationMixin,
     GraphSeriesMixin,
+    MonthSummaryBuilderMixin,
     ProjectionSeriesMixin,
     SafeToSpendOperationsMixin,
 ):
@@ -63,41 +67,6 @@ class BudgetService(
     income_repo: IncomeSourceRepository
     payment_method_repo: PaymentMethodRepository
     month_generator: MonthGenerator
-
-    def get_month_summary(self, *, year_month: YearMonth) -> MonthSummary:
-        active_bills = self.bill_repo.list_active_for_month(year_month=year_month)
-        all_bills = self.bill_repo.list_active_for_month(
-            year_month=year_month, include_inactive=True
-        )
-        extras = self.income_repo.list_extras_for_month(year_month=year_month)
-        income = self.income_repo.list_active_for_month(year_month=year_month) + extras
-        all_income = (
-            self.income_repo.list_active_for_month(
-                year_month=year_month, include_inactive=True
-            )
-            + extras
-        )
-
-        total_bills_pence = sum(bill.amount.pence for bill in active_bills)
-        bank_bills_pence = sum(
-            bill.amount.pence for bill in active_bills if bill.payment_method_id == 1
-        )
-        total_income_pence = sum(inc.amount.pence for inc in income)
-        balance_pence = total_income_pence - bank_bills_pence
-
-        return MonthSummary(
-            year_month=year_month,
-            total_income=Amount(pence=total_income_pence),
-            total_bills=Amount(pence=total_bills_pence),
-            bank_bills=Amount(pence=bank_bills_pence),
-            balance=(
-                Amount(pence=balance_pence) if balance_pence >= 0 else Amount(pence=0)
-            ),
-            bills=tuple(active_bills),
-            all_bills=tuple(all_bills),
-            income_sources=tuple(income),
-            all_income_sources=tuple(all_income),
-        )
 
     def calculate_solvency_from_summary(
         self,
@@ -272,7 +241,7 @@ class BudgetService(
     ) -> int:
         """Public wrapper: projected bank balance pence at start of year_month.
 
-        `today` is injectable so a caller, and a test, can ask what the
+        `today` is injectable so a caller (a test included) can ask what the
         projection looks like on a given date rather than only on this one.
         """
         return self._projected_starting_balance_pence(year_month, today)

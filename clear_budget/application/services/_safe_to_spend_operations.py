@@ -103,14 +103,18 @@ class SafeToSpendOperationsMixin:
 
         set_safe_to_spend_horizon(self.bill_repo.conn, horizon.value)
 
-    def get_safe_to_spend(self, *, today: date | None = None) -> SafeToSpendResult:
+    def get_safe_to_spend(
+        self, *, today: date | None = None, include_assumed: bool = False
+    ) -> SafeToSpendResult:
         """Safe to Spend Today, from the stored floor and horizon settings.
 
         `today` is injectable so the result is decided by its inputs rather
         than by the day the code happens to run.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
-        projection, income_days = self._build_safe_to_spend_inputs(today)
+        projection, income_days = self._build_safe_to_spend_inputs(
+            today, include_assumed=include_assumed
+        )
         return safe_to_spend(
             projection=projection,
             today=today,
@@ -120,7 +124,7 @@ class SafeToSpendOperationsMixin:
         )
 
     def get_spending_capacity(
-        self, *, today: date | None = None
+        self, *, today: date | None = None, include_assumed: bool = False
     ) -> tuple[CapacityStep, ...]:
         """What could be spent from each remaining day of this month onward.
 
@@ -129,7 +133,9 @@ class SafeToSpendOperationsMixin:
         holding the figure down fall behind.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
-        projection, income_days = self._build_safe_to_spend_inputs(today)
+        projection, income_days = self._build_safe_to_spend_inputs(
+            today, include_assumed=include_assumed
+        )
         return spending_capacity(
             projection=projection,
             today=today,
@@ -139,7 +145,7 @@ class SafeToSpendOperationsMixin:
         )
 
     def _build_safe_to_spend_inputs(
-        self, today: date
+        self, today: date, *, include_assumed: bool = False
     ) -> tuple[list[DayProjection], list[date]]:
         """Per-day projection and income dates across the forecast window.
 
@@ -152,7 +158,7 @@ class SafeToSpendOperationsMixin:
         exactly as the runway search does.
         """
         ym = YearMonth(today.year, today.month)
-        summary = self.get_month_summary(year_month=ym)
+        summary = self.get_month_summary(year_month=ym, include_assumed=include_assumed)
         days = days_in_month(ym.year, ym.month)
         bills, income = self._apply_current_month_filters(
             summary.bills, summary.income_sources, ym, ym, today.day
@@ -190,7 +196,9 @@ class SafeToSpendOperationsMixin:
         cursor = ym
         for _ in range(_FORECAST_WINDOW_MONTHS - 1):
             cursor = cursor.next_month()
-            summary = self.get_month_summary(year_month=cursor)
+            summary = self.get_month_summary(
+                year_month=cursor, include_assumed=include_assumed
+            )
             days = days_in_month(cursor.year, cursor.month)
             per_day = self._per_day_pence(summary, days)
             for day in range(1, days + 1):

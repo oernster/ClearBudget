@@ -19,6 +19,7 @@ from clear_budget.ui.widgets._save_load_flow import (
     build_save_load_buttons,
     build_settings_bank_buttons,
 )
+from clear_budget.ui.views._solvency_panel_assumed import SolvencyPanelAssumedMixin
 from clear_budget.ui.views._solvency_panel_card_bars import (
     SolvencyPanelCardBarsMixin,
 )
@@ -44,6 +45,7 @@ _PAGE_CARDS = 1
 
 
 class SolvencyPanel(
+    SolvencyPanelAssumedMixin,
     SolvencyPanelCardBarsMixin,
     SolvencyPanelDisplayMixin,
     SolvencyPanelLayoutMixin,
