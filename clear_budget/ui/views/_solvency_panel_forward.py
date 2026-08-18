@@ -2,7 +2,7 @@
 
 Extracted from _solvency_panel_display to keep both modules under the 400-LOC
 limit (tests/structural/test_loc_limits.py). Owns one concern: the next two
-months' projection lines, the card-state text under each, and the title-bar
+months' projection lines, the card-state text under each plus the title-bar
 colour broadcast that follows from the displayed month's own health.
 """
 
@@ -70,25 +70,38 @@ class SolvencyPanelForwardMixin:
             c.id: m1_card_states[c.id].closing_balance.pence for c in cards
         }
 
+        # The two readings render onto their own pages: the bank narrative
+        # here, the per-card lines on the cards page under the same month
+        # headings, so the pages can be held against each other.
+        m1_heading = f"{MONTH_NAMES[m1.month]} {m1.year}"
+        m2_heading = f"{MONTH_NAMES[m2.month]} {m2.year}"
         self._set_projection_label(
             self.m1_projection_label,
-            heading=f"{MONTH_NAMES[m1.month]} {m1.year}",
+            heading=m1_heading,
             body=m1_text,
-            card_text=self._build_card_state_text(
-                cards, m1_summary.bills, m1_card_opening
-            ),
             colour=m1_color,
             clarion=m1_clarion,
         )
         self._set_projection_label(
             self.m2_projection_label,
-            heading=f"{MONTH_NAMES[m2.month]} {m2.year}",
+            heading=m2_heading,
             body=m2_text,
-            card_text=self._build_card_state_text(
-                cards, m2_summary.bills, m2_card_opening
-            ),
             colour=m2_color,
             clarion=m2_clarion,
+        )
+        self._set_projection_label(
+            self.m1_cards_label,
+            heading=m1_heading,
+            body=self._build_card_state_text(cards, m1_summary.bills, m1_card_opening),
+            colour=m1_color,
+            clarion=False,
+        )
+        self._set_projection_label(
+            self.m2_cards_label,
+            heading=m2_heading,
+            body=self._build_card_state_text(cards, m2_summary.bills, m2_card_opening),
+            colour=m2_color,
+            clarion=False,
         )
 
         # The title-bar colour is the displayed month's OWN within-month health,
@@ -113,12 +126,10 @@ class SolvencyPanelForwardMixin:
 
     @staticmethod
     def _set_projection_label(
-        label, *, heading: str, body: str, card_text: str, colour: str, clarion: bool
+        label, *, heading: str, body: str, colour: str, clarion: bool
     ) -> None:
-        """Write one projection line, in its month's traffic-light colour."""
-        text = f"{heading}\n{body}"
-        if card_text:
-            text += f"\n{card_text}"
+        """Write one projection block, in its month's traffic-light colour."""
+        text = f"{heading}\n{body}" if body else heading
         style = f"font-size: {_PROJECTION_FONT_PX}px; padding: 5px; color: {colour};"
         if clarion:
             style += " font-weight: bold; font-style: italic;"

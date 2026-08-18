@@ -1,12 +1,16 @@
 """Solvency panel widget - displays financial health status and warnings."""
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QPushButton,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
-from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.utils.format_helpers import (
     build_centered_nav_header,
-    fmt,
     nav_glyph_height,
 )
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
@@ -19,6 +23,7 @@ from clear_budget.ui.views._solvency_panel_card_bars import (
     SolvencyPanelCardBarsMixin,
 )
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
+from clear_budget.ui.views._solvency_panel_layout import SolvencyPanelLayoutMixin
 from clear_budget.ui.views._solvency_panel_forward import SolvencyPanelForwardMixin
 from clear_budget.ui.views._solvency_panel_narratives import (
     SolvencyPanelNarrativeMixin,
@@ -27,13 +32,21 @@ from clear_budget.ui.views._solvency_panel_safe_to_spend import (
     SolvencyPanelSafeToSpendMixin,
 )
 
-# Section headings on this tab share one QSS role (see _theme_controls).
-_HEADING_ROLE = "SolvencySectionHeading"
+# The pilot button names the page it goes TO, never the page you are on, the
+# same convention the month graph's pilot button uses.
+_PILOT_TO_CARDS = "Switch to credit cards"
+_PILOT_TO_BANK = "Switch to bank view"
+
+# Stack order. The bank page opens first: it answers "does the account hold",
+# which is the question the tab exists for.
+_PAGE_BANK = 0
+_PAGE_CARDS = 1
 
 
 class SolvencyPanel(
     SolvencyPanelCardBarsMixin,
     SolvencyPanelDisplayMixin,
+    SolvencyPanelLayoutMixin,
     SolvencyPanelForwardMixin,
     SolvencyPanelNarrativeMixin,
     SolvencyPanelSafeToSpendMixin,
@@ -81,115 +94,29 @@ class SolvencyPanel(
             )
         )
 
-        # SECTION 0: SAFE TO SPEND TODAY (Headline - the actionable number)
-        sts_heading = QLabel("Safe to Spend Today")
-        sts_heading.setObjectName(_HEADING_ROLE)
-        layout.addWidget(sts_heading)
+        self.pilot_btn = QPushButton(_PILOT_TO_CARDS)
+        self.pilot_btn.setObjectName("SolvencyPilot")
+        self.pilot_btn.clicked.connect(self._toggle_page)
+        pilot_row = QHBoxLayout()
+        pilot_row.addWidget(self.pilot_btn)
+        pilot_row.addStretch(1)
+        layout.addLayout(pilot_row)
 
-        self.sts_banner = QLabel("")
-        self.sts_banner.setObjectName("SolvencyBanner")
-        layout.addWidget(self.sts_banner)
-
-        self.sts_detail = QLabel("")
-        self.sts_detail.setWordWrap(True)
-        self.sts_detail.setObjectName("SolvencyCommitted")
-        layout.addWidget(self.sts_detail)
-
-        # How the figure moves as money lands later in the month. Hidden when
-        # it never moves, so a flat month says nothing rather than repeating
-        # the headline.
-        self.sts_capacity = QLabel("")
-        self.sts_capacity.setWordWrap(True)
-        self.sts_capacity.setObjectName("SolvencyBreakdown")
-        self.sts_capacity.hide()
-        layout.addWidget(self.sts_capacity)
-
-        # SECTION 1: OVERDRAFT ALERT (Top - Prominent)
-        alert_label = QLabel("Overdraft Status")
-        alert_label.setObjectName(_HEADING_ROLE)
-        layout.addWidget(alert_label)
-
-        self.overdraft_alert = QLabel(f"SAFE: {fmt(0)} buffer")
-        self.overdraft_alert.setObjectName("SolvencyBanner")
-        layout.addWidget(self.overdraft_alert)
-
-        self.midmonth_alert = QLabel("")
-        self.midmonth_alert.setWordWrap(True)
-        self.midmonth_alert.setObjectName("SolvencyMidmonthAlert")
-        self.midmonth_alert.hide()
-        layout.addWidget(self.midmonth_alert)
-
-        # SECTION 2: OVERALL HEALTH (Middle)
-        health_label = QLabel("Overall Health")
-        health_label.setObjectName(_HEADING_ROLE)
-        layout.addWidget(health_label)
-
-        self.balance_label = QLabel(f"Bank Balance: {fmt(0)}")
-        self.balance_label.setObjectName(label_roles.VALUE)
-        layout.addWidget(self.balance_label)
-
-        self.committed_label = QLabel("Committed this month: -")
-        self.committed_label.setObjectName("SolvencyCommitted")
-        layout.addWidget(self.committed_label)
-
-        self.remaining_bank_label = QLabel("Still due this month (bank): -")
-        self.remaining_bank_label.setWordWrap(True)
-        self.remaining_bank_label.setObjectName("SolvencyRemainingBank")
-        layout.addWidget(self.remaining_bank_label)
-
-        self.remaining_card_label = QLabel("Still due this month (cards): -")
-        self.remaining_card_label.setObjectName("SolvencyRemainingCard")
-        layout.addWidget(self.remaining_card_label)
-
-        self.month_breakdown_label = QLabel("")
-        self.month_breakdown_label.setWordWrap(True)
-        self.month_breakdown_label.setObjectName("SolvencyBreakdown")
-        layout.addWidget(self.month_breakdown_label)
-
-        # What the month needs to hold flat plus what the cards cost it. Two
-        # separate drains: the gap belongs to the bank account while the
-        # interest belongs to the cards, so they are never added together.
-        self.gap_label = QLabel("")
-        self.gap_label.setWordWrap(True)
-        self.gap_label.setObjectName("SolvencyCommitted")
-        layout.addWidget(self.gap_label)
-
-        self.card_interest_label = QLabel("")
-        self.card_interest_label.setWordWrap(True)
-        self.card_interest_label.setObjectName("SolvencyCommitted")
-        layout.addWidget(self.card_interest_label)
-
-        cards_header = QLabel("Credit Card Status")
-        cards_header.setObjectName(_HEADING_ROLE)
-        layout.addWidget(cards_header)
-
-        self.card_bars_container = QWidget()
-        self.card_bars_layout = QVBoxLayout(self.card_bars_container)
-        self.card_bars_layout.setSpacing(ui_scale.px(3))
-        self.card_bars_layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.card_bars_container)
-
-        # SECTION 3: FORWARD PROJECTION (Bottom)
-        forward_label = QLabel("Forward Projection")
-        forward_label.setObjectName(_HEADING_ROLE)
-        layout.addWidget(forward_label)
-
-        self.m1_projection_label = QLabel("")
-        self.m1_projection_label.setWordWrap(True)
-        self.m1_projection_label.setStyleSheet(
-            ui_scale.style("font-size: 17px; padding: 5px;")
-        )
-        layout.addWidget(self.m1_projection_label)
-
-        self.m2_projection_label = QLabel("")
-        self.m2_projection_label.setWordWrap(True)
-        self.m2_projection_label.setStyleSheet(
-            ui_scale.style("font-size: 17px; padding: 5px;")
-        )
-        layout.addWidget(self.m2_projection_label)
+        # Both pages are built once and kept alive, so switching is a turn of
+        # the page rather than a rebuild that would drop scroll position.
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self._build_bank_page())
+        self.pages.addWidget(self._build_cards_page())
+        layout.addWidget(self.pages)
 
         layout.addStretch()
         self.setLayout(layout)
+
+    def _toggle_page(self) -> None:
+        """Swap the two readings, relabelling the button with its destination."""
+        showing_bank = self.pages.currentIndex() == _PAGE_BANK
+        self.pages.setCurrentIndex(_PAGE_CARDS if showing_bank else _PAGE_BANK)
+        self.pilot_btn.setText(_PILOT_TO_BANK if showing_bank else _PILOT_TO_CARDS)
 
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab."""
@@ -202,6 +129,7 @@ class SolvencyPanel(
             self.next_btn,
             self.theme_btn,
             self.info_btn,
+            self.pilot_btn,
         ]
 
     def connect_signals(self) -> None:

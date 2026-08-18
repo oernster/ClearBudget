@@ -286,7 +286,11 @@ class SolvencyPanelNarrativeMixin:
         """
         if not cards:
             return ""
-        lines = ["Cards:"]
+        # No "Cards:" prefix: this block now sits on the cards page under its
+        # own heading, where the word only repeats what the heading said. It
+        # earned its place when the block was buried inside the bank page's
+        # forward projection.
+        lines = []
         for card in cards:
             opening_pence = opening_balances.get(
                 card.id, card.current_balance_used.pence
