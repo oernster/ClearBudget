@@ -1,8 +1,8 @@
 """BankAccountSettingsDialog - configure the overdraft facility."""
 
 from PySide6.QtWidgets import (
+    QSpinBox,
     QCheckBox,
-    QComboBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -11,18 +11,15 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from clear_budget.domain.services.safe_to_spend import HorizonStrategy
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.shared.currency import get_symbol
 from clear_budget.ui import label_roles, ui_scale
 
 _BASIS_POINTS_PER_PERCENT = 100
 
-# Combo rows for the safe-to-spend horizon, in display order.
-_HORIZON_CHOICES = (
-    ("Whole forecast, no month goes under (default)", HorizonStrategy.FULL_FORECAST),
-    ("Until next income only", HorizonStrategy.UNTIL_NEXT_INCOME),
-)
+# Bounds on how far ahead a spendable figure must hold.
+_MIN_WINDOW_MONTHS = 1
+_MAX_WINDOW_MONTHS = 12
 
 
 class BankAccountSettingsDialog(QDialog):
@@ -35,7 +32,7 @@ class BankAccountSettingsDialog(QDialog):
         overdraft_limit: Amount | None = None,
         overdraft_apr_basis_points: int = 0,
         safe_to_spend_floor: Amount | None = None,
-        safe_to_spend_horizon: HorizonStrategy = HorizonStrategy.FULL_FORECAST,
+        sustainable_window_months: int = 4,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Bank Account Settings")
@@ -43,11 +40,11 @@ class BankAccountSettingsDialog(QDialog):
         self._overdraft_limit = overdraft_limit or Amount(pence=0)
         self._overdraft_apr_basis_points = overdraft_apr_basis_points
         self._safe_to_spend_floor = safe_to_spend_floor or Amount(pence=0)
-        self._safe_to_spend_horizon = safe_to_spend_horizon
+        self._sustainable_window_months = sustainable_window_months
         self._new_overdraft_limit: Amount | None = None
         self._new_overdraft_apr_basis_points: int | None = None
         self._new_safe_to_spend_floor: Amount | None = None
-        self._new_safe_to_spend_horizon: HorizonStrategy | None = None
+        self._new_sustainable_window_months: int | None = None
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -107,13 +104,16 @@ class BankAccountSettingsDialog(QDialog):
         self._floor_edit.setPlaceholderText("0.00")
         layout.addWidget(self._floor_edit)
 
-        layout.addWidget(QLabel("Horizon:"))
-        self._horizon_combo = QComboBox()
-        for text, strategy in _HORIZON_CHOICES:
-            self._horizon_combo.addItem(text, strategy)
-            if strategy is self._safe_to_spend_horizon:
-                self._horizon_combo.setCurrentIndex(self._horizon_combo.count() - 1)
-        layout.addWidget(self._horizon_combo)
+        layout.addWidget(QLabel("Months the figure must keep standing:"))
+        self._window_spin = QSpinBox()
+        self._window_spin.setMinimum(_MIN_WINDOW_MONTHS)
+        self._window_spin.setMaximum(_MAX_WINDOW_MONTHS)
+        self._window_spin.setValue(self._sustainable_window_months)
+        self._window_spin.setToolTip(
+            "Every day of this many months must clear the buffer. A longer"
+            " window is a harder promise, so the figure it allows is smaller."
+        )
+        layout.addWidget(self._window_spin)
 
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
@@ -160,7 +160,7 @@ class BankAccountSettingsDialog(QDialog):
         if floor_pounds < 0:
             return False
         self._new_safe_to_spend_floor = Amount.from_pounds(floor_pounds)
-        self._new_safe_to_spend_horizon = self._horizon_combo.currentData()
+        self._new_sustainable_window_months = self._window_spin.value()
         return True
 
     @property
@@ -179,6 +179,6 @@ class BankAccountSettingsDialog(QDialog):
         return self._new_safe_to_spend_floor
 
     @property
-    def safe_to_spend_horizon(self) -> HorizonStrategy | None:
-        """New horizon strategy; None if the dialog was cancelled or invalid."""
-        return self._new_safe_to_spend_horizon
+    def sustainable_window_months(self) -> int | None:
+        """New window length in months; None if cancelled or invalid."""
+        return self._new_sustainable_window_months

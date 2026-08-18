@@ -1,4 +1,4 @@
-"""Tests for the Safe to Spend Today domain calculation."""
+"""The sustainable-spend calculation, over a bounded window with no truncation."""
 
 from datetime import date, timedelta
 
@@ -6,288 +6,148 @@ import pytest
 
 from clear_budget.domain.services.safe_to_spend import (
     DayProjection,
-    HorizonStrategy,
-    SafeToSpendError,
-    SafeToSpendResult,
-    safe_to_spend,
+    SustainableError,
+    sustainable_capacity,
+    sustainable_spend,
 )
 
-_TODAY = date(2026, 8, 11)
+_TODAY = date(2026, 8, 19)
 
 
-def _projection(start: date, balances: list[int]) -> list[DayProjection]:
-    """One DayProjection per balance, on consecutive days from start."""
-    return [
-        DayProjection(day=start + timedelta(days=i), balance_pence=pence)
-        for i, pence in enumerate(balances)
-    ]
+def _run(balances: dict[date, int], **kwargs):
+    projection = [DayProjection(day=d, balance_pence=p) for d, p in balances.items()]
+    return sustainable_spend(projection=projection, today=_TODAY, **kwargs)
 
 
-def _flat_month_with_bill(
-    *, opening: int, bill: int, bill_day_offset: int, length: int
-) -> list[DayProjection]:
-    """Level balance from today, dropping by `bill` at the given offset."""
-    balances = [opening - (bill if i >= bill_day_offset else 0) for i in range(length)]
-    return _projection(_TODAY, balances)
+def _month(year: int, month: int, days: int, balance: int) -> dict[date, int]:
+    return {date(year, month, d): balance for d in range(1, days + 1)}
 
 
-class TestFlatMonthOneBill:
-    def test_value_is_balance_after_the_bill_on_its_due_day(self):
-        projection = _flat_month_with_bill(
-            opening=100000, bill=40000, bill_day_offset=9, length=20
-        )
-        result = safe_to_spend(projection=projection, today=_TODAY)
-        assert result.amount_pence == 60000
-        assert result.binding_day == _TODAY + timedelta(days=9)
-        assert result.horizon_end == _TODAY + timedelta(days=19)
-        assert result.floor_pence == 0
-
-    def test_binding_day_is_first_day_at_the_minimum(self):
-        # The bill day and every later day share the minimum; the bill day
-        # is the constraint the user can act on, so it is the one named.
-        projection = _flat_month_with_bill(
-            opening=50000, bill=10000, bill_day_offset=5, length=15
-        )
-        result = safe_to_spend(projection=projection, today=_TODAY)
-        assert result.binding_day == _TODAY + timedelta(days=5)
+def _august(balance: int, *, from_day: int = 19) -> dict[date, int]:
+    return {date(2026, 8, d): balance for d in range(from_day, 32)}
 
 
-class TestBoundaryExactness:
-    def test_spending_exactly_the_amount_leaves_min_at_the_floor(self):
-        floor = 12500
-        projection = _flat_month_with_bill(
-            opening=87263, bill=31417, bill_day_offset=7, length=25
-        )
-        first = safe_to_spend(projection=projection, today=_TODAY, floor_pence=floor)
-        respent = [
-            DayProjection(day=d.day, balance_pence=d.balance_pence - first.amount_pence)
-            for d in projection
+class TestTheWindowIsBoundedByWholeMonths:
+    def test_a_one_month_window_stops_at_the_end_of_this_month(self):
+        balances = _august(50000) | _month(2026, 9, 30, -90000)
+        result = _run(balances, window_months=1)
+        assert result.window_end == date(2026, 8, 31)
+        assert result.amount_pence == 50000
+
+    def test_a_two_month_window_lets_next_month_veto(self):
+        balances = _august(50000) | _month(2026, 9, 30, -90000)
+        result = _run(balances, window_months=2)
+        assert result.window_end == date(2026, 9, 30)
+        assert result.amount_pence == -90000
+
+    def test_a_window_longer_than_the_projection_uses_what_there_is(self):
+        result = _run(_august(50000), window_months=12)
+        assert result.window_end == date(2026, 8, 31)
+
+
+class TestNoDayIsExcluded:
+    def test_a_month_already_under_the_floor_still_vetoes_the_figure(self):
+        # The whole point. The old calculation stopped at the first day below
+        # the floor and reported the healthy stretch before it, which funded
+        # its own deficit: spending that figure deepened the excluded days by
+        # exactly the amount spent.
+        balances = _august(50000) | _month(2026, 9, 30, -20000)
+        result = _run(balances, window_months=2)
+        assert result.amount_pence == -20000
+        assert result.binding_day.month == 9
+
+    def test_the_deepest_day_sets_the_figure_not_the_first_bad_one(self):
+        balances = _august(50000)
+        balances[date(2026, 8, 25)] = -1000
+        balances[date(2026, 8, 28)] = -7000
+        result = _run(balances, window_months=1)
+        assert result.amount_pence == -7000
+        assert result.binding_day == date(2026, 8, 28)
+
+    def test_a_surviving_window_reports_what_it_can_spare(self):
+        result = _run(_august(50000), window_months=1)
+        assert result.is_sustainable
+        assert result.amount_pence == 50000
+
+
+class TestTheFloor:
+    def test_the_floor_comes_off_the_top(self):
+        result = _run(_august(50000), floor_pence=2000, window_months=1)
+        assert result.amount_pence == 48000
+        assert result.floor_pence == 2000
+
+    def test_a_balance_above_zero_but_under_the_floor_is_a_shortfall(self):
+        result = _run(_august(500), floor_pence=2000, window_months=1)
+        assert not result.is_sustainable
+        assert result.amount_pence == -1500
+
+
+class TestRejectedInputs:
+    def test_a_negative_floor_is_refused(self):
+        with pytest.raises(SustainableError, match="floor"):
+            _run(_august(50000), floor_pence=-1)
+
+    def test_a_window_shorter_than_a_month_is_refused(self):
+        with pytest.raises(SustainableError, match="at least one month"):
+            _run(_august(50000), window_months=0)
+
+    def test_a_projection_that_omits_today_is_refused(self):
+        with pytest.raises(SustainableError, match="include today"):
+            _run(_august(50000, from_day=20))
+
+    def test_an_empty_projection_is_refused(self):
+        with pytest.raises(SustainableError, match="include today"):
+            _run({})
+
+
+class TestSustainableCapacity:
+    def _steps(self, balances, **kwargs):
+        projection = [
+            DayProjection(day=d, balance_pence=p) for d, p in balances.items()
         ]
-        second = safe_to_spend(projection=respent, today=_TODAY, floor_pence=floor)
-        min_balance = min(d.balance_pence for d in respent)
-        assert min_balance == floor
-        assert second.amount_pence == 0
+        return sustainable_capacity(projection=projection, today=_TODAY, **kwargs)
+
+    def test_the_first_step_equals_the_headline(self):
+        balances = _august(50000)
+        balances[date(2026, 8, 20)] = 10000
+        steps = self._steps(balances, window_months=1)
+        headline = _run(balances, window_months=1)
+        assert steps[0].from_day == _TODAY
+        assert steps[0].amount_pence == headline.amount_pence
+
+    def test_waiting_past_the_low_day_raises_the_figure(self):
+        balances = _august(50000)
+        balances[date(2026, 8, 20)] = 10000
+        steps = self._steps(balances, window_months=1)
+        assert steps[-1].amount_pence > steps[0].amount_pence
+        assert steps[-1].from_day > date(2026, 8, 20)
+
+    def test_a_flat_window_reports_one_step(self):
+        assert len(self._steps(_august(50000), window_months=1)) == 1
+
+    def test_steps_never_leave_this_month(self):
+        balances = _august(50000) | _month(2026, 9, 30, 90000)
+        steps = self._steps(balances, window_months=2)
+        assert all(s.from_day.month == 8 for s in steps)
+
+    def test_a_later_month_caps_every_step(self):
+        # Waiting cannot buy past what the window will bear.
+        balances = _august(50000) | _month(2026, 9, 30, 1000)
+        steps = self._steps(balances, window_months=2)
+        assert all(s.amount_pence == 1000 for s in steps)
+        assert all(s.binding_day.month == 9 for s in steps)
+
+    def test_a_negative_floor_is_refused(self):
+        with pytest.raises(SustainableError, match="floor"):
+            self._steps(_august(50000), floor_pence=-1)
 
 
-class TestBaselineBreachTruncation:
-    def test_the_horizon_stops_where_the_baseline_first_goes_under(self):
-        # From the bill day onward the projection is under REGARDLESS of any
-        # spend today, so those days say nothing about today's spending: the
-        # amount is what the healthy stretch before them can spare.
-        projection = _flat_month_with_bill(
-            opening=20000, bill=45000, bill_day_offset=3, length=10
-        )
-        result = safe_to_spend(projection=projection, today=_TODAY)
-        assert result.amount_pence == 20000
-        assert result.binding_day == _TODAY
-        assert result.horizon_end == _TODAY + timedelta(days=2)
-        assert result.first_breach_day == _TODAY + timedelta(days=3)
-
-    def test_today_already_under_reports_todays_own_gap(self):
-        projection = _projection(_TODAY, [-2000, 5000, 5000])
-        result = safe_to_spend(projection=projection, today=_TODAY)
-        assert result.amount_pence == -2000
-        assert result.binding_day == _TODAY
-        assert result.first_breach_day == _TODAY
-
-    def test_today_under_the_floor_is_not_clamped(self):
-        projection = _projection(_TODAY, [5000, 5000, 5000])
-        result = safe_to_spend(projection=projection, today=_TODAY, floor_pence=8000)
-        assert result.amount_pence == -3000
-        assert result.first_breach_day == _TODAY
-
-
-class TestFloor:
-    def test_floor_reduces_the_result_by_exactly_the_floor(self):
-        projection = _flat_month_with_bill(
-            opening=90000, bill=30000, bill_day_offset=12, length=28
-        )
-        without = safe_to_spend(projection=projection, today=_TODAY, floor_pence=0)
-        with_floor = safe_to_spend(
-            projection=projection, today=_TODAY, floor_pence=10000
-        )
-        assert without.amount_pence - with_floor.amount_pence == 10000
-        assert with_floor.floor_pence == 10000
-
-
-class TestHorizon:
-    def _income_then_big_bill(self) -> tuple[list[DayProjection], list[date]]:
-        """Income on day 10 (offset), a huge bill after it."""
-        income_day = _TODAY + timedelta(days=10)
-        balances = [30000] * 10  # before income
-        balances += [130000] * 5  # income landed
-        balances += [10000] * 10  # big bill after the income event
-        return _projection(_TODAY, balances), [income_day]
-
-    def test_the_default_horizon_is_the_full_forecast(self):
-        # A spend today lowers every later day, so by default the answer must
-        # hold for the whole window even when income lands in between.
-        projection, income_days = self._income_then_big_bill()
-        result = safe_to_spend(
-            projection=projection, today=_TODAY, income_days=income_days
-        )
-        assert result.amount_pence == 10000
-        assert result.horizon_end == _TODAY + timedelta(days=24)
-
-    def test_until_next_income_ignores_a_bill_after_the_income(self):
-        projection, income_days = self._income_then_big_bill()
-        result = safe_to_spend(
-            projection=projection,
-            today=_TODAY,
-            income_days=income_days,
-            horizon=HorizonStrategy.UNTIL_NEXT_INCOME,
-        )
-        assert result.amount_pence == 30000
-        assert result.horizon_end == _TODAY + timedelta(days=9)
-
-    def test_full_forecast_sees_the_bill_after_the_income(self):
-        projection, income_days = self._income_then_big_bill()
-        result = safe_to_spend(
-            projection=projection,
-            today=_TODAY,
-            income_days=income_days,
-            horizon=HorizonStrategy.FULL_FORECAST,
-        )
-        assert result.amount_pence == 10000
-        assert result.horizon_end == _TODAY + timedelta(days=24)
-
-    def test_income_today_does_not_end_the_horizon(self):
-        # Income dated today is inside P(today); the horizon runs to the day
-        # before the NEXT income event, not today.
-        projection = _projection(_TODAY, [80000, 60000, 60000, 90000])
-        result = safe_to_spend(
-            projection=projection,
-            today=_TODAY,
-            income_days=[_TODAY, _TODAY + timedelta(days=3)],
-            horizon=HorizonStrategy.UNTIL_NEXT_INCOME,
-        )
-        assert result.horizon_end == _TODAY + timedelta(days=2)
-        assert result.amount_pence == 60000
-
-    def test_no_future_income_degrades_to_the_full_window(self):
-        projection = _projection(_TODAY, [40000, 35000, 30000])
-        result = safe_to_spend(
-            projection=projection,
-            today=_TODAY,
-            income_days=[],
-            horizon=HorizonStrategy.UNTIL_NEXT_INCOME,
-        )
-        assert result.horizon_end == _TODAY + timedelta(days=2)
-        assert result.amount_pence == 30000
-
-    def test_income_past_the_projection_never_extends_the_horizon(self):
-        projection = _projection(_TODAY, [40000, 30000])
-        result = safe_to_spend(
-            projection=projection,
-            today=_TODAY,
-            income_days=[_TODAY + timedelta(days=90)],
-            horizon=HorizonStrategy.UNTIL_NEXT_INCOME,
-        )
-        assert result.horizon_end == _TODAY + timedelta(days=1)
-
-
-class TestDeterminism:
-    def test_identical_inputs_give_identical_results(self):
-        projection = _flat_month_with_bill(
-            opening=77777, bill=22222, bill_day_offset=4, length=18
-        )
-        income_days = [_TODAY + timedelta(days=6)]
-        first = safe_to_spend(
-            projection=projection, today=_TODAY, income_days=income_days
-        )
-        second = safe_to_spend(
-            projection=projection, today=_TODAY, income_days=income_days
-        )
-        assert first == second
-        assert isinstance(first, SafeToSpendResult)
-
-    def test_days_before_today_are_ignored(self):
-        # A projection covering the whole month: the pre-today stretch holds
-        # a deep dip that already happened and must not bind the result.
-        past = _projection(_TODAY - timedelta(days=5), [-90000] * 5)
-        future = _projection(_TODAY, [25000, 20000, 30000])
-        result = safe_to_spend(projection=past + future, today=_TODAY)
-        assert result.amount_pence == 20000
-        assert result.binding_day == _TODAY + timedelta(days=1)
-
-
-class TestMonotonicity:
-    def _base(self) -> list[DayProjection]:
-        return _flat_month_with_bill(
-            opening=60000, bill=15000, bill_day_offset=8, length=20
-        )
-
-    def test_an_extra_bill_in_horizon_never_increases_the_result(self):
-        base = self._base()
-        extra_bill = [
-            DayProjection(
-                day=d.day,
-                balance_pence=d.balance_pence
-                - (5000 if d.day >= _TODAY + timedelta(days=12) else 0),
-            )
-            for d in base
-        ]
-        before = safe_to_spend(projection=base, today=_TODAY)
-        after = safe_to_spend(projection=extra_bill, today=_TODAY)
-        assert after.amount_pence <= before.amount_pence
-
-    def test_extra_income_in_horizon_never_decreases_the_result(self):
-        base = self._base()
-        extra_income = [
-            DayProjection(
-                day=d.day,
-                balance_pence=d.balance_pence
-                + (5000 if d.day >= _TODAY + timedelta(days=2) else 0),
-            )
-            for d in base
-        ]
-        before = safe_to_spend(projection=base, today=_TODAY)
-        after = safe_to_spend(projection=extra_income, today=_TODAY)
-        assert after.amount_pence >= before.amount_pence
-
-
-class TestFirstBreachDay:
-    def test_none_while_the_projection_stays_at_or_above_the_floor(self):
-        projection = _projection(_TODAY, [40000, 20000, 30000])
-        result = safe_to_spend(projection=projection, today=_TODAY)
-        assert result.first_breach_day is None
-
-    def test_names_the_first_day_under_and_binds_before_it(self):
-        # Breach starts at offset 2; the amount comes from the healthy
-        # stretch before it, not from the deeper dips beyond it.
-        projection = _projection(_TODAY, [20000, 5000, -1000, -500, -9000])
-        result = safe_to_spend(projection=projection, today=_TODAY)
-        assert result.first_breach_day == _TODAY + timedelta(days=2)
-        assert result.binding_day == _TODAY + timedelta(days=1)
-        assert result.amount_pence == 5000
-        assert result.horizon_end == _TODAY + timedelta(days=1)
-
-    def test_measured_against_the_floor_not_zero(self):
-        projection = _projection(_TODAY, [20000, 8000, 15000])
-        result = safe_to_spend(projection=projection, today=_TODAY, floor_pence=10000)
-        assert result.first_breach_day == _TODAY + timedelta(days=1)
-        assert result.amount_pence == 10000
-        assert result.binding_day == _TODAY
-
-
-class TestCurrencyPrecision:
-    def test_odd_pence_survive_exactly(self):
-        projection = _projection(_TODAY, [10001, 9999, 10003])
-        result = safe_to_spend(projection=projection, today=_TODAY, floor_pence=33)
-        assert result.amount_pence == 9999 - 33
-
-
-class TestInputValidation:
-    def test_negative_floor_is_rejected(self):
-        projection = _projection(_TODAY, [1000])
-        with pytest.raises(SafeToSpendError):
-            safe_to_spend(projection=projection, today=_TODAY, floor_pence=-1)
-
-    def test_empty_projection_is_rejected(self):
-        with pytest.raises(SafeToSpendError):
-            safe_to_spend(projection=[], today=_TODAY)
-
-    def test_projection_starting_after_today_is_rejected(self):
-        projection = _projection(_TODAY + timedelta(days=1), [1000, 2000])
-        with pytest.raises(SafeToSpendError):
-            safe_to_spend(projection=projection, today=_TODAY)
+def test_the_window_counts_calendar_months_not_thirty_day_blocks():
+    balances = _august(50000) | _month(2026, 9, 30, 40000) | _month(2026, 10, 31, -5000)
+    result = _run(balances, window_months=2)
+    assert result.window_end == date(2026, 9, 30)
+    assert result.amount_pence == 40000
+    later = _run(balances, window_months=3)
+    assert later.window_end == date(2026, 10, 31)
+    assert later.amount_pence == -5000
+    assert later.window_end - result.window_end == timedelta(days=31)

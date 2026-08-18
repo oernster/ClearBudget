@@ -44,13 +44,17 @@ bills never touch the bank balance.</p>
 
 <hr>
 <h3>Safe to Spend Today</h3>
-<p>The headline of the Solvency tab: the most you could spend today without
-pushing any day of the still-healthy forecast below your buffer. It looks
-across the whole forecast by default, because money spent today lowers every
-later day, then stops at the first day the forecast is already under
-regardless - those months are their own warning, named beside the number,
-never summed into it. The buffer and the horizon are in Settings &gt; Bank
-Account.</p>
+<p>The headline of the Solvency tab: the most you could spend today with
+every day of the next few months still clearing your buffer. No day is left
+out of that promise. An earlier version stopped at the first day already
+under, on the grounds that those days were lost anyway; the figure that gave
+was real but it was not spendable, because money spent today lowers the lost
+days too, so it quietly funded its own deficit.</p>
+<p>When the window cannot survive, the answer is nothing rather than a
+number, stating what the window is short by. That shortfall is money to
+find, not money to spend. The buffer and the number of months the figure must
+keep standing are in Settings &gt; Bank Account: a longer window is a harder
+promise, so it allows less.</p>
 
 <hr>
 <h3>Shaping a month</h3>

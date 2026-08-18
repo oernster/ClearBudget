@@ -1,38 +1,44 @@
-"""Safe to Spend Today - pure domain calculation over a day-by-day projection.
+"""Sustainable spend - pure domain calculation over a day-by-day projection.
 
-The single actionable number the forecasting engine produces: the maximum
-amount that could be spent today without any projected day within the horizon
-dropping below the configured safety floor.
+The single actionable number the forecasting engine produces: the most that
+could be spent today with EVERY day of the window still clearing the safety
+floor.
 
-    safe_to_spend_today = min(P(d) for d in H) - F
+    sustainable_spend = min(P(d) for d in W) - F
 
 where P(d) is the projected end-of-day balance assuming no discretionary
-spend today, H is the horizon (today through the day before the next income
-event or the whole forecast window) and F is the safety floor.
+spend today, W is a bounded window of whole months from today and F is the
+safety floor.
 
-The result is signed: a negative value is the shortfall and is NOT clamped
-here. Presentation of a shortfall is the UI's job.
+An earlier version stopped the window at the first day already below the
+floor, reasoning that those days were lost whatever happened today. The
+figure that produced was real yet it was not spendable: money spent today
+lowers the lost days too, so a number computed by ignoring them funded its
+own deficit. It could report hundreds of pounds as safe while the month
+after collapsed by exactly that much more.
+
+The result is signed and is NOT clamped here. A negative value is the sum the
+window is short by, which is money to be found rather than spent; presenting
+that is the UI's job.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, timedelta
-from enum import Enum
+from datetime import date
 
 from clear_budget.shared.errors import BudgetError
 
 
-class SafeToSpendError(BudgetError):
-    """Raised when a safe-to-spend calculation is given unusable inputs."""
+class SustainableError(BudgetError):
+    """Raised when a sustainable-spend calculation is given unusable inputs."""
 
 
-class HorizonStrategy(Enum):
-    """How far ahead the safe-to-spend minimum looks."""
-
-    UNTIL_NEXT_INCOME = "until_next_income"
-    FULL_FORECAST = "full_forecast"
+# How far ahead a sustainable figure must hold. Far enough that a month which
+# collapses cannot be waved through as somebody else's problem, near enough
+# that a forecast years out does not veto every penny today.
+_DEFAULT_WINDOW_MONTHS = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,32 +50,8 @@ class DayProjection:
 
 
 @dataclass(frozen=True, slots=True)
-class SafeToSpendResult:
-    """Outcome of a safe-to-spend calculation.
-
-    Attributes:
-        amount_pence: Signed safe-to-spend value; negative is the shortfall.
-        binding_day: The minimum-balance day that determined the result.
-        horizon_end: The last day considered.
-        floor_pence: The safety floor the amount was measured against.
-        first_breach_day: The first day the baseline projection (no spend
-            today) sits below the floor within the strategy horizon; None
-            when it never does. Days from it onward are excluded from the
-            calculation: they are already below the floor regardless of what
-            is spent today, so they can say nothing about today's spending.
-            The UI warns about them separately.
-    """
-
-    amount_pence: int
-    binding_day: date
-    horizon_end: date
-    floor_pence: int
-    first_breach_day: date | None
-
-
-@dataclass(frozen=True, slots=True)
 class CapacityStep:
-    """What could be spent from `from_day` onward, and what limits it.
+    """What could be spent from `from_day` onward, plus what limits it.
 
     Attributes:
         from_day: The first day this figure applies to.
@@ -82,146 +64,120 @@ class CapacityStep:
     binding_day: date
 
 
-def safe_to_spend(
-    *,
-    projection: Sequence[DayProjection],
-    today: date,
-    income_days: Sequence[date] = (),
-    floor_pence: int = 0,
-    horizon: HorizonStrategy = HorizonStrategy.FULL_FORECAST,
-) -> SafeToSpendResult:
-    """The most that could be spent today without breaching the floor.
+@dataclass(frozen=True, slots=True)
+class SustainableResult:
+    """What can be spent today and still leave the whole window standing.
 
-    Args:
-        projection: Per-day projected end-of-day balances, covering today.
-            Days before today are ignored; the sequence need not be sorted.
-        today: The day the spend would happen. Injected, never read from
-            the clock, so the calculation is deterministic.
-        income_days: Dates of projected income events. Only dates strictly
-            after today matter: income landing today is already inside
-            P(today) and does not end the horizon.
-        floor_pence: Safety floor the balance must not drop below.
-        horizon: FULL_FORECAST (the default) uses the whole projection, so
-            the answer holds for every future day the forecast covers: money
-            spent today lowers every later day, so a horizon that stops at
-            the next payday overstates safety whenever a later month does not
-            pay for itself. UNTIL_NEXT_INCOME ends the horizon the day before
-            the next income event (degrading to the full window when no
-            future income exists), for those who budget payday to payday.
-            Either way the horizon then self-truncates at the first day the
-            baseline projection is already below the floor (see
-            SafeToSpendResult.first_breach_day).
+    Attributes:
+        amount_pence: Signed. Positive is spendable; negative is the amount
+            the window is SHORT by, which no spending decision can fix.
+        binding_day: The lowest day in the window, which set the figure.
+        window_end: The last day considered.
+        floor_pence: The buffer the figure was measured against.
+    """
 
-    Returns:
-        SafeToSpendResult with the signed amount and the binding day.
+    amount_pence: int
+    binding_day: date
+    window_end: date
+    floor_pence: int
+
+    @property
+    def is_sustainable(self) -> bool:
+        """True when the window survives without any spending today."""
+        return self.amount_pence >= 0
+
+
+def _window_days(
+    projection: Sequence[DayProjection], today: date, window_months: int
+) -> list[DayProjection]:
+    """Days from today to the end of the window, WITHOUT truncation.
+
+    The deliberate difference from `_considered_days`: a day already below
+    the floor is kept rather than ending the window. Dropping it is what let
+    a figure be reported as safe while the month after it collapsed: the days
+    that collapse were excluded from the very minimum meant to
+    protect them. Spending today makes those days worse by exactly what is
+    spent, so they have every right to veto it.
 
     Raises:
-        SafeToSpendError: If the floor is negative or the projection does
-            not include today.
+        SustainableError: If the window is not at least one month or the
+            projection does not include today.
     """
-    considered, first_breach = _considered_days(
-        projection=projection,
-        today=today,
-        income_days=income_days,
-        floor_pence=floor_pence,
-        horizon=horizon,
-    )
-    binding = min(considered, key=lambda d: d.balance_pence)
-    return SafeToSpendResult(
-        amount_pence=binding.balance_pence - floor_pence,
-        binding_day=binding.day,
-        horizon_end=considered[-1].day,
-        floor_pence=floor_pence,
-        first_breach_day=first_breach,
-    )
-
-
-def _considered_days(
-    *,
-    projection: Sequence[DayProjection],
-    today: date,
-    income_days: Sequence[date],
-    floor_pence: int,
-    horizon: HorizonStrategy,
-) -> tuple[list[DayProjection], date | None]:
-    """The days a spendable figure may be measured over, and the first breach.
-
-    Shared by every spendable figure so they cannot disagree about the window.
-    The horizon self-truncates at the first day the baseline is already below
-    the floor: from there on nothing is safe to spend regardless, so
-    accumulating that stretch into a minimum would report a meaningless
-    multi-month depth as though it were owed today. The figure is what can be
-    spent without breaking the stretch that is healthy anyway. When today
-    itself is under the floor, the healthy stretch is empty and the window is
-    today alone, so the result is today's own (negative) gap.
-
-    Raises:
-        SafeToSpendError: If the floor is negative or the projection does not
-            include today.
-    """
-    if floor_pence < 0:
-        raise SafeToSpendError("Safety floor cannot be negative")
-
+    if window_months < 1:
+        raise SustainableError("The window must be at least one month")
     future = sorted((d for d in projection if d.day >= today), key=lambda d: d.day)
     if not future or future[0].day != today:
-        raise SafeToSpendError("Projection must include today")
+        raise SustainableError("Projection must include today")
 
-    horizon_end = future[-1].day
-    if horizon is HorizonStrategy.UNTIL_NEXT_INCOME:
-        upcoming = sorted(d for d in income_days if d > today)
-        if upcoming:
-            horizon_end = min(horizon_end, upcoming[0] - timedelta(days=1))
-
-    in_horizon = [d for d in future if d.day <= horizon_end]
-    first_breach = next(
-        (d.day for d in in_horizon if d.balance_pence < floor_pence), None
-    )
-    considered = in_horizon
-    if first_breach is not None:
-        healthy = [d for d in in_horizon if d.day < first_breach]
-        considered = healthy or [in_horizon[0]]
-    return considered, first_breach
+    months_seen: list[tuple[int, int]] = []
+    within = []
+    for day in future:
+        key = (day.day.year, day.day.month)
+        if key not in months_seen:
+            if len(months_seen) == window_months:
+                break
+            months_seen.append(key)
+        within.append(day)
+    return within
 
 
-def spending_capacity(
+def sustainable_spend(
     *,
     projection: Sequence[DayProjection],
     today: date,
-    income_days: Sequence[date] = (),
     floor_pence: int = 0,
-    horizon: HorizonStrategy = HorizonStrategy.FULL_FORECAST,
-) -> tuple[CapacityStep, ...]:
-    """What could be spent from each remaining day of today's month onward.
+    window_months: int = _DEFAULT_WINDOW_MONTHS,
+) -> SustainableResult:
+    """The most that can be spent today with the WHOLE window still standing.
 
-    Safe to Spend Today answers one day. This answers the rest of the month:
-    waiting for money to land raises what a day can carry, so the figure for
-    the 20th is not the figure for the 18th. Each step is a suffix minimum,
+    The difference from `safe_to_spend` is that no day is excluded. That
+    function stops at the first day already below the floor, on the ground
+    that those days are lost whatever happens today, reporting the minimum
+    of the healthy stretch before them. The figure that produces is real but
+    it is not spendable: money spent today lowers the lost days too, so a
+    number computed by ignoring them funds its own deficit.
 
-        capacity(d) = min(P(x) for x in W, x >= d) - F
+    Here a window that cannot survive returns a NEGATIVE amount, which is the
+    sum that would have to be found rather than spent. Nothing is safely
+    spendable until it is.
 
-    over the same window W that Safe to Spend uses, so the first step always
-    equals the headline and the two can never disagree.
-
-    Only days in today's own calendar month are reported: the question is
-    what this month can carry. The window itself still runs to the end of the
-    forecast, because money spent on the 20th lowers every later day too.
-
-    Returns:
-        One step per CHANGE in capacity, in date order, starting with today.
-        A month whose capacity never moves returns a single step.
+    Raises:
+        SustainableError: If the floor is negative, the window is shorter
+            than a month or the projection does not include today.
     """
-    considered, _ = _considered_days(
-        projection=projection,
-        today=today,
-        income_days=income_days,
+    if floor_pence < 0:
+        raise SustainableError("Safety floor cannot be negative")
+    within = _window_days(projection, today, window_months)
+    binding = min(within, key=lambda d: d.balance_pence)
+    return SustainableResult(
+        amount_pence=binding.balance_pence - floor_pence,
+        binding_day=binding.day,
+        window_end=within[-1].day,
         floor_pence=floor_pence,
-        horizon=horizon,
     )
+
+
+def sustainable_capacity(
+    *,
+    projection: Sequence[DayProjection],
+    today: date,
+    floor_pence: int = 0,
+    window_months: int = _DEFAULT_WINDOW_MONTHS,
+) -> tuple[CapacityStep, ...]:
+    """`sustainable_spend` from each remaining day of today's month onward.
+
+    Same suffix-minimum shape as `spending_capacity`, over the untruncated
+    window: waiting past a tight day still raises what a day can carry; it can
+    never raise it past what the whole window will bear.
+    """
+    if floor_pence < 0:
+        raise SustainableError("Safety floor cannot be negative")
+    within = _window_days(projection, today, window_months)
     steps: list[CapacityStep] = []
-    for index, day in enumerate(considered):
+    for index, day in enumerate(within):
         if day.day.month != today.month or day.day.year != today.year:
             break
-        rest = considered[index:]
+        rest = within[index:]
         binding = min(rest, key=lambda d: d.balance_pence)
         amount = binding.balance_pence - floor_pence
         if steps and steps[-1].amount_pence == amount:

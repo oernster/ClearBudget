@@ -24,10 +24,9 @@ from clear_budget.domain.services._prorating import days_in_month
 from clear_budget.domain.services.safe_to_spend import (
     CapacityStep,
     DayProjection,
-    HorizonStrategy,
-    SafeToSpendResult,
-    safe_to_spend,
-    spending_capacity,
+    SustainableResult,
+    sustainable_capacity,
+    sustainable_spend,
 )
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -42,18 +41,8 @@ _FORECAST_WINDOW_MONTHS = _DEFAULT_HORIZON_MONTHS
 # honoured as zero (the UI calls the floor a "buffer").
 _DEFAULT_BUFFER_PENCE = 2000
 
-
-def _income_dates(summary, year_month: YearMonth) -> list[date]:
-    """Dates a FUTURE month's income events land on, as the projection counts them."""
-    days = days_in_month(year_month.year, year_month.month)
-    return [
-        date(
-            year_month.year,
-            year_month.month,
-            min(inc.day_of_month or _UNDATED_INCOME_DAY, days),
-        )
-        for inc in summary.income_sources
-    ]
+# Months a spendable figure must keep standing when the user has not chosen.
+_DEFAULT_WINDOW_MONTHS = 4
 
 
 class SafeToSpendOperationsMixin:
@@ -77,76 +66,64 @@ class SafeToSpendOperationsMixin:
 
         set_safe_to_spend_floor_pence(self.bill_repo.conn, amount.pence)
 
-    def get_safe_to_spend_horizon(self) -> HorizonStrategy:
-        """Stored horizon strategy, defaulting to FULL_FORECAST.
-
-        The default is the whole forecast because a spend today lowers every
-        later day: a horizon stopping at the next payday overstates safety
-        whenever a later month does not pay for itself.
-        """
+    def get_sustainable_window_months(self) -> int:
+        """How many months a spendable figure must keep standing."""
         from clear_budget.application.services._settings_operations import (
-            get_safe_to_spend_horizon,
+            get_sustainable_window_months,
         )
 
-        stored = get_safe_to_spend_horizon(getattr(self.bill_repo, "conn", None))
-        try:
-            return HorizonStrategy(stored)
-        except ValueError:
-            return HorizonStrategy.FULL_FORECAST
+        stored = get_sustainable_window_months(getattr(self.bill_repo, "conn", None))
+        return _DEFAULT_WINDOW_MONTHS if stored is None else stored
 
-    def set_safe_to_spend_horizon(
-        self, *, horizon: HorizonStrategy
-    ) -> None:  # pragma: no cover
+    def set_sustainable_window_months(self, *, months: int) -> None:  # pragma: no cover
         from clear_budget.application.services._settings_operations import (
-            set_safe_to_spend_horizon,
+            set_sustainable_window_months,
         )
 
-        set_safe_to_spend_horizon(self.bill_repo.conn, horizon.value)
+        set_sustainable_window_months(self.bill_repo.conn, months)
 
     def get_safe_to_spend(
         self, *, today: date | None = None, include_assumed: bool = False
-    ) -> SafeToSpendResult:
-        """Safe to Spend Today, from the stored floor and horizon settings.
+    ) -> SustainableResult:
+        """The most that can be spent today with the whole window standing.
 
-        `today` is injectable so the result is decided by its inputs rather
-        than by the day the code happens to run.
+        No day inside the window is excluded, so a month that collapses vetoes
+        the figure rather than being written off. A window that cannot survive
+        returns a negative amount: the sum to be found, not spent.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
-        projection, income_days = self._build_safe_to_spend_inputs(
+        projection = self._build_safe_to_spend_inputs(
             today, include_assumed=include_assumed
         )
-        return safe_to_spend(
+        return sustainable_spend(
             projection=projection,
             today=today,
-            income_days=income_days,
             floor_pence=self.get_safe_to_spend_floor().pence,
-            horizon=self.get_safe_to_spend_horizon(),
+            window_months=self.get_sustainable_window_months(),
         )
 
     def get_spending_capacity(
         self, *, today: date | None = None, include_assumed: bool = False
     ) -> tuple[CapacityStep, ...]:
-        """What could be spent from each remaining day of this month onward.
+        """The same figure from each remaining day of this month onward.
 
-        Same projection, floor and horizon as Safe to Spend Today, so the
-        first step always equals the headline. Later steps rise as the days
-        holding the figure down fall behind.
+        The first step always equals the headline, because both read one
+        projection over one window.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
-        projection, income_days = self._build_safe_to_spend_inputs(
+        projection = self._build_safe_to_spend_inputs(
             today, include_assumed=include_assumed
         )
-        return spending_capacity(
+        return sustainable_capacity(
             projection=projection,
             today=today,
-            income_days=income_days,
             floor_pence=self.get_safe_to_spend_floor().pence,
-            horizon=self.get_safe_to_spend_horizon(),
+            window_months=self.get_sustainable_window_months(),
         )
 
     def _build_safe_to_spend_inputs(
         self, today: date, *, include_assumed: bool = False
-    ) -> tuple[list[DayProjection], list[date]]:
+    ) -> list[DayProjection]:
         """Per-day projection and income dates across the forecast window.
 
         The current month runs from today's stored balance over the same
@@ -164,12 +141,10 @@ class SafeToSpendOperationsMixin:
             summary.bills, summary.income_sources, ym, ym, today.day
         )
         per_day = [0] * (days + 1)
-        income_days: list[date] = []
         for inc in income:
             if inc.received_for_month:
                 continue
             nominal = min(inc.day_of_month or _UNDATED_INCOME_DAY, days)
-            income_days.append(date(ym.year, ym.month, nominal))
             # An event whose nominal day has already passed (an undated
             # income, an overdue one) lands on the earliest day it still can.
             per_day[max(nominal, today.day)] += inc.amount.pence
@@ -209,5 +184,4 @@ class SafeToSpendOperationsMixin:
                         balance_pence=balance,
                     )
                 )
-            income_days += _income_dates(summary, cursor)
-        return projection, income_days
+        return projection

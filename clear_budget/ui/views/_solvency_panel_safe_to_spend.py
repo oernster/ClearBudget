@@ -1,6 +1,6 @@
 """Safe to Spend Today rendering for SolvencyPanel - extracted for LOC limit.
 
-Owns one concern: turning a SafeToSpendResult into the headline banner and
+Owns one concern: turning a SustainableResult into the headline banner and
 its secondary line. The number's semantics live in the domain calculation;
 this module only decides what a person reads.
 """
@@ -20,8 +20,8 @@ class SolvencyPanelSafeToSpendMixin:
     def _sts_day(day) -> str:
         """A short day label ("28 Aug"), with the year when it is not this one.
 
-        The full-forecast horizon can bind years out, where "10 Jun" alone
-        would read as this year's June.
+        A window several months long can bind into next year, where "10 Jun"
+        alone would read as this year's June.
         """
         label = f"{day.day} {MONTH_NAMES[day.month][:3]}"
         today = _date.today()  # noqa: DTZ011 (local date)
@@ -30,42 +30,42 @@ class SolvencyPanelSafeToSpendMixin:
         return label
 
     def _update_safe_to_spend(self) -> None:
-        """Render the Safe to Spend Today headline from the live projection.
+        """Render the headline: what can be spent with the window still standing.
 
-        Always about today, whichever month is being viewed: the number is
-        what could leave the account now without pushing any day of the
-        still-healthy stretch below the safety floor. Days the baseline
-        forecast already has under the floor are a warning of their own (the
-        secondary line names when they start); they are never summed into
-        the number, because a dip accumulated across future months would
-        read as a debt owed today, which it is not.
+        The number is never the minimum of a healthy stretch with the bad
+        months excluded. Every day of the window has a veto, because money
+        spent today lowers the bad days too: a figure that ignored them would
+        fund its own deficit and read as safe while the month after collapsed
+        by exactly that much more.
+
+        So a window that cannot survive reports NOTHING spendable and names
+        what it is short by. That number is money to be found, not spent.
         """
-        result = self.view_model.budget_service.get_safe_to_spend()
-        self._update_capacity()
+        service = self.view_model.budget_service
+        result = service.get_safe_to_spend()
+        months = service.get_sustainable_window_months()
+        window = f"{months} months" if months != 1 else "month"
         if result.amount_pence < 0:
-            # Today itself is already under the floor; the answer to "what
-            # can I spend today" is nothing, so say that.
-            if result.floor_pence > 0:
-                self.sts_banner.setText(
-                    f"NOTHING SAFE TO SPEND: already below your"
-                    f" {money_from_pence(result.floor_pence)} buffer"
-                )
-            else:
-                self.sts_banner.setText("NOTHING SAFE TO SPEND: already under")
+            self.sts_banner.setText(
+                f"NOTHING SAFE TO SPEND: the next {window} are"
+                f" {money_from_pence(abs(result.amount_pence))} short"
+            )
             state = STATE_RED
-            detail = ""
+            detail = (
+                f"The shortfall lands on {self._sts_day(result.binding_day)}."
+                f" That is money to find rather than money to spend"
+            )
         elif result.amount_pence == 0:
             self.sts_banner.setText("Nothing safe to spend today")
             state = STATE_AT_RISK
-            detail = self._sts_detail_line(result)
+            detail = self._sts_detail_line(result, window)
         else:
             self.sts_banner.setText(
                 f"{money_from_pence(result.amount_pence)} safe to spend today"
             )
-            # A later breach does not change the amount (those days are
-            # under regardless of today's spending) but it tempers the tone.
-            state = STATE_AT_RISK if result.first_breach_day else STATE_SAFE
-            detail = self._sts_detail_line(result)
+            state = STATE_SAFE
+            detail = self._sts_detail_line(result, window)
+        self._update_capacity()
         self.sts_detail.setText(detail)
         self.sts_detail.setVisible(bool(detail))
         self.sts_banner.setProperty("state", state)
@@ -74,14 +74,14 @@ class SolvencyPanelSafeToSpendMixin:
     def _update_capacity(self) -> None:
         """Show how the spendable figure moves as money lands this month.
 
-        The headline is about today, and today is often the worst day of the
+        The headline is about today; today is often the worst day of the
         month: waiting for an income to land raises what the account can
         carry. Each row is the figure from that day onward, so a row answers
-        "what could I spend if I wait until then". The first step always
-        repeats the headline, so it is dropped: only the changes are news.
+        "what could I spend if I wait until then". The first step repeats
+        the headline, so it is dropped: only the changes are news.
 
-        Every row is still measured across the whole forecast window, so
-        waiting does not conjure money that a later month needs back.
+        Every row is still measured across the whole window, so waiting can
+        never raise the figure past what the later months will bear.
         """
         steps = self.view_model.budget_service.get_spending_capacity()
         rows = [
@@ -97,24 +97,16 @@ class SolvencyPanelSafeToSpendMixin:
         self.sts_capacity.setText("If you wait:\n" + "\n".join(rows))
         self.sts_capacity.setVisible(True)
 
-    def _sts_detail_line(self, result) -> str:
-        """Secondary line under a non-negative headline.
+    def _sts_detail_line(self, result, window: str) -> str:
+        """Secondary line under a spendable headline.
 
-        Names the constraining day and the reserve when one is set; when the
-        baseline forecast goes under later regardless of spending, it also
-        names the day that trouble starts.
+        Names the promise the figure keeps (every day of the window above the
+        buffer) and the day that limits it, so the number can be checked
+        against the projection rather than taken on trust.
         """
-        detail = f"Constrained by {self._sts_day(result.binding_day)}"
+        detail = f"Keeps the next {window} above"
         if result.floor_pence > 0:
-            detail += (
-                f", keeping a {money_from_pence(result.floor_pence)} buffer in hand"
-            )
-        if result.first_breach_day is not None:
-            under = (
-                "drops below your buffer" if result.floor_pence > 0 else "goes under"
-            )
-            detail += (
-                f"; the forecast {under} from"
-                f" {self._sts_day(result.first_breach_day)} regardless"
-            )
-        return detail
+            detail += f" your {money_from_pence(result.floor_pence)} buffer"
+        else:
+            detail += " zero"
+        return detail + f"; constrained by {self._sts_day(result.binding_day)}"
