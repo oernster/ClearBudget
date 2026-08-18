@@ -11,6 +11,8 @@ Qt-free: the builder is a static method over plain data, so these run without
 a QApplication (see this package's docstring).
 """
 
+from types import SimpleNamespace
+
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.amount import Amount
@@ -45,6 +47,15 @@ def _income(*, name: str, pence: int, day: int) -> IncomeSource:
         amount=Amount(pence=pence),
         is_reliable=True,
         day_of_month=day,
+    )
+
+
+def _summary(bills, incomes) -> SimpleNamespace:
+    """Minimal stand-in for MonthSummary, as the colours tests use."""
+    return SimpleNamespace(
+        bills=tuple(bills),
+        income_sources=tuple(incomes),
+        total_income=Amount(pence=sum(i.amount.pence for i in incomes)),
     )
 
 
@@ -98,3 +109,45 @@ class TestLowestPointIsReported:
         )
         assert lines[-2].startswith("Low point: ")
         assert lines[-1].startswith("Balance at end of month:")
+
+
+class TestGapClause:
+    """The shared clause naming what a month needs or what it spares."""
+
+    def test_a_month_short_of_its_bills_names_the_amount(self) -> None:
+        clause = SolvencyPanelNarrativeMixin._gap_clause(66_687)
+        assert clause == f"needs {fmt(66_687)} more to hold flat"
+
+    def test_a_month_in_surplus_names_the_headroom(self) -> None:
+        clause = SolvencyPanelNarrativeMixin._gap_clause(-50_000)
+        assert clause == f"pays for itself, {fmt(50_000)} to spare"
+
+    def test_a_month_that_breaks_even_says_so_without_a_figure(self) -> None:
+        assert SolvencyPanelNarrativeMixin._gap_clause(0) == "pays for itself exactly"
+
+    def test_a_healthy_forward_month_still_states_its_shape(self) -> None:
+        """The complaint this answers.
+
+        A figure shown only for months in trouble makes the healthy ones look
+        as though they have none, which is what made the low point read
+        inconsistently before it was given to every month.
+        """
+        mix = SolvencyPanelNarrativeMixin()
+        summary = _summary([_bill(name="Rent", pence=50_000, day=5)], [])
+        text, _, _ = mix._build_month_cashflow_summary(
+            _OPENING_PENCE, summary, -50_000, overdraft_limit_pence=0
+        )
+        assert f"Pays for itself, {fmt(50_000)} to spare" in text
+
+    def test_a_month_closing_positive_can_still_report_a_loss(self) -> None:
+        """The case a closing balance alone hides."""
+        mix = SolvencyPanelNarrativeMixin()
+        summary = _summary(
+            [_bill(name="Rent", pence=50_000, day=5)],
+            [_income(name="Salary", pence=33_313, day=20)],
+        )
+        text, _, _ = mix._build_month_cashflow_summary(
+            _OPENING_PENCE, summary, 16_687, overdraft_limit_pence=0
+        )
+        assert f"Needs {fmt(16_687)} more to hold flat" in text
+        assert "Closes:" in text

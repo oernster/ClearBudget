@@ -305,17 +305,7 @@ class SolvencyPanelDisplayMixin:
         """
         gap = self.view_model.budget_service.get_month_gap(year_month=year_month)
         month_name = MONTH_NAMES[year_month.month]
-        if gap.holds_flat:
-            spare = abs(gap.needed_pence)
-            self.gap_label.setText(
-                f"{month_name} pays for itself, with {fmt(spare)} to spare"
-                if spare
-                else f"{month_name} pays for itself exactly"
-            )
-        else:
-            self.gap_label.setText(
-                f"A month like this needs {fmt(gap.needed_pence)} more to hold flat"
-            )
+        self.gap_label.setText(f"{month_name} {self._gap_clause(gap.needed_pence)}")
         if gap.card_interest_pence:
             self.card_interest_label.setText(
                 f"Card interest adds {fmt(gap.card_interest_pence)} to your card"

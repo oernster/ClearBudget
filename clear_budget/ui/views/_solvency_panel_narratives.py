@@ -152,8 +152,8 @@ class SolvencyPanelNarrativeMixin:
 
         # Every month reports its low, whether or not it is alarming: a low
         # shown only when a month is in trouble makes the healthy months look
-        # as though they have no low at all, and leaves nothing to compare a
-        # worsening month against.
+        # as though they have no low at all; it also leaves nothing to compare
+        # a worsening month against.
         when = f"on day {min_day}" if min_day != _LOW_AT_START else "at the start"
         if min_balance < 0:
             lines.append(f"Low point: -{fmt(abs(min_balance))} {when}")
@@ -176,6 +176,12 @@ class SolvencyPanelNarrativeMixin:
             lines.append(f"Closes: {fmt(closing_pence)}")
         else:
             lines.append(f"Closes: -{fmt(abs(closing_pence))}  (still overdrawn)")
+
+        # Every month states its shape, on the same terms as the month on
+        # screen. A month that closes positive can still run at a loss; that
+        # is precisely the case a closing balance alone hides.
+        clause = self._gap_clause(monthly_drain_pence)
+        lines.append(clause[0].upper() + clause[1:])
 
         return "\n".join(lines), color, clarion
 
@@ -203,6 +209,21 @@ class SolvencyPanelNarrativeMixin:
                 True,
             )
         return "NO OVERDRAFT FACILITY - payments would be refused", "#f87171", True
+
+    @staticmethod
+    def _gap_clause(needed_pence: int) -> str:
+        """One month's shape as a clause: what it needs or what it spares.
+
+        Shared by the Overall Health line and by every Forward Projection
+        block so the wording and the sign convention cannot drift apart. Each
+        caller supplies its own subject, since one sits under a month heading
+        already and the other does not.
+        """
+        if needed_pence > 0:
+            return f"needs {fmt(needed_pence)} more to hold flat"
+        if needed_pence < 0:
+            return f"pays for itself, {fmt(abs(needed_pence))} to spare"
+        return "pays for itself exactly"
 
     @staticmethod
     def _build_income_timeline(opening_pence: int, income_sources, bills) -> list[str]:
