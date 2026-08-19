@@ -83,8 +83,20 @@ Everything below this section explains how the code satisfies them.
   - `is_active_in_month(year_month)` - checks date range
 
 - `IncomeSource` - Recurring income (salary, benefits)
-  - `name`, `amount`, `is_reliable` (for forward projections)
-  - `is_month_only: bool` - one-off "this month only" entry not tied to a template
+  - `name`, `amount`, `is_reliable` (excluded from counted totals when false)
+  - `start_ym`, `end_ym` - active month range, mirroring `Bill`. BOTH are
+    nullable and a null means unbounded on that side, unlike a bill's
+    mandatory start: every income row written before these columns existed has
+    no start to record and inventing one would rewrite the months it already
+    appeared in. An income that stops names its final month rather than being
+    deleted, so the months it really did arrive in keep it
+  - `is_active_in_month(year_month)` - checks the range, the same rule `Bill`
+    applies, so a month decides what it contains identically on both sides of
+    the ledger
+  - `is_month_only: bool` - one-off "this month only" entry not tied to a
+    template; stored in `income_month_extras`, an unrelated table with its own
+    id space, which is why a one-off and a recurring source are matched by NAME
+    wherever the two have to be compared
   - `skipped_for_month` / `has_month_override` / `received_for_month` - same
     per-month machinery as `Bill`
 
@@ -145,34 +157,31 @@ Everything below this section explains how the code satisfies them.
   - `estimate_daily_overdraft_interest_pence(overdrawn_pence, apr_basis_points)` -
     daily interest estimate from APR stored in basis points
 - `safe_to_spend.py` - the Safe to Spend Today calculation, pure over its
-  inputs: `safe_to_spend(projection, today, income_days, floor_pence, horizon)`
-  returns a `SafeToSpendResult` (signed `amount_pence`, the `binding_day` that
-  set the minimum, the `first_breach_day` the baseline projection first sits
-  below the floor or None, `horizon_end`, the floor echoed back). `today` is
-  a parameter, never read from the clock. `HorizonStrategy` defaults to
-  `FULL_FORECAST` (the whole projection: a spend today lowers every later
-  day, so a shorter horizon overstates safety whenever a later month does
-  not pay for itself); `UNTIL_NEXT_INCOME` ends the day before the next
-  income event strictly after today, degrading to the full window when none
-  exists. Either way the horizon then SELF-TRUNCATES at the first day the
-  baseline is already below the floor: from there on nothing is safe to
-  spend regardless of today, so accumulating that stretch into the minimum
-  would report a meaningless multi-month depth as though it were owed today.
-  The amount is the minimum over the still-healthy stretch; it is negative
-  only when today itself is under the floor and is not clamped
-  (presentation is the UI's job).
-  `spending_capacity(...)` answers the rest of the month rather than one
+  inputs and with `today` always a parameter, never read from the clock.
+  `sustainable_spend(projection, today, floor_pence, window_months)` returns a
+  `SustainableResult` (signed `amount_pence`, the `binding_day` that set the
+  minimum, the `window_months` asked for and the floor echoed back). The
+  figure is the minimum across a BOUNDED WINDOW of whole months: no day
+  inside it is excluded, so a month that cannot survive vetoes the figure
+  rather than being written off; a window that cannot hold returns a
+  negative amount, the sum to be found rather than an amount to spend.
+  An earlier version truncated the window at the first day the projection
+  was already below the floor. That was wrong in a way that mattered: the
+  figure it offered deepened the first breaching month by exactly the amount
+  it offered, so it was not survivable at all. Bounding by months instead
+  makes the promise checkable, which is why `window_months` is a user
+  setting rather than a strategy enum.
+  `sustainable_capacity(...)` answers the rest of the month rather than one
   day: `tuple[CapacityStep, ...]`, one step per CHANGE in the figure, each
   carrying `from_day`, the signed `amount_pence` from that day onward and
-  the `binding_day` that set it. Each step is a suffix minimum over the same
+  the `binding_day` that set it. Each step is a suffix minimum over its own
   window, so waiting past a tight day raises what a day can carry while
-  every step stays measured against the whole forecast; a month whose
-  figure never moves returns a single step. Only days in today's own
+  every step stays measured across whole months. Only days in today's own
   calendar month are reported, because the question is what THIS month can
-  carry. Both functions take their window from one shared
-  `_considered_days()` helper, which owns the horizon rules and the
-  self-truncation, so the headline and the schedule cannot disagree about
-  what they are measured over and the first step always equals the headline
+  carry. Both functions take their window from one shared `_window_days()`
+  helper, so the headline and the schedule cannot disagree about what they
+  are measured over and the first step always equals the headline.
+  `SustainableError` is the module's typed failure
 - `_prorating.py` - shared pro-rating helpers (`days_in_month`,
   `prorate_remaining_pence`) used by live card projection and balance projection
 - `CardMonthlyCalculator.calculate_card_monthly_state()` - Per-card monthly cashflow
@@ -208,7 +217,9 @@ focused mixins to stay under the 400-LOC-per-file limit:
   skip/override/paid and `end_bill` (history-safe delete: sets the bill's end
   month so earlier and archived months keep it)
 - `IncomeOperationsMixin` (`_income_operations.py`) - income CRUD, per-month
-  skip/override/received, "this month only" extras
+  skip/override/received, "this month only" extras and `end_income` (the
+  mirror of `end_bill`: sets the income's end month so earlier and archived
+  months keep it)
 - `OverdraftOperationsMixin` (`_overdraft_operations.py`) - overdraft facility
   settings, `get_month_gap()` (the month's bank shortfall and its card
   interest, as a `MonthGap`), `get_month_cashflow_projection()` and
@@ -229,21 +240,23 @@ focused mixins to stay under the 400-LOC-per-file limit:
   `get_card_graph_series` (one day-end balance series per active card),
   reusing the same projection day conventions as the rest of the app
 - `SafeToSpendOperationsMixin` (`_safe_to_spend_operations.py`) - the Safe to
-  Spend Today adapter and its settings. `get_safe_to_spend(today=None)` builds
-  the per-day projection across the forecast window plus the income event
-  dates (an income already marked Received cannot end the horizon), then
-  calls the pure domain calculation with the stored floor and horizon
-  strategy. The current month runs from today's stored balance over the same
-  still-due items the Solvency panel's timeline shows, an undated bill
-  counted at its prorated REMAINING portion because its elapsed portion is
-  already inside the stored balance (the raw month-graph convention charges
-  the full undated amount again near month end, which double-counted elapsed
-  spending and made the headline disagree with the panel it sits on); its
-  close therefore equals the panel's projected end-of-month figure. Later
-  months chain day by day from that close, over the same 24-month window the
-  overdraft runway walks. `get_spending_capacity(today=None)` runs the
-  capacity schedule over that same projection, floor and horizon, so it and
-  the headline are two readings of one forecast rather than two forecasts
+  Spend Today adapter and its settings. `get_safe_to_spend(today=None,
+  basis=KNOWN)` builds the per-day projection across the forecast window,
+  then calls the pure domain calculation with the stored floor and window.
+  The current month runs from today's stored balance over the same still-due
+  items the Solvency panel's timeline shows, an undated bill counted at its
+  prorated REMAINING portion because its elapsed portion is already inside
+  the stored balance (the raw month-graph convention charges the full undated
+  amount again near month end, which double-counted elapsed spending and made
+  the headline disagree with the panel it sits on); its close therefore
+  equals the panel's projected end-of-month figure. Later months chain day by
+  day from that close, over the same 24-month window the overdraft runway
+  walks. `get_spending_capacity(today=None, basis=KNOWN)` runs the capacity
+  schedule over that same projection, floor and window, so it and the
+  headline are two readings of one forecast rather than two forecasts.
+  `get_assumed_expectations(today=None)` returns the (month, income) pairs the
+  assumed reading counts that the known one does not, scoped to the
+  sustainable window because that is what a figure promises to keep standing
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
@@ -278,20 +291,23 @@ Key methods:
 - `adjust_bank_balance(delta_pence)` - signed delta to the stored balance,
   stamped as-of today (backs the same-day "update balance now?" prompt when an
   item dated today is added)
-- `get_safe_to_spend(today=None)` → `SafeToSpendResult` - Safe to Spend Today
-  from the stored floor and horizon; `today` is injectable so the result is
-  decided by its inputs rather than by the day the code runs
-- `get_spending_capacity(today=None)` → `tuple[CapacityStep, ...]` - what could
-  be spent from each remaining day of this month onward, one entry per change;
-  the first entry always equals `get_safe_to_spend`
+- `get_safe_to_spend(today=None, basis=KNOWN)` → `SustainableResult` - Safe to
+  Spend Today from the stored floor and window; `today` is injectable so the
+  result is decided by its inputs rather than by the day the code runs
+- `get_spending_capacity(today=None, basis=KNOWN)` → `tuple[CapacityStep, ...]` -
+  what could be spent from each remaining day of this month onward, one entry
+  per change; the first entry always equals `get_safe_to_spend`
+- `get_assumed_expectations(today=None)` → `tuple[tuple[YearMonth, IncomeSource], ...]` -
+  the money the assumed reading counts that the known one does not, as (month,
+  income) pairs so the panel can say WHEN each amount has to arrive
 - `get_safe_to_spend_floor()` / `set_safe_to_spend_floor(amount)` - the
   floor, which the UI calls the Safe to Spend "buffer" (the naming split:
   floor is the domain term the calculation uses, buffer is what a user
   reads). Defaults to 20.00 in the active currency when never set; an
   explicitly saved zero is honoured as zero
-- `get_safe_to_spend_horizon()` / `set_safe_to_spend_horizon(horizon)` - the
-  `HorizonStrategy`, defaulting to `FULL_FORECAST` for an unset or
-  unrecognised stored value
+- `get_sustainable_window_months()` / `set_sustainable_window_months(months)` -
+  how many months the figure must keep standing, defaulting to 4 when never
+  set; the dialog offers 1 to 12
 - `get_overdraft_limit()` / `set_overdraft_limit(amount)` - overdraft facility limit
 - `get_overdraft_apr_basis_points()` / `set_overdraft_apr_basis_points(basis_points)` -
   overdraft APR, stored as basis points (1bp = 0.01%)
@@ -306,6 +322,10 @@ Key methods:
   and the "overdrawn in <month>" escalation
 - `end_bill(bill_id, last_active_month)` - history-safe delete: set the bill's end
   month, leaving every earlier month (and archived snapshots) untouched
+- `end_income(income_id, last_active_month)` - the same for income. Deleting the
+  source instead would remove it from months it really did arrive in, which is
+  why this exists and why the income dialog offers no way to turn a recurring
+  income into a one-off
 - `reset_all_data()` - wipes all user budget data (New Budget feature)
 - `get_recorded_months()` → `list[YearMonth]` - months already snapshotted into the
   archive (drives the Archive tab)
@@ -317,8 +337,25 @@ Key methods:
   month up to the live month, filling any gap from the earliest recorded month so a
   month is captured the moment it ends even across several missed launches
 
+**Projection basis** (`application/projection_basis.py`):
+- `ProjectionBasis` - what a forward projection may assume about income.
+  `KNOWN` counts only income entered and marked reliable, month by month, as
+  typed. `REPEAT_CURRENT` assumes every income entered for the current month
+  arrives, then arrives again in each later month with no entry of THAT NAME.
+  The assumption only fills gaps, so it can never reduce a month below what
+  was entered for it. Matching is by name because a recurring source and a
+  one-off live in different tables with unrelated ids
+- It replaced a per-item "reliable" tick as the basis of the second reading.
+  The tick still excludes income from the counted totals. An assumption
+  nobody remembers to switch on is not a second reading, so the assumption is
+  now DERIVED from the shape of the current month
+
 **DTOs**:
-- `MonthSummary` - `year_month`, `total_income`, `total_bills`, `bank_bills`, `balance`, `bills`, `all_bills`, `income_sources`, `all_income_sources`
+- `MonthSummary` - `year_month`, `total_income`, `total_bills`, `bank_bills`,
+  `balance`, `bills`, `all_bills`, `income_sources` (the counted set),
+  `all_income_sources` and `assumed_income_sources` (active but not reliable,
+  carried separately whether or not they were counted, so the gap
+  specification can name them)
 - `SolvencyReport` - `year_month`, `balance_pence: int` (signed), `deficit`, `buffer`, `forward_shortfall`, `is_solvent`, `first_negative_day`
 - `GraphSeries` - `label`, `values` (one signed pence value per day of month)
 - `ReleaseInfo` / `ReleaseAsset` / `UpdateStatus` (`dto/update_info.py`) - the
@@ -354,7 +391,7 @@ Key methods:
      migration that runs once rather than on every launch. `amount_pence` here
      is only the ORIGINAL amount: what a bill costs in a given month comes from
      table 18 via `domain.services.bill_amount_schedule`
-  3. `income_sources`
+  3. `income_sources` - templates; `start_year` / `start_month` / `end_year` / `end_month` (migration) bound the months it appears in, all four nullable and all NULL on every row that predates them, so an upgraded database behaves exactly as it did
   4. `months` - one row per archived month (written by auto-archive at launch)
   5. `month_bills` - archived per-month bill snapshot
   6. `month_income` - archived per-month income snapshot
@@ -363,7 +400,7 @@ Key methods:
      `bank_balance_date` (the fold baseline; legacy databases without it fall
      back to `bank_balance_day`), `currency`,
      `overdraft_limit`, `overdraft_apr_bp`, `safe_to_spend_floor`,
-     `safe_to_spend_horizon`)
+     `sustainable_window_months`)
   9. `bill_month_overrides` - per-month bill amount/day override (`day_of_month` is a migration)
   10. `bill_month_skips` - per-month bill exclusion
   11. `bill_month_paid` - per-month bill "paid" flag (excludes it from "still due")
@@ -390,6 +427,11 @@ Key methods:
   - `skip_for_month` / `unskip_for_month`
   - `hard_delete(bill_id)` - cleans related skips and overrides
 - `SQLiteIncomeSourceRepository`
+  - `list_active_for_month()` - LEFT JOINs the per-month override, skip and
+    received tables and filters on the month bounds, where a NULL on either
+    side reads as unbounded
+  - `IncomeMonthExtrasMixin` (`_income_month_extras.py`) - the one-off rows in
+    `income_month_extras`, split out as a distinct concern from template CRUD
 - `SQLitePaymentMethodRepository`
   - `set_card_active(card_id, active)` - soft-delete toggle
 
@@ -596,15 +638,24 @@ bank statement. Both identities are tested.
 - `MonthView` - bill/income tables with inline editing; balance display adapts
   to current vs future month; composed of mixins (builders, table, edit, delete,
   apply-prompt) to stay under the LOC limit
-- `SolvencyPanel` - Safe to Spend Today headline (rendered by
+- `SolvencyPanel` - split across a bank page and a cards page. Safe to Spend
+  Today headline (rendered by
   `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` from
   `BudgetService.get_safe_to_spend`, reusing the banner's traffic-light state
-  property; a later baseline breach turns the tone amber and is named on the
-  secondary line, "the forecast goes under from 14 Oct regardless", never
-  summed into the amount; "NOTHING SAFE TO SPEND" appears only when today is
-  already under the floor), the capacity schedule beneath it ("If you wait:"
-  and one line per change, from `get_spending_capacity`, hidden entirely when
-  the figure never moves so a flat month does not restate the headline),
+  property; the secondary line names what the figure keeps standing and the
+  day that constrains it, "Keeps the next 4 months above your £20.00 buffer;
+  constrained by 14 Sep"; when the window cannot hold, the headline is the
+  shortfall to FIND with the day it lands on), the capacity schedule beneath
+  it ("If you wait:" and one line per change, from `get_spending_capacity`,
+  hidden entirely when the figure never moves so a flat month does not
+  restate the headline), the assumed second reading
+  (`_solvency_panel_assumed.SolvencyPanelAssumedMixin`: the same calculations
+  run on `ProjectionBasis.REPEAT_CURRENT`, painted in muted variants of the
+  same traffic-light hues so it reads as provisional, with a gap
+  specification from `get_assumed_expectations` naming what has to arrive and
+  when; the whole block hides when there is nothing to assume; its
+  heading names the assumption rather than the money, "If the months ahead
+  are like this one"),
   overdraft alert, mid-month alert, card bars
   (`_solvency_panel_card_bars.SolvencyPanelCardBarsMixin`: the per-card
   utilisation bar, its scheduled-limit-change pills and the within-month
@@ -654,8 +705,9 @@ bank statement. Both identities are tested.
 - `CurrencyDialog` - combobox of 25 currencies; opened via Settings >
   Preferences or the tray's cog button
 - `BankAccountSettingsDialog` - configure the overdraft facility (limit and
-  APR) plus the Safe to Spend Today buffer and horizon strategy; opened
-  via Settings > Bank Account or the tray's bank button
+  APR) plus the Safe to Spend Today buffer and the sustainable window (a spin
+  box, 1 to 12 months, defaulting to 4); opened via Settings > Bank Account or
+  the tray's bank button
 - `ExportViewerPackageDialog` - admin: bundle a snapshot of the budget DB into a zip
   for a read-only viewer account
 - `_viewer_package_import_flow.py` - shared import flow used by both the login
@@ -666,8 +718,18 @@ bank statement. Both identities are tested.
   per-month override; optional end-month control (greyed while one-off is
   ticked, since the ending is implied)
 - `CreditCardDialog` - add/edit credit card
-- `IncomeDialog` - add/edit income source; "this month only" checkbox with
-  contextual status text
+- `IncomeDialog` - add/edit income source. Which controls appear depends on
+  what is being edited, each labelled for the job it does there: adding shows
+  `one_off_check` alone; editing a one-off shows it too, untickable to promote
+  the entry to a recurring income; editing a recurring income shows
+  `ends_check` with `end_month_edit` (worded exactly as `BillDialog` words its
+  own) plus `scope_check` for how far this edit reaches. A note beneath states
+  what OK will do before it is pressed. One checkbox used to carry two
+  unrelated jobs, identity and edit scope, so it had to change meaning by
+  context and was greyed with no explanation in the one context it could not
+  express. There is deliberately NO control that turns a recurring income into
+  a one-off: that would delete the source and so erase months it really did
+  arrive in
 - `BalanceDialog` - edit current bank balance; opens with the figure focused
   and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
@@ -716,8 +778,16 @@ bank statement. Both identities are tested.
   now that archiving is automatic (no manual "Archive Month" button)
 - `_month_view_edit_mixin.py` (`MonthViewEditMixin`) - inline cell edits and
   the active/skip/paid/received checkbox handlers
-- `_month_view_delete_mixin.py` (`MonthViewDeleteMixin`) - the bill
-  (stop-from-month vs delete-entirely) and income delete confirmation flows
+- `_month_view_delete_mixin.py` (`MonthViewDeleteMixin`) - the delete
+  confirmation flows. Bills and income share one stop-from-month vs
+  delete-entirely choice, so the two sides of the ledger behave alike. A
+  one-off income is exempt and simply confirms: it exists in one month, so
+  stopping it from that month and deleting it are the same act
+- `_month_view_income_convert.py` (`MonthViewIncomeConvertMixin`) - promoting a
+  one-off income entry to a recurring source. The two live in different
+  tables, so it is a delete plus an add rather than an update; it
+  confirms first. Only this direction exists; the reverse would rewrite
+  history
 - `_month_view_apply_prompt.py` (`MonthViewApplyPromptMixin`) - the "update
   balance now?" offer for an item added dated today or edited to today's date
   (dialog or inline); fires only on a genuine transition to today and skips
@@ -1259,11 +1329,16 @@ an option that read as "remove my data" removed nothing.
 ### UI Layer
 - The suite is Qt-free: fragile widget-level PySide6 tests (which needed a
   `QApplication` and were flaky) have been removed
-- Pure UI-layer logic is still covered without Qt under `tests/ui_logic`: the
-  Solvency month-colour rule (by instantiating the colour mixins directly), the
-  tab-strip keyboard cursor, theme persistence and the window-geometry
+- Pure UI-layer logic is still covered without Qt under `tests/ui_logic`,
+  twelve modules covering the Solvency month-colour rule and its low-point
+  line (by instantiating the mixins directly), the assumed block's wording,
+  the income one-off and edit-scope rules, the bill amount-change entry,
+  inline edits, the tab-strip keyboard cursor, highlight colour, theme and
+  save-location persistence, the skipped-update record and the window-geometry
   arithmetic. What lands here is logic a widget happens to host, extracted far
-  enough from Qt to be asserted on
+  enough from Qt to be asserted on: where a mixin's method reads a widget, the
+  state arrives as an argument instead so the decision can be made without a
+  `QApplication`
 - The UI layer is excluded from the coverage gate (see `.coveragerc`)
 - Anything that must be seen rather than asserted (a painted ring, a glyph
   against an icon, a window's placement on a monitor) is measured with an

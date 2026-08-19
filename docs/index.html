@@ -110,7 +110,7 @@
             <div class="grid">
                 <div class="card">
                     <h3>Safe to Spend Today</h3>
-                    <p>One actionable number at the top of the Solvency tab: the most you could spend today without pushing any day of the still-healthy forecast below your buffer, named with the day that constrains it. When the forecast goes under later regardless, that is a named warning beside the number, never summed into it. The buffer (twenty by default, zero if you plan to the wire) and the horizon (the whole forecast by default or only until your next income) are yours to set.</p>
+                    <p>One actionable number at the top of the Solvency tab: the most you could spend today while every day of a whole window of months stays above your buffer, named with the day that constrains it. No day inside the window is written off, so a month that cannot survive vetoes the figure rather than being skipped past; when the window cannot hold, the headline is the shortfall to find rather than an amount to spend. The buffer (twenty by default, zero if you plan to the wire) and the window (one to twelve months, four by default) are yours to set.</p>
                     <p>Today is often the tightest day of the month, so beneath it a short schedule gives the figure from each later day money lands, each line naming the day still holding it down. That day is frequently in a later month, which is the point of it: a bigger balance later this month does not mean more to spend when next month has to survive too.</p>
                 </div>
                 <div class="card">
@@ -122,6 +122,16 @@
                     <p>Every month states the gap between its full bills and its full income, so a month that does not hold together comes with a size rather than just a warning. A month can close in credit while still running at a loss, which is exactly what a closing balance alone hides. Credit card interest is reported beside that figure and never inside it, because it accrues on the cards rather than leaving the bank account.</p>
                 </div>
                 <div class="card">
+                    <h3>If the months ahead are like this one</h3>
+                    <p>Months you have not filled in yet look poorer than they are, so a
+                        reading that counts only what is typed reports a shortfall you do
+                        not have. Beneath the known figures a muted second reading assumes
+                        the income entered for this month arrives again in every later
+                        month with no entry of that name. It fills gaps only, never
+                        showing a month as worse than what you entered. It names
+                        exactly what has to arrive and by when.</p>
+                </div>
+                <div class="card">
                     <h3>Mid-month overdraft alerts</h3>
                     <p>Catches the dip when bills cluster before payday, even when the month still ends positive; it also names the first month you would go overdrawn.</p>
                 </div>
@@ -131,7 +141,7 @@
                 </div>
                 <div class="card">
                     <h3>Bill and income timing</h3>
-                    <p>Per-month skips, amount and due-day overrides, paid and received flags and one-off entries, plus end dates for bills and a delete that leaves earlier months untouched. A bill can also change amount from a month onward, for a rent increase, without rewriting what earlier months cost.</p>
+                    <p>Per-month skips, amount and due-day overrides, paid and received flags and one-off entries. Bills and income alike carry a final month, so something that has stopped names when it stopped instead of being erased. Deleting either offers the same choice: stop it from the month you are viewing; delete it entirely. A bill can also change amount from a month onward, for a rent increase, without rewriting what earlier months cost.</p>
                 </div>
                 <div class="card">
                     <h3>Self-maintaining balance</h3>
@@ -277,7 +287,7 @@
             "publisher": { "@id": "https://ernster.dev/ClearBudget/#oliver" },
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" },
             "featureList": [
-                "Safe to Spend Today: the most you could spend today without any future day across the forecast breaching a chosen buffer, with the constraining day named and a configurable horizon",
+                "Safe to Spend Today: the most you could spend today while every day of a chosen window of months stays above your buffer, with the constraining day named and the window configurable from one to twelve months",
                 "Forward solvency projection for the next two months",
                 "Mid-month overdraft detection",
                 "Runway warning naming the first overdrawn month and the monthly drain",
@@ -285,6 +295,8 @@
                 "Credit card utilisation, interest and six-month balance projection",
                 "Scheduled credit-limit changes",
                 "Per-month bill and income overrides, skips and one-off entries",
+                "A second reading assuming the income entered for this month recurs in later months, naming exactly what has to arrive and when",
+                "Start and end months on bills and income alike, so something that stops names its final month rather than being erased",
                 "Bill amounts that change from a month onward, leaving earlier months as they were",
                 "Spending capacity from each later day of the month, one line per change, each naming the day that constrains it",
                 "Low point and the day it falls on for every month shown, whether or not that month is in trouble",

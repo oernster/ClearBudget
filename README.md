@@ -117,15 +117,20 @@ what is deliberately left and what only looks like debt.
 - The balance edit dialog opens with the current figure selected, ready to
   type straight over
 - Per-month income flexibility: per-month overrides, per-month skips, a
-  "received" flag and "this month only" one-off income entries
+  "received" flag and "this month only" one-off income entries. An entry
+  added as a one-off can be promoted to a regular income later
+- Per-income start and end month: an income that has stopped names its final
+  month rather than being deleted, so every month it really did arrive in
+  keeps it. Deleting income offers the same two scopes bills have, stop from
+  the viewed month or delete entirely
 - Safe to Spend Today: the headline of the Solvency tab is the single number
-  you could spend today without pushing ANY day of the still-healthy
-  forecast below your buffer, named with the day that constrains it
-  ("Constrained by 23 Aug"). Months the forecast already has going under are
-  a warning of their own, named beneath the number ("the forecast drops below
-  your buffer from 14 Oct regardless"), never summed into it: a dip
-  accumulated across future months would read as a debt owed today, which it
-  is not
+  you could spend today while every day of a whole window of months stays
+  above your buffer, named with the day that constrains it ("constrained by
+  23 Aug"). The window is yours to set (one to twelve months, four by
+  default). No day inside it is written off, so a month that cannot survive
+  vetoes the figure rather than being skipped past: when the window cannot
+  hold, the headline states the shortfall and the day it lands on, which is
+  money to find rather than money to spend
 - What you could spend if you wait: today is often the tightest day of the
   month, so beneath the headline a short schedule gives the figure from each
   later day money lands ("From 19 Aug: £108.04", "From 20 Aug: £443.31"),
@@ -133,6 +138,15 @@ what is deliberately left and what only looks like debt.
   the whole forecast, so waiting never conjures money a later month needs
   back; a month whose figure never moves shows nothing rather than repeating
   the headline
+- If the months ahead are like this one: beneath the known figures, a muted
+  second reading says what the picture looks like if the income you entered
+  for this month arrives again in every later month that has no entry of that
+  name. Months ahead usually look poorer than they are simply because their
+  ad hoc income has not been typed in yet, so a reading that counts only what
+  is typed reports a shortfall you do not have. The assumption is derived,
+  not marked by hand, so the block appears on its own once the months ahead
+  are thinner than this one; every line says it depends on money not yet
+  received and names exactly what has to arrive, plus when
 - What a month needs to hold flat: every month on the Solvency tab states the
   difference between its full bills and its full income ("October needs
   £666.87 more to hold flat" or "September pays for itself, £120.00 to
@@ -144,10 +158,10 @@ what is deliberately left and what only looks like debt.
   accrues on the cards and never leaves the bank account, so adding the two
   together would claim money that was never going to move
 - User-editable Safe to Spend buffer (a reserve the number always leaves in
-  hand, £20 by default; set it to zero to plan to the wire) and a horizon
-  setting: the whole forecast window (default, so spending the number leaves
-  no future month going under) or only until your next income lands
-  (Settings > Bank Account)
+  hand, £20 by default; set it to zero to plan to the wire) and a window: how
+  many months the figure must keep standing, one to twelve, four by default
+  (Settings > Bank Account). A longer window is a stricter question, so it
+  usually returns a smaller number
 - Solvency analysis with forward cashflow projections (next 2 months)
 - Runway warnings: a deficit month shows how fast savings are falling per month
   and the first month you would go overdrawn (a mid-month dip counts even when the
@@ -230,7 +244,7 @@ what is deliberately left and what only looks like debt.
 | File | Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
 | File | Exit | Close application |
 | Settings | Preferences... | Choose display currency |
-| Settings | Bank Account | Configure an overdraft facility (limit and APR) plus the Safe to Spend Today buffer and horizon |
+| Settings | Bank Account | Configure an overdraft facility (limit and APR) plus the Safe to Spend Today buffer and window |
 | Users | Switch User | Return to login screen |
 | Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
 
@@ -409,6 +423,9 @@ or the bill template:
 Income sources have the same per-month flexibility (overrides, skips and a "received"
 flag that likewise ticks itself when a dated income is applied to the balance), plus
 "this month only" one-off entries for ad-hoc income not tied to a recurring template.
+A one-off can be promoted to a regular income later; the reverse is deliberately
+not offered, because turning a regular income into a one-off would delete it from
+the months it really did arrive in.
 
 A bill can also **change amount from a month onward**, which is what a rent
 increase is: say what it costs from a given month and that amount applies to
@@ -424,6 +441,12 @@ that month; deleting a bill offers two scopes: **stop from the viewed month**
 (the viewed month onward drop it while earlier and archived months keep it) or
 **delete entirely** (removed from every month). The first is the history-safe way
 to end something; the second is for entries added by mistake.
+
+Income works the same way on both counts. An income carries a **start month** and
+an **end month**, so one that has stopped names its final month instead of being
+erased; deleting income offers the same two scopes. Both bounds are optional:
+an income that states neither appears in every month, which is what every income
+entered before these existed continues to do.
 
 ---
 
@@ -444,26 +467,32 @@ to end something; the second is for entries added by mistake.
 
 ## Solvency Panel
 
-- **Safe to Spend Today**: the headline number, the most you could spend today
-  without pushing any day of the still-healthy forecast below your buffer
-  (£20 by default, editable in Settings > Bank Account, zero if you want to
-  plan to the wire). A spend today lowers every later day, so by default the
-  horizon is the whole forecast window; it then stops at the first day the
-  forecast is already under REGARDLESS of spending, because from there on
-  nothing is safe to spend anyway and those months can say nothing about
-  today. A positive amount shows with the constraining day ("Constrained by
-  14 Sep"); when the forecast goes under later it shows that warning beside
-  it in amber ("the forecast drops below your buffer from 14 Oct
-  regardless"); "Nothing safe to spend" appears when today itself is already
-  at or under the buffer, which is named ("keeping a £20.00 buffer in
-  hand"). A setting narrows the horizon to your next income for
-  payday-to-payday budgeting
+- **Safe to Spend Today**: the headline number, the most you could spend
+  today while every day of the window stays above your buffer (£20 by
+  default, editable in Settings > Bank Account, zero if you want to plan to
+  the wire). A spend today lowers every later day, so the figure is measured
+  across a whole window of months rather than to the end of this one: one to
+  twelve, four by default. No day inside the window is excluded, so a month
+  that collapses vetoes the figure instead of being written off. A positive
+  amount shows with the constraining day and what it keeps standing ("Keeps
+  the next 4 months above your £20.00 buffer; constrained by 14 Sep"). When
+  the window cannot hold, the headline is the sum to FIND rather than an
+  amount to spend, with the day it lands on named
 - **If you wait**: the same figure from each later day of the month, one line
   per change, so an income landing on the 20th has a number against it
   instead of leaving you to guess. Each line names the day still holding the
   figure down, which is often in a LATER month: that is the point of it, since
   a bigger balance later this month does not mean a bigger balance to spend
   when September has to survive too
+- **If the months ahead are like this one**: a muted second reading of the
+  same figures, run on the assumption that income entered for this month
+  arrives again in any later month with no entry of that name. It carries the
+  same traffic-light hues blended toward the background, so it reads as
+  provisional at a glance. It always names what must arrive for it to come
+  true. Counterintuitively the assumed figure is often LOWER than the
+  known one, because making a later month survive extends how far the
+  question reaches; the panel says so rather than leaving it to look like a
+  fault
 - **What the month needs**: the gap between the month's full bank bills and
   its full income, stated for every month the page shows. Credit card interest
   is reported on its own line beneath it and is never added in, because it
@@ -497,8 +526,8 @@ shows:
 
 The same dialog holds the Safe to Spend Today settings: the buffer (a balance
 the number will never plan to go below, £20 by default; an explicit zero
-plans to the wire) and the horizon (the whole forecast window by default or
-narrowed to your next income).
+plans to the wire) and the window, how many months the figure has to keep
+standing (one to twelve, four by default).
 
 ---
 
