@@ -139,8 +139,8 @@ what is deliberately left and what only looks like debt.
   the same stretch the headline promises, so waiting never conjures money a
   later month needs back; a month whose figure never moves shows nothing rather than repeating
   the headline
-- If the months ahead are like this one: beneath the known figures, a muted
-  second reading says what the picture looks like if the income you entered
+- If the months ahead are like this one: a Projection page, reached by its own
+  button, says what the picture looks like if the income you entered
   for this month arrives again in every later month that has no entry of that
   name. Months ahead usually look poorer than they are simply because their
   ad hoc income has not been typed in yet, so a reading that counts only what
@@ -486,7 +486,7 @@ entered before these existed continues to do.
   figure down, which is often in a LATER month: that is the point of it, since
   a bigger balance later this month does not mean a bigger balance to spend
   when September has to survive too
-- **If the months ahead are like this one**: a muted second reading of the
+- **Projection page**: a muted second reading of the
   same figures, run on the assumption that income entered for this month
   arrives again in any later month with no entry of that name. It carries the
   same traffic-light hues blended toward the background, so it reads as

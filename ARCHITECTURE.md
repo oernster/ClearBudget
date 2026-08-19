@@ -647,7 +647,11 @@ bank statement. Both identities are tested.
 - `MonthView` - bill/income tables with inline editing; balance display adapts
   to current vs future month; composed of mixins (builders, table, edit, delete,
   apply-prompt) to stay under the LOC limit
-- `SolvencyPanel` - split across a bank page and a cards page. Safe to Spend
+- `SolvencyPanel` - three pages in a `QStackedWidget`: bank, cards and
+  projection. Each has a pilot button naming it as a destination and the
+  button for the page being read is HIDDEN rather than disabled, so from
+  anywhere each other page is one press away and the keyboard ring skips
+  the control that would do nothing. Safe to Spend
   Today headline (rendered by
   `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` from
   `BudgetService.get_safe_to_spend`, reusing the banner's traffic-light state
@@ -660,14 +664,7 @@ bank statement. Both identities are tested.
   all-clear), the capacity schedule beneath
   it ("If you wait:" and one line per change, from `get_spending_capacity`,
   hidden entirely when the figure never moves so a flat month does not
-  restate the headline), the assumed second reading
-  (`_solvency_panel_assumed.SolvencyPanelAssumedMixin`: the same calculations
-  run on `ProjectionBasis.REPEAT_CURRENT`, painted in muted variants of the
-  same traffic-light hues so it reads as provisional, with a gap
-  specification from `get_assumed_expectations` naming what has to arrive and
-  when; the whole block hides when there is nothing to assume; its
-  heading names the assumption rather than the money, "If the months ahead
-  are like this one"),
+  restate the headline),
   overdraft alert, mid-month alert, card bars
   (`_solvency_panel_card_bars.SolvencyPanelCardBarsMixin`: the per-card
   utilisation bar, its scheduled-limit-change pills and the within-month
@@ -685,6 +682,15 @@ bank statement. Both identities are tested.
   not. The forward blocks already had the number in hand as
   `monthly_drain_pence`, which until then only ever chose a traffic-light
   colour
+- The projection page (`_solvency_panel_assumed.SolvencyPanelAssumedMixin`)
+  runs the same calculations on `ProjectionBasis.REPEAT_CURRENT`, painted in
+  muted variants of the same traffic-light hues so it reads as provisional,
+  with a gap specification from `get_assumed_expectations` naming what has to
+  arrive and when. It is a PAGE rather than a block under the spendable
+  headline, where a muted second figure beside the real one read as a
+  qualifier on it: the two answer different questions and only one of them is
+  a fact about money entered. With nothing to assume the block hides and a
+  line says so, because a page reachable by a button must never be blank
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
 

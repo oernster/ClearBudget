@@ -1,20 +1,29 @@
-"""The Solvency tab's two pages, built here to keep the panel module small.
+"""The Solvency tab's three pages, built here to keep the panel module small.
 
-The tab carries two distinct readings of the same month and they had grown
+The tab carries three distinct readings of the same month and they had grown
 into one column: the bank account's position (what is safe to spend, whether
-the month holds together, how the next two months look) and the credit cards'
-position (utilisation, interest, per-card movement). Read together they are a
-wall; the card block also sits in the middle of the bank narrative, between
-the month's own figures and the forward projection that continues them.
+the month holds together, how the next two months look), the credit cards'
+position (utilisation, interest, per-card movement) and the projection, which
+is the same arithmetic run on an assumption rather than on what is entered.
 
-So they are two pages behind one pilot button rather than one long scroll.
-Each page is a coherent answer to a single question. The button names the
-page it goes to rather than the page you are on, which is the same convention
-the month graph's own pilot button uses.
+Read together they are a wall. Each mixes badly with the others in its own
+way. The card block sat in the middle of the bank narrative, between the
+month's own figures and the forward projection that continues them. The
+projection sat directly under the spendable headline, where a muted second
+figure next to the real one invites the two to be read as one reading with a
+qualifier, which is exactly what it is not: it answers a different question
+and is only true if its assumption is.
 
-Both pages are built once and kept alive in a stack: rebuilding on each
-switch would drop the card bars' scroll position and make the toggle feel
-like a reload rather than a turn of the page.
+So they are three pages behind pilot buttons rather than one long scroll. Each
+page is a coherent answer to a single question. A button names the page it
+goes to rather than the page you are on, the same convention the month graph's
+own pilot button uses. The button for the page you are already reading is
+hidden rather than disabled, so the keyboard ring skips it instead of stopping
+on a control that does nothing.
+
+Every page is built once and kept alive in a stack: rebuilding on each switch
+would drop the card bars' scroll position and make the change feel like a
+reload rather than a turn of the page.
 """
 
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
@@ -79,19 +88,6 @@ class SolvencyPanelLayoutMixin:
         self.sts_capacity.hide()
         layout.addWidget(self.sts_capacity)
 
-        # The second reading, hidden while the months ahead already match
-        # this one. The heading names the assumption rather than the money,
-        # because the assumption is now derived rather than marked by hand.
-        self.assumed_heading = _heading("If the months ahead are like this one")
-        self.assumed_heading.hide()
-        layout.addWidget(self.assumed_heading)
-        self.sts_assumed = _line("SolvencyCommitted")
-        self.sts_assumed.hide()
-        layout.addWidget(self.sts_assumed)
-        self.assumed_gaps_label = _line("SolvencyCommitted")
-        self.assumed_gaps_label.hide()
-        layout.addWidget(self.assumed_gaps_label)
-
         layout.addWidget(_heading("Overdraft Status"))
         self.overdraft_alert = _line(
             "SolvencyBanner", f"SAFE: {fmt(0)} buffer", wrap=False
@@ -124,6 +120,46 @@ class SolvencyPanelLayoutMixin:
         layout.addWidget(self.m1_projection_label)
         self.m2_projection_label = _projection_label()
         layout.addWidget(self.m2_projection_label)
+
+        layout.addStretch()
+        return page
+
+    def _build_projection_page(self) -> QWidget:
+        """The same arithmetic on an assumption instead of on what is entered.
+
+        It has a page rather than a footnote because it answers a different
+        question from the bank page: not "what does my budget say" but "what
+        would it say if the months ahead resembled this one". Sitting under
+        the real headline it read as a qualifier on that figure; here nothing
+        it says can be mistaken for a fact about money already entered.
+
+        The page always has something to say. When there is nothing to assume
+        the block hides and a line says so, because a page reachable by a
+        button the user just pressed must never be blank.
+        """
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # The heading names the assumption rather than the money, because the
+        # assumption is derived rather than marked by hand.
+        self.assumed_heading = _heading("If the months ahead are like this one")
+        self.assumed_heading.hide()
+        layout.addWidget(self.assumed_heading)
+        self.sts_assumed = _line("SolvencyCommitted")
+        self.sts_assumed.hide()
+        layout.addWidget(self.sts_assumed)
+        self.assumed_gaps_label = _line("SolvencyCommitted")
+        self.assumed_gaps_label.hide()
+        layout.addWidget(self.assumed_gaps_label)
+
+        self.assumed_empty_label = _line(
+            "SolvencyCommitted",
+            "Nothing to assume: every month ahead already carries the income"
+            " this one does.",
+        )
+        self.assumed_empty_label.hide()
+        layout.addWidget(self.assumed_empty_label)
 
         layout.addStretch()
         return page

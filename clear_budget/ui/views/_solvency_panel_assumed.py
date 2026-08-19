@@ -51,7 +51,7 @@ class SolvencyPanelAssumedMixin:
         )
 
     def _update_assumed(self, report) -> None:
-        """Fill the assumed block, hiding it when nothing is expected.
+        """Fill the projection page; say why when it has nothing to show.
 
         Runs the same calculations as the known reading on the repeat basis,
         so the two are one engine read twice rather than two engines that
@@ -59,17 +59,14 @@ class SolvencyPanelAssumedMixin:
         """
         service = self.view_model.budget_service
         expected = service.get_assumed_expectations()
+        block = (self.assumed_heading, self.sts_assumed, self.assumed_gaps_label)
+        # The page is reachable by a button, so it must never be blank: with
+        # nothing to assume it says that rather than showing an empty column.
+        self.assumed_empty_label.setVisible(not expected)
+        for label in block:
+            label.setVisible(bool(expected))
         if not expected:
-            for label in (
-                self.assumed_heading,
-                self.sts_assumed,
-                self.assumed_gaps_label,
-            ):
-                label.setVisible(False)
             return
-
-        for label in (self.assumed_heading, self.sts_assumed, self.assumed_gaps_label):
-            label.setVisible(True)
 
         known = service.get_spending_capacity()
         probable = service.get_spending_capacity(basis=ProjectionBasis.REPEAT_CURRENT)

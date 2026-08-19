@@ -33,15 +33,22 @@ from clear_budget.ui.views._solvency_panel_safe_to_spend import (
     SolvencyPanelSafeToSpendMixin,
 )
 
-# The pilot button names the page it goes TO, never the page you are on, the
-# same convention the month graph's pilot button uses.
-_PILOT_TO_CARDS = "Switch to credit cards"
-_PILOT_TO_BANK = "Switch to bank view"
-
 # Stack order. The bank page opens first: it answers "does the account hold",
 # which is the question the tab exists for.
 _PAGE_BANK = 0
 _PAGE_CARDS = 1
+_PAGE_PROJECTION = 2
+
+# A pilot button names the page it goes TO, never the page you are on, the
+# same convention the month graph's pilot button uses. Every page has its own
+# button and the one for the page being read is hidden, so from anywhere each
+# other page is exactly one press away and the keyboard ring never stops on a
+# control that would do nothing.
+_PILOTS = (
+    (_PAGE_BANK, "Switch to bank view"),
+    (_PAGE_CARDS, "Switch to credit cards"),
+    (_PAGE_PROJECTION, "Switch to projection"),
+)
 
 
 class SolvencyPanel(
@@ -96,29 +103,36 @@ class SolvencyPanel(
             )
         )
 
-        self.pilot_btn = QPushButton(_PILOT_TO_CARDS)
-        self.pilot_btn.setObjectName("SolvencyPilot")
-        self.pilot_btn.clicked.connect(self._toggle_page)
         pilot_row = QHBoxLayout()
-        pilot_row.addWidget(self.pilot_btn)
+        self.pilot_btns = {}
+        for index, label in _PILOTS:
+            button = QPushButton(label)
+            button.setObjectName("SolvencyPilot")
+            button.clicked.connect(
+                lambda _checked=False, target=index: self._show_page(target)
+            )
+            self.pilot_btns[index] = button
+            pilot_row.addWidget(button)
         pilot_row.addStretch(1)
         layout.addLayout(pilot_row)
 
-        # Both pages are built once and kept alive, so switching is a turn of
+        # Every page is built once and kept alive, so switching is a turn of
         # the page rather than a rebuild that would drop scroll position.
         self.pages = QStackedWidget()
         self.pages.addWidget(self._build_bank_page())
         self.pages.addWidget(self._build_cards_page())
+        self.pages.addWidget(self._build_projection_page())
         layout.addWidget(self.pages)
+        self._show_page(_PAGE_BANK)
 
         layout.addStretch()
         self.setLayout(layout)
 
-    def _toggle_page(self) -> None:
-        """Swap the two readings, relabelling the button with its destination."""
-        showing_bank = self.pages.currentIndex() == _PAGE_BANK
-        self.pages.setCurrentIndex(_PAGE_CARDS if showing_bank else _PAGE_BANK)
-        self.pilot_btn.setText(_PILOT_TO_BANK if showing_bank else _PILOT_TO_CARDS)
+    def _show_page(self, index: int) -> None:
+        """Show one reading and hide the button that would return to it."""
+        self.pages.setCurrentIndex(index)
+        for page_index, button in self.pilot_btns.items():
+            button.setVisible(page_index != index)
 
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab."""
@@ -131,7 +145,7 @@ class SolvencyPanel(
             self.next_btn,
             self.theme_btn,
             self.info_btn,
-            self.pilot_btn,
+            *self.pilot_btns.values(),
         ]
 
     def connect_signals(self) -> None:
