@@ -176,6 +176,31 @@ class MonthViewModel(QObject):
         self.budget_service.delete_income_month_extra(extra_id=extra_id)
         self.refresh_month_summary()
 
+    def convert_income_extra_to_source(self, *, extra_id: int, income):
+        """Turn a one-off entry into a recurring income source.
+
+        The two live in different tables, so a conversion is a delete plus an
+        add rather than an update. One refresh covers both halves. Returns the
+        persisted source.
+        """
+        self.budget_service.delete_income_month_extra(extra_id=extra_id)
+        persisted = self.budget_service.add_income(income=income)
+        self.refresh_month_summary()
+        return persisted
+
+    def convert_income_source_to_extra(self, *, income_id: int, income):
+        """Turn a recurring income source into a one-off for the current month.
+
+        Deleting the source removes it from every month, so the caller must
+        have confirmed that first. Returns the persisted one-off entry.
+        """
+        self.budget_service.delete_income(income_id=income_id)
+        persisted = self.budget_service.add_income_month_extra(
+            income=income, year_month=self.current_month
+        )
+        self.refresh_month_summary()
+        return persisted
+
     def update_income_for_month(self, *, income) -> None:
         """Store per-month override for an income source and refresh summary."""
         self.budget_service.update_income_for_month(

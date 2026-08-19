@@ -16,6 +16,9 @@ from clear_budget.ui.views._month_view_balance_mixin import MonthViewBalanceMixi
 from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
 from clear_budget.ui.views._month_view_delete_mixin import MonthViewDeleteMixin
 from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
+from clear_budget.ui.views._month_view_income_convert import (
+    MonthViewIncomeConvertMixin,
+)
 from clear_budget.ui.views._month_view_table_mixin import (
     _BANK_ACCOUNT_ID,
     MonthViewTableMixin,
@@ -48,6 +51,7 @@ class MonthView(
     MonthViewEditMixin,
     MonthViewDeleteMixin,
     MonthViewApplyPromptMixin,
+    MonthViewIncomeConvertMixin,
     QWidget,
 ):
     """Displays bills and income for current month in tabular form."""
@@ -273,7 +277,7 @@ class MonthView(
     def on_add_income(self) -> None:
         dialog = IncomeDialog(self, None, current_month=self.view_model.current_month)
         if dialog.exec() == IncomeDialog.Accepted and (inc := dialog.get_income()):
-            if dialog.month_only_check.isChecked():
+            if dialog.one_off_check.isChecked():
                 persisted = self.view_model.add_income_month_extra(income=inc)
             else:
                 persisted = self.view_model.add_income(income=inc)
@@ -288,13 +292,24 @@ class MonthView(
     def _edit_income_dialog(self, income) -> None:
         had_override = income.has_month_override
         dialog = IncomeDialog(self, income, current_month=self.view_model.current_month)
-        if dialog.exec() == IncomeDialog.Accepted and (inc := dialog.get_income()):
-            if income.is_month_only:
-                self.view_model.update_income_month_extra(income=inc)
-            elif dialog.month_only_check.isChecked():
-                self.view_model.update_income_for_month(income=inc)
-            else:
-                if had_override:
-                    self.view_model.delete_income_month_override(income_id=inc.id)
-                self.view_model.update_income(income=inc)
-            self._offer_apply_edited_income(income, inc)
+        if dialog.exec() != IncomeDialog.Accepted:
+            return
+        inc = dialog.get_income()
+        if inc is None:
+            return
+        # The dialog reports the identity the box asks for, so a mismatch with
+        # the entry's current identity IS the request to convert.
+        if income.is_month_only != inc.is_month_only:
+            if (converted := self._convert_income(before=income, after=inc)) is None:
+                return
+            self._offer_apply_edited_income(income, converted)
+            return
+        if income.is_month_only:
+            self.view_model.update_income_month_extra(income=inc)
+        elif dialog.scope_check.isChecked():
+            self.view_model.update_income_for_month(income=inc)
+        else:
+            if had_override:
+                self.view_model.delete_income_month_override(income_id=inc.id)
+            self.view_model.update_income(income=inc)
+        self._offer_apply_edited_income(income, inc)
