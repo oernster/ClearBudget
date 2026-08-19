@@ -79,7 +79,11 @@ class FakeIncomeSourceRepository:
         """List income sources for a given month."""
         if include_inactive:
             return list(self._sources)
-        return [s for s in self._sources if s.active and not s.skipped_for_month]
+        return [
+            s
+            for s in self._sources
+            if s.is_active_in_month(year_month) and not s.skipped_for_month
+        ]
 
     def get_by_id(self, *, income_id: int) -> IncomeSource | None:
         """Get income source by ID."""

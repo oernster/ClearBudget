@@ -297,12 +297,13 @@ class MonthView(
         inc = dialog.get_income()
         if inc is None:
             return
-        # The dialog reports the identity the box asks for, so a mismatch with
-        # the entry's current identity IS the request to convert.
-        if income.is_month_only != inc.is_month_only:
-            if (converted := self._convert_income(before=income, after=inc)) is None:
+        # The dialog reports the identity the box asks for. The box is only
+        # offered on a one-off, so the single mismatch it can produce is a
+        # request to promote; there is no demote direction to route.
+        if income.is_month_only and not inc.is_month_only:
+            if (promoted := self._promote_income(before=income, after=inc)) is None:
                 return
-            self._offer_apply_edited_income(income, converted)
+            self._offer_apply_edited_income(income, promoted)
             return
         if income.is_month_only:
             self.view_model.update_income_month_extra(income=inc)

@@ -54,7 +54,11 @@ def create_schema(conn) -> None:
             amount_pence INTEGER NOT NULL,
             is_reliable INTEGER NOT NULL,
             day_of_month INTEGER,
-            active INTEGER DEFAULT 1
+            active INTEGER DEFAULT 1,
+            start_year INTEGER,
+            start_month INTEGER,
+            end_year INTEGER,
+            end_month INTEGER
         )
         """)
 
@@ -256,7 +260,7 @@ def create_schema(conn) -> None:
         """)
 
     # Evolve an existing database to the current shape. Each step runs once, in
-    # order, and any failure that is not "the column is already there" raises.
+    # order; any failure that is not "the column is already there" raises.
     apply_pending(cursor)
 
     conn.commit()

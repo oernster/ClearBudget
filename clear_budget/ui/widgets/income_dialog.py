@@ -1,23 +1,29 @@
 """Dialog for adding/editing income sources.
 
-Two checkboxes, not one. A single "This month only" box used to carry two
+One control, one job. A single "This month only" box used to carry two
 unrelated jobs: whether the entry *is* a one-off; how far *this edit*
-reaches. Those are independent axes, so one control could not say which it
-meant and had to be greyed out in the case it could not express.
+reaches. Those are independent, so one control could not say which it meant
+and was greyed out in the case it could not express at all.
 
-    | Regular income     | One-off
-    | ------------------ | -------------------------------
-    | change all months  | (a one-off exists in one month,
-    | change this month  |  so the column collapses)
+Which controls appear depends on what is being edited. Each is labelled
+for the job it actually does there:
 
-`one_off_check` picks the column, `scope_check` picks the row. The scope box
-is hidden whenever the column collapses. Nothing is greyed and nothing is
-silently ignored: `get_income` reports the identity the box asks for, so the
-caller can see a conversion was requested rather than inferring it.
+* adding: `one_off_check` alone, because nothing else has a meaning yet;
+* editing a one-off: `one_off_check`, untickable to make it recurring;
+* editing a recurring income: `ends_check` with `end_month_edit`, plus
+  `scope_check` for how far this edit reaches.
+
+There is deliberately NO way to turn a recurring income into a one-off. That
+direction deletes the source, which removes it from months it really did
+arrive in. The app does not rewrite history. An income that stops is
+recorded by naming its final month, exactly as a bill is, so the months before
+it keep what they had.
 """
 
+from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QCheckBox,
+    QDateEdit,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -52,7 +58,7 @@ class IncomeDialog(QDialog):
         # Size only, never position: see bill_dialog. A fixed virtual-desktop
         # point pins the dialog to one monitor; sized alone, Qt centres it on
         # its parent.
-        self.resize(400, 280)
+        self.resize(400, 320)
         self.init_ui()
         if income is not None:
             self.load_income(income)
@@ -92,6 +98,23 @@ class IncomeDialog(QDialog):
         )
         layout.addWidget(self.one_off_check)
 
+        # Worded exactly as the bill dialog words its own, because it is the
+        # same idea and two phrasings for one concept teach the user twice.
+        self.ends_check = QCheckBox("This income ends (set a final month)")
+        self.ends_check.setToolTip(
+            "For an income that stops: a job ending, a loan finishing. The"
+            " income stops after the chosen month; earlier months stay"
+            " unchanged."
+        )
+        layout.addWidget(self.ends_check)
+        self.end_month_edit = QDateEdit()
+        self.end_month_edit.setCalendarPopup(True)
+        self.end_month_edit.setDisplayFormat("MMMM yyyy")
+        self.end_month_edit.setDate(
+            QDate(self.current_month.year, self.current_month.month, 1)
+        )
+        layout.addWidget(self.end_month_edit)
+
         self.scope_check = QCheckBox(f"Apply these changes to {month} only")
         self.scope_check.setToolTip(
             f"Ticked, only {month} changes and every other month keeps its "
@@ -117,6 +140,7 @@ class IncomeDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         self.one_off_check.stateChanged.connect(self._apply_context)
         self.scope_check.stateChanged.connect(self._apply_context)
+        self.ends_check.stateChanged.connect(self._apply_context)
 
     def load_income(self, income: IncomeSource) -> None:
         """Load income data into form."""
@@ -126,27 +150,47 @@ class IncomeDialog(QDialog):
         self.one_off_check.setChecked(income.is_month_only)
         if not income.is_month_only and income.has_month_override:
             self.scope_check.setChecked(True)
+        if income.end_ym is not None:
+            self.ends_check.setChecked(True)
+            self.end_month_edit.setDate(
+                QDate(income.end_ym.year, income.end_ym.month, 1)
+            )
 
     def _apply_context(self) -> None:
-        """Show the boxes this context can express; say what will happen.
+        """Show the controls this context can express; say what will happen.
 
-        The scope box is hidden whenever the entry is a one-off, because a
-        one-off already exists in exactly one month: there is no wider reach
-        for an edit to have.
+        A one-off already exists in exactly one month, so neither an edit
+        scope nor a final month has anything to say about it and both are
+        hidden. The one-off box itself is hidden when editing a recurring
+        income, because ticking it there would mean demoting; demoting
+        deletes months that already happened.
         """
+        editing = self.income is not None
+        is_one_off = editing and self.income.is_month_only
         wants_one_off = self.one_off_check.isChecked()
-        self.scope_check.setVisible(self.income is not None and not wants_one_off)
+        self.one_off_check.setVisible(not editing or is_one_off)
+        recurring = editing and not is_one_off and not wants_one_off
+        self.scope_check.setVisible(recurring)
+        self.ends_check.setVisible(recurring)
+        self.end_month_edit.setVisible(recurring and self.ends_check.isChecked())
         text = self._status_text(wants_one_off, self.scope_check.isChecked())
         self.status_label.setText(text)
         label_roles.set_role(self.status_label, self._status_role(wants_one_off))
 
-    def _is_conversion(self, wants_one_off: bool) -> bool:
-        """Whether saving would move this entry between one-off and regular."""
-        return self.income is not None and self.income.is_month_only != wants_one_off
+    def _is_promotion(self, wants_one_off: bool) -> bool:
+        """Whether saving would turn this one-off into a recurring income.
+
+        Only this direction can be asked for. The reverse would delete the
+        source and so erase months that already happened. The box is not
+        offered on a recurring income at all.
+        """
+        return (
+            self.income is not None and self.income.is_month_only and not wants_one_off
+        )
 
     def _status_role(self, wants_one_off: bool) -> str:
-        """Conversions change other months, so they are warned, not noted."""
-        if self._is_conversion(wants_one_off):
+        """A promotion changes later months, so it is warned, not noted."""
+        if self._is_promotion(wants_one_off):
             return label_roles.STRONG_WARN
         return label_roles.NOTE
 
@@ -161,12 +205,7 @@ class IncomeDialog(QDialog):
             if wants_one_off:
                 return f"Added as a one-off for {month} only."
             return "Added as a regular income, arriving every month."
-        if self._is_conversion(wants_one_off):
-            if wants_one_off:
-                return (
-                    f"This will remove '{self.income.name}' from every other "
-                    f"month, past and future, leaving it in {month} alone."
-                )
+        if self._is_promotion(wants_one_off):
             return (
                 f"This will become a regular income, arriving every month "
                 f"rather than in {month} alone."
@@ -176,6 +215,17 @@ class IncomeDialog(QDialog):
         if scope_only:
             return f"Changes saved for {month} only. Other months are unchanged."
         return "Changes saved for every month."
+
+    def _chosen_end_month(self) -> YearMonth | None:
+        """The final month the user named; None when the income continues.
+
+        An existing start month is carried through untouched: it records when
+        the income began and no edit here is a claim about that.
+        """
+        if not self.ends_check.isChecked():
+            return None
+        chosen = self.end_month_edit.date()
+        return YearMonth(year=chosen.year(), month=chosen.month())
 
     def get_income(self) -> IncomeSource | None:
         """Get income from form (returns None if invalid).
@@ -202,6 +252,8 @@ class IncomeDialog(QDialog):
                 is_reliable=True,
                 day_of_month=due_day_value,
                 active=True,
+                start_ym=self.income.start_ym if self.income else None,
+                end_ym=self._chosen_end_month(),
                 is_month_only=self.one_off_check.isChecked(),
             )
         except (ValueError, AttributeError):

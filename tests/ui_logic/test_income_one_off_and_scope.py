@@ -30,7 +30,7 @@ class _Wording:
     """
 
     _month_label = IncomeDialog._month_label
-    _is_conversion = IncomeDialog._is_conversion
+    _is_promotion = IncomeDialog._is_promotion
     _status_role = IncomeDialog._status_role
     _status_text = IncomeDialog._status_text
 
@@ -91,13 +91,6 @@ class TestEditingAOneOff:
 
 
 class TestEditingARegularIncome:
-    def test_ticking_one_off_warns_that_other_months_lose_it(self):
-        entry = _entry(one_off=False)
-        text = _text(entry, wants_one_off=True)
-        assert "'Salary'" in text
-        assert "every other month, past and future" in text
-        assert _role(entry, wants_one_off=True) == label_roles.STRONG_WARN
-
     def test_a_narrow_edit_says_other_months_are_untouched(self):
         entry = _entry(one_off=False)
         text = _text(entry, wants_one_off=False, scope_only=True)
@@ -109,22 +102,21 @@ class TestEditingARegularIncome:
         text = _text(entry, wants_one_off=False, scope_only=False)
         assert text == "Changes saved for every month."
 
-    def test_the_scope_wording_is_ignored_once_one_off_is_ticked(self):
-        """Scope has no meaning on a one-off, so it must not leak into the text."""
+    def test_demoting_is_not_something_the_dialog_can_ask_for(self):
+        """The one control that could erase history does not exist here.
+
+        A regular income never offers the one-off box, so this combination is
+        unreachable through the UI. It is pinned anyway: were the box ever
+        reinstated, this says the dialog must not treat it as a conversion.
+        """
         entry = _entry(one_off=False)
-        assert _text(entry, wants_one_off=True, scope_only=True) == _text(
-            entry, wants_one_off=True, scope_only=False
-        )
+        assert _role(entry, wants_one_off=True) == label_roles.NOTE
 
 
 class _FakeViewModel:
     def __init__(self) -> None:
         self.current_month = _JUNE
         self.calls: list[tuple[str, dict]] = []
-
-    def convert_income_source_to_extra(self, **kwargs):
-        self.calls.append(("to_extra", kwargs))
-        return _entry(one_off=True, entry_id=99)
 
     def convert_income_extra_to_source(self, **kwargs):
         self.calls.append(("to_source", kwargs))
@@ -139,47 +131,44 @@ class _Converter(MonthViewIncomeConvertMixin):
         self._answer = answer
         self.asked: list[dict] = []
 
-    def _confirm_income_conversion(self, *, name: str, to_one_off: bool) -> bool:
-        self.asked.append({"name": name, "to_one_off": to_one_off})
+    def _confirm_income_promotion(self, *, name: str) -> bool:
+        self.asked.append({"name": name})
         return self._answer
 
 
-class TestConversionRouting:
-    def test_declining_converts_nothing_and_reports_it(self):
+class TestPromotionRouting:
+    def test_declining_promotes_nothing_and_reports_it(self):
         converter = _Converter(answer=False)
-        result = converter._convert_income(
-            before=_entry(one_off=False), after=_entry(one_off=True)
+        result = converter._promote_income(
+            before=_entry(one_off=True), after=_entry(one_off=False)
         )
         assert result is None
         assert converter.view_model.calls == []
-
-    def test_a_regular_income_becomes_a_one_off_by_its_source_id(self):
-        converter = _Converter(answer=True)
-        before = _entry(one_off=False, entry_id=3)
-        after = _entry(one_off=True, entry_id=3)
-        persisted = converter._convert_income(before=before, after=after)
-        kind, kwargs = converter.view_model.calls[0]
-        assert kind == "to_extra"
-        assert kwargs == {"income_id": 3, "income": after}
-        assert persisted.is_month_only is True
 
     def test_a_one_off_becomes_a_regular_income_by_its_extra_id(self):
         converter = _Converter(answer=True)
         before = _entry(one_off=True, entry_id=5)
         after = _entry(one_off=False, entry_id=5)
-        persisted = converter._convert_income(before=before, after=after)
+        persisted = converter._promote_income(before=before, after=after)
         kind, kwargs = converter.view_model.calls[0]
         assert kind == "to_source"
         assert kwargs == {"extra_id": 5, "income": after}
         assert persisted.is_month_only is False
 
-    def test_the_confirmation_is_asked_in_the_direction_being_taken(self):
+    def test_the_confirmation_names_the_entry(self):
         converter = _Converter(answer=True)
-        converter._convert_income(
-            before=_entry(one_off=False, name="Wages"),
-            after=_entry(one_off=True, name="Wages"),
+        converter._promote_income(
+            before=_entry(one_off=True, name="Wages"),
+            after=_entry(one_off=False, name="Wages"),
         )
-        assert converter.asked == [{"name": "Wages", "to_one_off": True}]
+        assert converter.asked == [{"name": "Wages"}]
+
+    def test_there_is_no_route_that_demotes(self):
+        """The mixin exposes promotion alone, so nothing can erase history."""
+        assert not hasattr(_Converter(answer=True), "_convert_income")
+        assert not hasattr(
+            _Converter(answer=True).view_model, "convert_income_source_to_extra"
+        )
 
     def test_the_month_is_named_rather_than_numbered(self):
         converter = _Converter(answer=True)

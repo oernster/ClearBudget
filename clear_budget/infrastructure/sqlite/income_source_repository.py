@@ -10,6 +10,36 @@ from clear_budget.infrastructure.sqlite._income_month_extras import (
     IncomeMonthExtrasMixin,
 )
 
+# The four columns an income's month bounds are stored in. Nullable; NULL
+# on a side means unbounded there, so a row written before these columns
+# existed keeps appearing in exactly the months it always did.
+_BOUND_COLUMNS = "start_year, start_month, end_year, end_month"
+
+
+def _bounds(row) -> tuple[YearMonth | None, YearMonth | None]:
+    """The first and last month a row states, each None when unbounded."""
+    start = (
+        YearMonth(row["start_year"], row["start_month"])
+        if row["start_year"] is not None
+        else None
+    )
+    end = (
+        YearMonth(row["end_year"], row["end_month"])
+        if row["end_year"] is not None
+        else None
+    )
+    return start, end
+
+
+def _bound_values(income: IncomeSource) -> tuple[int | None, ...]:
+    """A source's bounds as the four values the columns hold."""
+    return (
+        income.start_ym.year if income.start_ym else None,
+        income.start_ym.month if income.start_ym else None,
+        income.end_ym.year if income.end_ym else None,
+        income.end_ym.month if income.end_ym else None,
+    )
+
 
 @dataclass
 class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
@@ -20,50 +50,46 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
     def list_active(self) -> list[IncomeSource]:
         """List all active income sources."""
         cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, name, amount_pence, is_reliable, day_of_month
+        cursor.execute(f"""
+            SELECT id, name, amount_pence, is_reliable, day_of_month, active,
+                   {_BOUND_COLUMNS}
             FROM income_sources
             WHERE active = 1
             """)
-
-        sources = []
-        for row in cursor.fetchall():
-            source = IncomeSource(
-                id=row["id"],
-                name=row["name"],
-                amount=Amount(pence=row["amount_pence"]),
-                is_reliable=bool(row["is_reliable"]),
-                day_of_month=row["day_of_month"],
-            )
-            sources.append(source)
-
-        return sources
+        return [self._row_to_source(row) for row in cursor.fetchall()]
 
     def list_all(self) -> list[IncomeSource]:
         """List all income sources including inactive."""
         cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, name, amount_pence, is_reliable, day_of_month, active
+        cursor.execute(f"""
+            SELECT id, name, amount_pence, is_reliable, day_of_month, active,
+                   {_BOUND_COLUMNS}
             FROM income_sources
             """)
-        return [
-            IncomeSource(
-                id=row["id"],
-                name=row["name"],
-                amount=Amount(pence=row["amount_pence"]),
-                is_reliable=bool(row["is_reliable"]),
-                day_of_month=row["day_of_month"],
-                active=bool(row["active"]),
-            )
-            for row in cursor.fetchall()
-        ]
+        return [self._row_to_source(row) for row in cursor.fetchall()]
+
+    @staticmethod
+    def _row_to_source(row) -> IncomeSource:
+        """One income_sources row, month bounds included."""
+        start_ym, end_ym = _bounds(row)
+        return IncomeSource(
+            id=row["id"],
+            name=row["name"],
+            amount=Amount(pence=row["amount_pence"]),
+            is_reliable=bool(row["is_reliable"]),
+            day_of_month=row["day_of_month"],
+            active=bool(row["active"]),
+            start_ym=start_ym,
+            end_ym=end_ym,
+        )
 
     def get_by_id(self, *, income_id: int) -> IncomeSource | None:
         """Get income source by ID."""
         cursor = self.conn.cursor()
         cursor.execute(
-            """
-            SELECT id, name, amount_pence, is_reliable, day_of_month, active
+            f"""
+            SELECT id, name, amount_pence, is_reliable, day_of_month, active,
+                   {_BOUND_COLUMNS}
             FROM income_sources WHERE id = ?
             """,
             (income_id,),
@@ -73,14 +99,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
         if not row:
             return None
 
-        return IncomeSource(
-            id=row["id"],
-            name=row["name"],
-            amount=Amount(pence=row["amount_pence"]),
-            is_reliable=bool(row["is_reliable"]),
-            day_of_month=row["day_of_month"],
-            active=bool(row["active"]),
-        )
+        return self._row_to_source(row)
 
     def add(self, *, income: IncomeSource) -> IncomeSource:
         """Add an income source."""
@@ -88,8 +107,9 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
         cursor.execute(
             """
             INSERT INTO income_sources
-            (name, amount_pence, is_reliable, day_of_month, active)
-            VALUES (?, ?, ?, ?, ?)
+            (name, amount_pence, is_reliable, day_of_month, active,
+             start_year, start_month, end_year, end_month)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 income.name,
@@ -97,6 +117,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 1 if income.is_reliable else 0,
                 income.day_of_month,
                 1 if income.active else 0,
+                *_bound_values(income),
             ),
         )
         self.conn.commit()
@@ -108,6 +129,8 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
             is_reliable=income.is_reliable,
             day_of_month=income.day_of_month,
             active=income.active,
+            start_ym=income.start_ym,
+            end_ym=income.end_ym,
         )
 
     def update(self, *, income: IncomeSource) -> IncomeSource:
@@ -117,7 +140,8 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
             """
             UPDATE income_sources
             SET name = ?, amount_pence = ?, is_reliable = ?,
-                day_of_month = ?, active = ?
+                day_of_month = ?, active = ?,
+                start_year = ?, start_month = ?, end_year = ?, end_month = ?
             WHERE id = ?
             """,
             (
@@ -126,6 +150,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 1 if income.is_reliable else 0,
                 income.day_of_month,
                 1 if income.active else 0,
+                *_bound_values(income),
                 income.id,
             ),
         )
@@ -176,6 +201,10 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 i.is_reliable,
                 COALESCE(o.day_of_month, i.day_of_month) AS day_of_month,
                 i.active,
+                i.start_year,
+                i.start_month,
+                i.end_year,
+                i.end_month,
                 CASE WHEN s.income_id IS NOT NULL THEN 1 ELSE 0
                     END AS skipped_for_month,
                 CASE WHEN o.income_id IS NOT NULL THEN 1 ELSE 0
@@ -189,7 +218,10 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 ON s.income_id = i.id AND s.year = ? AND s.month = ?
             LEFT JOIN income_month_received r
                 ON r.income_id = i.id AND r.year = ? AND r.month = ?
-            WHERE 1=1
+            WHERE (i.start_year IS NULL OR i.start_year < ? OR
+                   (i.start_year = ? AND i.start_month <= ?))
+              AND (i.end_year IS NULL OR i.end_year > ? OR
+                   (i.end_year = ? AND i.end_month >= ?))
               {active_filter}
               {skip_filter}
             """,
@@ -198,6 +230,12 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 year_month.month,
                 year_month.year,
                 year_month.month,
+                year_month.year,
+                year_month.month,
+                year_month.year,
+                year_month.year,
+                year_month.month,
+                year_month.year,
                 year_month.year,
                 year_month.month,
             ),
@@ -210,6 +248,8 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 is_reliable=bool(row["is_reliable"]),
                 day_of_month=row["day_of_month"],
                 active=bool(row["active"]),
+                start_ym=_bounds(row)[0],
+                end_ym=_bounds(row)[1],
                 skipped_for_month=bool(row["skipped_for_month"]),
                 has_month_override=bool(row["has_month_override"]),
                 received_for_month=bool(row["received_for_month"]),

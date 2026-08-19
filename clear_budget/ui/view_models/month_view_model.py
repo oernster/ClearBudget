@@ -153,6 +153,14 @@ class MonthViewModel(QObject):
             self.budget_service.delete_income(income_id=income_id)
         self.refresh_month_summary()
 
+    def end_incomes(self, *, income_ids: list[int], last_active_month) -> None:
+        """End multiple income sources at last_active_month (history-safe delete)."""
+        for income_id in income_ids:
+            self.budget_service.end_income(
+                income_id=income_id, last_active_month=last_active_month
+            )
+        self.refresh_month_summary()
+
     def add_income_month_extra(self, *, income):
         """Create a one-off income entry for the current month and refresh.
 
@@ -185,19 +193,6 @@ class MonthViewModel(QObject):
         """
         self.budget_service.delete_income_month_extra(extra_id=extra_id)
         persisted = self.budget_service.add_income(income=income)
-        self.refresh_month_summary()
-        return persisted
-
-    def convert_income_source_to_extra(self, *, income_id: int, income):
-        """Turn a recurring income source into a one-off for the current month.
-
-        Deleting the source removes it from every month, so the caller must
-        have confirmed that first. Returns the persisted one-off entry.
-        """
-        self.budget_service.delete_income(income_id=income_id)
-        persisted = self.budget_service.add_income_month_extra(
-            income=income, year_month=self.current_month
-        )
         self.refresh_month_summary()
         return persisted
 

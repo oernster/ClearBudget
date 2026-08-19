@@ -16,7 +16,7 @@ class MonthViewDeleteMixin:
         viewed = self.view_model.current_month
         viewed_name = MONTH_NAMES[viewed.month]
         noun = "bill" if len(ids) == 1 else f"{len(ids)} bills"
-        scope = self._ask_delete_scope(noun, viewed_name)
+        scope = self._ask_delete_scope(noun, viewed_name, "Delete Bill")
         if scope == "stop":
             self.view_model.end_bills(
                 bill_ids=ids, last_active_month=viewed.previous_month()
@@ -24,10 +24,10 @@ class MonthViewDeleteMixin:
         elif scope == "wipe":
             self.view_model.delete_bills(bill_ids=ids)
 
-    def _ask_delete_scope(self, noun: str, viewed_name: str) -> str:
+    def _ask_delete_scope(self, noun: str, viewed_name: str, title: str) -> str:
         """Ask how to delete: 'stop' (from viewed month on), 'wipe' (all), 'cancel'."""
         box = QMessageBox(self)
-        box.setWindowTitle("Delete Bill")
+        box.setWindowTitle(title)
         box.setText(
             f"Delete {noun}?\n\n"
             f"Stop from {viewed_name}: drops it from {viewed_name} onward and "
@@ -52,12 +52,46 @@ class MonthViewDeleteMixin:
         return "cancel"
 
     def on_delete_income(self) -> None:
+        """Delete income, offering the same stop-or-wipe choice a bill has.
+
+        A recurring income can now be ended rather than erased, so the two
+        sides of the ledger behave alike. A one-off is exempt: it exists in
+        one month only, so stopping it from that month on and deleting it are
+        the same act; offering a choice between them would be theatre.
+        """
         rows = sorted({idx.row() for idx in self.income_table.selectedIndexes()})
         incomes = [i for r in rows if (i := self._get_income_from_row(r)) is not None]
         if not incomes:
             return
+        viewed = self.view_model.current_month
         count = len(incomes)
         noun = "income source" if count == 1 else f"{count} income sources"
+        extra_ids = [i.id for i in incomes if i.is_month_only]
+        income_ids = [i.id for i in incomes if not i.is_month_only]
+        if not income_ids:
+            if not self._confirm_one_off_delete(count):
+                return
+            scope = "wipe"
+        else:
+            scope = self._ask_delete_scope(
+                noun, MONTH_NAMES[viewed.month], "Delete Income"
+            )
+            if scope == "cancel":
+                return
+        for extra_id in extra_ids:
+            self.view_model.delete_income_month_extra(extra_id=extra_id)
+        if not income_ids:
+            return
+        if scope == "stop":
+            self.view_model.end_incomes(
+                income_ids=income_ids, last_active_month=viewed.previous_month()
+            )
+        else:
+            self.view_model.delete_incomes(income_ids=income_ids)
+
+    def _confirm_one_off_delete(self, count: int) -> bool:
+        """Confirm removal of one-off entries, which have no wider scope."""
+        noun = "this one-off entry" if count == 1 else f"these {count} one-off entries"
         reply = QMessageBox.question(
             self,
             "Delete Income",
@@ -65,10 +99,4 @@ class MonthViewDeleteMixin:
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-        if reply == QMessageBox.StandardButton.Yes:
-            extra_ids = [i.id for i in incomes if i.is_month_only]
-            income_ids = [i.id for i in incomes if not i.is_month_only]
-            for extra_id in extra_ids:
-                self.view_model.delete_income_month_extra(extra_id=extra_id)
-            if income_ids:
-                self.view_model.delete_incomes(income_ids=income_ids)
+        return reply == QMessageBox.StandardButton.Yes

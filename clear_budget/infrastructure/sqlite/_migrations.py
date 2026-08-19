@@ -3,18 +3,18 @@
 The previous mechanism was a sequence of `ALTER TABLE ... ADD COLUMN` statements
 each wrapped in `except Exception: pass`, on the assumption that a failure meant
 the column was already present. That assumption is unverifiable: a corrupt file,
-a locked database and a full disk all raise as well, and each one became a silent
+a locked database and a full disk all raise as well; each one became a silent
 no-op with the application continuing against a schema it had never checked.
 
 Two changes remove that. A column is added only after reading `PRAGMA table_info`,
 so "already present" is established by looking rather than inferred from an
-exception, and every other failure propagates. A `schema_version` row then records
+exception; every other failure propagates. A `schema_version` row then records
 how far the database has been taken, so each migration runs once, in order, rather
 than being re-attempted on every startup.
 
 Both a new database and one predating this module converge on the same state: the
 baseline DDL creates current tables in full, so every column step finds its column
-already there and does nothing, and the version is recorded at the end.
+already there and does nothing; the version is recorded at the end.
 """
 
 from __future__ import annotations
@@ -118,7 +118,7 @@ def _m04_card_minimum_payment_percent(cursor: sqlite3.Cursor) -> None:
 
 
 def _m05_card_balance_applied_anchor(cursor: sqlite3.Cursor) -> None:
-    """Track the month, and day within it, a balance was last folded in."""
+    """Track the month (and the day within it) a balance was last folded in."""
     _add_columns(
         cursor,
         "credit_cards",
@@ -165,6 +165,26 @@ def _m08_bill_amount_changes(cursor: sqlite3.Cursor) -> None:
     )
 
 
+def _m09_income_start_and_end_month(cursor: sqlite3.Cursor) -> None:
+    """First and last month an income appears, mirroring a bill's.
+
+    Nullable; left NULL on every existing row. An income that stops is
+    then recorded by naming its final month rather than by deleting it, which
+    would have removed it from the months it really did arrive in. NULL reads
+    as unbounded, so an upgraded database behaves exactly as it did before.
+    """
+    _add_columns(
+        cursor,
+        "income_sources",
+        (
+            ("start_year", "INTEGER DEFAULT NULL"),
+            ("start_month", "INTEGER DEFAULT NULL"),
+            ("end_year", "INTEGER DEFAULT NULL"),
+            ("end_month", "INTEGER DEFAULT NULL"),
+        ),
+    )
+
+
 _MIGRATIONS: tuple[Migration, ...] = (
     _m01_credit_card_detail_columns,
     _m02_bill_target_card,
@@ -174,6 +194,7 @@ _MIGRATIONS: tuple[Migration, ...] = (
     _m06_income_extra_received,
     _m07_retire_one_time_category,
     _m08_bill_amount_changes,
+    _m09_income_start_and_end_month,
 )
 
 # Derived from the list so the two cannot drift apart.

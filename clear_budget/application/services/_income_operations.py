@@ -1,5 +1,7 @@
 """Income CRUD/override/skip/received pass-throughs for BudgetService - LOC limit split."""
 
+from dataclasses import replace
+
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.year_month import YearMonth
 
@@ -29,6 +31,30 @@ class IncomeOperationsMixin:
             item_id=income_id,
         )
         self.income_repo.hard_delete(income_id=income_id)
+
+    def end_income(self, *, income_id: int, last_active_month: YearMonth) -> None:
+        """End an income so it stops after last_active_month, preserving history.
+
+        The mirror of end_bill. Sets the income's end month, so every earlier
+        month (and any archived snapshot) still shows it. This is how an
+        income that has stopped is recorded: deleting the source instead would
+        remove it from months it really did arrive in. Amounts applied to the
+        balance in the months being removed are handed back; earlier months
+        keep theirs.
+        """
+        from clear_budget.application.services._balance_application import (
+            reverse_applied_for_item,
+        )
+
+        income = self.income_repo.get_by_id(income_id=income_id)
+        if income is not None:
+            reverse_applied_for_item(
+                getattr(self.income_repo, "conn", None),
+                item_type="income",
+                item_id=income_id,
+                after=last_active_month,
+            )
+            self.income_repo.update(income=replace(income, end_ym=last_active_month))
 
     def add_income_month_extra(
         self, *, income: IncomeSource, year_month: YearMonth
