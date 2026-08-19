@@ -136,8 +136,8 @@ what is deliberately left and what only looks like debt.
   month, so beneath the headline a short schedule gives the figure from each
   later day money lands ("From 19 Aug: £108.04", "From 20 Aug: £443.31"),
   each naming the day still holding it down. Every line is measured across
-  the whole forecast, so waiting never conjures money a later month needs
-  back; a month whose figure never moves shows nothing rather than repeating
+  the same stretch the headline promises, so waiting never conjures money a
+  later month needs back; a month whose figure never moves shows nothing rather than repeating
   the headline
 - If the months ahead are like this one: beneath the known figures, a muted
   second reading says what the picture looks like if the income you entered

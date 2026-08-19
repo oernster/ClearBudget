@@ -85,8 +85,9 @@ class SolvencyPanelSafeToSpendMixin:
         "what could I spend if I wait until then". The first step repeats
         the headline, so it is dropped: only the changes are news.
 
-        Every row is still measured across the whole window, so waiting can
-        never raise the figure past what the later months will bear.
+        Every row is measured over the same stretch the headline promises,
+        so waiting can never raise the figure past what the months it names
+        will bear.
         """
         steps = self.view_model.budget_service.get_spending_capacity()
         rows = [
