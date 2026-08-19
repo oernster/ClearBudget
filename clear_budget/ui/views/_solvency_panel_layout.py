@@ -79,8 +79,10 @@ class SolvencyPanelLayoutMixin:
         self.sts_capacity.hide()
         layout.addWidget(self.sts_capacity)
 
-        # The second reading, hidden until something is marked as expected.
-        self.assumed_heading = _heading("If the expected income arrives")
+        # The second reading, hidden while the months ahead already match
+        # this one. The heading names the assumption rather than the money,
+        # because the assumption is now derived rather than marked by hand.
+        self.assumed_heading = _heading("If the months ahead are like this one")
         self.assumed_heading.hide()
         layout.addWidget(self.assumed_heading)
         self.sts_assumed = _line("SolvencyCommitted")

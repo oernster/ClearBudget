@@ -86,35 +86,6 @@ class TestSQLiteIncomeSourceList:
         assert any(s.name == "UC" for s in sources)
         assert any(s.name == "Freelance" for s in sources)
 
-    def test_list_reliable(self, db) -> None:
-        """Test listing only reliable income sources."""
-        repo = SQLiteIncomeSourceRepository(db.conn)
-
-        repo.add(
-            income=IncomeSource(
-                id=0,
-                name="UC",
-                amount=Amount(pence=120000),
-                is_reliable=True,
-                day_of_month=21,
-            )
-        )
-        repo.add(
-            income=IncomeSource(
-                id=0,
-                name="Freelance",
-                amount=Amount(pence=50000),
-                is_reliable=False,
-                day_of_month=None,
-            )
-        )
-
-        sources = repo.list_reliable()
-
-        assert len(sources) == 1
-        assert sources[0].name == "UC"
-        assert sources[0].is_reliable
-
     def test_list_skips_inactive(self, db) -> None:
         """Test that inactive sources are excluded."""
         repo = SQLiteIncomeSourceRepository(db.conn)

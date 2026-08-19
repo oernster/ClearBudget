@@ -81,10 +81,6 @@ class FakeIncomeSourceRepository:
             return list(self._sources)
         return [s for s in self._sources if s.active and not s.skipped_for_month]
 
-    def list_reliable(self) -> list[IncomeSource]:
-        """List reliable income sources."""
-        return [s for s in self._sources if s.active and s.is_reliable]
-
     def get_by_id(self, *, income_id: int) -> IncomeSource | None:
         """Get income source by ID."""
         for source in self._sources:

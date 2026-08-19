@@ -58,28 +58,6 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
             for row in cursor.fetchall()
         ]
 
-    def list_reliable(self) -> list[IncomeSource]:
-        """List all reliable (forward-projectable) income sources."""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, name, amount_pence, is_reliable, day_of_month
-            FROM income_sources
-            WHERE active = 1 AND is_reliable = 1
-            """)
-
-        sources = []
-        for row in cursor.fetchall():
-            source = IncomeSource(
-                id=row["id"],
-                name=row["name"],
-                amount=Amount(pence=row["amount_pence"]),
-                is_reliable=True,
-                day_of_month=row["day_of_month"],
-            )
-            sources.append(source)
-
-        return sources
-
     def get_by_id(self, *, income_id: int) -> IncomeSource | None:
         """Get income source by ID."""
         cursor = self.conn.cursor()

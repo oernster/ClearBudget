@@ -16,10 +16,6 @@ class IncomeSourceRepository(Protocol):
         """List all income sources including inactive."""
         ...
 
-    def list_reliable(self) -> list[IncomeSource]:
-        """List all reliable (forward-projectable) income sources."""
-        ...
-
     def get_by_id(self, *, income_id: int) -> IncomeSource | None:
         """Get an income source by ID."""
         ...

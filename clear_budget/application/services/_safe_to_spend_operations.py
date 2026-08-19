@@ -14,6 +14,7 @@ search, so the headline agrees with the panel's Forward Projection.
 
 from datetime import date
 
+from clear_budget.application.projection_basis import ProjectionBasis
 from clear_budget.application.services._overdraft_projection import (
     _BANK_PAYMENT_METHOD_ID,
     _DEFAULT_HORIZON_MONTHS,
@@ -28,6 +29,7 @@ from clear_budget.domain.services.safe_to_spend import (
     sustainable_capacity,
     sustainable_spend,
 )
+from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 
@@ -43,6 +45,23 @@ _DEFAULT_BUFFER_PENCE = 2000
 
 # Months a spendable figure must keep standing when the user has not chosen.
 _DEFAULT_WINDOW_MONTHS = 4
+
+
+def _match_key(source) -> str:
+    """How two income entries are judged to be the same money.
+
+    By name, because that is the identity the user recognises and the only one
+    that survives the two storage kinds: a recurring source and a one-off live
+    in different tables with unrelated ids, so an id comparison would treat
+    the same monthly payment as two different things.
+    """
+    return source.name.strip().casefold()
+
+
+def _missing_from(repeated, present) -> list:
+    """The repeated income a month has no entry for, in the given order."""
+    have = {_match_key(source) for source in present}
+    return [source for source in repeated if _match_key(source) not in have]
 
 
 class SafeToSpendOperationsMixin:
@@ -83,7 +102,10 @@ class SafeToSpendOperationsMixin:
         set_sustainable_window_months(self.bill_repo.conn, months)
 
     def get_safe_to_spend(
-        self, *, today: date | None = None, include_assumed: bool = False
+        self,
+        *,
+        today: date | None = None,
+        basis: ProjectionBasis = ProjectionBasis.KNOWN,
     ) -> SustainableResult:
         """The most that can be spent today with the whole window standing.
 
@@ -92,9 +114,7 @@ class SafeToSpendOperationsMixin:
         returns a negative amount: the sum to be found, not spent.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
-        projection = self._build_safe_to_spend_inputs(
-            today, include_assumed=include_assumed
-        )
+        projection = self._build_safe_to_spend_inputs(today, basis=basis)
         return sustainable_spend(
             projection=projection,
             today=today,
@@ -103,7 +123,10 @@ class SafeToSpendOperationsMixin:
         )
 
     def get_spending_capacity(
-        self, *, today: date | None = None, include_assumed: bool = False
+        self,
+        *,
+        today: date | None = None,
+        basis: ProjectionBasis = ProjectionBasis.KNOWN,
     ) -> tuple[CapacityStep, ...]:
         """The same figure from each remaining day of this month onward.
 
@@ -111,9 +134,7 @@ class SafeToSpendOperationsMixin:
         projection over one window.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
-        projection = self._build_safe_to_spend_inputs(
-            today, include_assumed=include_assumed
-        )
+        projection = self._build_safe_to_spend_inputs(today, basis=basis)
         return sustainable_capacity(
             projection=projection,
             today=today,
@@ -121,8 +142,37 @@ class SafeToSpendOperationsMixin:
             window_months=self.get_sustainable_window_months(),
         )
 
+    def get_assumed_expectations(
+        self, *, today: date | None = None
+    ) -> tuple[tuple[YearMonth, IncomeSource], ...]:
+        """The money the assumed reading counts that the known reading does not.
+
+        Returned as (month, income) pairs so the panel can say WHEN each
+        amount has to arrive, not merely that it must. Two kinds appear:
+        income entered for a month but marked unreliable; income repeated
+        forward from this month into a later month with no entry of that name.
+
+        Scoped to the sustainable window rather than the whole forecast: the
+        window is what a spendable figure promises to keep standing, so those
+        are the months that can hold it down.
+        """
+        today = today or date.today()  # noqa: DTZ011 (naive local dates)
+        ym = YearMonth(today.year, today.month)
+        base = self.get_month_summary(year_month=ym, include_assumed=True)
+        items = [(ym, source) for source in base.assumed_income_sources]
+        cursor = ym
+        for _ in range(self.get_sustainable_window_months() - 1):
+            cursor = cursor.next_month()
+            summary = self.get_month_summary(year_month=cursor, include_assumed=True)
+            items += [(cursor, source) for source in summary.assumed_income_sources]
+            items += [
+                (cursor, source)
+                for source in _missing_from(base.income_sources, summary.income_sources)
+            ]
+        return tuple(items)
+
     def _build_safe_to_spend_inputs(
-        self, today: date, *, include_assumed: bool = False
+        self, today: date, *, basis: ProjectionBasis = ProjectionBasis.KNOWN
     ) -> list[DayProjection]:
         """Per-day projection and income dates across the forecast window.
 
@@ -133,9 +183,16 @@ class SafeToSpendOperationsMixin:
         stored balance). Its close therefore equals the panel's projected
         end-of-month figure. Later months chain day by day from that close,
         exactly as the runway search does.
+
+        On the REPEAT_CURRENT basis each later month additionally receives any
+        income this month has that the later month does not, on the same day
+        of the month. The later month keeps its own bills and its own entries
+        untouched: the assumption only fills gaps, so it can never reduce a
+        month below what was actually entered for it.
         """
+        assumed = basis is ProjectionBasis.REPEAT_CURRENT
         ym = YearMonth(today.year, today.month)
-        summary = self.get_month_summary(year_month=ym, include_assumed=include_assumed)
+        summary = self.get_month_summary(year_month=ym, include_assumed=assumed)
         days = days_in_month(ym.year, ym.month)
         bills, income = self._apply_current_month_filters(
             summary.bills, summary.income_sources, ym, ym, today.day
@@ -168,14 +225,19 @@ class SafeToSpendOperationsMixin:
                 DayProjection(day=date(ym.year, ym.month, day), balance_pence=balance)
             )
 
+        # The shape being repeated is THIS month's income as entered, taken
+        # before any received/undated filtering: an income already received
+        # still describes what a month like this one brings in.
+        repeated = summary.income_sources if assumed else ()
         cursor = ym
         for _ in range(_FORECAST_WINDOW_MONTHS - 1):
             cursor = cursor.next_month()
-            summary = self.get_month_summary(
-                year_month=cursor, include_assumed=include_assumed
-            )
+            summary = self.get_month_summary(year_month=cursor, include_assumed=assumed)
             days = days_in_month(cursor.year, cursor.month)
             per_day = self._per_day_pence(summary, days)
+            for source in _missing_from(repeated, summary.income_sources):
+                nominal = min(source.day_of_month or _UNDATED_INCOME_DAY, days)
+                per_day[nominal] += source.amount.pence
             for day in range(1, days + 1):
                 balance += per_day[day]
                 projection.append(

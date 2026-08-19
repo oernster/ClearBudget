@@ -1,9 +1,10 @@
-"""The second reading: what the months look like IF expected income arrives.
+"""The second reading: what the months look like IF this month repeats.
 
-Income marked NOT reliable is money the user expects rather than money they
-have. Every figure elsewhere in the app excludes it, so nothing is quietly
-propped up by money that may not come. This module adds the other half of the
-picture beside those figures, never instead of them:
+Every figure elsewhere in the app counts only money entered and marked
+reliable, so nothing is quietly propped up by money that may not come. That
+reading is honest but pessimistic about the future, because a month nobody has
+filled in yet looks empty rather than unknown. This module adds the other half
+of the picture beside those figures, never instead of them:
 
 * the same traffic-light hues, blended toward the page background, so an
   assumed figure reads as provisional at a glance without changing what its
@@ -13,12 +14,14 @@ picture beside those figures, never instead of them:
   assumed reading to come true. A second projection without that list would
   be a wish rather than a plan.
 
-The whole block hides when nothing is marked as expected, which is the case
-until the user deliberately unticks a reliable box. Nothing changes on screen
-until they do.
+The assumption is DERIVED, not marked: income entered for this month is taken
+to arrive again in any later month that has no entry of that name. The block
+therefore appears on its own once the months ahead are thinner than this one,
+rather than waiting for the user to remember to untick a reliable box.
 """
 
 from clear_budget.application.formatting import money_from_pence
+from clear_budget.application.projection_basis import ProjectionBasis
 from clear_budget.ui import theme, ui_scale
 from clear_budget.ui.theme_tokens import assumed_state_colours_for
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
@@ -50,12 +53,12 @@ class SolvencyPanelAssumedMixin:
     def _update_assumed(self, report) -> None:
         """Fill the assumed block, hiding it when nothing is expected.
 
-        Runs the same calculations as the known reading with assumed income
-        included, so the two are one engine read twice rather than two engines
-        that could disagree.
+        Runs the same calculations as the known reading on the repeat basis,
+        so the two are one engine read twice rather than two engines that
+        could disagree.
         """
         service = self.view_model.budget_service
-        expected = self._expected_items(report.year_month)
+        expected = service.get_assumed_expectations()
         if not expected:
             for label in (
                 self.assumed_heading,
@@ -69,7 +72,7 @@ class SolvencyPanelAssumedMixin:
             label.setVisible(True)
 
         known = service.get_spending_capacity()
-        probable = service.get_spending_capacity(include_assumed=True)
+        probable = service.get_spending_capacity(basis=ProjectionBasis.REPEAT_CURRENT)
         self.sts_assumed.setText(self._assumed_capacity_text(known, probable))
         state = self._state_key(
             probable[-1].amount_pence, 0, False, service.get_overdraft_limit().pence
@@ -106,21 +109,6 @@ class SolvencyPanelAssumedMixin:
                 " the later months now count against today"
             )
         return "\n".join(lines)
-
-    def _expected_items(self, year_month) -> list:
-        """Expected-but-unconfirmed income across the months on screen.
-
-        Returned as (month, source) pairs so the specification can say WHEN
-        each amount has to arrive, not merely that it must.
-        """
-        service = self.view_model.budget_service
-        months = [year_month, year_month.next_month()]
-        months.append(months[-1].next_month())
-        items = []
-        for month in months:
-            summary = service.get_month_summary(year_month=month)
-            items += [(month, source) for source in summary.assumed_income_sources]
-        return items
 
     @staticmethod
     def _gap_specification(expected: list) -> str:
