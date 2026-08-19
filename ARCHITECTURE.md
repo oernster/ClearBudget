@@ -160,17 +160,26 @@ Everything below this section explains how the code satisfies them.
   inputs and with `today` always a parameter, never read from the clock.
   `sustainable_spend(projection, today, floor_pence, window_months)` returns a
   `SustainableResult` (signed `amount_pence`, the `binding_day` that set the
-  minimum, the `window_months` asked for and the floor echoed back). The
-  figure is the minimum across a BOUNDED WINDOW of whole months: no day
-  inside it is excluded, so a month that cannot survive vetoes the figure
-  rather than being written off; a window that cannot hold returns a
-  negative amount, the sum to be found rather than an amount to spend.
-  An earlier version truncated the window at the first day the projection
-  was already below the floor. That was wrong in a way that mattered: the
-  figure it offered deepened the first breaching month by exactly the amount
-  it offered, so it was not survivable at all. Bounding by months instead
-  makes the promise checkable, which is why `window_months` is a user
-  setting rather than a strategy enum.
+  minimum, the `covered_end` the figure makes a promise up to, the floor
+  echoed back, plus `shortfall_pence` and `shortfall_day` for the gap beyond
+  it). The window bounds how far the calculation LOOKS; what it OFFERS is
+  bounded by `_covered_and_beyond`, the longest run of whole months from
+  today whose own lowest day clears the floor with nothing spent.
+  Two wrong answers were tried before this one and the rule reconciles both.
+  Truncating at the first breaching DAY reported the healthy stretch as
+  though the days after it did not exist, so the figure it offered deepened
+  the very month it had skipped while saying nothing about it. Letting every
+  day veto instead reported nothing spendable whenever any month in the
+  window collapsed, which answers "does my budget hold" in the slot reserved
+  for "what can I spend": a user with real headroom in front of them read
+  NOTHING SAFE TO SPEND. Bounding at a MONTH boundary and carrying the
+  shortfall separately keeps both truths: the promise is one a reader can
+  state ("everything through October holds") and the gap it does not fix is
+  named rather than netted off. A month after a collapse is excluded even
+  when it looks healthy, because it is projected from that collapse.
+  Only when today's own month is under the floor is `amount_pence` negative;
+  it is then THIS month's shortfall rather than the window's deepest
+  point, because the nearest gap is the one that can still be acted on.
   `sustainable_capacity(...)` answers the rest of the month rather than one
   day: `tuple[CapacityStep, ...]`, one step per CHANGE in the figure, each
   carrying `from_day`, the signed `amount_pence` from that day onward and
@@ -642,10 +651,13 @@ bank statement. Both identities are tested.
   Today headline (rendered by
   `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` from
   `BudgetService.get_safe_to_spend`, reusing the banner's traffic-light state
-  property; the secondary line names what the figure keeps standing and the
-  day that constrains it, "Keeps the next 4 months above your £20.00 buffer;
-  constrained by 14 Sep"; when the window cannot hold, the headline is the
-  shortfall to FIND with the day it lands on), the capacity schedule beneath
+  property; the secondary line names how far the promise reaches and the day
+  that constrains it, "Holds every day through October 2026 above your £20.00
+  buffer; constrained by 14 Oct", with a second line naming any month beyond
+  that cannot be saved and stating that spending the headline deepens it; the
+  banner takes the at-risk tone rather than the safe one whenever that second
+  line is present, so a figure with a gap behind it never reads as an
+  all-clear), the capacity schedule beneath
   it ("If you wait:" and one line per change, from `get_spending_capacity`,
   hidden entirely when the figure never moves so a flat month does not
   restate the headline), the assumed second reading

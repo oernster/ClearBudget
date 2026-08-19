@@ -191,27 +191,35 @@ class TestTheRepeatedShape:
 
 class TestTheSpendableFigure:
     def test_repeating_this_month_shrinks_the_shortfall(self, service):
-        _thin_months(service)
-        known = service.get_safe_to_spend(today=_TODAY)
-        repeated = service.get_safe_to_spend(
-            today=_TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        assert known.amount_pence < 0
-        assert repeated.amount_pence > known.amount_pence
+        """Both bases share a headline here, because THIS month is the one under.
 
-    def test_the_constraint_moves_nearer_once_the_later_months_survive(self, service):
-        """The counterintuitive direction, pinned.
-
-        Filling the later months stops them being the thing that binds, so the
-        binding day moves TOWARD today rather than away. Read without that in
-        mind, an assumed figure that is not simply larger looks like a fault.
+        The difference the assumption makes therefore shows up in the gap
+        beyond it, which is exactly where it should: repeating the income
+        cannot rescue a month that has already happened.
         """
         _thin_months(service)
         known = service.get_safe_to_spend(today=_TODAY)
         repeated = service.get_safe_to_spend(
             today=_TODAY, basis=ProjectionBasis.REPEAT_CURRENT
         )
-        assert repeated.binding_day < known.binding_day
+        assert known.amount_pence < 0
+        assert known.has_shortfall
+        assert repeated.shortfall_pence < known.shortfall_pence
+
+    def test_the_gap_beyond_moves_nearer_once_the_later_months_survive(self, service):
+        """The counterintuitive direction, pinned.
+
+        Filling the later months moves the surviving edge, so the first month
+        that still cannot be saved moves TOWARD today rather than away. Read
+        without that in mind, an assumed reading that is not simply better
+        everywhere looks like a fault.
+        """
+        _thin_months(service)
+        known = service.get_safe_to_spend(today=_TODAY)
+        repeated = service.get_safe_to_spend(
+            today=_TODAY, basis=ProjectionBasis.REPEAT_CURRENT
+        )
+        assert repeated.shortfall_day < known.shortfall_day
 
     def test_the_capacity_schedule_reads_the_same_basis(self, service):
         _thin_months(service)

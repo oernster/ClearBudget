@@ -124,13 +124,14 @@ what is deliberately left and what only looks like debt.
   keeps it. Deleting income offers the same two scopes bills have, stop from
   the viewed month or delete entirely
 - Safe to Spend Today: the headline of the Solvency tab is the single number
-  you could spend today while every day of a whole window of months stays
-  above your buffer, named with the day that constrains it ("constrained by
-  23 Aug"). The window is yours to set (one to twelve months, four by
-  default). No day inside it is written off, so a month that cannot survive
-  vetoes the figure rather than being skipped past: when the window cannot
-  hold, the headline states the shortfall and the day it lands on, which is
-  money to find rather than money to spend
+  you could spend today while every month that still stands on its own keeps
+  standing. It says how far that reaches and what limits it ("Holds every day
+  through October above your £20.00 buffer; constrained by 14 Oct"). A month
+  already under your buffer with nothing spent is a shortfall rather than a
+  limit on today, so it does not veto the figure: it gets a line of its own
+  naming the month, the amount and the fact that spending the headline
+  deepens it. The window you set (one to twelve months, four by default)
+  decides how far ahead the app looks, never how much it offers
 - What you could spend if you wait: today is often the tightest day of the
   month, so beneath the headline a short schedule gives the figure from each
   later day money lands ("From 19 Aug: £108.04", "From 20 Aug: £443.31"),
@@ -468,16 +469,17 @@ entered before these existed continues to do.
 ## Solvency Panel
 
 - **Safe to Spend Today**: the headline number, the most you could spend
-  today while every day of the window stays above your buffer (£20 by
-  default, editable in Settings > Bank Account, zero if you want to plan to
-  the wire). A spend today lowers every later day, so the figure is measured
-  across a whole window of months rather than to the end of this one: one to
-  twelve, four by default. No day inside the window is excluded, so a month
-  that collapses vetoes the figure instead of being written off. A positive
-  amount shows with the constraining day and what it keeps standing ("Keeps
-  the next 4 months above your £20.00 buffer; constrained by 14 Sep"). When
-  the window cannot hold, the headline is the sum to FIND rather than an
-  amount to spend, with the day it lands on named
+  today while every month that currently survives still survives (buffer £20
+  by default, editable in Settings > Bank Account, zero if you want to plan
+  to the wire). A spend today lowers every later day, so the figure is
+  measured across whole months rather than to the end of this one, bounded by
+  the last month that clears the buffer with nothing spent. That bound is the
+  promise, stated in full: "Holds every day through October above your
+  £20.00 buffer; constrained by 14 Oct". A month beyond it that cannot be
+  saved by spending nothing is named on a second line with its shortfall and
+  a plain statement that spending the headline deepens it, so neither fact is
+  hidden by the other. "Nothing safe to spend" now means what it says: not
+  even this month clears the buffer; the figure shown is then the sum to FIND
 - **If you wait**: the same figure from each later day of the month, one line
   per change, so an income landing on the 20th has a number against it
   instead of leaving you to guess. Each line names the day still holding the

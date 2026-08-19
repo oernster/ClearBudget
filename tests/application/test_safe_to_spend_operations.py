@@ -150,22 +150,24 @@ class TestSpendingCapacity:
 
 
 class TestSustainableHeadline:
-    def test_a_later_month_that_collapses_vetoes_todays_figure(self, budget_service):
-        """The regression this whole change exists for.
+    def test_a_later_month_that_collapses_is_named_not_netted_off(self, budget_service):
+        """A collapse ahead is a shortfall, not a limit on today.
 
-        The old calculation stopped at the first day below the floor and
-        reported the healthy stretch before it, so it could call hundreds of
-        pounds safe while the next month went further under by exactly the
-        same amount. Every day of the window now has a veto.
+        Letting it drive the headline reported nothing spendable while this
+        month still had real headroom, which answers "does my budget hold" in
+        the slot reserved for "what can I spend". The collapse is reported on
+        its own terms instead, so neither fact is lost.
         """
         _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
         budget_service.add_income(income=_income("Salary", 50000, 1))
         budget_service.add_bill(bill=_bill("Rent", 190000, 10, start=_AUGUST))
         budget_service.set_safe_to_spend_floor(amount=Amount(pence=0))
         result = budget_service.get_safe_to_spend(today=_TODAY)
-        assert not result.is_sustainable
-        assert result.amount_pence < 0
-        assert result.binding_day > date(2026, 7, 31)
+        assert result.is_sustainable
+        assert result.amount_pence == 100000
+        assert result.covered_end.month == _TODAY.month
+        assert result.has_shortfall
+        assert result.shortfall_day > result.covered_end
 
     def test_a_window_that_holds_reports_what_it_can_spare(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
@@ -176,8 +178,13 @@ class TestSustainableHeadline:
         assert result.is_sustainable
         assert result.amount_pence > 0
 
-    def test_a_shorter_window_can_allow_what_a_longer_one_refuses(self, budget_service):
-        # A longer window is a harder promise, so it can only ever allow less.
+    def test_a_longer_window_never_offers_more_only_sees_further(self, budget_service):
+        """A longer window is a harder promise, so it can never allow more.
+
+        It can allow the SAME, which is the case here: the extra months
+        cannot be promised, so they change what is reported about the
+        shortfall rather than what is offered for today.
+        """
         _seed_balance(budget_service.bill_repo.conn, pence=100000, iso="2026-07-26")
         budget_service.add_income(income=_income("Salary", 50000, 1))
         budget_service.add_bill(bill=_bill("Rent", 190000, 10, start=_AUGUST))
@@ -186,7 +193,9 @@ class TestSustainableHeadline:
         short = budget_service.get_safe_to_spend(today=_TODAY)
         budget_service.set_sustainable_window_months(months=4)
         long = budget_service.get_safe_to_spend(today=_TODAY)
-        assert short.amount_pence > long.amount_pence
+        assert long.amount_pence <= short.amount_pence
+        assert long.has_shortfall
+        assert not short.has_shortfall
 
     def test_the_default_today_is_the_real_one(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=90000, iso="2026-07-26")

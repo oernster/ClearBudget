@@ -217,7 +217,10 @@ class TestTheProjectionHonoursTheEnd:
         service.set_safe_to_spend_floor(amount=Amount(pence=0))
         service.add_bill(bill=_bill())
         persisted = service.add_income(income=_income())
-        with_income = service.get_safe_to_spend(today=today).amount_pence
+        before = service.get_safe_to_spend(today=today)
         service.end_income(income_id=persisted.id, last_active_month=_JUNE)
-        without = service.get_safe_to_spend(today=today).amount_pence
-        assert without < with_income
+        after = service.get_safe_to_spend(today=today)
+        # June keeps the income either way, so the headline is unmoved and the
+        # loss lands where it actually falls: the months after it.
+        assert after.amount_pence == before.amount_pence
+        assert after.shortfall_pence > before.shortfall_pence

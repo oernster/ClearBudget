@@ -29,25 +29,30 @@ class SolvencyPanelSafeToSpendMixin:
             label += f" {day.year}"
         return label
 
+    @staticmethod
+    def _sts_month(day) -> str:
+        """A month label ("October 2026"), for naming how far a promise reaches."""
+        return f"{MONTH_NAMES[day.month]} {day.year}"
+
     def _update_safe_to_spend(self) -> None:
-        """Render the headline: what can be spent with the window still standing.
+        """Render the headline: what can be spent, plus how far that holds.
 
-        The number is never the minimum of a healthy stretch with the bad
-        months excluded. Every day of the window has a veto, because money
-        spent today lowers the bad days too: a figure that ignored them would
-        fund its own deficit and read as safe while the month after collapsed
-        by exactly that much more.
+        The figure answers "what can I spend today", so it is bounded by the
+        last month that still stands on its own. A month already under the
+        floor with nothing spent is not a spending limit but a shortfall.
+        Letting it drive the headline answered "does my budget hold" in
+        the slot reserved for the other question: the banner read NOTHING
+        SAFE TO SPEND while the months in front of it had real headroom.
 
-        So a window that cannot survive reports NOTHING spendable and names
-        what it is short by. That number is money to be found, not spent.
+        The shortfall is not discarded either, which is what made the older
+        truncating version dishonest. It gets a line of its own naming the
+        month, the amount and the fact that spending the headline deepens it.
         """
         service = self.view_model.budget_service
         result = service.get_safe_to_spend()
-        months = service.get_sustainable_window_months()
-        window = f"{months} months" if months != 1 else "month"
         if result.amount_pence < 0:
             self.sts_banner.setText(
-                f"NOTHING SAFE TO SPEND: the next {window} are"
+                "NOTHING SAFE TO SPEND: this month is"
                 f" {money_from_pence(abs(result.amount_pence))} short"
             )
             state = STATE_RED
@@ -58,13 +63,13 @@ class SolvencyPanelSafeToSpendMixin:
         elif result.amount_pence == 0:
             self.sts_banner.setText("Nothing safe to spend today")
             state = STATE_AT_RISK
-            detail = self._sts_detail_line(result, window)
+            detail = self._sts_detail_line(result)
         else:
             self.sts_banner.setText(
                 f"{money_from_pence(result.amount_pence)} safe to spend today"
             )
-            state = STATE_SAFE
-            detail = self._sts_detail_line(result, window)
+            state = STATE_AT_RISK if result.has_shortfall else STATE_SAFE
+            detail = self._sts_detail_line(result)
         self._update_capacity()
         self.sts_detail.setText(detail)
         self.sts_detail.setVisible(bool(detail))
@@ -97,16 +102,27 @@ class SolvencyPanelSafeToSpendMixin:
         self.sts_capacity.setText("If you wait:\n" + "\n".join(rows))
         self.sts_capacity.setVisible(True)
 
-    def _sts_detail_line(self, result, window: str) -> str:
+    def _sts_detail_line(self, result) -> str:
         """Secondary line under a spendable headline.
 
-        Names the promise the figure keeps (every day of the window above the
-        buffer) and the day that limits it, so the number can be checked
-        against the projection rather than taken on trust.
+        Two sentences at most. The first names how far the promise reaches
+        and the day that limits it, so the figure can be checked against the
+        projection rather than taken on trust. The second appears only when a
+        later month cannot be saved by spending nothing: without it the
+        headline would read as an all-clear, which is the failure the
+        truncating version had.
         """
-        detail = f"Keeps the next {window} above"
+        detail = f"Holds every day through {self._sts_month(result.covered_end)} above"
         if result.floor_pence > 0:
             detail += f" your {money_from_pence(result.floor_pence)} buffer"
         else:
             detail += " zero"
-        return detail + f"; constrained by {self._sts_day(result.binding_day)}"
+        detail += f"; constrained by {self._sts_day(result.binding_day)}"
+        if not result.has_shortfall:
+            return detail
+        return (
+            detail
+            + f"\n{self._sts_month(result.shortfall_day)} is"
+            + f" {money_from_pence(result.shortfall_pence)} short whatever you do;"
+            + " spending this deepens it"
+        )

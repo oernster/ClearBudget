@@ -66,25 +66,41 @@ class CapacityStep:
 
 @dataclass(frozen=True, slots=True)
 class SustainableResult:
-    """What can be spent today and still leave the whole window standing.
+    """What can be spent today with every month that still stands left standing.
 
     Attributes:
-        amount_pence: Signed. Positive is spendable; negative is the amount
-            the window is SHORT by, which no spending decision can fix.
-        binding_day: The lowest day in the window, which set the figure.
-        window_end: The last day considered.
+        amount_pence: Signed. Positive is spendable. Negative only when not
+            even the current month clears the floor, in which case it is the
+            sum the window is SHORT by rather than an amount to spend.
+        binding_day: The lowest day of the covered stretch, which set the
+            figure.
+        covered_end: The last day the figure makes a promise about: the end of
+            the last month that clears the floor with no spending at all.
         floor_pence: The buffer the figure was measured against.
+        shortfall_pence: How far the worst day BEYOND the covered stretch
+            falls under the floor. It is 0 when the whole window stands. It is
+            never subtracted from the figure: it is a gap that exists whether
+            or not anything is spent today.
+        shortfall_day: The day that shortfall lands on. None when there
+            is no such day.
     """
 
     amount_pence: int
     binding_day: date
-    window_end: date
+    covered_end: date
     floor_pence: int
+    shortfall_pence: int = 0
+    shortfall_day: date | None = None
 
     @property
     def is_sustainable(self) -> bool:
-        """True when the window survives without any spending today."""
+        """True when the covered stretch survives without any spending today."""
         return self.amount_pence >= 0
+
+    @property
+    def has_shortfall(self) -> bool:
+        """True when a month past the covered stretch cannot be saved by thrift."""
+        return self.shortfall_day is not None
 
 
 def _window_days(
@@ -121,6 +137,36 @@ def _window_days(
     return within
 
 
+def _covered_and_beyond(
+    within: Sequence[DayProjection], floor_pence: int
+) -> tuple[list[DayProjection], list[DayProjection]]:
+    """Split the window at the first month that cannot clear the floor unaided.
+
+    The covered stretch is the longest run of whole months from today whose
+    own lowest day still clears the floor with nothing spent. Everything from
+    the first failing month onward is beyond it, INCLUDING any later month
+    that looks healthy on paper: a month after a collapse is projected from
+    that collapse, so promising it would be promising a balance that cannot
+    be reached.
+
+    Splitting by month rather than by day is what makes the answer speakable.
+    "Everything through October holds" is a sentence a person can check
+    against the projection; "everything up to the thirteenth of November"
+    describes a boundary that exists only inside the arithmetic.
+    """
+    covered: list[DayProjection] = []
+    months: dict[tuple[int, int], list[DayProjection]] = {}
+    for day in within:
+        months.setdefault((day.day.year, day.day.month), []).append(day)
+    for key in sorted(months):
+        days = months[key]
+        if min(d.balance_pence for d in days) - floor_pence < 0:
+            break
+        covered += days
+    beyond = within[len(covered) :]
+    return covered, beyond
+
+
 def sustainable_spend(
     *,
     projection: Sequence[DayProjection],
@@ -128,18 +174,25 @@ def sustainable_spend(
     floor_pence: int = 0,
     window_months: int = _DEFAULT_WINDOW_MONTHS,
 ) -> SustainableResult:
-    """The most that can be spent today with the WHOLE window still standing.
+    """The most that can be spent today leaving every surviving month standing.
 
-    The difference from `safe_to_spend` is that no day is excluded. That
-    function stops at the first day already below the floor, on the ground
-    that those days are lost whatever happens today, reporting the minimum
-    of the healthy stretch before them. The figure that produces is real but
-    it is not spendable: money spent today lowers the lost days too, so a
-    number computed by ignoring them funds its own deficit.
+    A month already under the floor with NOTHING spent is not a spending
+    limit; it is a shortfall. Letting it veto the figure answers "does my
+    budget hold?" in the slot reserved for "what can I spend?". It reports
+    nothing spendable while the account still has real headroom in front of
+    it. So the figure is bounded at the end of the last month that clears the
+    floor unaided and the shortfall beyond is carried separately, named
+    rather than netted off.
 
-    Here a window that cannot survive returns a NEGATIVE amount, which is the
-    sum that would have to be found rather than spent. Nothing is safely
-    spendable until it is.
+    That is not the truncation this replaced. The old rule cut at the first
+    breaching DAY and reported the minimum before it as though the days after
+    did not exist, so the figure it offered deepened the very month it had
+    skipped and said nothing about it. Here the promise stops at a month
+    boundary a reader can state, with the deepening reported: the caller
+    has both the amount and the gap it does not fix.
+
+    When not even the current month clears the floor there is nothing to
+    promise, so the amount is negative and is the sum to be found.
 
     Raises:
         SustainableError: If the floor is negative, the window is shorter
@@ -148,12 +201,46 @@ def sustainable_spend(
     if floor_pence < 0:
         raise SustainableError("Safety floor cannot be negative")
     within = _window_days(projection, today, window_months)
-    binding = min(within, key=lambda d: d.balance_pence)
+    covered, beyond = _covered_and_beyond(within, floor_pence)
+    worst_beyond = min(beyond, key=lambda d: d.balance_pence) if beyond else None
+    if not covered:
+        # Today's own month is already under, so there is no promise to make.
+        # The figure is THIS month's shortfall rather than the window's
+        # deepest point: the nearest gap is the one that can still be acted
+        # on. A multi-month depth reported as one number reads as a debt
+        # owed today.
+        this_month = [
+            d for d in within if (d.day.year, d.day.month) == (today.year, today.month)
+        ]
+        binding = min(this_month, key=lambda d: d.balance_pence)
+        rest = within[len(this_month) :]
+        worst_rest = min(rest, key=lambda d: d.balance_pence) if rest else None
+        return SustainableResult(
+            amount_pence=binding.balance_pence - floor_pence,
+            binding_day=binding.day,
+            covered_end=this_month[-1].day,
+            floor_pence=floor_pence,
+            shortfall_pence=(
+                floor_pence - worst_rest.balance_pence
+                if worst_rest and worst_rest.balance_pence - floor_pence < 0
+                else 0
+            ),
+            shortfall_day=(
+                worst_rest.day
+                if worst_rest and worst_rest.balance_pence - floor_pence < 0
+                else None
+            ),
+        )
+    binding = min(covered, key=lambda d: d.balance_pence)
     return SustainableResult(
         amount_pence=binding.balance_pence - floor_pence,
         binding_day=binding.day,
-        window_end=within[-1].day,
+        covered_end=covered[-1].day,
         floor_pence=floor_pence,
+        shortfall_pence=(
+            floor_pence - worst_beyond.balance_pence if worst_beyond else 0
+        ),
+        shortfall_day=worst_beyond.day if worst_beyond else None,
     )
 
 
@@ -166,13 +253,15 @@ def sustainable_capacity(
 ) -> tuple[CapacityStep, ...]:
     """`sustainable_spend` from each remaining day of today's month onward.
 
-    Same suffix-minimum shape as `spending_capacity`, over the untruncated
-    window: waiting past a tight day still raises what a day can carry; it can
-    never raise it past what the whole window will bear.
+    Measured over the same covered stretch the headline promises, so the
+    first step always equals the headline and no row can offer more than the
+    months it names will bear.
     """
     if floor_pence < 0:
         raise SustainableError("Safety floor cannot be negative")
-    within = _window_days(projection, today, window_months)
+    window = _window_days(projection, today, window_months)
+    covered, _ = _covered_and_beyond(window, floor_pence)
+    within = covered or window
     steps: list[CapacityStep] = []
     for index, day in enumerate(within):
         if day.day.month != today.month or day.day.year != today.year:
