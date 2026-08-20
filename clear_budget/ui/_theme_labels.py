@@ -220,6 +220,16 @@ QLabel#SolvencyCommitted {{
     color: {t["text_muted"]};
 }}
 
+/* A shortfall no amount of restraint can close is the one line on the tab
+   that reports a fact rather than a caution, so it takes the traffic light's
+   own red rather than the muted body colour it used to share with the reach
+   sentence above it. */
+QLabel#SolvencyShortfall {{
+    font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
+    padding: 5px;
+    color: {s[STATE_RED]};
+}}
+
 QLabel#SolvencyRemainingBank {{
     font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
     padding: 5px;

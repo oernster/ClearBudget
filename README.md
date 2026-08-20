@@ -128,8 +128,8 @@ what is deliberately left and what only looks like debt.
   standing. It says how far that reaches and what limits it ("Holds every day
   through October above your £20.00 buffer; constrained by 14 Oct"). A month
   already under your buffer with nothing spent is a shortfall rather than a
-  limit on today, so it does not veto the figure: it gets a line of its own
-  naming the month, the amount and the fact that spending the headline
+  limit on today, so it does not veto the figure: it gets a line of its own,
+  in red, naming the month, the amount and the fact that spending the headline
   deepens it. The window you set (one to twelve months, four by default)
   decides how far ahead the app looks, never how much it offers
 - What you could spend if you wait: today is often the tightest day of the
@@ -484,7 +484,10 @@ entered before these existed continues to do.
   £20.00 buffer; constrained by 14 Oct". A month beyond it that cannot be
   saved by spending nothing is named on a second line with its shortfall and
   a plain statement that spending the headline deepens it, so neither fact is
-  hidden by the other. "Nothing safe to spend" means what it says: not
+  hidden by the other. That second line is RED while the line above it stays
+  muted: the first is a caution about a figure you can still act on, the
+  second reports a gap no restraint closes. Sharing one colour made the
+  second read as more small print under the first. "Nothing safe to spend" means what it says: not
   even this month clears the buffer; the figure shown is then the sum to FIND
 - **If you wait**: the same figure from each later day of the month, one line
   per change, so an income landing on the 20th has a number against it

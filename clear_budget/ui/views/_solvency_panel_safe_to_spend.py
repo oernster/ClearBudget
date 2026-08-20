@@ -1,8 +1,8 @@
 """Safe to Spend Today rendering for SolvencyPanel - extracted for LOC limit.
 
 Owns one concern: turning a SustainableResult into the headline banner and
-its secondary line. The number's semantics live in the domain calculation;
-this module only decides what a person reads.
+the two lines under it. The number's semantics live in the domain
+calculation; this module only decides what a person reads.
 """
 
 from datetime import date as _date
@@ -46,7 +46,9 @@ class SolvencyPanelSafeToSpendMixin:
 
         The shortfall is not discarded either, which is what made the older
         truncating version dishonest. It gets a line of its own naming the
-        month, the amount and the fact that spending the headline deepens it.
+        month, the amount and the fact that spending the headline deepens
+        it, rendered red because it is the one statement here that no
+        amount of restraint answers.
         """
         service = self.view_model.budget_service
         result = service.get_safe_to_spend()
@@ -56,23 +58,28 @@ class SolvencyPanelSafeToSpendMixin:
                 f" {money_from_pence(abs(result.amount_pence))} short"
             )
             state = STATE_RED
-            detail = (
+            # The whole sentence is the shortfall statement here, so it goes
+            # to the red label and the reach line has nothing left to say.
+            detail = ""
+            shortfall = (
                 f"The shortfall lands on {self._sts_day(result.binding_day)}."
                 f" That is money to find rather than money to spend"
             )
         elif result.amount_pence == 0:
             self.sts_banner.setText("Nothing safe to spend today")
             state = STATE_AT_RISK
-            detail = self._sts_detail_line(result)
+            detail, shortfall = self._sts_detail_lines(result)
         else:
             self.sts_banner.setText(
                 f"{money_from_pence(result.amount_pence)} safe to spend today"
             )
             state = STATE_AT_RISK if result.has_shortfall else STATE_SAFE
-            detail = self._sts_detail_line(result)
+            detail, shortfall = self._sts_detail_lines(result)
         self._update_capacity()
         self.sts_detail.setText(detail)
         self.sts_detail.setVisible(bool(detail))
+        self.sts_shortfall.setText(shortfall)
+        self.sts_shortfall.setVisible(bool(shortfall))
         self.sts_banner.setProperty("state", state)
         _repolish_role(self.sts_banner, self.sts_banner.objectName())
 
@@ -103,15 +110,21 @@ class SolvencyPanelSafeToSpendMixin:
         self.sts_capacity.setText("If you wait:\n" + "\n".join(rows))
         self.sts_capacity.setVisible(True)
 
-    def _sts_detail_line(self, result) -> str:
-        """Secondary line under a spendable headline.
+    def _sts_detail_lines(self, result) -> tuple[str, str]:
+        """The two statements under a spendable headline, told apart.
 
-        Two sentences at most. The first names how far the promise reaches
-        and the day that limits it, so the figure can be checked against the
-        projection rather than taken on trust. The second appears only when a
-        later month cannot be saved by spending nothing: without it the
-        headline would read as an all-clear, which is the failure the
-        truncating version had.
+        The first names how far the promise reaches and the day that limits
+        it, so the figure can be checked against the projection rather than
+        taken on trust. The second appears only when a later month cannot be
+        saved by spending nothing: without it the headline would read as an
+        all-clear, which is the failure the truncating version had.
+
+        They are returned separately, then rendered into separate labels,
+        because they are not the same KIND of statement. The first is a
+        caution about a figure the reader can still act on; the second reports
+        a gap no restraint closes. Sharing one muted line made the second read
+        as more small print under the first, which is how a reader skips the
+        one sentence on the page that spending cannot answer.
         """
         detail = f"Holds every day through {self._sts_month(result.covered_end)} above"
         if result.floor_pence > 0:
@@ -120,10 +133,9 @@ class SolvencyPanelSafeToSpendMixin:
             detail += " zero"
         detail += f"; constrained by {self._sts_day(result.binding_day)}"
         if not result.has_shortfall:
-            return detail
-        return (
-            detail
-            + f"\n{self._sts_month(result.shortfall_day)} is"
-            + f" {money_from_pence(result.shortfall_pence)} short whatever you do;"
-            + " spending this deepens it"
+            return detail, ""
+        return detail, (
+            f"{self._sts_month(result.shortfall_day)} is"
+            f" {money_from_pence(result.shortfall_pence)} short whatever you do;"
+            " spending this deepens it"
         )

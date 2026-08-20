@@ -672,7 +672,13 @@ bank statement. Both identities are tested.
   that cannot be saved and stating that spending the headline deepens it; the
   banner takes the at-risk tone rather than the safe one whenever that second
   line is present, so a figure with a gap behind it never reads as an
-  all-clear), the capacity schedule beneath
+  all-clear. `_sts_detail_lines` returns the two sentences SEPARATELY and they
+  render into separate labels, because a QLabel carries one colour and the two
+  are not the same kind of statement: the reach sentence keeps the muted body
+  role while the shortfall takes `SolvencyShortfall`, the traffic light's own
+  red. A gap no restraint closes is the one line on the tab reporting a fact
+  rather than a caution; in one shared muted line it read as more small
+  print under the sentence above it), the capacity schedule beneath
   it ("If you wait:" and one line per change, from `get_spending_capacity`,
   hidden entirely when the figure never moves so a flat month does not
   restate the headline),
@@ -1382,8 +1388,9 @@ an option that read as "remove my data" removed nothing.
 - The suite is Qt-free: fragile widget-level PySide6 tests (which needed a
   `QApplication` and were flaky) have been removed
 - Pure UI-layer logic is still covered without Qt under `tests/ui_logic`,
-  twelve modules covering the Solvency month-colour rule and its low-point
-  line (by instantiating the mixins directly), the assumed block's wording,
+  thirteen modules covering the Solvency month-colour rule and its low-point
+  line (by instantiating the mixins directly), the spendable headline's reach
+  and shortfall sentences, the assumed block's wording,
   the income one-off and edit-scope rules, the bill amount-change entry,
   inline edits, the tab-strip keyboard cursor, highlight colour, theme and
   save-location persistence, the skipped-update record and the window-geometry

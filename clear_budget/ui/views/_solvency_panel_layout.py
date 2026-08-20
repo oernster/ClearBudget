@@ -89,6 +89,14 @@ class SolvencyPanelLayoutMixin:
         layout.addWidget(self.sts_banner)
         self.sts_detail = _line("SolvencyCommitted")
         layout.addWidget(self.sts_detail)
+        # A shortfall spending cannot fix gets its own label rather than a
+        # second sentence in the line above: it is the one statement here that
+        # no restraint answers, so it takes the traffic light's red while the
+        # reach sentence keeps the muted body colour. One label could not hold
+        # both, since a QLabel carries one colour.
+        self.sts_shortfall = _line("SolvencyShortfall")
+        self.sts_shortfall.hide()
+        layout.addWidget(self.sts_shortfall)
         # Hidden when the figure never moves, so a flat month says nothing
         # rather than restating the headline.
         self.sts_capacity = _line("SolvencyBreakdown")

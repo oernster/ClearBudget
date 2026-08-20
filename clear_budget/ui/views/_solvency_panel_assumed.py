@@ -124,10 +124,16 @@ class SolvencyPanelAssumedMixin:
         state = self._state_key(
             probable[-1].amount_pence, 0, False, overdraft_limit_pence
         )
+        # The headline takes the state of the figure IT prints, not of the
+        # schedule below it. Those are different days: a month whose last step
+        # is comfortable can still be short today; colouring the headline by
+        # the schedule's best day would paint that shortfall green.
         self.sts_assumed_banner.setText(
             self._spendable_sentence(probable[0].amount_pence)
         )
-        self._style_assumed_banner(state)
+        self._style_assumed_banner(
+            self._state_key(probable[0].amount_pence, 0, False, overdraft_limit_pence)
+        )
         # The known figure is a fact, so it keeps the plain muted role rather
         # than an assumed hue: only the assumed figures are spoken quietly.
         # It appears only when the two readings differ, on the same grounds
