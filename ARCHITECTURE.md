@@ -709,25 +709,29 @@ bank statement. Both identities are tested.
   a fact about money entered. With nothing to assume the whole block
   hides (headings included) and a line says so, because a page reachable by a
   button must never be blank
-- The projection page carries the bank page's skeleton (a spendable headline,
-  the terms it rests on, then the months after it) because the two pages are
-  meant to be held against each other. Without it the page was a muted figure
-  with no noun that never said what it assumed. So it states the derivation
-  outright (nothing was ticked to produce it) and paints its headline at
-  banner weight as an OUTLINE, since a filled banner would give an assumed
-  figure a known one's standing
-- The page states NO figure from the bank page. Restating the known one
-  beside the assumed one was tried, to give the schedule's "lower than the
-  known figure" line both its terms; it was withdrawn as misleading. The assumed
-  figure is usually the SMALLER of the two, because surviving longer means
-  later months start counting, so a larger number labelled "already entered"
-  sat beside it reading as an amount the user was free to spend instead. The
-  schedule gives the direction in words, which is the part a reader needs; a
-  second figure invites the wrong one to be acted on
+- The projection page carries NO SPENDABLE FIGURE and this is the settled
+  position, reached by trying the alternatives. It first carried an assumed
+  Safe to Spend headline, then a restatement of the bank page's figure beside
+  it so the "lower than the known figure" line had both its terms. Both are
+  gone. "What can I spend today" is a question about money the user actually
+  has, so a second answer to it on a page whose every number is conditional
+  invites the conditional one to be spent. The two answers also disagree by
+  construction, since surviving longer makes the later months count against
+  today, so the assumed figure comes out LOWER and the pair reads as a
+  contradiction rather than as two questions. The page keeps the bank page's
+  ORDER without keeping its headline: the assumption in words, what has to
+  arrive for it to hold, then the months after this one
+- Because of that, nothing in the running application passes
+  `ProjectionBasis.REPEAT_CURRENT` any more: the projection page's forward
+  months go through `get_assumed_month_summary`, which states the fill-forward
+  rule for itself. The `basis` parameter on `get_safe_to_spend` and
+  `get_spending_capacity`, plus the repeat branch inside
+  `_build_safe_to_spend_inputs`, are reachable only from their tests
 - The assumed forward projection reads
   `BudgetService.get_assumed_month_summary`, which fills a later month's gaps
-  from this month's income exactly as `_build_safe_to_spend_inputs` does. One
-  statement of the assumption, two readings of it: a spendable figure and a
+  from this month's income on the same rule `_build_safe_to_spend_inputs`
+  applies per day. One statement of the assumption, two readings of it: a
+  spendable figure and a
   month narrative on one page could otherwise disagree about the same month.
   Each month then goes through the SAME `_build_month_cashflow_summary` the
   bank page uses, so the two pages differ in their evidence and never in their
@@ -1395,7 +1399,7 @@ an option that read as "remove my data" removed nothing.
 - Pure UI-layer logic is still covered without Qt under `tests/ui_logic`,
   thirteen modules covering the Solvency month-colour rule and its low-point
   line (by instantiating the mixins directly), the spendable headline's reach
-  and shortfall sentences, the assumed block's wording,
+  and shortfall sentences, the projection page's gap specification,
   the income one-off and edit-scope rules, the bill amount-change entry,
   inline edits, the tab-strip keyboard cursor, highlight colour, theme and
   save-location persistence, the skipped-update record and the window-geometry

@@ -1,31 +1,21 @@
-"""The assumed-income second reading, as text.
+"""The gap specification: what has to arrive for the projection page to hold.
 
-Qt-free: both builders are plain functions over plain data, so these run
-without a QApplication (see this package's docstring).
+A second projection without that list would be a wish rather than a plan, so
+these pin what it names and how it names an expectation with no day on it.
+
+Qt-free: the builder is a plain function over plain data, so these run without
+a QApplication (see this package's docstring).
 """
 
-from datetime import date
 from types import SimpleNamespace
 
-from clear_budget.domain.services.safe_to_spend import CapacityStep
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.views._solvency_panel_assumed import SolvencyPanelAssumedMixin
-from clear_budget.ui.views._solvency_panel_safe_to_spend import (
-    SolvencyPanelSafeToSpendMixin,
-)
 
 
-class _Block(SolvencyPanelAssumedMixin, SolvencyPanelSafeToSpendMixin):
-    """The two mixins that between them render the assumed block."""
-
-
-def _step(day: int, pence: int, binding: int) -> CapacityStep:
-    return CapacityStep(
-        from_day=date(2026, 8, day),
-        amount_pence=pence,
-        binding_day=date(2026, 10, binding),
-    )
+class _Block(SolvencyPanelAssumedMixin):
+    """The mixin that renders the assumed block."""
 
 
 def _expected(name: str, pence: int, day):
@@ -53,46 +43,3 @@ class TestGapSpecification:
         )
         assert "Top-up" in text
         assert "Refund" in text
-
-
-class TestAssumedCapacityText:
-    def test_an_expectation_that_changes_nothing_says_so_once(self):
-        # Restating an identical schedule would be noise dressed as insight.
-        steps = [_step(19, 10189, 14)]
-        text = _Block()._assumed_capacity_text(steps, list(steps))
-        assert text == (
-            "No change: the expected income falls outside what limits you now"
-        )
-
-    def test_a_lower_assumed_figure_explains_why_it_is_lower(self):
-        # The counterintuitive case: surviving longer means the later months
-        # start counting, so expecting MORE money lowers what today allows.
-        known = [_step(20, 44561, 14)]
-        probable = [_step(20, 37874, 14)]
-        text = _Block()._assumed_capacity_text(known, probable)
-        assert "£378.74" in text
-        assert "Lower than the known figure" in text
-        assert "later months now count against today" in text
-
-    def test_a_higher_assumed_figure_is_not_explained_away(self):
-        known = [_step(20, 10000, 14)]
-        probable = [_step(20, 50000, 14)]
-        text = _Block()._assumed_capacity_text(known, probable)
-        assert "£500.00" in text
-        assert "Lower than the known figure" not in text
-
-
-class TestSpendableSentence:
-    """Both readings are said the same way, so the comparison is a comparison."""
-
-    def test_a_positive_figure_names_what_it_is(self):
-        # The old page showed the number with no noun at all.
-        assert _Block._spendable_sentence(31525) == "£315.25 safe to spend today"
-
-    def test_nothing_to_spend_says_so_rather_than_showing_zero(self):
-        assert _Block._spendable_sentence(0) == "Nothing safe to spend today"
-
-    def test_a_shortfall_is_money_to_find_rather_than_money_to_spend(self):
-        text = _Block._spendable_sentence(-28475)
-        assert "Nothing safe to spend today" in text
-        assert "£284.75 short" in text

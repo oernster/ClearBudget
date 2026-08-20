@@ -26,10 +26,7 @@ _SMALL_LABEL_FONT_PX = 12
 _BODY_LABEL_FONT_PX = 16
 _VALUE_LABEL_FONT_PX = 20
 # Solvency tab type scale: banner, section lines, headings, breakdown detail.
-# The banner size is public because the projection page paints a banner of
-# its own in code (a provisional variant that carries no fill); the two must
-# not drift into different sizes for the same kind of statement.
-BANNER_FONT_PX = 22
+_BANNER_FONT_PX = 22
 _SECTION_FONT_PX = 18
 _HEADING_FONT_PX = 17
 _BREAKDOWN_FONT_PX = 15
@@ -176,7 +173,7 @@ QTextEdit#RecoveryCodeBox {{
    live theme switch. Caution is a light fill in both themes, so it alone takes
    dark text. */
 QLabel#SolvencyBanner {{
-    font-size: {ui_scale.px(BANNER_FONT_PX)}px;
+    font-size: {ui_scale.px(_BANNER_FONT_PX)}px;
     font-weight: bold;
     padding: 10px;
     border-radius: 5px;
@@ -224,6 +221,17 @@ QLabel#SolvencyCommitted {{
    that reports a fact rather than a caution, so it takes the traffic light's
    own red rather than the muted body colour it used to share with the reach
    sentence above it. */
+/* The projection page's gap specification: what has to arrive for the page to
+   come true. Italic because it is the one block there that is not yet a fact;
+   neutral in colour because a list of expectations has no traffic-light state
+   of its own, unlike the months below it. */
+QLabel#SolvencyAssumedNote {{
+    font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
+    padding: 5px;
+    font-style: italic;
+    color: {t["text_muted"]};
+}}
+
 QLabel#SolvencyShortfall {{
     font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
     padding: 5px;

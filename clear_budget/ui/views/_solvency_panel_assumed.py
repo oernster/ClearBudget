@@ -7,9 +7,8 @@ filled in yet looks empty rather than unknown. This module adds the other half
 of the picture on a page of its own, never instead of those figures:
 
 * the same traffic-light hues, blended toward the page background, so an
-  assumed figure reads as provisional at a glance without changing what its
+  assumed month reads as provisional at a glance without changing what its
   colour means;
-* every line says plainly that it depends on money not yet received;
 * the gap specification names exactly what has to arrive (and when) for the
   assumed reading to come true. A second projection without that list would
   be a wish rather than a plan.
@@ -21,31 +20,23 @@ rather than waiting for the user to remember to untick a reliable box. Because
 nothing was ticked, the page states the rule outright: a reader cannot infer
 a derivation from the figures it produced.
 
-The page answers the bank page's questions in the bank page's order. Its
-earlier shape was a muted figure with no noun that never said what it
-assumed and never said whether the months ahead survived the assumption.
+The page carries NO SPENDABLE FIGURE. It had one, worded as the bank page
+words its headline. It was withdrawn. A spendable figure answers "what can
+I spend today", which is a question about money the user actually has; putting
+a second answer to it on a page whose every number is conditional invites the
+conditional one to be spent. The two readings also disagree by construction,
+because surviving longer makes the later months count against today, so the
+assumed figure comes out LOWER and the pair reads as a contradiction rather
+than as two answers to different questions.
 
-It states no figure from the bank page. Doing so was tried and withdrawn:
-the assumed figure is usually the SMALLER of the two, since surviving
-longer means later months start counting, so the known figure printed
-beside it read as a larger amount the reader was free to spend instead.
-The schedule gives the direction in words, which is the part that helps.
+What is left is what the page is for: the assumption said in words, what has
+to arrive for it to hold, then the months ahead walked again under it.
 """
 
 from clear_budget.application.formatting import money_from_pence
-from clear_budget.application.projection_basis import ProjectionBasis
-from clear_budget.ui import theme, ui_scale
-from clear_budget.ui._theme_labels import BANNER_FONT_PX
+from clear_budget.ui import theme
 from clear_budget.ui.theme_tokens import assumed_state_colours_for
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
-
-# Unscaled type size of an assumed line, a step below the figure it qualifies.
-_ASSUMED_FONT_PX = 15
-# The provisional banner: the bank banner's size and padding so the figure is
-# as findable, an outline instead of a fill so it never reads as settled.
-_ASSUMED_BANNER_BORDER_PX = 2
-_ASSUMED_BANNER_PADDING_PX = 10
-_ASSUMED_BANNER_RADIUS_PX = 5
 
 
 class SolvencyPanelAssumedMixin:
@@ -59,58 +50,8 @@ class SolvencyPanelAssumedMixin:
             state_key
         ]
 
-    def _style_assumed(self, label, state_key: str) -> None:
-        """Paint an assumed line in the muted variant of its own state."""
-        label.setStyleSheet(
-            ui_scale.style(
-                f"font-size: {_ASSUMED_FONT_PX}px; padding: 2px 5px;"
-                f" font-style: italic; color: {self._assumed_colour(state_key)};"
-            )
-        )
-
-    def _style_assumed_banner(self, state_key: str) -> None:
-        """Paint the provisional headline: banner weight, no fill.
-
-        A filled banner would give an assumed figure the standing the bank
-        page's known one has, which is the confusion this page exists to
-        avoid. An outline in the same muted hue keeps the prominence and
-        withholds the authority.
-        """
-        colour = self._assumed_colour(state_key)
-        self.sts_assumed_banner.setStyleSheet(
-            ui_scale.style(
-                f"font-size: {BANNER_FONT_PX}px; font-weight: bold;"
-                f" padding: {ui_scale.px(_ASSUMED_BANNER_PADDING_PX)}px;"
-                f" border: {ui_scale.px(_ASSUMED_BANNER_BORDER_PX)}px solid {colour};"
-                f" border-radius: {ui_scale.px(_ASSUMED_BANNER_RADIUS_PX)}px;"
-                f" color: {colour};"
-            )
-        )
-
-    @staticmethod
-    def _spendable_sentence(amount_pence: int) -> str:
-        """The assumed spendable figure said in full, with its noun.
-
-        Worded exactly as the bank page words its own headline, so a
-        reader moving between the pages is comparing the same quantity
-        rather than working out whether they are.
-        """
-        if amount_pence < 0:
-            return (
-                "Nothing safe to spend today:"
-                f" {money_from_pence(abs(amount_pence))} short"
-            )
-        if amount_pence == 0:
-            return "Nothing safe to spend today"
-        return f"{money_from_pence(amount_pence)} safe to spend today"
-
     def _update_assumed(self, report) -> None:
-        """Fill the projection page; say why when it has nothing to show.
-
-        Runs the same calculations as the known reading on the repeat basis,
-        so the two are one engine read twice rather than two engines that
-        could disagree.
-        """
+        """Fill the projection page; say why when it has nothing to show."""
         service = self.view_model.budget_service
         expected = service.get_assumed_expectations()
         # The page is reachable by a button, so it must never be blank: with
@@ -121,35 +62,16 @@ class SolvencyPanelAssumedMixin:
         if not expected:
             return
 
-        known = service.get_spending_capacity()
-        probable = service.get_spending_capacity(basis=ProjectionBasis.REPEAT_CURRENT)
-        overdraft_limit_pence = service.get_overdraft_limit().pence
-        state = self._state_key(
-            probable[-1].amount_pence, 0, False, overdraft_limit_pence
-        )
-        # The headline takes the state of the figure IT prints, not of the
-        # schedule below it. Those are different days: a month whose last step
-        # is comfortable can still be short today; colouring the headline by
-        # the schedule's best day would paint that shortfall green.
-        self.sts_assumed_banner.setText(
-            self._spendable_sentence(probable[0].amount_pence)
-        )
-        self._style_assumed_banner(
-            self._state_key(probable[0].amount_pence, 0, False, overdraft_limit_pence)
-        )
-        self.sts_assumed.setText(self._assumed_capacity_text(known, probable))
-        self._style_assumed(self.sts_assumed, state)
         self.assumed_gaps_label.setText(self._gap_specification(expected))
-        self._style_assumed(self.assumed_gaps_label, state)
-        self._render_assumed_forward(report, overdraft_limit_pence)
+        self._render_assumed_forward(report, service.get_overdraft_limit().pence)
 
     def _render_assumed_forward(self, report, overdraft_limit_pence: int) -> None:
         """The bank page's two months, walked again on the assumption.
 
         This is what the page is opened for. A bank page that ends in an
         overdrawn month is exactly when someone asks whether the money they
-        expect would rescue it; a spendable figure alone cannot answer that,
-        because it says what today allows, never what October does.
+        expect would rescue it. That is a question about those months rather
+        than about today.
 
         Each month is read through the same builder the bank page uses, on a
         summary the service filled forward, so the two pages differ in their
@@ -186,35 +108,6 @@ class SolvencyPanelAssumedMixin:
                 clarion=clarion,
             )
             opening -= drain
-
-    def _assumed_capacity_text(self, known, probable) -> str:
-        """The spendable schedule again, with the expected income counted.
-
-        Mirrors the known schedule rather than restating today's headline,
-        because today is usually constrained by a day too near to care what a
-        later month receives: the difference the expected money makes shows up
-        in what waiting buys, not in what today allows.
-        """
-        if [(s.from_day, s.amount_pence) for s in probable] == [
-            (s.from_day, s.amount_pence) for s in known
-        ]:
-            return "No change: the expected income falls outside what limits you now"
-        lines = []
-        for step in probable:
-            lines.append(
-                f"From {self._sts_day(step.from_day)}:"
-                f" {money_from_pence(step.amount_pence)}"
-                f" (held down by {self._sts_day(step.binding_day)})"
-            )
-        # Naming the direction matters: making a later month survive extends
-        # the horizon, so the assumed figure is frequently LOWER than the known
-        # one. Read without that said, it looks like a mistake.
-        if probable[-1].amount_pence < known[-1].amount_pence:
-            lines.append(
-                "Lower than the known figure, because surviving longer means"
-                " the later months now count against today"
-            )
-        return "\n".join(lines)
 
     @staticmethod
     def _gap_specification(expected: list) -> str:

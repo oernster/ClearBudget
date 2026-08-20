@@ -148,18 +148,18 @@ class SolvencyPanelLayoutMixin:
         the real headline it read as a qualifier on that figure; here nothing
         it says can be mistaken for a fact about money already entered.
 
-        It carries the bank page's three-part skeleton (a spendable headline,
-        the month's terms, then the months after it) because the two pages are
-        meant to be held against each other. Read without that shape it was a
-        muted figure with no noun that never said what it assumed.
+        It carries NO SPENDABLE FIGURE, deliberately. It had one, then a
+        restatement of the bank page's beside it; both were withdrawn.
+        "What can I spend today" is a question about money the user actually
+        has, so a second answer to it on a page whose every number is
+        conditional invites the conditional one to be spent. The two answers
+        also disagree by construction, since surviving longer makes the later
+        months count against today, so the assumed figure comes out lower and
+        the pair reads as a contradiction rather than as two questions.
 
-        It deliberately does NOT restate the bank page's figure. That was
-        tried, to give the schedule's "lower than the known figure" line both
-        its terms; it misleads. The assumed figure is usually the SMALLER
-        of the two, so printing the larger one beside it under the words
-        "already entered" reads as an invitation to spend that instead. The
-        schedule states the direction in words, which is the part a reader
-        needs; a second number invites the wrong one to be acted on.
+        What is left is what the page is for and it still reads in the bank
+        page's order: the assumption in words, what has to arrive for it to
+        hold, then the months after this one walked again under it.
 
         The page always has something to say. When there is nothing to assume
         the block hides and a line says so, because a page reachable by a
@@ -171,16 +171,6 @@ class SolvencyPanelLayoutMixin:
 
         # The heading names the assumption rather than the money, because the
         # assumption is derived rather than marked by hand.
-        self.assumed_heading = _heading("Safe to Spend If This Repeats")
-        layout.addWidget(self.assumed_heading)
-        # Banner-weight, so the figure is as findable as the bank page's.
-        # Painted in code with no fill: a filled banner would give an assumed
-        # number the same standing as a known one.
-        self.sts_assumed_banner = _line("SolvencyAssumedBanner", wrap=False)
-        layout.addWidget(self.sts_assumed_banner)
-        self.sts_assumed = _line("SolvencyCommitted")
-        layout.addWidget(self.sts_assumed)
-
         self.assumed_terms_heading = _heading("What This Assumes")
         layout.addWidget(self.assumed_terms_heading)
         # The rule is DERIVED, so it has to be stated: nothing was ticked to
@@ -188,7 +178,10 @@ class SolvencyPanelLayoutMixin:
         # figures it produced.
         self.assumed_basis_label = _line("SolvencyCommitted", _ASSUMPTION_TEXT)
         layout.addWidget(self.assumed_basis_label)
-        self.assumed_gaps_label = _line("SolvencyCommitted")
+        # Italic, because it is the one block on the page that is not yet
+        # true: it names money that has to turn up. The colour stays neutral,
+        # since a list of expectations has no traffic-light state of its own.
+        self.assumed_gaps_label = _line("SolvencyAssumedNote")
         layout.addWidget(self.assumed_gaps_label)
 
         self.assumed_forward_heading = _heading("Forward Projection If This Repeats")
@@ -224,9 +217,6 @@ class SolvencyPanelLayoutMixin:
         the failure mode when the two lists were maintained separately.
         """
         return (
-            self.assumed_heading,
-            self.sts_assumed_banner,
-            self.sts_assumed,
             self.assumed_terms_heading,
             self.assumed_basis_label,
             self.assumed_gaps_label,

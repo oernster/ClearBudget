@@ -147,13 +147,12 @@ what is deliberately left and what only looks like debt.
   is typed reports a shortfall you do not have. The assumption is derived,
   not marked by hand, so the block appears on its own once the months ahead
   are thinner than this one; every line says it depends on money not yet
-  received and names exactly what has to arrive, plus when. The page answers
-  the bank page's questions in the bank page's order: what today allows on
-  that assumption, what exactly is being assumed, then the same two months
-  walked again. That last part is what the page is usually opened for. A bank
-  page ending in an overdrawn month is exactly when you want to know whether
-  the money you expect would rescue it; a spendable figure alone cannot say
-  it
+  received and names exactly what has to arrive, plus when. It then walks the
+  same two months the bank page projects again under that assumption, which is
+  what the page is usually opened for: a bank page ending in an overdrawn
+  month is exactly when you want to know whether the money you expect would
+  rescue it. The page carries no spendable figure of its own, because that
+  question is about money you already have and belongs on the bank page
 - What a month needs to hold flat: every month on the Solvency tab states the
   difference between its full bills and its full income ("October needs
   £666.87 more to hold flat" or "September pays for itself, £120.00 to
@@ -495,26 +494,20 @@ entered before these existed continues to do.
   figure down, which is often in a LATER month: that is the point of it, since
   a bigger balance later this month does not mean a bigger balance to spend
   when September has to survive too
-- **Projection page**: a muted second reading of the
-  same figures, run on the assumption that income entered for this month
-  arrives again in any later month with no entry of that name. It carries the
-  same traffic-light hues blended toward the background, so it reads as
-  provisional at a glance; it states the assumption outright rather than
-  leaving you to infer it from the figures: nothing was ticked to produce
-  this page. Its headline sits at the same size as the bank page's but as an
-  outline rather than a filled banner, so the figure is as easy to find
-  without reading as settled. It always names what must arrive for it to come
-  true. Counterintuitively the assumed figure is often LOWER than the
-  known one, because making a later month survive extends how far the
-  question reaches. The panel says so in words rather than leaving it to look
-  like a fault. It deliberately does not print the bank page's figure beside
-  it: that number is usually the larger of the two, so under the words
-  "already entered" it read as an amount you could spend instead
-- **Projection page, forward months**: the two months the bank page projects,
-  walked again on the assumption, so the page answers whether expected money
-  rescues a month the bank page shows going overdrawn. Both readings run
-  through the same month engine, so they differ in their evidence and never in
-  their arithmetic
+- **Projection page**: the months ahead run on the assumption that income
+  entered for this month arrives again in any later month with no entry of
+  that name. It states that assumption outright rather than leaving you to
+  infer it from the figures, since nothing was ticked to produce the page. It
+  always names what must arrive for it to come true. Then it walks the two
+  months the bank page projects again under that assumption, in the same
+  traffic-light hues blended toward the background so they read as provisional
+  at a glance. Both readings run through the same month engine, so they differ
+  in their evidence and never in their arithmetic
+- **The projection page carries no spendable figure.** It had one and it is
+  gone. "What can I spend today" is a question about money you actually have,
+  so a second answer to it sitting on a page where every number is conditional
+  invites the conditional one to be spent. Safe to Spend Today lives on the
+  bank page, once
 - **What the month needs**: the gap between the month's full bank bills and
   its full income, stated for every month the page shows. Credit card interest
   is reported on its own line beneath it and is never added in, because it
