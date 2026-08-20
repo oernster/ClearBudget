@@ -147,7 +147,13 @@ what is deliberately left and what only looks like debt.
   is typed reports a shortfall you do not have. The assumption is derived,
   not marked by hand, so the block appears on its own once the months ahead
   are thinner than this one; every line says it depends on money not yet
-  received and names exactly what has to arrive, plus when
+  received and names exactly what has to arrive, plus when. The page answers
+  the bank page's questions in the bank page's order: what today allows on
+  that assumption, what exactly is being assumed, then the same two months
+  walked again. That last part is what the page is usually opened for. A bank
+  page ending in an overdrawn month is exactly when you want to know whether
+  the money you expect would rescue it; a spendable figure alone cannot say
+  it
 - What a month needs to hold flat: every month on the Solvency tab states the
   difference between its full bills and its full income ("October needs
   £666.87 more to hold flat" or "September pays for itself, £120.00 to
@@ -495,6 +501,11 @@ entered before these existed continues to do.
   known one, because making a later month survive extends how far the
   question reaches; the panel says so rather than leaving it to look like a
   fault
+- **Projection page, forward months**: the two months the bank page projects,
+  walked again on the assumption, so the page answers whether expected money
+  rescues a month the bank page shows going overdrawn. Both readings run
+  through the same month engine, so they differ in their evidence and never in
+  their arithmetic
 - **What the month needs**: the gap between the month's full bank bills and
   its full income, stated for every month the page shows. Credit card interest
   is reported on its own line beneath it and is never added in, because it

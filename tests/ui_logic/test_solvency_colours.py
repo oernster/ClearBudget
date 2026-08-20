@@ -20,6 +20,7 @@ from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.ui.theme_tokens import STATE_CAUTION, STATE_RED, STATE_SAFE
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
 from clear_budget.ui.views._solvency_panel_narratives import (
     SolvencyPanelNarrativeMixin,
@@ -241,3 +242,46 @@ def test_current_month_below_zero_with_no_facility_is_red() -> None:
     )
 
     assert color == RED
+
+
+# --------------------------------------------------------------------------
+# The state key behind the colour, which the projection page mutes.
+# --------------------------------------------------------------------------
+
+
+def test_the_state_key_and_the_colour_agree_about_a_healthy_month() -> None:
+    """The muted rendering resolves the same state the full one paints."""
+    mix = SolvencyPanelNarrativeMixin()
+    summary = _summary([_bank_bill(10000, 1)], [_income(100000, 20)])
+
+    _, colour, _ = mix._build_month_cashflow_summary(100000, summary, -90000)
+    state = mix._month_cashflow_state(100000, summary, -90000)
+
+    assert state == STATE_SAFE
+    assert colour == GREEN
+
+
+def test_the_state_key_and_the_colour_agree_about_an_overdrawn_month() -> None:
+    mix = SolvencyPanelNarrativeMixin()
+    summary = _summary([_bank_bill(80000, 1)], [_income(80000, 20)])
+
+    _, colour, clarion = mix._build_month_cashflow_summary(0, summary, 0)
+    state = mix._month_cashflow_state(0, summary, 0)
+
+    assert clarion is True
+    assert state == STATE_RED
+    assert colour == RED
+
+
+def test_a_dip_inside_an_agreed_facility_is_the_amber_state_not_the_red_one() -> None:
+    """The facility branch: the state has to follow the note, not the low."""
+    mix = SolvencyPanelNarrativeMixin()
+    summary = _summary([_bank_bill(80000, 1)], [_income(80000, 20)])
+
+    _, colour, _ = mix._build_month_cashflow_summary(
+        50000, summary, 0, overdraft_limit_pence=50000
+    )
+    state = mix._month_cashflow_state(50000, summary, 0, overdraft_limit_pence=50000)
+
+    assert state == STATE_CAUTION
+    assert colour == AMBER

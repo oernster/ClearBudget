@@ -84,22 +84,35 @@ class SolvencyPanelNarrativeMixin:
         return STATE_SAFE
 
     @staticmethod
-    def _health_color(balance_pence: int, monthly_drain_pence: int) -> str:
-        """Return traffic-light color based on balance vs monthly drain coverage.
+    def _health_state_key(balance_pence: int, monthly_drain_pence: int) -> str:
+        """The traffic-light STATE of a month, from balance against drain.
 
         Red only for actual overdraft (< 0).
         Amber for positive but less than 2 months coverage - tight but surviving.
         Green for 2+ months coverage.
-        monthly_drain_pence: bills − income for a future month (positive = deficit).
+        monthly_drain_pence: bills minus income for a future month
+        (positive = deficit).
+
+        Kept separate from the colour for the same reason _state_key is: the
+        projection page paints the same months in the muted assumed variant of
+        their own state, so it needs the state rather than a resolved colour.
         """
-        states = theme.state_colours()
         if balance_pence < 0:
-            return states[STATE_RED]
+            return STATE_RED
         if monthly_drain_pence <= 0:
-            return states[STATE_SAFE]
+            return STATE_SAFE
         if balance_pence >= _MONTHS_COVERAGE_FOR_SAFE * monthly_drain_pence:
-            return states[STATE_SAFE]
-        return states[STATE_CAUTION]
+            return STATE_SAFE
+        return STATE_CAUTION
+
+    @staticmethod
+    def _health_color(balance_pence: int, monthly_drain_pence: int) -> str:
+        """_health_state_key resolved through the active theme's palette."""
+        return theme.state_colours()[
+            SolvencyPanelNarrativeMixin._health_state_key(
+                balance_pence, monthly_drain_pence
+            )
+        ]
 
     @staticmethod
     def _walk_month(opening_pence: int, summary) -> dict:
@@ -169,7 +182,7 @@ class SolvencyPanelNarrativeMixin:
         rescue_event = walk["rescue_event"]
         closing_pence = walk["closing"]
         lines = [f"Opens: {fmt(opening_pence)}"]
-        color = self._health_color(min_balance, monthly_drain_pence)
+        state = self._health_state_key(min_balance, monthly_drain_pence)
         clarion = False
 
         # Every month reports its low, whether or not it is alarming: a low
@@ -189,7 +202,7 @@ class SolvencyPanelNarrativeMixin:
                 lines.append(f"Rescued day {rday}: {rname} +{fmt(ramt)}")
             else:
                 lines.append("No rescue income - remains overdrawn")
-            note, color, clarion = self._overdraft_facility_outcome(
+            note, state, clarion = self._overdraft_facility_outcome(
                 min_balance, overdraft_limit_pence
             )
             lines.append(note)
@@ -205,7 +218,27 @@ class SolvencyPanelNarrativeMixin:
         clause = self._gap_clause(monthly_drain_pence)
         lines.append(clause[0].upper() + clause[1:])
 
-        return "\n".join(lines), color, clarion
+        return "\n".join(lines), theme.state_colours()[state], clarion
+
+    def _month_cashflow_state(
+        self,
+        opening_pence: int,
+        summary,
+        monthly_drain_pence: int,
+        overdraft_limit_pence: int = 0,
+    ) -> str:
+        """The state key behind _build_month_cashflow_summary's colour.
+
+        Reads the same walk through the same two classifiers, so the muted
+        rendering on the projection page can never disagree with the full one
+        about what state a month is in.
+        """
+        walk = self._walk_month(opening_pence, summary)
+        if walk["first_negative_day"] is not None:
+            return self._overdraft_facility_outcome(
+                walk["min_balance"], overdraft_limit_pence
+            )[1]
+        return self._health_state_key(walk["min_balance"], monthly_drain_pence)
 
     @staticmethod
     def _overdraft_facility_outcome(
@@ -213,24 +246,25 @@ class SolvencyPanelNarrativeMixin:
     ) -> tuple[str, str, bool]:
         """Classify a month's overdraft dip against the agreed facility.
 
-        Returns (note, color, clarion). Within an agreed facility is amber and
-        manageable; going overdrawn with no facility or beyond it is a red
-        clarion: refused payments and fees.
+        Returns (note, state_key, clarion). Within an agreed facility is amber
+        and manageable; going overdrawn with no facility or beyond it is a red
+        clarion: refused payments and fees. The state is a palette key rather
+        than a colour so both themes and both readings resolve it themselves.
         """
         if overdraft_limit_pence > 0 and min_balance_pence >= -overdraft_limit_pence:
             return (
                 f"Within your {fmt(overdraft_limit_pence)} overdraft facility",
-                "#fbbf24",
+                STATE_CAUTION,
                 False,
             )
         if overdraft_limit_pence > 0:
             over = abs(min_balance_pence) - overdraft_limit_pence
             return (
                 f"EXCEEDS your {fmt(overdraft_limit_pence)} overdraft by {fmt(over)}",
-                "#f87171",
+                STATE_RED,
                 True,
             )
-        return "NO OVERDRAFT FACILITY - payments would be refused", "#f87171", True
+        return "NO OVERDRAFT FACILITY - payments would be refused", STATE_RED, True
 
     @staticmethod
     def _gap_clause(needed_pence: int) -> str:

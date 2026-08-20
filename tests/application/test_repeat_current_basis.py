@@ -266,3 +266,83 @@ class TestWhatTheAssumptionRestsOn:
         expected = service.get_assumed_expectations(today=_TODAY)
         august = [source.name for month, source in expected if month == _AUGUST]
         assert august.count("Maybe work") <= 1
+
+
+class TestAssumedMonthSummary:
+    """The assumption stated as a month, for the projection page's narrative.
+
+    The page shows a spendable figure and a month-by-month projection on one
+    assumption, so both have to be built from one statement of it. These pin
+    the summary to the same fill-forward rule the per-day projection uses.
+    """
+
+    def test_a_later_month_gains_this_month_s_extra(self, service):
+        _thin_months(service)
+        assumed = service.get_assumed_month_summary(year_month=_AUGUST, today=_TODAY)
+        known = service.get_month_summary(year_month=_AUGUST)
+        assert assumed.total_income.pence - known.total_income.pence == 60000
+        assert "Family top-up" in [s.name for s in assumed.income_sources]
+
+    def test_the_month_keeps_its_own_bills(self, service):
+        _thin_months(service)
+        assumed = service.get_assumed_month_summary(year_month=_AUGUST, today=_TODAY)
+        known = service.get_month_summary(year_month=_AUGUST)
+        assert assumed.bills == known.bills
+        assert assumed.bank_bills == known.bank_bills
+
+    def test_the_balance_follows_the_filled_income(self, service):
+        _thin_months(service)
+        assumed = service.get_assumed_month_summary(year_month=_AUGUST, today=_TODAY)
+        assert (
+            assumed.balance.pence
+            == assumed.total_income.pence - assumed.bank_bills.pence
+        )
+
+    def test_a_month_whose_income_never_covers_its_bills_floors_at_zero(self, service):
+        _seed_balance(service.bill_repo.conn, pence=0, iso="2026-07-01")
+        service.add_income(income=_income("Salary", 10000, 10))
+        service.add_bill(bill=_bill("Rent", 130000, 5))
+        service.add_income_month_extra(
+            income=_income("Family top-up", 5000, 12), year_month=_JULY
+        )
+        assumed = service.get_assumed_month_summary(year_month=_AUGUST, today=_TODAY)
+        assert assumed.balance.pence == 0
+
+    def test_a_month_that_already_has_the_entry_gains_nothing(self, service):
+        _thin_months(service)
+        service.add_income_month_extra(
+            income=_income("Family top-up", 60000, 12), year_month=_AUGUST
+        )
+        assumed = service.get_assumed_month_summary(year_month=_AUGUST, today=_TODAY)
+        assert assumed == service.get_month_summary(
+            year_month=_AUGUST, include_assumed=True
+        )
+
+    def test_the_current_month_is_never_filled_from_itself(self, service):
+        _thin_months(service)
+        assumed = service.get_assumed_month_summary(year_month=_JULY, today=_TODAY)
+        assert assumed == service.get_month_summary(
+            year_month=_JULY, include_assumed=True
+        )
+
+    def test_a_past_month_is_left_alone(self, service):
+        # An earlier month has nothing to receive: the income repeats forward.
+        _thin_months(service)
+        june = YearMonth(2026, 6)
+        assumed = service.get_assumed_month_summary(year_month=june, today=_TODAY)
+        assert assumed == service.get_month_summary(
+            year_month=june, include_assumed=True
+        )
+
+    def test_it_agrees_with_the_per_day_projection_about_the_same_month(self, service):
+        # The point of the method: the narrative and the spendable figure are
+        # one assumption read twice, so August's shape has to be the same in
+        # both. A divergence here would put two answers on one page.
+        _thin_months(service)
+        assumed = service.get_assumed_month_summary(year_month=_AUGUST, today=_TODAY)
+        projection = service._build_safe_to_spend_inputs(
+            _TODAY, basis=ProjectionBasis.REPEAT_CURRENT
+        )
+        by_day = {d.day: d.balance_pence for d in projection}
+        movement = by_day[date(2026, 8, 31)] - by_day[date(2026, 7, 31)]
+        assert movement == assumed.total_income.pence - assumed.bank_bills.pence

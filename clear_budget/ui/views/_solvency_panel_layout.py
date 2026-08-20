@@ -35,6 +35,13 @@ from clear_budget.ui.utils.format_helpers import fmt
 _HEADING_ROLE = "SolvencySectionHeading"
 # Unscaled type size of a forward-projection line, matching the card block's.
 _PROJECTION_FONT_PX = 17
+# The assumption, stated in the words the derivation is written in. It is
+# not a setting anyone turned on, so the page has to say what it did.
+_ASSUMPTION_TEXT = (
+    "Income entered for this month is taken to arrive again in every later "
+    "month with no entry of the same name. Later months keep their own bills "
+    "and their own entries. None of this is counted anywhere else in the app."
+)
 
 
 def _heading(text: str) -> QLabel:
@@ -133,6 +140,13 @@ class SolvencyPanelLayoutMixin:
         the real headline it read as a qualifier on that figure; here nothing
         it says can be mistaken for a fact about money already entered.
 
+        It carries the bank page's three-part skeleton (a spendable headline,
+        the month's terms, then the months after it) because the two pages are
+        meant to be held against each other. Read without that shape it was a
+        muted figure with no noun, quoting a comparison against a number that
+        lived on the other page: to use it at all you had to remember the bank
+        page rather than read this one.
+
         The page always has something to say. When there is nothing to assume
         the block hides and a line says so, because a page reachable by a
         button the user just pressed must never be blank.
@@ -143,15 +157,41 @@ class SolvencyPanelLayoutMixin:
 
         # The heading names the assumption rather than the money, because the
         # assumption is derived rather than marked by hand.
-        self.assumed_heading = _heading("If the months ahead are like this one")
-        self.assumed_heading.hide()
+        self.assumed_heading = _heading("Safe to Spend If This Repeats")
         layout.addWidget(self.assumed_heading)
+        # Banner-weight, so the figure is as findable as the bank page's.
+        # Painted in code with no fill: a filled banner would give an assumed
+        # number the same standing as a known one.
+        self.sts_assumed_banner = _line("SolvencyAssumedBanner", wrap=False)
+        layout.addWidget(self.sts_assumed_banner)
+        # The known figure restated HERE, because the schedule below explains
+        # itself by comparison with it and a comparison needs both terms on
+        # the same page.
+        self.sts_assumed_known = _line("SolvencyCommitted")
+        layout.addWidget(self.sts_assumed_known)
         self.sts_assumed = _line("SolvencyCommitted")
-        self.sts_assumed.hide()
         layout.addWidget(self.sts_assumed)
+
+        self.assumed_terms_heading = _heading("What This Assumes")
+        layout.addWidget(self.assumed_terms_heading)
+        # The rule is DERIVED, so it has to be stated: nothing was ticked to
+        # produce this page and the user cannot infer the rule from the
+        # figures it produced.
+        self.assumed_basis_label = _line("SolvencyCommitted", _ASSUMPTION_TEXT)
+        layout.addWidget(self.assumed_basis_label)
         self.assumed_gaps_label = _line("SolvencyCommitted")
-        self.assumed_gaps_label.hide()
         layout.addWidget(self.assumed_gaps_label)
+
+        self.assumed_forward_heading = _heading("Forward Projection If This Repeats")
+        layout.addWidget(self.assumed_forward_heading)
+        # The months the bank page shows, walked again on the assumption. This
+        # is the question the page is opened for: a bank page ending in an
+        # overdrawn month is exactly when someone asks whether the money they
+        # expect would rescue it; the page used to decline to answer.
+        self.m1_assumed_projection_label = _projection_label()
+        layout.addWidget(self.m1_assumed_projection_label)
+        self.m2_assumed_projection_label = _projection_label()
+        layout.addWidget(self.m2_assumed_projection_label)
 
         self.assumed_empty_label = _line(
             "SolvencyCommitted",
@@ -161,8 +201,31 @@ class SolvencyPanelLayoutMixin:
         self.assumed_empty_label.hide()
         layout.addWidget(self.assumed_empty_label)
 
+        for widget in self.assumed_block():
+            widget.hide()
+
         layout.addStretch()
         return page
+
+    def assumed_block(self) -> tuple:
+        """Every widget of the projection page's populated state.
+
+        Named once here so building the page and emptying it cannot disagree
+        about what the block is: a heading left visible over a hidden body was
+        the failure mode when the two lists were maintained separately.
+        """
+        return (
+            self.assumed_heading,
+            self.sts_assumed_banner,
+            self.sts_assumed_known,
+            self.sts_assumed,
+            self.assumed_terms_heading,
+            self.assumed_basis_label,
+            self.assumed_gaps_label,
+            self.assumed_forward_heading,
+            self.m1_assumed_projection_label,
+            self.m2_assumed_projection_label,
+        )
 
     def _build_cards_page(self) -> QWidget:
         """The cards' position: utilisation now, then the same two months.

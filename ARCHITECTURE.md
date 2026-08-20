@@ -689,8 +689,31 @@ bank statement. Both identities are tested.
   arrive and when. It is a PAGE rather than a block under the spendable
   headline, where a muted second figure beside the real one read as a
   qualifier on it: the two answer different questions and only one of them is
-  a fact about money entered. With nothing to assume the block hides and a
-  line says so, because a page reachable by a button must never be blank
+  a fact about money entered. With nothing to assume the whole block
+  hides (headings included) and a line says so, because a page reachable by a
+  button must never be blank
+- The projection page carries the bank page's skeleton (a spendable headline,
+  the terms it rests on, then the months after it) because the two pages are
+  meant to be held against each other. Without it the page was a muted figure
+  with no noun, quoting a comparison against a number that lived on the other
+  page: to use it you had to remember the bank page rather than read this
+  one. So it states the derivation outright (nothing was ticked to produce
+  it), restates the known figure whenever the two readings differ (hiding it
+  when they agree, on the same grounds the bank page hides a flat month's
+  capacity rows) and paints its headline at banner weight as an OUTLINE, since
+  a filled banner would give an assumed figure a known one's standing
+- The assumed forward projection reads
+  `BudgetService.get_assumed_month_summary`, which fills a later month's gaps
+  from this month's income exactly as `_build_safe_to_spend_inputs` does. One
+  statement of the assumption, two readings of it: a spendable figure and a
+  month narrative on one page could otherwise disagree about the same month.
+  Each month then goes through the SAME `_build_month_cashflow_summary` the
+  bank page uses, so the two pages differ in their evidence and never in their
+  arithmetic. `_month_cashflow_state()` returns the state key behind that
+  builder's colour, so the muted rendering resolves the state rather than
+  reverse-engineering a hex; `_overdraft_facility_outcome` returns a state key
+  for the same reason (it previously returned dark-theme literals, which the
+  light theme would have painted wrong)
 - `CreditCardView` - card CRUD, month navigation, 6-month projection strip
 - `ArchiveView` - historical month summaries by year; year navigation
 

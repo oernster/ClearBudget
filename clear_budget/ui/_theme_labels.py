@@ -26,7 +26,10 @@ _SMALL_LABEL_FONT_PX = 12
 _BODY_LABEL_FONT_PX = 16
 _VALUE_LABEL_FONT_PX = 20
 # Solvency tab type scale: banner, section lines, headings, breakdown detail.
-_BANNER_FONT_PX = 22
+# The banner size is public because the projection page paints a banner of
+# its own in code (a provisional variant that carries no fill); the two must
+# not drift into different sizes for the same kind of statement.
+BANNER_FONT_PX = 22
 _SECTION_FONT_PX = 18
 _HEADING_FONT_PX = 17
 _BREAKDOWN_FONT_PX = 15
@@ -173,7 +176,7 @@ QTextEdit#RecoveryCodeBox {{
    live theme switch. Caution is a light fill in both themes, so it alone takes
    dark text. */
 QLabel#SolvencyBanner {{
-    font-size: {ui_scale.px(_BANNER_FONT_PX)}px;
+    font-size: {ui_scale.px(BANNER_FONT_PX)}px;
     font-weight: bold;
     padding: 10px;
     border-radius: 5px;

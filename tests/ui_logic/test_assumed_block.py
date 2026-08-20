@@ -80,3 +80,19 @@ class TestAssumedCapacityText:
         text = _Block()._assumed_capacity_text(known, probable)
         assert "£500.00" in text
         assert "Lower than the known figure" not in text
+
+
+class TestSpendableSentence:
+    """Both readings are said the same way, so the comparison is a comparison."""
+
+    def test_a_positive_figure_names_what_it_is(self):
+        # The old page showed the number with no noun at all.
+        assert _Block._spendable_sentence(31525) == "£315.25 safe to spend today"
+
+    def test_nothing_to_spend_says_so_rather_than_showing_zero(self):
+        assert _Block._spendable_sentence(0) == "Nothing safe to spend today"
+
+    def test_a_shortfall_is_money_to_find_rather_than_money_to_spend(self):
+        text = _Block._spendable_sentence(-28475)
+        assert "Nothing safe to spend today" in text
+        assert "£284.75 short" in text

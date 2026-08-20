@@ -12,8 +12,10 @@ chain from that close using the same per-day event rules as the runway
 search, so the headline agrees with the panel's Forward Projection.
 """
 
+from dataclasses import replace
 from datetime import date
 
+from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.application.projection_basis import ProjectionBasis
 from clear_budget.application.services._overdraft_projection import (
     _BANK_PAYMENT_METHOD_ID,
@@ -170,6 +172,43 @@ class SafeToSpendOperationsMixin:
                 for source in _missing_from(base.income_sources, summary.income_sources)
             ]
         return tuple(items)
+
+    def get_assumed_month_summary(
+        self, *, year_month: YearMonth, today: date | None = None
+    ) -> MonthSummary:
+        """One month as the repeat assumption sees it, for a month narrative.
+
+        The projection page shows both a spendable figure and a month-by-month
+        forward projection on the same assumption. They have to be built from
+        one statement of that assumption or they could disagree about the same
+        month on the same page, so the fill-forward rule lives here once and
+        both readings go through it.
+
+        The month keeps its own bills and its own entries untouched: the
+        assumption only fills the gaps, exactly as the per-day projection
+        does, so an assumed month can never fall below what was entered for
+        it. A month at or before the current one is returned unfilled, because
+        there is no later month for this one's income to repeat into.
+        """
+        today = today or date.today()  # noqa: DTZ011 (naive local dates)
+        summary = self.get_month_summary(year_month=year_month, include_assumed=True)
+        current = YearMonth(today.year, today.month)
+        if (year_month.year, year_month.month) <= (current.year, current.month):
+            return summary
+        base = self.get_month_summary(year_month=current, include_assumed=True)
+        filled = _missing_from(base.income_sources, summary.income_sources)
+        if not filled:
+            return summary
+        income_pence = summary.total_income.pence + sum(
+            source.amount.pence for source in filled
+        )
+        balance_pence = income_pence - summary.bank_bills.pence
+        return replace(
+            summary,
+            income_sources=summary.income_sources + tuple(filled),
+            total_income=Amount(pence=income_pence),
+            balance=Amount(pence=max(balance_pence, 0)),
+        )
 
     def _build_safe_to_spend_inputs(
         self, today: date, *, basis: ProjectionBasis = ProjectionBasis.KNOWN
