@@ -13,7 +13,7 @@ Everything below this section explains how the code satisfies them.
 |-----------|-------------|
 | Dependencies point inward: UI → Application → Domain ← Infrastructure. The Domain imports nothing outward, has no I/O and no framework | `tests/structural/test_layering_rules.py` (AST scan for forbidden imports) |
 | The auth layer's surface stays where it is declared: identity and credentials never leak into budget infrastructure | `tests/structural/test_auth_structure.py` |
-| No source file exceeds 400 lines | `tests/structural/test_loc_limits.py` |
+| No source file exceeds 400 lines and none sits in the 381 to 399 danger band: a file refactored down from over the cap lands at 350 or below rather than stopping the moment it clears 400 | `tests/structural/test_loc_limits.py` (both halves) |
 | Only `shared/config.py` derives the real data directory. The suite never resolves it; the installer never so much as names it, so no test and no install can disturb live user data | `tests/structural/test_data_dir_isolation.py` (plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py`) |
 | 100% line AND branch coverage over `clear_budget`, `main` and the Qt-free half of the setup program | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
 | An exported report adds up: `opening + net == close` for every month whose Paid/Received flags agree with the calendar. In the anchored month an item actioned early (or missed) moves the close off the totals by exactly that amount, because the series never charges twice what the recorded balance already contains | `tests/application/test_projection_series.py::test_opening_plus_net_equals_the_close` and `::test_a_bill_paid_early_moves_the_anchored_close` |
@@ -265,7 +265,14 @@ focused mixins to stay under the 400-LOC-per-file limit:
   headline are two readings of one forecast rather than two forecasts.
   `get_assumed_expectations(today=None)` returns the (month, income) pairs the
   assumed reading counts that the known one does not, scoped to the
-  sustainable window because that is what a figure promises to keep standing
+  sustainable window because that is what a figure promises to keep standing.
+  `get_assumed_month_summary(year_month, today=None)` states the same
+  assumption as a MonthSummary, filling a later month's gaps from this month's
+  income exactly as the per-day projection does, so the projection page's
+  spendable figure and its month narrative are two readings of one assumption
+  rather than two implementations of it. A month at or before the current one
+  comes back unfilled: income repeats forward, so there is nothing for an
+  earlier month to receive
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
@@ -309,6 +316,10 @@ Key methods:
 - `get_assumed_expectations(today=None)` → `tuple[tuple[YearMonth, IncomeSource], ...]` -
   the money the assumed reading counts that the known one does not, as (month,
   income) pairs so the panel can say WHEN each amount has to arrive
+- `get_assumed_month_summary(year_month, today=None)` → `MonthSummary` - one
+  month as the repeat assumption sees it, for the projection page's forward
+  narrative. Fills gaps only, never reducing a month below what was entered
+  for it; the current month and every earlier one are left alone
 - `get_safe_to_spend_floor()` / `set_safe_to_spend_floor(amount)` - the
   floor, which the UI calls the Safe to Spend "buffer" (the naming split:
   floor is the domain term the calculation uses, buffer is what a user
@@ -1407,7 +1418,9 @@ an option that read as "remove my data" removed nothing.
 
 ### Structural Tests
 - `test_layering_rules.py` - AST-based forbidden import enforcement
-- `test_loc_limits.py` - No file > 400 LOC
+- `test_loc_limits.py` - no file over 400 LOC and none in the 381 to 399
+  danger band, so a file is never shaved to just under the cap only to break
+  it again on the next edit
 - `test_auth_structure.py` - Auth layer structure validation
 - `test_data_dir_isolation.py` - the suite cannot resolve the real
   `~/.clearbudget`, only `shared/config.py` derives it and the installer never

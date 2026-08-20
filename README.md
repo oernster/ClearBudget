@@ -137,8 +137,8 @@ what is deliberately left and what only looks like debt.
   later day money lands ("From 19 Aug: £108.04", "From 20 Aug: £443.31"),
   each naming the day still holding it down. Every line is measured across
   the same stretch the headline promises, so waiting never conjures money a
-  later month needs back; a month whose figure never moves shows nothing rather than repeating
-  the headline
+  later month needs back; a month whose figure never moves shows nothing
+  rather than repeating the headline
 - If the months ahead are like this one: a Projection page, reached by its own
   button, says what the picture looks like if the income you entered
   for this month arrives again in every later month that has no entry of that
@@ -233,7 +233,7 @@ what is deliberately left and what only looks like debt.
 ## Application Tabs
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
-- **Solvency** - Safe to Spend Today headline, financial health analysis, overdraft alerts, mid-month cashflow risk, per-card utilisation bars, forward projections for the next two months. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
+- **Solvency** - three pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries the Safe to Spend Today headline, financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months; the credit cards page carries the per-card utilisation bars and the same two months per card; the projection page answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
@@ -484,7 +484,7 @@ entered before these existed continues to do.
   £20.00 buffer; constrained by 14 Oct". A month beyond it that cannot be
   saved by spending nothing is named on a second line with its shortfall and
   a plain statement that spending the headline deepens it, so neither fact is
-  hidden by the other. "Nothing safe to spend" now means what it says: not
+  hidden by the other. "Nothing safe to spend" means what it says: not
   even this month clears the buffer; the figure shown is then the sum to FIND
 - **If you wait**: the same figure from each later day of the month, one line
   per change, so an income landing on the 20th has a number against it
@@ -496,11 +496,15 @@ entered before these existed continues to do.
   same figures, run on the assumption that income entered for this month
   arrives again in any later month with no entry of that name. It carries the
   same traffic-light hues blended toward the background, so it reads as
-  provisional at a glance. It always names what must arrive for it to come
+  provisional at a glance; it states the assumption outright rather than
+  leaving you to infer it from the figures: nothing was ticked to produce
+  this page. Its headline sits at the same size as the bank page's but as an
+  outline rather than a filled banner, so the figure is as easy to find
+  without reading as settled. It always names what must arrive for it to come
   true. Counterintuitively the assumed figure is often LOWER than the
   known one, because making a later month survive extends how far the
-  question reaches; the panel says so rather than leaving it to look like a
-  fault
+  question reaches. The panel says so rather than leaving it to look like a
+  fault and restates the known figure beside it whenever the two differ
 - **Projection page, forward months**: the two months the bank page projects,
   walked again on the assumption, so the page answers whether expected money
   rescues a month the bank page shows going overdrawn. Both readings run
