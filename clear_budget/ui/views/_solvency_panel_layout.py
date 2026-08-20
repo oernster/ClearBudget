@@ -151,9 +151,15 @@ class SolvencyPanelLayoutMixin:
         It carries the bank page's three-part skeleton (a spendable headline,
         the month's terms, then the months after it) because the two pages are
         meant to be held against each other. Read without that shape it was a
-        muted figure with no noun, quoting a comparison against a number that
-        lived on the other page: to use it at all you had to remember the bank
-        page rather than read this one.
+        muted figure with no noun that never said what it assumed.
+
+        It deliberately does NOT restate the bank page's figure. That was
+        tried, to give the schedule's "lower than the known figure" line both
+        its terms; it misleads. The assumed figure is usually the SMALLER
+        of the two, so printing the larger one beside it under the words
+        "already entered" reads as an invitation to spend that instead. The
+        schedule states the direction in words, which is the part a reader
+        needs; a second number invites the wrong one to be acted on.
 
         The page always has something to say. When there is nothing to assume
         the block hides and a line says so, because a page reachable by a
@@ -172,11 +178,6 @@ class SolvencyPanelLayoutMixin:
         # number the same standing as a known one.
         self.sts_assumed_banner = _line("SolvencyAssumedBanner", wrap=False)
         layout.addWidget(self.sts_assumed_banner)
-        # The known figure restated HERE, because the schedule below explains
-        # itself by comparison with it and a comparison needs both terms on
-        # the same page.
-        self.sts_assumed_known = _line("SolvencyCommitted")
-        layout.addWidget(self.sts_assumed_known)
         self.sts_assumed = _line("SolvencyCommitted")
         layout.addWidget(self.sts_assumed)
 
@@ -225,7 +226,6 @@ class SolvencyPanelLayoutMixin:
         return (
             self.assumed_heading,
             self.sts_assumed_banner,
-            self.sts_assumed_known,
             self.sts_assumed,
             self.assumed_terms_heading,
             self.assumed_basis_label,

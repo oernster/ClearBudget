@@ -21,11 +21,15 @@ rather than waiting for the user to remember to untick a reliable box. Because
 nothing was ticked, the page states the rule outright: a reader cannot infer
 a derivation from the figures it produced.
 
-The page answers the bank page's questions in the bank page's order and it
-carries both terms of every comparison it draws. Its earlier shape was a
-muted figure with no noun beside a phrase comparing it to a number on the
-other page, which asked the reader to remember the bank page rather than to
-read this one.
+The page answers the bank page's questions in the bank page's order. Its
+earlier shape was a muted figure with no noun that never said what it
+assumed and never said whether the months ahead survived the assumption.
+
+It states no figure from the bank page. Doing so was tried and withdrawn:
+the assumed figure is usually the SMALLER of the two, since surviving
+longer means later months start counting, so the known figure printed
+beside it read as a larger amount the reader was free to spend instead.
+The schedule gives the direction in words, which is the part that helps.
 """
 
 from clear_budget.application.formatting import money_from_pence
@@ -85,12 +89,11 @@ class SolvencyPanelAssumedMixin:
 
     @staticmethod
     def _spendable_sentence(amount_pence: int) -> str:
-        """One spendable figure said in full, on either basis.
+        """The assumed spendable figure said in full, with its noun.
 
-        Both readings are said the same way, because the point of showing
-        them together is that they answer the same question from different
-        evidence. Wording them differently would make the comparison look
-        like a comparison of two different quantities.
+        Worded exactly as the bank page words its own headline, so a
+        reader moving between the pages is comparing the same quantity
+        rather than working out whether they are.
         """
         if amount_pence < 0:
             return (
@@ -133,18 +136,6 @@ class SolvencyPanelAssumedMixin:
         )
         self._style_assumed_banner(
             self._state_key(probable[0].amount_pence, 0, False, overdraft_limit_pence)
-        )
-        # The known figure is a fact, so it keeps the plain muted role rather
-        # than an assumed hue: only the assumed figures are spoken quietly.
-        # It appears only when the two readings differ, on the same grounds
-        # the bank page hides its capacity rows on a flat month: restating an
-        # identical figure is the schedule's "no change" line said twice.
-        self.sts_assumed_known.setText(
-            "Counting only money already entered: "
-            + self._spendable_sentence(known[0].amount_pence)
-        )
-        self.sts_assumed_known.setVisible(
-            probable[0].amount_pence != known[0].amount_pence
         )
         self.sts_assumed.setText(self._assumed_capacity_text(known, probable))
         self._style_assumed(self.sts_assumed, state)

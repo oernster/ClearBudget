@@ -712,13 +712,18 @@ bank statement. Both identities are tested.
 - The projection page carries the bank page's skeleton (a spendable headline,
   the terms it rests on, then the months after it) because the two pages are
   meant to be held against each other. Without it the page was a muted figure
-  with no noun, quoting a comparison against a number that lived on the other
-  page: to use it you had to remember the bank page rather than read this
-  one. So it states the derivation outright (nothing was ticked to produce
-  it), restates the known figure whenever the two readings differ (hiding it
-  when they agree, on the same grounds the bank page hides a flat month's
-  capacity rows) and paints its headline at banner weight as an OUTLINE, since
-  a filled banner would give an assumed figure a known one's standing
+  with no noun that never said what it assumed. So it states the derivation
+  outright (nothing was ticked to produce it) and paints its headline at
+  banner weight as an OUTLINE, since a filled banner would give an assumed
+  figure a known one's standing
+- The page states NO figure from the bank page. Restating the known one
+  beside the assumed one was tried, to give the schedule's "lower than the
+  known figure" line both its terms; it was withdrawn as misleading. The assumed
+  figure is usually the SMALLER of the two, because surviving longer means
+  later months start counting, so a larger number labelled "already entered"
+  sat beside it reading as an amount the user was free to spend instead. The
+  schedule gives the direction in words, which is the part a reader needs; a
+  second figure invites the wrong one to be acted on
 - The assumed forward projection reads
   `BudgetService.get_assumed_month_summary`, which fills a later month's gaps
   from this month's income exactly as `_build_safe_to_spend_inputs` does. One

@@ -506,8 +506,10 @@ entered before these existed continues to do.
   without reading as settled. It always names what must arrive for it to come
   true. Counterintuitively the assumed figure is often LOWER than the
   known one, because making a later month survive extends how far the
-  question reaches. The panel says so rather than leaving it to look like a
-  fault and restates the known figure beside it whenever the two differ
+  question reaches. The panel says so in words rather than leaving it to look
+  like a fault. It deliberately does not print the bank page's figure beside
+  it: that number is usually the larger of the two, so under the words
+  "already entered" it read as an amount you could spend instead
 - **Projection page, forward months**: the two months the bank page projects,
   walked again on the assumption, so the page answers whether expected money
   rescues a month the bank page shows going overdrawn. Both readings run
