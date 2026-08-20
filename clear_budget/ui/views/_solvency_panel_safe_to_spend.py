@@ -18,7 +18,6 @@ with its terms rather than apart from them.
 from datetime import date as _date
 
 from clear_budget.application.formatting import money_from_pence
-from clear_budget.application.projection_basis import ProjectionBasis
 from clear_budget.ui.label_roles import set_role as _repolish_role
 from clear_budget.ui.theme_tokens import STATE_AT_RISK, STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
@@ -66,7 +65,7 @@ class SolvencyPanelSafeToSpendMixin:
         amount of restraint answers.
         """
         service = self.view_model.budget_service
-        result = service.get_safe_to_spend(basis=ProjectionBasis.REPEAT_CURRENT)
+        result = service.get_safe_to_spend()
         if result.amount_pence < 0:
             self.sts_banner.setText(
                 "NOTHING SAFE TO SPEND: this month is"
@@ -111,9 +110,7 @@ class SolvencyPanelSafeToSpendMixin:
         so waiting can never raise the figure past what the months it names
         will bear.
         """
-        steps = self.view_model.budget_service.get_spending_capacity(
-            basis=ProjectionBasis.REPEAT_CURRENT
-        )
+        steps = self.view_model.budget_service.get_spending_capacity()
         rows = [
             f"From {self._sts_day(step.from_day)}:"
             f" {money_from_pence(step.amount_pence)}"

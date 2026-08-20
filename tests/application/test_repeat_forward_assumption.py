@@ -16,7 +16,6 @@ from datetime import date
 
 import pytest
 
-from clear_budget.application.projection_basis import ProjectionBasis
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.entities.bill import Bill
@@ -39,21 +38,39 @@ _SEPTEMBER = YearMonth(2026, 9)
 
 
 @pytest.fixture()
-def service(tmp_path):
+def make_service(tmp_path):
+    """Build a BudgetService on a database of its own.
+
+    A factory rather than a single service, because the assumption is no
+    longer switchable: showing that repeating this month forward CHANGES
+    something means comparing two real budgets, one with the ad hoc income
+    and one without, rather than reading one budget two ways.
+    """
+    created = []
+
+    def _make(name: str = "test") -> BudgetService:
+        db = Database(tmp_path / f"{name}.db")
+        db.connect()
+        db.create_schema()
+        created.append(db)
+        return BudgetService(
+            bill_repo=SQLiteBillRepository(db.conn),
+            income_repo=SQLiteIncomeSourceRepository(db.conn),
+            payment_method_repo=SQLitePaymentMethodRepository(db.conn),
+            month_generator=MonthGenerator(
+                SQLiteBillRepository(db.conn), SQLiteIncomeSourceRepository(db.conn)
+            ),
+        )
+
+    yield _make
+    for db in created:
+        db.close()
+
+
+@pytest.fixture()
+def service(make_service):
     """BudgetService wired to a temp SQLite database."""
-    db = Database(tmp_path / "test.db")
-    db.connect()
-    db.create_schema()
-    svc = BudgetService(
-        bill_repo=SQLiteBillRepository(db.conn),
-        income_repo=SQLiteIncomeSourceRepository(db.conn),
-        payment_method_repo=SQLitePaymentMethodRepository(db.conn),
-        month_generator=MonthGenerator(
-            SQLiteBillRepository(db.conn), SQLiteIncomeSourceRepository(db.conn)
-        ),
-    )
-    yield svc
-    db.close()
+    return make_service()
 
 
 def _seed_balance(conn, *, pence: int, iso: str) -> None:
@@ -105,35 +122,49 @@ def _thin_months(service) -> None:
     )
 
 
+def _bare_months(service) -> None:
+    """The same budget with no ad hoc income entered in any month.
+
+    The baseline the repeated shape is measured against, now that there is no
+    second reading to compare a budget with itself.
+    """
+    _seed_balance(service.bill_repo.conn, pence=0, iso="2026-07-01")
+    service.set_safe_to_spend_floor(amount=Amount(pence=0))
+    service.add_income(income=_income("Salary", 100000, 10))
+    service.add_bill(bill=_bill("Rent", 130000, 5))
+
+
+def _august_movement(service) -> int:
+    """What August does to the balance, from its opening to its close."""
+    by_day = {
+        d.day: d.balance_pence for d in service._build_safe_to_spend_inputs(_TODAY)
+    }
+    return by_day[date(2026, 8, 31)] - by_day[date(2026, 7, 31)]
+
+
 class TestTheRepeatedShape:
-    def test_a_month_lacking_this_month_s_extra_receives_it(self, service):
+    def test_a_month_lacking_this_month_s_extra_receives_it(
+        self, service, make_service
+    ):
         _thin_months(service)
-        known = service._build_safe_to_spend_inputs(_TODAY)
-        repeated = service._build_safe_to_spend_inputs(
-            _TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        end_of_august = date(2026, 8, 31)
-        known_close = next(d.balance_pence for d in known if d.day == end_of_august)
-        repeat_close = next(d.balance_pence for d in repeated if d.day == end_of_august)
-        # July is identical under both; August gains exactly the one top-up.
-        assert repeat_close - known_close == 60000
+        bare = make_service("bare")
+        _bare_months(bare)
+        # Measured on August's own movement rather than its close, so July's
+        # top-up cannot leak into the comparison: August gains exactly one.
+        assert _august_movement(service) - _august_movement(bare) == 60000
 
     def test_the_top_up_lands_on_the_day_it_falls_on_in_this_month(self, service):
         _thin_months(service)
-        repeated = service._build_safe_to_spend_inputs(
-            _TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        by_day = {d.day: d.balance_pence for d in repeated}
+        projection = service._build_safe_to_spend_inputs(_TODAY)
+        by_day = {d.day: d.balance_pence for d in projection}
         # Entered for day 12, so day 12 is where August's balance steps up.
         step = by_day[date(2026, 8, 12)] - by_day[date(2026, 8, 11)]
         assert step == 60000
 
     def test_the_recurring_salary_is_never_counted_twice(self, service):
         _thin_months(service)
-        repeated = service._build_safe_to_spend_inputs(
-            _TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        by_day = {d.day: d.balance_pence for d in repeated}
+        projection = service._build_safe_to_spend_inputs(_TODAY)
+        by_day = {d.day: d.balance_pence for d in projection}
         assert by_day[date(2026, 8, 10)] - by_day[date(2026, 8, 9)] == 100000
 
     def test_a_month_that_already_has_the_entry_gains_nothing(self, service):
@@ -141,28 +172,22 @@ class TestTheRepeatedShape:
         service.add_income_month_extra(
             income=_income("Family top-up", 60000, 12), year_month=_AUGUST
         )
-        known = service._build_safe_to_spend_inputs(_TODAY)
-        repeated = service._build_safe_to_spend_inputs(
-            _TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        end_of_august = date(2026, 8, 31)
-        known_close = next(d.balance_pence for d in known if d.day == end_of_august)
-        repeat_close = next(d.balance_pence for d in repeated if d.day == end_of_august)
-        assert repeat_close == known_close
+        projection = service._build_safe_to_spend_inputs(_TODAY)
+        by_day = {d.day: d.balance_pence for d in projection}
+        # August has its own entry, so day 12 steps up by one top-up and not
+        # by two: the fill only ever covers a gap.
+        assert by_day[date(2026, 8, 12)] - by_day[date(2026, 8, 11)] == 60000
 
     def test_matching_ignores_case_and_surrounding_space(self, service):
         _thin_months(service)
         service.add_income_month_extra(
             income=_income("  FAMILY TOP-UP ", 60000, 12), year_month=_AUGUST
         )
-        known = service._build_safe_to_spend_inputs(_TODAY)
-        repeated = service._build_safe_to_spend_inputs(
-            _TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        end_of_august = date(2026, 8, 31)
-        known_close = next(d.balance_pence for d in known if d.day == end_of_august)
-        repeat_close = next(d.balance_pence for d in repeated if d.day == end_of_august)
-        assert repeat_close == known_close
+        projection = service._build_safe_to_spend_inputs(_TODAY)
+        by_day = {d.day: d.balance_pence for d in projection}
+        # Recognised as the same money despite the case and the spaces, so
+        # the fill stays away and day 12 steps up once.
+        assert by_day[date(2026, 8, 12)] - by_day[date(2026, 8, 11)] == 60000
 
     def test_an_undated_top_up_lands_on_the_first_of_the_month(self, service):
         """An income with no day is carried at the undated day, never dropped."""
@@ -171,26 +196,14 @@ class TestTheRepeatedShape:
         service.add_income_month_extra(
             income=_income("Bonus", 25000, None), year_month=_JULY
         )
-        known = service._build_safe_to_spend_inputs(_TODAY)
-        repeated = service._build_safe_to_spend_inputs(
-            _TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        first = date(2026, 8, 1)
-        known_first = next(d.balance_pence for d in known if d.day == first)
-        repeat_first = next(d.balance_pence for d in repeated if d.day == first)
-        assert repeat_first - known_first == 25000
-
-    def test_the_known_basis_repeats_nothing(self, service):
-        _thin_months(service)
-        default = service._build_safe_to_spend_inputs(_TODAY)
-        explicit = service._build_safe_to_spend_inputs(
-            _TODAY, basis=ProjectionBasis.KNOWN
-        )
-        assert [d.balance_pence for d in default] == [d.balance_pence for d in explicit]
+        projection = service._build_safe_to_spend_inputs(_TODAY)
+        by_day = {d.day: d.balance_pence for d in projection}
+        # No rent in this budget, so the whole step into August is the bonus.
+        assert by_day[date(2026, 8, 1)] - by_day[date(2026, 7, 31)] == 25000
 
 
 class TestTheSpendableFigure:
-    def test_repeating_this_month_shrinks_the_shortfall(self, service):
+    def test_repeating_this_month_shrinks_the_shortfall(self, service, make_service):
         """Both bases share a headline here, because THIS month is the one under.
 
         The difference the assumption makes therefore shows up in the gap
@@ -198,15 +211,17 @@ class TestTheSpendableFigure:
         cannot rescue a month that has already happened.
         """
         _thin_months(service)
-        known = service.get_safe_to_spend(today=_TODAY)
-        repeated = service.get_safe_to_spend(
-            today=_TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        assert known.amount_pence < 0
-        assert known.has_shortfall
-        assert repeated.shortfall_pence < known.shortfall_pence
+        bare = make_service("bare")
+        _bare_months(bare)
+        with_top_up = service.get_safe_to_spend(today=_TODAY)
+        without = bare.get_safe_to_spend(today=_TODAY)
+        assert without.amount_pence < 0
+        assert without.has_shortfall
+        assert with_top_up.shortfall_pence < without.shortfall_pence
 
-    def test_the_gap_beyond_moves_nearer_once_the_later_months_survive(self, service):
+    def test_the_gap_beyond_moves_nearer_once_the_later_months_survive(
+        self, service, make_service
+    ):
         """The counterintuitive direction, pinned.
 
         Filling the later months moves the surviving edge, so the first month
@@ -215,20 +230,16 @@ class TestTheSpendableFigure:
         everywhere looks like a fault.
         """
         _thin_months(service)
-        known = service.get_safe_to_spend(today=_TODAY)
-        repeated = service.get_safe_to_spend(
-            today=_TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        assert repeated.shortfall_day < known.shortfall_day
+        bare = make_service("bare")
+        _bare_months(bare)
+        with_top_up = service.get_safe_to_spend(today=_TODAY)
+        without = bare.get_safe_to_spend(today=_TODAY)
+        assert with_top_up.shortfall_day < without.shortfall_day
 
-    def test_the_capacity_schedule_reads_the_same_basis(self, service):
+    def test_the_capacity_schedule_reads_the_same_projection(self, service):
         _thin_months(service)
-        steps = service.get_spending_capacity(
-            today=_TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
-        headline = service.get_safe_to_spend(
-            today=_TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
+        steps = service.get_spending_capacity(today=_TODAY)
+        headline = service.get_safe_to_spend(today=_TODAY)
         assert steps[0].amount_pence == headline.amount_pence
 
 
@@ -340,9 +351,7 @@ class TestAssumedMonthSummary:
         # both. A divergence here would put two answers on one page.
         _thin_months(service)
         assumed = service.get_assumed_month_summary(year_month=_AUGUST, today=_TODAY)
-        projection = service._build_safe_to_spend_inputs(
-            _TODAY, basis=ProjectionBasis.REPEAT_CURRENT
-        )
+        projection = service._build_safe_to_spend_inputs(_TODAY)
         by_day = {d.day: d.balance_pence for d in projection}
         movement = by_day[date(2026, 8, 31)] - by_day[date(2026, 7, 31)]
         assert movement == assumed.total_income.pence - assumed.bank_bills.pence

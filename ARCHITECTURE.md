@@ -249,9 +249,9 @@ focused mixins to stay under the 400-LOC-per-file limit:
   `get_card_graph_series` (one day-end balance series per active card),
   reusing the same projection day conventions as the rest of the app
 - `SafeToSpendOperationsMixin` (`_safe_to_spend_operations.py`) - the Safe to
-  Spend Today adapter and its settings. `get_safe_to_spend(today=None,
-  basis=KNOWN)` builds the per-day projection across the forecast window,
-  then calls the pure domain calculation with the stored floor and window.
+  Spend Today adapter and its settings. `get_safe_to_spend(today=None)`
+  builds the per-day projection across the forecast window, then calls
+  the pure domain calculation with the stored floor and window.
   The current month runs from today's stored balance over the same still-due
   items the Solvency panel's timeline shows, an undated bill counted at its
   prorated REMAINING portion because its elapsed portion is already inside
@@ -260,7 +260,7 @@ focused mixins to stay under the 400-LOC-per-file limit:
   the headline disagree with the panel it sits on); its close therefore
   equals the panel's projected end-of-month figure. Later months chain day by
   day from that close, over the same 24-month window the overdraft runway
-  walks. `get_spending_capacity(today=None, basis=KNOWN)` runs the capacity
+  walks. `get_spending_capacity(today=None)` runs the capacity
   schedule over that same projection, floor and window, so it and the
   headline are two readings of one forecast rather than two forecasts.
   `get_assumed_expectations(today=None)` returns the (month, income) pairs the
@@ -307,10 +307,10 @@ Key methods:
 - `adjust_bank_balance(delta_pence)` - signed delta to the stored balance,
   stamped as-of today (backs the same-day "update balance now?" prompt when an
   item dated today is added)
-- `get_safe_to_spend(today=None, basis=KNOWN)` → `SustainableResult` - Safe to
+- `get_safe_to_spend(today=None)` → `SustainableResult` - Safe to
   Spend Today from the stored floor and window; `today` is injectable so the
   result is decided by its inputs rather than by the day the code runs
-- `get_spending_capacity(today=None, basis=KNOWN)` → `tuple[CapacityStep, ...]` -
+- `get_spending_capacity(today=None)` → `tuple[CapacityStep, ...]` -
   what could be spent from each remaining day of this month onward, one entry
   per change; the first entry always equals `get_safe_to_spend`
 - `get_assumed_expectations(today=None)` → `tuple[tuple[YearMonth, IncomeSource], ...]` -
@@ -357,18 +357,33 @@ Key methods:
   month up to the live month, filling any gap from the earliest recorded month so a
   month is captured the moment it ends even across several missed launches
 
-**Projection basis** (`application/projection_basis.py`):
-- `ProjectionBasis` - what a forward projection may assume about income.
-  `KNOWN` counts only income entered and marked reliable, month by month, as
-  typed. `REPEAT_CURRENT` assumes every income entered for the current month
-  arrives, then arrives again in each later month with no entry of THAT NAME.
-  The assumption only fills gaps, so it can never reduce a month below what
-  was entered for it. Matching is by name because a recurring source and a
-  one-off live in different tables with unrelated ids
+**The repeat-forward assumption** (`_safe_to_spend_operations._missing_from`):
+- Every income entered for the current month is assumed to arrive, then to
+  arrive again in each later month with no entry of THAT NAME. It only fills
+  gaps, so it can never reduce a month below what was entered for it.
+  Matching is by name because a recurring source and a one-off live in
+  different tables with unrelated ids
+- It is NOT optional and there is no second, unassumed reading to select.
+  There was: a `ProjectionBasis` enum with `KNOWN` and `REPEAT_CURRENT`,
+  from when the bank page showed one figure and the projection page the
+  other. Once the spendable figure moved to the projection page for good,
+  every call passed `REPEAT_CURRENT` and the parameter selected between one
+  behaviour and a dead one, so it went. One projection, one assumption,
+  stated on the page that shows it
 - It replaced a per-item "reliable" tick as the basis of the second reading.
   The tick still excludes income from the counted totals. An assumption
   nobody remembers to switch on is not a second reading, so the assumption is
-  now DERIVED from the shape of the current month
+  DERIVED from the shape of the current month
+- **An ENDED income is never filled forward.** The rule exists to cover an
+  absence of DATA (ad hoc money typed in only where it has already
+  happened), so `_missing_from` also tests `is_active_in_month` on the
+  target month and skips a source whose final month has passed. Without
+  that test the rule resurrects income the user deliberately stopped and
+  the spendable figure does not fall when an income ends, which is exactly
+  when it must. Held by
+  `tests/application/test_ended_income_not_repeated.py`; it is also why
+  `test_income_month_bounds.py::test_the_spendable_figure_reads_the_ended_income`
+  exists
 
 **DTOs**:
 - `MonthSummary` - `year_month`, `total_income`, `total_bills`, `bank_bills`,
@@ -667,8 +682,8 @@ bank statement. Both identities are tested.
   actually entered. The PROJECTION page carries the Safe to Spend
   Today headline (rendered by
   `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` from
-  `BudgetService.get_safe_to_spend` on the `REPEAT_CURRENT` basis, reusing the
-  banner's traffic-light state
+  `BudgetService.get_safe_to_spend`, which always repeats this month's
+  income forward, reusing the banner's traffic-light state
   property; the secondary line names how far the promise reaches and the day
   that constrains it, "Holds every day through October 2026 above your £20.00
   buffer; constrained by 14 Oct", with a second line naming any month beyond
@@ -703,8 +718,8 @@ bank statement. Both identities are tested.
   `monthly_drain_pence`, which until then only ever chose a traffic-light
   colour
 - The projection page (`_solvency_panel_assumed.SolvencyPanelAssumedMixin`)
-  runs the same calculations on `ProjectionBasis.REPEAT_CURRENT`, painted in
-  muted variants of the same traffic-light hues so it reads as provisional,
+  runs the same month calculations on the repeat-forward assumption, painted
+  in muted variants of the same traffic-light hues so it reads as provisional,
   with a gap specification from `get_assumed_expectations` naming what has to
   arrive and when. It is a PAGE rather than a block under the spendable
   headline, where a muted second figure beside the real one read as a
