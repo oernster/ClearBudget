@@ -264,8 +264,9 @@ focused mixins to stay under the 400-LOC-per-file limit:
   schedule over that same projection, floor and window, so it and the
   headline are two readings of one forecast rather than two forecasts.
   `get_assumed_expectations(today=None)` returns the (month, income) pairs the
-  assumed reading counts that the known one does not, scoped to the
-  sustainable window because that is what a figure promises to keep standing.
+  assumed reading counts that a reading of only what was entered would not,
+  scoped to the sustainable window because that is what a figure promises to
+  keep standing.
   `get_assumed_month_summary(year_month, today=None)` states the same
   assumption as a MonthSummary, filling a later month's gaps from this month's
   income exactly as the per-day projection does, so the projection page's
@@ -314,8 +315,9 @@ Key methods:
   what could be spent from each remaining day of this month onward, one entry
   per change; the first entry always equals `get_safe_to_spend`
 - `get_assumed_expectations(today=None)` → `tuple[tuple[YearMonth, IncomeSource], ...]` -
-  the money the assumed reading counts that the known one does not, as (month,
-  income) pairs so the panel can say WHEN each amount has to arrive
+  the money the assumed reading counts that a reading of only what was entered
+  would not, as (month, income) pairs so the panel can say WHEN each amount has
+  to arrive
 - `get_assumed_month_summary(year_month, today=None)` → `MonthSummary` - one
   month as the repeat assumption sees it, for the projection page's forward
   narrative. Fills gaps only, never reducing a month below what was entered
@@ -699,11 +701,14 @@ bank statement. Both identities are tested.
   print under the sentence above it), the capacity schedule beneath
   it ("If you wait:" and one line per change, from `get_spending_capacity`,
   hidden entirely when the figure never moves so a flat month does not
-  restate the headline),
-  overdraft alert, mid-month alert, card bars
+  restate the headline) and beneath both the assumption in words with the
+  months that follow from it. The BANK page's own contents are the overdraft
+  alert, the mid-month alert and its two forward-projection blocks. The CARDS
+  page carries the per-card bars
   (`_solvency_panel_card_bars.SolvencyPanelCardBarsMixin`: the per-card
   utilisation bar, its scheduled-limit-change pills and the within-month
-  movement line), forward projection. Every month it shows states its low
+  movement line) and the same two months per card. Every month any page shows
+  states its low
   point on a line of its own, plus what that month needs to hold flat, in one
   shape, whether or not the month is in trouble: a figure printed only for a
   month in difficulty makes the healthy months look as though they have none
@@ -721,12 +726,15 @@ bank statement. Both identities are tested.
   runs the same month calculations on the repeat-forward assumption, painted
   in muted variants of the same traffic-light hues so it reads as provisional,
   with a gap specification from `get_assumed_expectations` naming what has to
-  arrive and when. It is a PAGE rather than a block under the spendable
-  headline, where a muted second figure beside the real one read as a
-  qualifier on it: the two answer different questions and only one of them is
-  a fact about money entered. With nothing to assume the whole block
-  hides (headings included) and a line says so, because a page reachable by a
-  button must never be blank
+  arrive and when. This mixin owns only the LOWER half of the page: the
+  assumption in words, the gap specification and the two month blocks. The
+  headline above it belongs to
+  `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` and is
+  rendered outside `assumed_block()`. With nothing to assume it is the
+  ASSUMPTION BLOCK alone that hides (its headings included), replaced by a
+  line saying so; the headline stays, because a page reachable by a button
+  must never be blank and the figure is defined whether or not there is
+  anything to fill forward
 - The spendable figure lives on the PROJECTION page and nowhere else. This is
   the settled position, reached by trying the alternatives. It sat on
   the bank page first, where a number printed beside entered balances reads as

@@ -9,10 +9,9 @@ is the same arithmetic run on an assumption rather than on what is entered.
 Read together they are a wall. Each mixes badly with the others in its own
 way. The card block sat in the middle of the bank narrative, between the
 month's own figures and the forward projection that continues them. The
-projection sat directly under the spendable headline, where a muted second
-figure next to the real one invites the two to be read as one reading with a
-qualifier, which is exactly what it is not: it answers a different question
-and is only true if its assumption is.
+projection sat under the bank page's own figures, where its numbers read as
+one more line of what had been entered rather than as an answer to a
+different question that is only true if its assumption is.
 
 So they are three pages behind pilot buttons rather than one long scroll. Each
 page is a coherent answer to a single question. A button names the page it
@@ -70,15 +69,16 @@ def _projection_label() -> QLabel:
 
 
 class SolvencyPanelLayoutMixin:
-    """Builds the bank page and the cards page."""
+    """Builds the tab's three pages: bank, projection and cards."""
 
     def _build_bank_page(self) -> QWidget:
-        """The bank account's position: spendable, solvent and what is coming.
+        """The bank account's position, built only from what was entered.
 
         Everything here answers one question, "does the account hold", so the
-        page reads top to bottom as a single argument: what you can spend
-        today, whether you are heading for an overdraft, where the month
-        stands and then the two months after it.
+        page reads top to bottom as a single argument: whether you are heading
+        for an overdraft, where the month stands and then the two months after
+        it. No spendable figure: that one rests on an assumption and belongs
+        on the page that states it.
         """
         page = QWidget()
         layout = QVBoxLayout(page)
@@ -125,26 +125,30 @@ class SolvencyPanelLayoutMixin:
 
         It has a page rather than a footnote because it answers a different
         question from the bank page: not "what does my budget say" but "what
-        would it say if the months ahead resembled this one". Sitting under
-        the real headline it read as a qualifier on that figure; here nothing
-        it says can be mistaken for a fact about money already entered.
+        would it say if the months ahead resembled this one". Mixed into the
+        bank page its numbers read as facts about money already entered.
 
-        It carries NO SPENDABLE FIGURE, deliberately. It had one, then a
-        restatement of the bank page's beside it; both were withdrawn.
-        "What can I spend today" is a question about money the user actually
-        has, so a second answer to it on a page whose every number is
-        conditional invites the conditional one to be spent. The two answers
-        also disagree by construction, since surviving longer makes the later
-        months count against today, so the assumed figure comes out lower and
-        the pair reads as a contradiction rather than as two questions.
+        Safe to Spend Today is the FIRST thing on it and the only place in
+        the application that figure appears. That took three attempts to
+        settle. It began on the bank page, where a number printed beside
+        entered balances reads as a fact about the account rather than as a
+        promise about months that have not happened. Then both were shown,
+        the bank page's beside this page's, so the schedule's "lower than the
+        known figure" line had its two terms: worse again, because the
+        assumed figure is the SMALLER of the two (surviving longer makes the
+        later months count against today), so the larger number under the
+        words "already entered" read as an amount the user could spend
+        instead. One figure, on the page whose assumption qualifies it.
 
-        What is left is what the page is for and it still reads in the bank
-        page's order: the assumption in words, what has to arrive for it to
-        hold, then the months after this one walked again under it.
+        The page then reads in the order the bank page reads: the number and
+        its schedule, the assumption those rest on, what has to arrive for it
+        to hold, then the months after this one walked again under it.
 
         The page always has something to say. When there is nothing to assume
-        the block hides and a line says so, because a page reachable by a
-        button the user just pressed must never be blank.
+        the assumption block hides and a line says so, because a page
+        reachable by a button the user just pressed must never be blank. The
+        headline stays, because with nothing to assume it simply equals what
+        was entered.
         """
         page = QWidget()
         layout = QVBoxLayout(page)

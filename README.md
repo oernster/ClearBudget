@@ -155,8 +155,11 @@ what is deliberately left and what only looks like debt.
   same two months the bank page projects again under that assumption, which is
   what the page is usually opened for: a bank page ending in an overdrawn
   month is exactly when you want to know whether the money you expect would
-  rescue it. The page carries no spendable figure of its own, because that
-  question is about money you already have and belongs on the bank page
+  rescue it. The Safe to Spend Today headline sits at the top of this same
+  page, because it rests on that assumption and belongs beside the statement
+  of it. An income you have marked as ended is never filled forward: its final
+  month is respected, so a job that stopped in July does not reappear in
+  August merely because August has no entry of that name
 - What a month needs to hold flat: every month on the Solvency tab states the
   difference between its full bills and its full income ("October needs
   £666.87 more to hold flat" or "September pays for itself, £120.00 to

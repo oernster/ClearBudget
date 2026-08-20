@@ -1,10 +1,11 @@
-"""The second reading: what the months look like IF this month repeats.
+"""The second reading of the months ahead: what they look like if this repeats.
 
-Every figure elsewhere in the app counts only money entered and marked
-reliable, so nothing is quietly propped up by money that may not come. That
+Every figure on the bank page counts only money entered and marked reliable,
+so nothing there is quietly propped up by money that may not come. That
 reading is honest but pessimistic about the future, because a month nobody has
-filled in yet looks empty rather than unknown. This module adds the other half
-of the picture on a page of its own, never instead of those figures:
+filled in yet looks empty rather than unknown. This module renders the other
+half of the picture, on a page of its own and never in place of the bank
+page's own months:
 
 * the same traffic-light hues, blended toward the page background, so an
   assumed month reads as provisional at a glance without changing what its
@@ -20,17 +21,15 @@ rather than waiting for the user to remember to untick a reliable box. Because
 nothing was ticked, the page states the rule outright: a reader cannot infer
 a derivation from the figures it produced.
 
-The page carries NO SPENDABLE FIGURE. It had one, worded as the bank page
-words its headline. It was withdrawn. A spendable figure answers "what can
-I spend today", which is a question about money the user actually has; putting
-a second answer to it on a page whose every number is conditional invites the
-conditional one to be spent. The two readings also disagree by construction,
-because surviving longer makes the later months count against today, so the
-assumed figure comes out LOWER and the pair reads as a contradiction rather
-than as two answers to different questions.
+This module owns the lower half of that page: the gap specification and the
+months ahead. The Safe to Spend headline above them is rendered by
+`_solvency_panel_safe_to_spend`, on the same repeat-forward assumption, so
+the whole page is one reading rather than a figure with commentary attached.
 
-What is left is what the page is for: the assumption said in words, what has
-to arrive for it to hold, then the months ahead walked again under it.
+The two halves differ in one way on purpose. The headline is outside
+`assumed_block()` and always shows, because with nothing to assume it simply
+equals what was entered; everything here hides, because with nothing to
+assume there is no assumption to state and no month to qualify.
 """
 
 from clear_budget.application.formatting import money_from_pence
