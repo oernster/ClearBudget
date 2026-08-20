@@ -44,9 +44,16 @@ bills never touch the bank balance.</p>
 
 <hr>
 <h3>Safe to Spend Today</h3>
-<p>The headline of the Solvency tab: the most you could spend today with
-every day of the next few months still clearing your buffer. No day is left
-out of that promise. An earlier version stopped at the first day already
+<p>The headline of the Solvency tab's Projection page: the most you could
+spend today with every day of the next few months still clearing your buffer.
+No day is left out of that promise.</p>
+<p>It sits on that page rather than beside your entered figures because it is
+a promise about months that have not happened. It counts the income this
+month has as arriving again in every later month with no entry of that name.
+Months ahead look thinner on screen than in life simply because their ad hoc
+income has not been typed in yet, so a figure that ignored them would report
+a shortfall you do not have. The page states that assumption directly beneath
+the number and names exactly what has to arrive for it to hold. An earlier version stopped at the first day already
 under, on the grounds that those days were lost anyway; the figure that gave
 was real but it was not spendable, because money spent today lowers the lost
 days too, so it quietly funded its own deficit.</p>

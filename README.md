@@ -123,9 +123,13 @@ what is deliberately left and what only looks like debt.
   month rather than being deleted, so every month it really did arrive in
   keeps it. Deleting income offers the same two scopes bills have, stop from
   the viewed month or delete entirely
-- Safe to Spend Today: the headline of the Solvency tab is the single number
-  you could spend today while every month that still stands on its own keeps
-  standing. It says how far that reaches and what limits it ("Holds every day
+- Safe to Spend Today: the headline of the Solvency tab's Projection page is
+  the single number you could spend today while every month that still stands
+  on its own keeps standing. It lives there rather than beside your entered
+  figures because it is a promise about months that have not happened: it
+  counts the income this month has as arriving again in every later month with
+  no entry of that name. That page states the assumption directly beneath the
+  number. It says how far that reaches and what limits it ("Holds every day
   through October above your £20.00 buffer; constrained by 14 Oct"). A month
   already under your buffer with nothing spent is a shortfall rather than a
   limit on today, so it does not veto the figure: it gets a line of its own,
@@ -232,7 +236,7 @@ what is deliberately left and what only looks like debt.
 ## Application Tabs
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
-- **Solvency** - three pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries the Safe to Spend Today headline, financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months; the credit cards page carries the per-card utilisation bars and the same two months per card; the projection page answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
+- **Solvency** - three pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the credit cards page carries the per-card utilisation bars and the same two months per card; the projection page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
@@ -473,10 +477,14 @@ entered before these existed continues to do.
 
 ## Solvency Panel
 
-- **Safe to Spend Today**: the headline number, the most you could spend
-  today while every month that currently survives still survives (buffer £20
-  by default, editable in Settings > Bank Account, zero if you want to plan
-  to the wire). A spend today lowers every later day, so the figure is
+- **Safe to Spend Today** (on the Projection page): the headline number, the
+  most you could spend today while every month that currently survives still
+  survives (buffer £20 by default, editable in Settings > Bank Account, zero
+  if you want to plan to the wire). It sits on that page because the figure
+  counts money not yet received, which is where the assumption behind it is
+  stated. The bank page carries no spendable figure: a number presented beside
+  your entered balances reads as a fact about the account, which a promise
+  about future months is not. A spend today lowers every later day, so the figure is
   measured across whole months rather than to the end of this one, bounded by
   the last month that clears the buffer with nothing spent. That bound is the
   promise, stated in full: "Holds every day through October above your
@@ -494,20 +502,16 @@ entered before these existed continues to do.
   figure down, which is often in a LATER month: that is the point of it, since
   a bigger balance later this month does not mean a bigger balance to spend
   when September has to survive too
-- **Projection page**: the months ahead run on the assumption that income
-  entered for this month arrives again in any later month with no entry of
-  that name. It states that assumption outright rather than leaving you to
-  infer it from the figures, since nothing was ticked to produce the page. It
-  always names what must arrive for it to come true. Then it walks the two
-  months the bank page projects again under that assumption, in the same
-  traffic-light hues blended toward the background so they read as provisional
-  at a glance. Both readings run through the same month engine, so they differ
-  in their evidence and never in their arithmetic
-- **The projection page carries no spendable figure.** It had one and it is
-  gone. "What can I spend today" is a question about money you actually have,
-  so a second answer to it sitting on a page where every number is conditional
-  invites the conditional one to be spent. Safe to Spend Today lives on the
-  bank page, once
+- **Projection page**: Safe to Spend Today and its schedule, then the
+  assumption they rest on, then the months ahead run on it. The assumption is
+  that income entered for this month arrives again in any later month with no
+  entry of that name; the page states that outright rather than leaving you to
+  infer it, since nothing was ticked to produce it. It names what must arrive
+  for it to come true. Then it walks the two months the bank page
+  projects again under that assumption, in the same traffic-light hues blended
+  toward the background so they read as provisional at a glance. Both readings
+  run through the same month engine, so they differ in their evidence and never
+  in their arithmetic
 - **What the month needs**: the gap between the month's full bank bills and
   its full income, stated for every month the page shows. Credit card interest
   is reported on its own line beneath it and is never added in, because it

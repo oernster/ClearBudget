@@ -1,13 +1,24 @@
-"""Safe to Spend Today rendering for SolvencyPanel - extracted for LOC limit.
+"""Safe to Spend rendering for SolvencyPanel - extracted for LOC limit.
 
 Owns one concern: turning a SustainableResult into the headline banner and
 the two lines under it. The number's semantics live in the domain
 calculation; this module only decides what a person reads.
+
+It renders onto the PROJECTION page and reads the REPEAT_CURRENT basis, so
+the figure counts the income this month has in every later month that has no
+entry of that name. That placement is the point of it. A spendable figure
+sitting on the bank page was read as a plain fact about money in the account,
+which it is not. It is a promise about months that have not happened, months
+usually thinner on screen than in life simply because their ad hoc income
+has not been typed in yet. On the projection page the
+assumption it rests on is stated directly beneath it, so the figure is read
+with its terms rather than apart from them.
 """
 
 from datetime import date as _date
 
 from clear_budget.application.formatting import money_from_pence
+from clear_budget.application.projection_basis import ProjectionBasis
 from clear_budget.ui.label_roles import set_role as _repolish_role
 from clear_budget.ui.theme_tokens import STATE_AT_RISK, STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
@@ -37,6 +48,10 @@ class SolvencyPanelSafeToSpendMixin:
     def _update_safe_to_spend(self) -> None:
         """Render the headline: what can be spent, plus how far that holds.
 
+        Measured on the repeat basis (see the module docstring), so the
+        figure and the assumption stated under it on the same page describe
+        one reading rather than two.
+
         The figure answers "what can I spend today", so it is bounded by the
         last month that still stands on its own. A month already under the
         floor with nothing spent is not a spending limit but a shortfall.
@@ -51,7 +66,7 @@ class SolvencyPanelSafeToSpendMixin:
         amount of restraint answers.
         """
         service = self.view_model.budget_service
-        result = service.get_safe_to_spend()
+        result = service.get_safe_to_spend(basis=ProjectionBasis.REPEAT_CURRENT)
         if result.amount_pence < 0:
             self.sts_banner.setText(
                 "NOTHING SAFE TO SPEND: this month is"
@@ -96,7 +111,9 @@ class SolvencyPanelSafeToSpendMixin:
         so waiting can never raise the figure past what the months it names
         will bear.
         """
-        steps = self.view_model.budget_service.get_spending_capacity()
+        steps = self.view_model.budget_service.get_spending_capacity(
+            basis=ProjectionBasis.REPEAT_CURRENT
+        )
         rows = [
             f"From {self._sts_day(step.from_day)}:"
             f" {money_from_pence(step.amount_pence)}"

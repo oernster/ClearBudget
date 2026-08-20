@@ -662,10 +662,13 @@ bank statement. Both identities are tested.
   projection. Each has a pilot button naming it as a destination and the
   button for the page being read is HIDDEN rather than disabled, so from
   anywhere each other page is one press away and the keyboard ring skips
-  the control that would do nothing. Safe to Spend
+  the control that would do nothing. The bank page carries overdraft status,
+  overall health and the two forward months, all of it built from money
+  actually entered. The PROJECTION page carries the Safe to Spend
   Today headline (rendered by
   `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` from
-  `BudgetService.get_safe_to_spend`, reusing the banner's traffic-light state
+  `BudgetService.get_safe_to_spend` on the `REPEAT_CURRENT` basis, reusing the
+  banner's traffic-light state
   property; the secondary line names how far the promise reaches and the day
   that constrains it, "Holds every day through October 2026 above your £20.00
   buffer; constrained by 14 Oct", with a second line naming any month beyond
@@ -709,24 +712,23 @@ bank statement. Both identities are tested.
   a fact about money entered. With nothing to assume the whole block
   hides (headings included) and a line says so, because a page reachable by a
   button must never be blank
-- The projection page carries NO SPENDABLE FIGURE and this is the settled
-  position, reached by trying the alternatives. It first carried an assumed
-  Safe to Spend headline, then a restatement of the bank page's figure beside
-  it so the "lower than the known figure" line had both its terms. Both are
-  gone. "What can I spend today" is a question about money the user actually
-  has, so a second answer to it on a page whose every number is conditional
-  invites the conditional one to be spent. The two answers also disagree by
-  construction, since surviving longer makes the later months count against
-  today, so the assumed figure comes out LOWER and the pair reads as a
-  contradiction rather than as two questions. The page keeps the bank page's
-  ORDER without keeping its headline: the assumption in words, what has to
-  arrive for it to hold, then the months after this one
-- Because of that, nothing in the running application passes
-  `ProjectionBasis.REPEAT_CURRENT` any more: the projection page's forward
-  months go through `get_assumed_month_summary`, which states the fill-forward
-  rule for itself. The `basis` parameter on `get_safe_to_spend` and
-  `get_spending_capacity`, plus the repeat branch inside
-  `_build_safe_to_spend_inputs`, are reachable only from their tests
+- The spendable figure lives on the PROJECTION page and nowhere else. This is
+  the settled position, reached by trying the alternatives. It sat on
+  the bank page first, where a number printed beside entered balances reads as
+  a fact about the account rather than as a promise about months that have not
+  happened. Restating the bank page's figure on the projection page beside the
+  assumed one was tried too, so the "lower than the known figure" line had
+  both its terms; it was worse. The assumed figure is the SMALLER of the
+  two, so the larger number under the words "already entered" read as an
+  amount the user was free to spend instead. One figure, on the page whose
+  assumption qualifies it, in the bank page's order: the number and its
+  schedule, the assumption in words, what has to arrive for it to hold, then
+  the months after this one
+- The projection page's headline block is deliberately OUTSIDE
+  `assumed_block()`, so it shows whether or not this month has anything to
+  repeat forward. With nothing to assume the figure simply equals what was
+  entered; hiding it there would leave the application with no spendable
+  figure at all in the commonest case, which is every month filled in
 - The assumed forward projection reads
   `BudgetService.get_assumed_month_summary`, which fills a later month's gaps
   from this month's income on the same rule `_build_safe_to_spend_inputs`

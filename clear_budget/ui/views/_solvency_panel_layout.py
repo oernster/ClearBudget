@@ -84,25 +84,6 @@ class SolvencyPanelLayoutMixin:
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(_heading("Safe to Spend Today"))
-        self.sts_banner = _line("SolvencyBanner", wrap=False)
-        layout.addWidget(self.sts_banner)
-        self.sts_detail = _line("SolvencyCommitted")
-        layout.addWidget(self.sts_detail)
-        # A shortfall spending cannot fix gets its own label rather than a
-        # second sentence in the line above: it is the one statement here that
-        # no restraint answers, so it takes the traffic light's red while the
-        # reach sentence keeps the muted body colour. One label could not hold
-        # both, since a QLabel carries one colour.
-        self.sts_shortfall = _line("SolvencyShortfall")
-        self.sts_shortfall.hide()
-        layout.addWidget(self.sts_shortfall)
-        # Hidden when the figure never moves, so a flat month says nothing
-        # rather than restating the headline.
-        self.sts_capacity = _line("SolvencyBreakdown")
-        self.sts_capacity.hide()
-        layout.addWidget(self.sts_capacity)
-
         layout.addWidget(_heading("Overdraft Status"))
         self.overdraft_alert = _line(
             "SolvencyBanner", f"SAFE: {fmt(0)} buffer", wrap=False
@@ -169,8 +150,30 @@ class SolvencyPanelLayoutMixin:
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # The heading names the assumption rather than the money, because the
-        # assumption is derived rather than marked by hand.
+        layout.addWidget(_heading("Safe to Spend If This Repeats"))
+        self.sts_banner = _line("SolvencyBanner", wrap=False)
+        layout.addWidget(self.sts_banner)
+        self.sts_detail = _line("SolvencyCommitted")
+        layout.addWidget(self.sts_detail)
+        # A shortfall spending cannot fix gets its own label rather than a
+        # second sentence in the line above: it is the one statement here that
+        # no restraint answers, so it takes the traffic light's red while the
+        # reach sentence keeps the muted body colour. One label could not hold
+        # both, since a QLabel carries one colour.
+        self.sts_shortfall = _line("SolvencyShortfall")
+        self.sts_shortfall.hide()
+        layout.addWidget(self.sts_shortfall)
+        # Hidden when the figure never moves, so a flat month says nothing
+        # rather than restating the headline.
+        self.sts_capacity = _line("SolvencyBreakdown")
+        self.sts_capacity.hide()
+        layout.addWidget(self.sts_capacity)
+
+        # Deliberately NOT part of assumed_block(): the figure is shown
+        # whether or not this month has anything to repeat forward, because
+        # with nothing to assume it simply equals what was entered. Hiding it
+        # there would leave the app with no spendable figure at all in the
+        # commonest case, which is every month fully filled in.
         self.assumed_terms_heading = _heading("What This Assumes")
         layout.addWidget(self.assumed_terms_heading)
         # The rule is DERIVED, so it has to be stated: nothing was ticked to
