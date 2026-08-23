@@ -152,11 +152,22 @@ def build_installer_main_window_ui(window: Any) -> None:
     window._progress_bar.setRange(0, 100)
     window._progress_bar.setValue(0)
     window._progress_bar.setVisible(False)
+    # Hidden, yet it must still OCCUPY its space. Without this the bar's height
+    # left the layout whenever it was hidden, so the whole column below the
+    # status line jumped up the moment an operation started and dropped back
+    # when it finished: the buttons moved under the pointer mid-install.
+    _bar_policy = window._progress_bar.sizePolicy()
+    _bar_policy.setRetainSizeWhenHidden(True)
+    window._progress_bar.setSizePolicy(_bar_policy)
     outer.addWidget(window._progress_bar)
 
     window._progress = SafeLabel("", extra_width_px=6, extra_height_px=6)
     window._progress.setObjectName("StatusLine")
     window._progress.setAlignment(Qt.AlignHCenter)
+    # Pinned to one line for the same reason: this label alternates between a
+    # worker message and an empty string; an empty QLabel is shorter than
+    # a filled one, so its height would move everything above it.
+    window._progress.setFixedHeight(window._progress.line_height())
     outer.addWidget(window._progress)
 
     # Return the browse button so the caller can connect signals.

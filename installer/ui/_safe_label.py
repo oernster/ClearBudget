@@ -45,6 +45,20 @@ class SafeLabel(QLabel):
             base.height() + self._extra_height_px,
         )
 
+    def line_height(self) -> int:
+        """The height of ONE line of this label's text, buffer included.
+
+        Used to pin a label whose text comes and goes. An empty QLabel is
+        shorter than a filled one, so a status line that alternates between a
+        message and nothing changes the height of everything laid out below
+        it. Reading the metric rather than guessing keeps it right across the
+        DPI and text-scaling combinations this class exists for.
+        """
+        from PySide6.QtGui import QFontMetrics
+
+        self.ensurePolished()
+        return QFontMetrics(self.font()).height() + self._extra_height_px
+
     def paintEvent(self, event) -> None:
         # Default QLabel painting can clip large/bold glyphs by 1px on some
         # Windows DPI/text-scaling configurations. When a draw offset is
