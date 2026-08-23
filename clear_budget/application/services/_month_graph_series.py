@@ -10,6 +10,7 @@ month end, undated card bills accrue evenly).
 from datetime import date
 
 from clear_budget.application.dto.graph_series import GraphSeries
+from clear_budget.application.services._card_projection import card_openings_at
 from clear_budget.application.services._overdraft_projection import (
     _BANK_PAYMENT_METHOD_ID,
     _UNDATED_BILL_DAY,
@@ -18,6 +19,9 @@ from clear_budget.application.services._overdraft_projection import (
 from clear_budget.domain.services._card_live_projection import (
     anchored_month_opening_pence,
     month_to_date_net_pence,
+)
+from clear_budget.domain.services.card_monthly_calculator import (
+    monthly_interest_pence,
 )
 from clear_budget.domain.services._prorating import days_in_month
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -121,19 +125,47 @@ class GraphSeriesMixin:
             values.append(running)
         return GraphSeries(label=_BANK_SERIES_LABEL, values=tuple(values))
 
-    def get_card_graph_series(self, *, year_month: YearMonth) -> list[GraphSeries]:
-        """One day-end balance series per active card for year_month."""
+    def get_card_graph_series(
+        self, *, year_month: YearMonth, today: date | None = None
+    ) -> list[GraphSeries]:
+        """One day-end balance series per active card for year_month.
+
+        A month after the current one opens from the CHAINED projection the
+        Credit Cards tab shows (card_openings_at), never from the stored
+        balance: the stored figure is as-of the day it was entered, so a
+        distant month opened from it drew a balance untouched by every
+        intervening payment and every month's interest. The viewed month's
+        own interest lands on its last day, exactly the amount the monthly
+        state adds, so the month closes where the next one opens and the
+        graph's close equals the strip's closing balance.
+        """
+        today = today or date.today()  # noqa: DTZ011 (naive local dates)
+        today_ym = YearMonth(today.year, today.month)
         summary = self.get_month_summary(year_month=year_month)
         bills = list(summary.bills)
         days = days_in_month(year_month.year, year_month.month)
+        chained = (
+            card_openings_at(
+                self.payment_method_repo,
+                self.get_month_summary,
+                month=year_month,
+                today_ym=today_ym,
+            )
+            if year_month > today_ym
+            else None
+        )
         series = []
         for card in self.get_credit_cards():
-            opening = anchored_month_opening_pence(
-                card=card,
-                bills=bills,
-                year=year_month.year,
-                month=year_month.month,
-            )
+            if chained is None:
+                opening = anchored_month_opening_pence(
+                    card=card,
+                    bills=bills,
+                    year=year_month.year,
+                    month=year_month.month,
+                )
+            else:
+                opening = chained[card.id]
+            interest = monthly_interest_pence(card=card, opening_balance_pence=opening)
             values = tuple(
                 max(
                     0,
@@ -142,7 +174,8 @@ class GraphSeriesMixin:
                         card=card,
                         bills=bills,
                         today=date(year_month.year, year_month.month, day),
-                    ),
+                    )
+                    + (interest if day == days else 0),
                 )
                 for day in range(1, days + 1)
             )

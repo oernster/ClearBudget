@@ -7,6 +7,18 @@ from clear_budget.domain.entities.credit_card import CreditCard
 from clear_budget.domain.value_objects.amount import Amount
 
 _MIN_PAYMENT_FLOOR_PENCE = 2500  # £25 minimum floor
+_APR_TO_MONTHLY_DIVISOR = 1200  # 12 months x 100 (the APR is a percentage)
+
+
+def monthly_interest_pence(*, card: CreditCard, opening_balance_pence: int) -> int:
+    """One month's interest on the opening balance, in pence.
+
+    The single statement of the interest rule, read by the monthly state
+    below and by the month graph, so the two can never charge a different
+    month's interest for the same card.
+    """
+    apr = card.interest_rate_apr or 0.0
+    return int(opening_balance_pence * apr / _APR_TO_MONTHLY_DIVISOR)
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,11 +54,12 @@ def calculate_card_monthly_state(
         for b in bills
         if b.category == "credit_payment" and b.target_card_id == card.id
     )
-    apr = card.interest_rate_apr or 0.0
-    monthly_interest_pence = int(opening_balance_pence * apr / 1200)
+    interest_pence = monthly_interest_pence(
+        card=card, opening_balance_pence=opening_balance_pence
+    )
 
     closing_pence = (
-        opening_balance_pence + charges_pence - payment_pence + monthly_interest_pence
+        opening_balance_pence + charges_pence - payment_pence + interest_pence
     )
 
     if opening_balance_pence > 0:
@@ -61,7 +74,7 @@ def calculate_card_monthly_state(
             # Generic fallback: max(£25, interest + 1% of balance)
             one_percent_pence = int(opening_balance_pence * 0.01)
             minimum_pence = max(
-                _MIN_PAYMENT_FLOOR_PENCE, monthly_interest_pence + one_percent_pence
+                _MIN_PAYMENT_FLOOR_PENCE, interest_pence + one_percent_pence
             )
     else:
         minimum_pence = 0
@@ -80,7 +93,7 @@ def calculate_card_monthly_state(
         opening_balance=Amount(pence=opening_balance_pence),
         charges=Amount(pence=charges_pence),
         payment_received=Amount(pence=payment_pence),
-        monthly_interest=Amount(pence=monthly_interest_pence),
+        monthly_interest=Amount(pence=interest_pence),
         closing_balance=Amount(pence=max(0, closing_pence)),
         minimum_payment=Amount(pence=minimum_pence),
         payment_date=payment_bill.day_of_month if payment_bill else None,

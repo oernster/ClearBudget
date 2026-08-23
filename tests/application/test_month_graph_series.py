@@ -4,6 +4,7 @@ from datetime import date
 
 import pytest
 
+from clear_budget.application.services._card_projection import card_openings_at
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.entities.bill import Bill
@@ -23,6 +24,8 @@ from clear_budget.infrastructure.sqlite.payment_method_repository import (
 _TODAY = date(2026, 7, 26)
 _JULY = YearMonth(2026, 7)
 _AUGUST = YearMonth(2026, 8)
+_SEPTEMBER = YearMonth(2026, 9)
+_OCTOBER = YearMonth(2026, 10)
 
 
 @pytest.fixture()
@@ -239,3 +242,88 @@ class TestCardGraphSeries:
 
     def test_no_cards_means_no_series(self, budget_service):
         assert budget_service.get_card_graph_series(year_month=_AUGUST) == []
+
+
+def _chained_card(svc, name: str, used: int, apr: float | None = None) -> CreditCard:
+    card = CreditCard(
+        id=0,
+        name=name,
+        credit_limit=Amount(pence=500000),
+        current_balance_used=Amount(pence=used),
+        interest_rate_apr=apr,
+    )
+    return svc.payment_method_repo.add_credit_card(card=card)
+
+
+class TestCardGraphChaining:
+    """A future month's card series opens from the chained projection.
+
+    The stored balance is as-of the day it was entered, so opening a distant
+    month from it drew a balance untouched by every intervening payment and
+    every month's interest: May 2028 showed the card where it stood today.
+    """
+
+    def test_a_future_month_opens_from_the_chained_projection(self, budget_service):
+        card = _chained_card(budget_service, "Visa", 100000)
+        budget_service.add_bill(
+            bill=_bill(
+                "Visa payment",
+                10000,
+                20,
+                category="credit_payment",
+                target_card_id=card.id,
+            )
+        )
+        values = budget_service.get_card_graph_series(
+            year_month=_OCTOBER, today=_TODAY
+        )[0].values
+        # July, August and September each pay 10000 off before October opens.
+        assert values[0] == 70000
+        assert values[18] == 70000
+        assert values[19] == 60000  # October's own payment lands day 20
+        assert values[30] == 60000
+
+    def test_a_month_closes_where_the_next_one_opens(self, budget_service):
+        card = _chained_card(budget_service, "Visa", 100000, apr=12.0)
+        assert card.interest_rate_apr == 12.0
+        september = budget_service.get_card_graph_series(
+            year_month=_SEPTEMBER, today=_TODAY
+        )[0].values
+        october = budget_service.get_card_graph_series(
+            year_month=_OCTOBER, today=_TODAY
+        )[0].values
+        # 1% a month: July closes 101000, August 102010; September opens there.
+        assert september[0] == 102010
+        assert september[-2] == 102010  # no interest until the month ends
+        assert september[-1] == 103030  # the month's interest lands on its last day
+        assert october[0] == 103030  # and the next month opens exactly there
+
+    def test_the_current_month_still_opens_from_the_anchored_balance(
+        self, budget_service
+    ):
+        _chained_card(budget_service, "Visa", 45000)
+        values = budget_service.get_card_graph_series(year_month=_JULY, today=_TODAY)[
+            0
+        ].values
+        assert values[0] == 45000
+
+    def test_openings_for_the_current_month_are_the_anchored_opening(
+        self, budget_service
+    ):
+        card = _chained_card(budget_service, "Visa", 12345)
+        openings = card_openings_at(
+            budget_service.payment_method_repo,
+            budget_service.get_month_summary,
+            month=_JULY,
+            today_ym=_JULY,
+        )
+        assert openings == {card.id: 12345}
+
+    def test_no_cards_yields_no_openings(self, budget_service):
+        openings = card_openings_at(
+            budget_service.payment_method_repo,
+            budget_service.get_month_summary,
+            month=_OCTOBER,
+            today_ym=_JULY,
+        )
+        assert openings == {}

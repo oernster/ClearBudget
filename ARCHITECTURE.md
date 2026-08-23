@@ -18,6 +18,7 @@ Everything below this section explains how the code satisfies them.
 | 100% line AND branch coverage over `clear_budget`, `main` and the Qt-free half of the setup program | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
 | An exported report adds up: `opening + net == close` for every month whose Paid/Received flags agree with the calendar. In the anchored month an item actioned early (or missed) moves the close off the totals by exactly that amount, because the series never charges twice what the recorded balance already contains | `tests/application/test_projection_series.py::test_opening_plus_net_equals_the_close` and `::test_a_bill_paid_early_moves_the_anchored_close` |
 | The exported report and the on-screen month graph can never disagree about a month they both cover, because both run the same day-by-day projection | `tests/application/test_projection_series.py::test_the_projection_agrees_with_the_month_graph` |
+| The card graph and the Credit Cards tab open a future month from the SAME chained figure (`card_openings_at`), never from the stored balance and each month closes where the next one opens, its interest landing on its last day | `tests/application/test_month_graph_series.py::TestCardGraphChaining` |
 | With ONE deliberate exception: the month in progress opens from the recorded bank balance, not the previous month's projected close. The recorded balance is the only figure in the report that is a fact; the gap is the drift the report exists to expose | `tests/application/test_projection_series.py::test_the_current_month_is_anchored_on_the_recorded_balance` and `::test_months_outside_the_current_one_still_chain_when_today_is_inside` |
 | An exported HTML file references nothing outside itself, so it survives being emailed and opens offline | `tests/application/reporting/test_reports.py::test_a_report_references_nothing_outside_itself` |
 | User-entered text cannot inject markup into an exported report | `tests/application/reporting/test_reports.py::test_user_text_cannot_inject_markup_into_a_report` |
@@ -247,7 +248,15 @@ focused mixins to stay under the 400-LOC-per-file limit:
   `get_bank_graph_series` (day-end projected bank balance across the viewed
   month, anchored through today's stored balance for the current month) and
   `get_card_graph_series` (one day-end balance series per active card),
-  reusing the same projection day conventions as the rest of the app
+  reusing the same projection day conventions as the rest of the app. A card
+  month AFTER the current one opens from `card_openings_at`
+  (`_card_projection.py`), the same chained openings the Credit Cards tab's
+  panels and projection strip read, never from the stored balance: the stored
+  figure is as-of the day it was entered, so a distant month opened from it
+  drew a balance untouched by every intervening payment and every month's
+  interest. The viewed month's interest (one shared
+  `monthly_interest_pence` rule with the monthly state) lands on the series'
+  last day, so a month closes exactly where the next one opens
 - `SafeToSpendOperationsMixin` (`_safe_to_spend_operations.py`) - the Safe to
   Spend Today adapter and its settings. `get_safe_to_spend(today=None)`
   builds the per-day projection across the forecast window, then calls
