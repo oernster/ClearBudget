@@ -809,8 +809,14 @@ unrelated to what it had to hold.
   reader when a facility is added later. The banner BODY still names the
   overdraft, as it should: in a critical state ", with no overdraft arranged"
   is the fact that a payment bounces rather than drawing on something
-  arranged. Sentence case, since the CRITICAL prefix already carries the
-  alarm and shouting it twice only cost the line its readability.
+  arranged. The banner is sentence case throughout, state prefix included
+  ("Critical:", never "CRITICAL:"). The prefix still LEADS every line, since
+  the word is what carries the state for a reader who does not take it from
+  the fill, so it may be softened but never dropped. Capitals added nothing
+  the word and the colour were not already saying; a line opening in shouting
+  capitals reads as an alarm even in the Safe case, which is the one state
+  that should read calmly. The palette key underneath is untouched, so
+  the stylesheet and the traffic-light colours are unaffected.
   Guarded by `tests/structural/test_solvency_headings.py`, which scans for
   the WORD in any `_heading()` literal rather than pinning the replacement
   copy, so the principle survives a future rewording. The PROJECTION page carries the Safe to Spend

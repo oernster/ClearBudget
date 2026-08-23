@@ -95,7 +95,7 @@ class SolvencyPanelLayoutMixin:
         # naming a product feature.
         layout.addWidget(_heading("Account Position"))
         self.position_banner = _line(
-            "SolvencyBanner", f"SAFE: {fmt(0)} buffer", wrap=False
+            "SolvencyBanner", f"Safe: {fmt(0)} buffer", wrap=False
         )
         layout.addWidget(self.position_banner)
         self.midmonth_alert = _line("SolvencyMidmonthAlert")

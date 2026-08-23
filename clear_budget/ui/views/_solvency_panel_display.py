@@ -77,10 +77,10 @@ class SolvencyPanelDisplayMixin:
         )
         # Sentence case, not capitals. The fact still has to be stated, since
         # going under with nothing arranged means a payment bounces rather
-        # than drawing on a facility. The CRITICAL prefix already carries the
-        # alarm; shouting it a second time only made the line harder to read.
-        # "arranged" rather than "facility" because that is the word a bank
-        # uses when you ask for one.
+        # than drawing on a facility. The "Critical" prefix already carries
+        # the alarm; shouting it a second time only made the line harder to
+        # read. "arranged" rather than "facility" because that is the word a
+        # bank uses when you ask for one.
         facility_alert = (
             ", with no overdraft arranged" if overdraft_limit_pence == 0 else ""
         )
@@ -101,6 +101,15 @@ class SolvencyPanelDisplayMixin:
         deficit_note = self._deficit_note(
             monthly_deficit_pence, overdraft_ym, overdrawn_next_month
         )
+        # State prefixes are sentence case ("Critical:", not "CRITICAL:").
+        # They still lead every line, because the word is what carries the
+        # state for a reader who does not take it from the banner's colour,
+        # so it must not be dropped. Capitals added nothing that the word and
+        # the fill were not already saying; a line opening in shouting capitals
+        # is read as an alarm even in the Safe case, which is the one state
+        # that should read calmly. The palette key underneath is
+        # untouched, so the colours and the stylesheet are unaffected.
+        #
         # The banner text spells out the month's situation; its colour and the
         # title-bar colour both come from the shared _state_color classifier, so
         # the only difference is that the banner escalates to red to warn of a
@@ -113,38 +122,38 @@ class SolvencyPanelDisplayMixin:
                 else facility_alert
             )
             self.position_banner.setText(
-                f"CRITICAL: {fmt(abs(balance))} overdrawn{beyond_note}{deficit_note}"
+                f"Critical: {fmt(abs(balance))} overdrawn{beyond_note}{deficit_note}"
             )
         elif report.balance_pence < 0:
             self.position_banner.setText(
-                f"CAUTION: using {fmt(abs(balance))} of your "
+                f"Caution: using {fmt(abs(balance))} of your "
                 f"{fmt(overdraft_limit_pence)} overdraft{deficit_note}"
             )
         elif overdrawn_next_month:
             self.position_banner.setText(
-                f"CRITICAL: overdrawn in {next_month_name} - "
+                f"Critical: overdrawn in {next_month_name} - "
                 f"{fmt(balance)} left in savings{facility_alert}{deficit_note}"
             )
         elif monthly_deficit_pence > 0 and balance <= 500:
             self.position_banner.setText(
-                f"CRITICAL: projected end of {month_name}: "
+                f"Critical: projected end of {month_name}: "
                 f"{fmt(balance)} - drawing down savings{deficit_note}"
             )
         elif balance <= 200:
             self.position_banner.setText(
-                f"AT RISK: only {fmt(balance)} remaining{deficit_note}"
+                f"At risk: only {fmt(balance)} remaining{deficit_note}"
             )
         elif balance <= 500:
             self.position_banner.setText(
-                f"CAUTION: {fmt(balance)} remaining{deficit_note}"
+                f"Caution: {fmt(balance)} remaining{deficit_note}"
             )
         elif monthly_deficit_pence > 0:
             self.position_banner.setText(
-                f"CAUTION: {fmt(balance)} after {month_name} bills{deficit_note}"
+                f"Caution: {fmt(balance)} after {month_name} bills{deficit_note}"
             )
         else:
             self.position_banner.setText(
-                f"SAFE: {fmt(balance)} remaining after all {month_name} bills"
+                f"Safe: {fmt(balance)} remaining after all {month_name} bills"
             )
         # The banner carries its state, not a colour: the theme stylesheet
         # supplies the fill, so it follows a light/dark switch on its own.
@@ -184,7 +193,7 @@ class SolvencyPanelDisplayMixin:
                 mid_balance = starting_pence + early_income - early_bills
                 if mid_balance < 0:
                     self.midmonth_alert.setText(
-                        f"CRITICAL: overdrawn {fmt(abs(mid_balance))} "
+                        f"Critical: overdrawn {fmt(abs(mid_balance))} "
                         f"before day-{max_income_day} income"
                         f" - rescued day {max_income_day}{facility_alert}"
                     )
