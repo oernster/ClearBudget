@@ -1,9 +1,22 @@
-"""How It Works dialog - plain-English explanation of ClearBudget's calculations.
+"""How It Works dialog - what the screens cannot say for themselves.
 
-Deliberately about CONCEPTS, not controls: it explains only what the screens
-cannot say for themselves (how pro-rating works, how the balance maintains
-itself, what Safe to Spend Today means). A button-by-button inventory was
-tried and read as a wall of text; buttons explain themselves in context.
+Two jobs, in this order. It NAMES the furniture, each entry carrying the real
+icon or glyph the tray and the tab row actually draw, so the pictures that
+replaced the old text labels can be identified by someone who has just met
+them. Then it explains the three rules the numbers depend on and that no
+screen can state on its own: how an undated bill accrues, how the balance
+maintains itself and what Safe to Spend Today is a promise about.
+
+It is deliberately short. A button-by-button inventory was tried first and
+read as a wall of text; so did the essay that replaced it, which explained
+every rejected design alongside the shipped one. A help screen nobody
+finishes explains nothing, so anything a control says for itself is left to
+the control.
+
+The tab icons are the BUNDLED IMAGES, pulled through the same resource lookup
+the tab row itself uses, rather than described in words or approximated with
+a similar-looking emoji. An icon guide showing something other than the icon
+is worse than no guide.
 """
 
 from PySide6.QtWidgets import (
@@ -15,98 +28,114 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.ui import ui_scale
+from clear_budget.ui.utils.tab_icons import (
+    ARCHIVE_ICON,
+    CREDIT_CARDS_ICON,
+    MONTHLY_BUDGET_ICON,
+    SOLVENCY_ICON,
+)
 from clear_budget.ui.widgets.auto_scroller import AutoScroller
 
-_HOW_IT_WORKS_TEXT = """\
+# Height of an inline icon in the body text, unscaled. Sized to the text
+# rather than to the tray, since here they are read in a sentence.
+_INLINE_ICON_PX = 20
+
+
+def _img(path, px: int) -> str:
+    """One bundled image as an inline <img>; an empty string if unbundled.
+
+    Empty rather than a placeholder: the line still reads without its
+    picture, and a missing asset must never stop the help screen opening.
+    """
+    if path is None:
+        return ""
+    return (
+        f'<img src="file:///{str(path).replace(chr(92), "/")}" '
+        f'width="{px}" height="{px}"> '
+    )
+
+
+def _tab_row(spec: str, name: str, text: str, px: int) -> str:
+    """One tab's line, led by its real icon (an image or the archive glyph)."""
+    from clear_budget.shared.resources import find_tab_icon_path
+
+    lead = _img(find_tab_icon_path(spec), px) if spec.endswith(".png") else f"{spec} "
+    return f"<p>{lead}<b>{name}</b> &ndash; {text}</p>"
+
+
+def _body_html() -> str:
+    """Build the help text, resolving the real icons at open time."""
+    from clear_budget.shared.resources import find_logo_png_path
+
+    px = ui_scale.px(_INLINE_ICON_PX)
+    app_icon = _img(find_logo_png_path(), px)
+    return f"""\
 <h2>How Clear Budget Works</h2>
 
-<h3>Pro-rated bills (no fixed due date)</h3>
-<p>A bill with no fixed day - "Food", say - is treated as spent evenly
-across the month, so only the part still ahead of you counts as due:</p>
-<p><b>still due</b> = amount &minus; (amount &times; today's day &divide;
-days in month, rounded up)</p>
-<p><b>Example:</b> Food is &pound;200 on the 11th of a 30-day month:
-&pound;74 has notionally gone, &pound;126 is still due.</p>
-<p>A bill with a fixed day counts in full until that day, then drops to
-zero. The projected balance follows the same rule, so it eases down a
-little each day rather than dropping all at once.</p>
+<h3>The four tabs</h3>
+{_tab_row(MONTHLY_BUDGET_ICON, "Monthly Budget",
+          "this month's bills and income, plus what the balance does.", px)}
+{_tab_row(SOLVENCY_ICON, "Solvency",
+          "whether the month holds, plus the two months after it. Three pages "
+          "behind the buttons at the top: the bank, the cards and Safe to "
+          "Spend.", px)}
+{_tab_row(CREDIT_CARDS_ICON, "Credit Cards",
+          "one panel per card, with a six-month projection.", px)}
+{_tab_row(ARCHIVE_ICON, "Archive",
+          "months that have finished. They are filed automatically; there is "
+          "no archive button.", px)}
+<p>Hover any tab to see its name.</p>
 
 <hr>
-<h3>Your bank balance</h3>
-<p>Set the balance once with the &#128221; button; Clear Budget then keeps
-it up to date. A dated bank bill is deducted at midnight on its due day and
-ticked <b>Paid</b>; dated income is added and ticked <b>Received</b>. Days
-missed while the app was closed are caught up at the next launch. Adding an
-item dated today offers to apply it immediately - say No if your balance
-already reflects it. Deleting an auto-applied item hands the amount back;
-typing a balance yourself supersedes everything applied before it. Card
-bills never touch the bank balance.</p>
+<h3>The tray</h3>
+<p>{app_icon}the month as a graph &nbsp;&middot;&nbsp; &#128194; load
+&nbsp;&middot;&nbsp; &#128190; save &nbsp;&middot;&nbsp; &#9881;&#65039;
+currency &nbsp;&middot;&nbsp; &#127974; overdraft plus the Safe to Spend
+buffer and window &nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or
+dark &nbsp;&middot;&nbsp; &#8505;&#65039; this screen</p>
 
 <hr>
-<h3>Safe to Spend Today</h3>
-<p>The headline of the Solvency tab's Projection page: the most you could
-spend today with every day of the next few months still clearing your buffer.
-No day is left out of that promise.</p>
-<p>It sits on that page rather than beside your entered figures because it is
-a promise about months that have not happened. It counts the income this
-month has as arriving again in every later month with no entry of that name.
-Months ahead look thinner on screen than in life simply because their ad hoc
-income has not been typed in yet, so a figure that ignored them would report
-a shortfall you do not have. The page states that assumption directly beneath
-the number and names exactly what has to arrive for it to hold. An earlier version stopped at the first day already
-under, on the grounds that those days were lost anyway; the figure that gave
-was real but it was not spendable, because money spent today lowers the lost
-days too, so it quietly funded its own deficit.</p>
-<p>When the window cannot survive, the answer is nothing rather than a
-number, stating what the window is short by. That shortfall is money to
-find, not money to spend. The buffer and the number of months the figure must
-keep standing are in Settings &gt; Bank Account: a longer window is a harder
-promise, so it allows less.</p>
+<h3>Three rules behind the numbers</h3>
+
+<p><b>A bill with no due day spreads across the month.</b> Only the part
+ahead of you counts as still due, so &pound;200 of food on the 11th of a
+30-day month leaves &pound;126. A bill WITH a due day counts in full until
+that day, then drops to zero.</p>
+
+<p><b>&#128221; The balance keeps itself up to date.</b> Set it once. After
+that, dated bills are deducted and dated income added at midnight on the day,
+each ticking itself Paid or Received; days missed while the app was shut are
+caught up at the next launch. Typing a balance yourself overrides everything
+applied before it. Card bills never touch it.</p>
+
+<p><b>Safe to Spend Today is a promise, not a balance.</b> It is the most you
+could spend today with every month in your window still clearing its buffer.
+It assumes the income you entered for this month arrives again in each later
+month that has none of that name, which is why it lives on its own Solvency
+page with that assumption written under it. Months ahead look thin only
+because their one-off income has not been typed in yet. If the window cannot
+be saved, it says so and names the shortfall: that is money to find, not money
+to spend.</p>
 
 <hr>
-<h3>Shaping a month</h3>
-<p>A bill or income can be <b>skipped</b> for one month, <b>overridden</b>
-(amount or day) for one month, added as a <b>one-off</b> for just this
-month, given a <b>final month</b> after which it stops or given an
-<b>amount change from a month onward</b> - what a rent increase is; earlier
-months keep what they actually cost. Deleting a bill offers two scopes:
-stop it from the viewed month onward (history stays intact) or delete it
-everywhere, for entries added by mistake.</p>
-
-<hr>
-<h3>Graphs and exports</h3>
-<p>The app icon in the navigation tray opens the viewed month as a graph
-(bank balance day by day or every card on the Credit Cards tab), steppable
-between months. It can be exported as a single self-contained web page and
-Monthly Budget can also export a projection across a range of months,
-showing each month's close and its lowest point. Both open offline and
-default to Downloads.</p>
-
-<hr>
-<h3>Archive</h3>
-<p>Months are archived automatically the moment they end - there is no
-manual step. The Archive tab holds only fully-completed months.</p>
-
-<hr>
-<h3>Saving, loading and viewer packages</h3>
-<p>Save copies the database to a remembered file; Load validates a file
-before replacing anything. An admin can export a <b>read-only viewer
-package</b> (a snapshot plus credentials) for someone else to import from
-their sign-in screen; re-exporting and re-importing refreshes the same
-account. A viewer sees everything and can change nothing, with
-"(Read-only)" in the title bar.</p>
+<h3>Also worth knowing</h3>
+<p>A bill or income can be skipped, overridden, ended, made a one-off or
+given a new amount from a month onward. Deleting offers two scopes: stop it
+here (earlier months keep it) or remove it everywhere.</p>
+<p>An admin can export a read-only viewer package for someone else to import
+from their sign-in screen. A viewer sees everything and changes nothing.</p>
 
 <hr>
 <h3>Keyboard</h3>
-<p>Tab or Right moves forward; Shift+Tab or Left moves back, wrapping at
-both ends. Up/Down walk table rows; Enter equals Space. Green outline:
-focused or hovered. Red outline: disabled. Nothing is highlighted on launch
-until the first keypress.</p>
+<p>Tab or Right goes forward, Shift+Tab or Left goes back, wrapping at both
+ends. Up and Down walk table rows. Enter does what Space does. A green
+outline means focused or hovered; a red one means disabled. Nothing is
+highlighted until your first keypress.</p>
 """
 
 
 class HowItWorksDialog(QDialog):
-    """Explains the calculations and concepts in plain English."""
+    """Names the icons, then explains the three rules behind the numbers."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -116,7 +145,7 @@ class HowItWorksDialog(QDialog):
 
         body = QTextBrowser()
         body.setOpenExternalLinks(True)
-        body.setHtml(_HOW_IT_WORKS_TEXT)
+        body.setHtml(_body_html())
         layout.addWidget(body)
         self._scroller = AutoScroller(body)
 

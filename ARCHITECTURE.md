@@ -854,10 +854,18 @@ bank statement. Both identities are tested.
 - `BalanceDialog` - edit current bank balance; opens with the figure focused
   and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
-- `HowItWorksDialog` - Help menu explanation of the concepts the screens
-  cannot say for themselves (pro-rating, the self-maintaining balance, Safe
-  to Spend Today, archiving, viewer packages); deliberately not a
-  button-by-button inventory, which was tried and read as a wall of text
+- `HowItWorksDialog` - two jobs in one page. It NAMES the furniture, each
+  entry led by the real icon the tray or the tab row draws, which the tabs
+  now need because their text labels became pictures. Then it states the three
+  rules the numbers rest on and that no screen can say for itself: how an
+  undated bill accrues, how the balance maintains itself, what Safe to Spend
+  Today promises. The tab icons are the BUNDLED IMAGES, inlined through the
+  same `find_tab_icon_path` the tab row uses rather than described in words or
+  approximated with a similar-looking emoji; an icon guide showing something
+  other than the icon is worse than none. Length is the recurring failure
+  here. A button-by-button inventory was tried and read as a wall of text;
+  the essay that replaced it explained every rejected design alongside the
+  shipped one. Anything a control says for itself is left to the control
 - `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text. The credits are
   two lists, not one: what is BUNDLED with the application (whose licences
   travel with the binary, which is what LGPL-3.0 compliance turns on) and what

@@ -53,11 +53,12 @@ def build_exe() -> int:
         # two look for; the repository ships it capitalised and PyInstaller
         # stages a file under whatever name it is given here.
         "--add-data=clearbudget_256.png:.",
-        # The multi-resolution ICO, for the Windows shell rather than for any
-        # code path in the app: it is what a shortcut and the Apps list point
-        # at. The installer also deploys its own copy (ops/registration), so
-        # this covers running straight out of dist-pyinstaller.
-        "--add-data=ClearBudget.ico:.",
+        # No ICO here on purpose. Nothing in the application ever asks for one:
+        # `find_app_icon_path` and `find_qt_window_icon_path` are called only by
+        # the SETUP program, which carries its own copy and deploys it beside
+        # ClearBudget.exe (`installer/ops/registration`), which is what the
+        # shortcut and the Apps list point at. An ICO staged here would be read
+        # by nobody.
         # The tab-strip artwork, read at runtime by ui/utils/tab_icons.
         "--add-data=monthlybudget.png:.",
         "--add-data=solvency.png:.",
