@@ -1477,9 +1477,14 @@ renderings of the same figures to hold in step. Every month any page shows
 - A chart plotting exactly ONE series takes ROLE colours instead of the series
   palette: the line light blue (`chart_line_colour_for`), the bars amber
   (`chart_bar_colour_for`) and the curve over those bars light blue
-  (`solo_curve_colour_for`). The bank graph plots one series; green there read
-  as a positive balance whatever the figures actually were, so the colour was
-  making a claim the data does not support. Light blue and amber carry no
+  (`solo_curve_colour_for`). The LINE is blue and carries no verdict, because
+  one stroke spans the whole month and green there read as a positive balance
+  over days that were not. A BAR is one day, so green is honest on it: a bar
+  fills green only where that day's value is at or above zero and keeps the
+  danger red below it, which is why the two marks take different colours from
+  the same rule. The bar green is the palette's own first entry and the app's
+  safe-state green; the collision is harmless because a solo chart and a
+  multi-series chart never appear together. Light blue and amber carry no
   such reading. The rule is keyed on series COUNT, not on which view opened the
   chart, so the credit-card graph (one series per card) keeps the palette,
   because telling the cards apart is the whole job of colour there; its curve

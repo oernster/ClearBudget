@@ -122,9 +122,10 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
     def _plot_colour(self, idx: int) -> QColor:
         """The colour series `idx` is ACTUALLY drawn in, for the current mode.
 
-        A single series takes a role colour: light blue as a line, amber as
-        bars. It used to take the palette's first entry, which was green;
-        green on a bank balance reads as "in credit" whether or not it is.
+        A single series takes a role colour: a deep blue as a line, green as
+        bars. The line stays neutral because one stroke spans a whole month,
+        so green there read as "in credit" over days that were not; a bar is
+        one day, so green states a fact about a day that really is.
         With several series the palette wins, because telling one card from
         another is the only job the colour has there.
         """
@@ -134,7 +135,7 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         return QColor(bar_colour if self._mode == MODE_BAR else line_colour)
 
     def _active_curve_colour(self) -> QColor:
-        """The curve's colour: light blue over a lone series, else its own hue."""
+        """The curve's colour: the line's blue alone, else its own hue."""
         _line, _bar, solo_curve = self._solo_colours
         return QColor(solo_curve if self._solo() else self._curve_colour)
 

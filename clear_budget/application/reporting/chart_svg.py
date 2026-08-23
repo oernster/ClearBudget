@@ -36,12 +36,13 @@ SERIES = ("#60a5fa", "#34d399", "#fbbf24", "#c084fc", "#22d3ee", "#fb923c")
 
 # Role colours for a chart plotting a SINGLE series, mirroring
 # CHART_LINE_DARK / CHART_BAR_DARK / SOLO_CURVE_DARK in ui.theme_tokens. With
-# one series nothing needs telling apart, so the mark says what it IS: a light
-# blue line for the running balance, amber bars for the individual days. Green
-# used to do both and read as "in credit" whatever the figure was. A
+# one series nothing needs telling apart, so the mark says what it IS: a deep
+# blue line for the running balance, green bars for the individual days. The
+# line stays neutral because it spans positive and negative days alike; a bar
+# is one day, so green states a fact about a day that really is in credit. A
 # below-zero bar still fills in ZERO_LINE's red.
-SOLO_LINE = "#7dd3fc"
-SOLO_BAR = "#fbbf24"
+SOLO_LINE = "#0ea5e9"
+SOLO_BAR = "#34d399"
 SOLO_CURVE = SOLO_LINE
 
 WIDTH = 880
@@ -144,7 +145,7 @@ class _Plot:
     def curve_colour(self) -> str:
         """The following curve's stroke.
 
-        Light blue over a lone series' amber bars; its own hue when several
+        The line's blue over a lone series' bars; its own hue when several
         series share the axis, where it must not read as one more of them.
         """
         return SOLO_CURVE if self.solo else CURVE
@@ -258,7 +259,7 @@ def _curve(plot: _Plot) -> list[str]:
 
 def _legend(plot: _Plot) -> list[str]:
     # The swatch has to be the colour actually drawn, which for one series
-    # differs between the two renderings: amber bars, a light blue line.
+    # differs between the two renderings: green bars, a deep blue line.
     mark = plot.bar_colour if plot.with_curve else plot.line_colour
     entries = [(mark(i), s.label) for i, s in enumerate(plot.series)]
     if plot.with_curve:

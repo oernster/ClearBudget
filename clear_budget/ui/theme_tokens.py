@@ -121,19 +121,29 @@ CURVE_LIGHT = "#a21caf"
 # ROLE colours, for a chart plotting a SINGLE series. With one series there is
 # nothing to tell apart, so the mark is free to say what it IS rather than
 # which series it is: a line reads as a running balance, bars read as one day
-# each. Green was the palette's first entry and it said "in credit" whatever
-# the figure actually was, which is exactly the wrong thing for a balance that
-# may be negative. Light blue carries no verdict.
+# each.
+#
+# The LINE is blue and carries no verdict, because it runs through positive
+# and negative days alike and must not flatter either. It was a pale sky blue
+# and is now a deeper one, which holds the eye against the bars it crosses in
+# bar mode rather than washing out over them.
+#
+# The BARS are green ONLY where the value is positive; a below-zero bar keeps
+# the danger red it has always had. That is why green is honest here where it
+# was not on the line: a green bar is drawn only on a day the account really
+# is in credit, so the colour states a fact about that day rather than a
+# verdict on the month. Green as the LINE's colour was the opposite, since one
+# stroke spanning a month said "in credit" over days that were not.
 #
 # These do NOT apply to a multi-series chart (one series per credit card),
 # where telling one card from another is the whole job and the palette does it.
-CHART_LINE_DARK = "#7dd3fc"
-CHART_LINE_LIGHT = "#0284c7"
-CHART_BAR_DARK = "#fbbf24"
-CHART_BAR_LIGHT = "#d97706"
+CHART_LINE_DARK = "#0ea5e9"
+CHART_LINE_LIGHT = "#075985"
+CHART_BAR_DARK = "#34d399"
+CHART_BAR_LIGHT = "#059669"
 
-# The single-series curve sits over amber bars, so it takes the same light blue
-# as the line. The multi-series curve keeps its own hue: with up to eight
+# The single-series curve follows the same days the line would, so it takes
+# the line's blue. The multi-series curve keeps its own hue: with up to eight
 # series on the axis it has to stay outside the palette or it reads as one
 # more card.
 SOLO_CURVE_DARK = CHART_LINE_DARK
