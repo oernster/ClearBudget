@@ -630,7 +630,7 @@ bank statement. Both identities are tested.
   install used to clip the year's last digit).
   `apply_nav_label_color` / `_nav_label_style` recolour the
   label; the colour is each month's OWN within-month solvency health (current
-  month from its live balance, a future month from its Forward Projection),
+  month from its live balance, a future month from its next-two-months block),
   computed once by the Solvency panel and broadcast to every tab via
   `SolvencyPanel.month_label_color_changed` so no tab can disagree. A month is
   red only when its own balance breaches the overdraft floor (below zero with no
@@ -714,7 +714,7 @@ bank statement. Both identities are tested.
   month in difficulty makes the healthy months look as though they have none
   and leaves nothing to compare a worsening month against. A month can close
   in credit while running at a loss, which is precisely what a closing balance
-  alone hides. The Overall Health line and every Forward Projection block
+  alone hides. The Overall Health line and every next-two-months block
   render that figure through ONE shared `_gap_clause()` helper
   (`_solvency_panel_narratives.py`), so the wording and the sign convention
   cannot drift apart between the two surfaces; each caller supplies its own

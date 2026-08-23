@@ -111,7 +111,7 @@ class SolvencyPanelLayoutMixin:
         self.gap_label = _line("SolvencyCommitted")
         layout.addWidget(self.gap_label)
 
-        layout.addWidget(_heading("Forward Projection"))
+        layout.addWidget(_heading("Next Two Months As Entered"))
         self.m1_projection_label = _projection_label()
         layout.addWidget(self.m1_projection_label)
         self.m2_projection_label = _projection_label()
@@ -191,7 +191,7 @@ class SolvencyPanelLayoutMixin:
         self.assumed_gaps_label = _line("SolvencyAssumedNote")
         layout.addWidget(self.assumed_gaps_label)
 
-        self.assumed_forward_heading = _heading("Forward Projection If This Repeats")
+        self.assumed_forward_heading = _heading("Next Two Months If This Repeats")
         layout.addWidget(self.assumed_forward_heading)
         # The months the bank page shows, walked again on the assumption. This
         # is the question the page is opened for: a bank page ending in an

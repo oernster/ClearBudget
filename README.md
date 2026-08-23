@@ -525,7 +525,7 @@ entered before these existed continues to do.
   you have none
 - **Mid-month alert**: detects temporary overdraft when bills cluster before the last income payment of the month
 - **Credit Card Status**: one progress bar per card showing current balance vs limit; projected month-end closing balance, charges, payment, interest, minimum due and net direction all shown inline
-- **Forward Projection**: day-by-day cashflow narrative for the next two months
+- **Next Two Months As Entered**: day-by-day cashflow narrative for the next two months
   including card state, each stating that month's low point and the day it
   falls on plus what it needs to hold flat; a dip within an agreed overdraft
   reads calmly, while going

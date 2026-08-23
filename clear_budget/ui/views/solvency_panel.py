@@ -44,10 +44,20 @@ _PAGE_PROJECTION = 2
 # button and the one for the page being read is hidden, so from anywhere each
 # other page is exactly one press away and the keyboard ring never stops on a
 # control that would do nothing.
+#
+# A button names its page by the ANSWER that page holds, not by the method it
+# used to get there. The third button said "projection", which named neither:
+# the bank page carries months ahead of its own built from what is entered, so
+# offering "projection" read as though those months were the assumed ones and
+# made the entered figures look provisional. Worse, it hid the one number most
+# often wanted behind a word nobody searches for. It names the figure now.
+#
+# That button leads the row for the same reason: "what can I spend" is the
+# question asked most, so its way there is the first control on the page.
 _PILOTS = (
     (_PAGE_BANK, "Switch to bank view"),
+    (_PAGE_PROJECTION, "Switch to safe to spend"),
     (_PAGE_CARDS, "Switch to credit cards"),
-    (_PAGE_PROJECTION, "Switch to projection"),
 )
 
 
