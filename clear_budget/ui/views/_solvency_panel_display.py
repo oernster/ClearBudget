@@ -106,44 +106,44 @@ class SolvencyPanelDisplayMixin:
                 if overdraft_limit_pence > 0
                 else facility_alert
             )
-            self.overdraft_alert.setText(
+            self.position_banner.setText(
                 f"CRITICAL: {fmt(abs(balance))} overdrawn{beyond_note}{deficit_note}"
             )
         elif report.balance_pence < 0:
-            self.overdraft_alert.setText(
+            self.position_banner.setText(
                 f"CAUTION: using {fmt(abs(balance))} of your "
                 f"{fmt(overdraft_limit_pence)} overdraft{deficit_note}"
             )
         elif overdrawn_next_month:
-            self.overdraft_alert.setText(
+            self.position_banner.setText(
                 f"CRITICAL: overdrawn in {next_month_name} - "
                 f"{fmt(balance)} left in savings{facility_alert}{deficit_note}"
             )
         elif monthly_deficit_pence > 0 and balance <= 500:
-            self.overdraft_alert.setText(
+            self.position_banner.setText(
                 f"CRITICAL: projected end of {month_name}: "
                 f"{fmt(balance)} - drawing down savings{deficit_note}"
             )
         elif balance <= 200:
-            self.overdraft_alert.setText(
+            self.position_banner.setText(
                 f"AT RISK: only {fmt(balance)} remaining{deficit_note}"
             )
         elif balance <= 500:
-            self.overdraft_alert.setText(
+            self.position_banner.setText(
                 f"CAUTION: {fmt(balance)} remaining{deficit_note}"
             )
         elif monthly_deficit_pence > 0:
-            self.overdraft_alert.setText(
+            self.position_banner.setText(
                 f"CAUTION: {fmt(balance)} after {month_name} bills{deficit_note}"
             )
         else:
-            self.overdraft_alert.setText(
+            self.position_banner.setText(
                 f"SAFE: {fmt(balance)} remaining after all {month_name} bills"
             )
         # The banner carries its state, not a colour: the theme stylesheet
         # supplies the fill, so it follows a light/dark switch on its own.
         states = theme.state_colours()
-        self.overdraft_alert.setProperty(
+        self.position_banner.setProperty(
             "state",
             self._state_key(
                 report.balance_pence,
@@ -152,7 +152,7 @@ class SolvencyPanelDisplayMixin:
                 overdraft_limit_pence,
             ),
         )
-        _repolish(self.overdraft_alert)
+        _repolish(self.position_banner)
 
         self.midmonth_alert.hide()
         if not is_current_month and summary and summary.income_sources:
@@ -321,7 +321,7 @@ class SolvencyPanelDisplayMixin:
         dipping only within a facility is amber.
 
         The CURRENT month is judged on its live/actual balance instead. It is
-        already underway, so its real trajectory (the Overdraft Status banner's
+        already underway, so its real trajectory (the Account Position banner's
         own verdict) is what counts, not a re-simulation of the whole month from
         a stale projected opening that would replay already-paid bills and dip
         it spuriously into the red.

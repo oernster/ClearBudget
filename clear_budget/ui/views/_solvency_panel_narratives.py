@@ -31,7 +31,7 @@ class SolvencyPanelNarrativeMixin:
     ) -> str:
         """Traffic-light colour for a month's own solvency state.
 
-        The single source of truth for both the Overdraft Status banner and the
+        The single source of truth for both the Account Position banner and the
         title-bar label. The red line is the agreed overdraft floor: the balance
         finishing below ``-overdraft_limit_pence`` is red. When no facility is
         defined the floor is zero, so this reduces to red-below-zero. Dipping

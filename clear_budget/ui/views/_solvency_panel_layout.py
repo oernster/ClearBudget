@@ -84,11 +84,20 @@ class SolvencyPanelLayoutMixin:
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(_heading("Overdraft Status"))
-        self.overdraft_alert = _line(
+        # NOT "Overdraft Status". An overdraft facility is optional and
+        # defaults to none, in which case this section is not reporting on one
+        # at all: it is saying whether the balance stays above zero. The old
+        # heading named a facility the reader may never have arranged, which
+        # made a healthy account look as though it were being measured against
+        # borrowing. "Account Position" is true in both cases, so the heading
+        # does not change under the reader when a facility is set later; it
+        # matches its four plain-spoken siblings on this tab rather than
+        # naming a product feature.
+        layout.addWidget(_heading("Account Position"))
+        self.position_banner = _line(
             "SolvencyBanner", f"SAFE: {fmt(0)} buffer", wrap=False
         )
-        layout.addWidget(self.overdraft_alert)
+        layout.addWidget(self.position_banner)
         self.midmonth_alert = _line("SolvencyMidmonthAlert")
         self.midmonth_alert.hide()
         layout.addWidget(self.midmonth_alert)

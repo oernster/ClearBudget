@@ -797,9 +797,21 @@ unrelated to what it had to hold.
   behind a word nobody goes looking for, which is why that button now leads
   the row. The button for the page being read is HIDDEN rather than disabled, so from
   anywhere each other page is one press away and the keyboard ring skips
-  the control that would do nothing. The bank page carries overdraft status,
+  the control that would do nothing. The bank page carries account position,
   overall health and the two forward months, all of it built from money
-  actually entered. The PROJECTION page carries the Safe to Spend
+  actually entered. Its first section is headed "Account Position" and NOT
+  "Overdraft Status": a facility is optional and defaults to none, so with
+  none arranged that section is not reporting on one at all, it is saying
+  whether the balance stays above zero against a floor of zero. The old
+  heading named a facility the reader may never have set up and made a
+  healthy account read as though it were being measured against borrowing.
+  The wording is true either way, so the heading does not move under the
+  reader when a facility is added later. The banner BODY still names the
+  overdraft, as it should: in a critical state "NO OVERDRAFT FACILITY" is the
+  fact that a payment bounces rather than drawing on something arranged.
+  Guarded by `tests/structural/test_solvency_headings.py`, which scans for
+  the WORD in any `_heading()` literal rather than pinning the replacement
+  copy, so the principle survives a future rewording. The PROJECTION page carries the Safe to Spend
   Today headline (rendered by
   `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` from
   `BudgetService.get_safe_to_spend`, which always repeats this month's
