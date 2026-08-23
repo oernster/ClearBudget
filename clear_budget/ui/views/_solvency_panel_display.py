@@ -75,8 +75,14 @@ class SolvencyPanelDisplayMixin:
         overdraft_limit_pence = (
             self.view_model.budget_service.get_overdraft_limit().pence
         )
+        # Sentence case, not capitals. The fact still has to be stated, since
+        # going under with nothing arranged means a payment bounces rather
+        # than drawing on a facility. The CRITICAL prefix already carries the
+        # alarm; shouting it a second time only made the line harder to read.
+        # "arranged" rather than "facility" because that is the word a bank
+        # uses when you ask for one.
         facility_alert = (
-            " - NO OVERDRAFT FACILITY" if overdraft_limit_pence == 0 else ""
+            ", with no overdraft arranged" if overdraft_limit_pence == 0 else ""
         )
         next_ym = report.year_month.next_month()
         next_month_name = MONTH_NAMES[next_ym.month]

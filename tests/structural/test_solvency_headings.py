@@ -10,8 +10,8 @@ measured against borrowing.
 The invariant is the PRINCIPLE, not the replacement wording, so this scans
 for the word rather than pinning the exact copy: a heading on the solvency
 pages may not name the overdraft. The banner BODY may and does, because in a
-critical state "NO OVERDRAFT FACILITY" is the fact that a payment will bounce
-rather than draw on something arranged. That is a statement about what has
+critical state ", with no overdraft arranged" is the fact that a payment will
+bounce rather than draw on something arranged. That is a statement about what has
 happened to the balance, not a label on a section the reader is browsing.
 
 Asserted by source scan because the suite is deliberately Qt-free (see

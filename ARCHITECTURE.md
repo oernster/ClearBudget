@@ -807,8 +807,10 @@ unrelated to what it had to hold.
   healthy account read as though it were being measured against borrowing.
   The wording is true either way, so the heading does not move under the
   reader when a facility is added later. The banner BODY still names the
-  overdraft, as it should: in a critical state "NO OVERDRAFT FACILITY" is the
-  fact that a payment bounces rather than drawing on something arranged.
+  overdraft, as it should: in a critical state ", with no overdraft arranged"
+  is the fact that a payment bounces rather than drawing on something
+  arranged. Sentence case, since the CRITICAL prefix already carries the
+  alarm and shouting it twice only cost the line its readability.
   Guarded by `tests/structural/test_solvency_headings.py`, which scans for
   the WORD in any `_heading()` literal rather than pinning the replacement
   copy, so the principle survives a future rewording. The PROJECTION page carries the Safe to Spend
