@@ -1286,6 +1286,14 @@ renderings of the same figures to hold in step. Every month any page shows
     purpose, since it plots nothing. Solvency draws the BANK series the Budget
     tab draws, because both tabs answer the same question about the same
     account and two tabs disagreeing would read as two accounts
+  - The graph icon is scaled by `tab_icons.TAB_IMAGE_SCALE`, the same factor
+    the three tab pictures take, because it is drawn INSIDE that run rather
+    than among the tray's emoji. Left at the tray's bare glyph height it
+    painted 46 tall against their 62 and its base sat 8px above theirs; a row
+    of icons that do not share a bottom edge reads as badly set rather than as
+    deliberately varied, which is the effect that constant exists to cure.
+    Verified by measuring every icon's bottom edge in window coordinates on
+    all three tabs that carry one
   - `build_centered_nav_header` SKIPS a None entry rather than passing it to
     `addWidget`. `build_graph_icon_button` returns None when the app icon
     cannot be resolved, so that a missing asset costs the tray one control

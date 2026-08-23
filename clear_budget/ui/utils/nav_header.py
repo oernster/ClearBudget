@@ -97,11 +97,25 @@ def build_graph_icon_button(glyph_height: int, on_click):
     being read. It belongs with the tabs it is sized against, so it is built
     here for the lower tray and returns None when the icon cannot be resolved,
     exactly as the decorative version did.
+
+    It takes the TAB run's image scale, not the tray's bare glyph height,
+    because it is drawn INSIDE that run, immediately after the Cards tab. The
+    three tab pictures are scaled up by `TAB_IMAGE_SCALE` to hold their own
+    optically beside the tray's emoji; this one was left at 1.0 from its days
+    in the upper tray, so it painted 46 tall against their 62 and its base sat
+    8px above theirs. A row of icons that do not share a bottom edge reads as
+    badly set rather than as deliberately varied, which is the very effect
+    `tab_icons` introduced that constant to cure. Imported inside the function
+    to keep the two modules' import order free of each other.
     """
+    from clear_budget.ui.utils.tab_icons import TAB_IMAGE_SCALE
+
     pixmap = _load_cropped_icon_pixmap()
     if pixmap is None:
         return None
-    return _build_icon_graph_button(pixmap, glyph_height, on_click)
+    return _build_icon_graph_button(
+        pixmap, round(glyph_height * TAB_IMAGE_SCALE), on_click
+    )
 
 
 def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
