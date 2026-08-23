@@ -251,9 +251,15 @@ class CreditCardView(
         # Archive was moved out of the tab run to the right-hand group,
         # so the ring has to walk it there. A ring that disagrees with the
         # drawing reads as a SKIPPED control, not as a wrong order.
+        #
+        # The card panels sit BEFORE the graph icon by decision (2026-08-24):
+        # the work of this tab is its cards, so the ring runs toggle, Edit,
+        # Delete per panel, then Add Card, then continues into the graph icon
+        # and the right-hand tray group. A task-flow override of the strict
+        # reading order, chosen deliberately.
         others = ring_tab_stops(self.tab_btns[:-1])
         archive_stop = ring_tab_stops(self.tab_btns[-1:])
-        card_buttons = [b for b in self.cards_container.findChildren(QPushButton)]
+        card_stops = list(getattr(self, "card_nav_stops", []))
         return [
             self.prev_btn,
             self.next_btn,
@@ -263,14 +269,25 @@ class CreditCardView(
             self.settings_btn,
             self.bank_btn,
             *others,
+            *card_stops,
+            self.add_btn,
             self.graph_btn,
             *archive_stop,
             self.theme_btn,
             self.info_btn,
-            *card_buttons,
-            self.add_btn,
             self.projection_table,
         ]
+
+    def nav_entry_stop(self):
+        """Where the ring is entered from neutral on this tab.
+
+        The first card's Active toggle: arriving on Credit Cards, the first
+        Tab lands on the first card rather than on the File menu, because the
+        cards are what the tab is opened for. With no cards yet, Add Card is
+        the one action the tab offers.
+        """
+        stops = getattr(self, "card_nav_stops", [])
+        return stops[0] if stops else self.add_btn
 
     def _get_status_text(self, utilization: float) -> str:
         """Get status text based on card utilization."""

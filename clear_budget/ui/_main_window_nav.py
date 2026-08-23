@@ -28,6 +28,7 @@ class MainWindowNavMixin:
             window=self,
             menubar=self.menuBar(),
             current_stops=self._current_nav_stops,
+            entry_stop=self._current_nav_entry,
         )
         self.tabs.currentChanged.connect(self._restore_neutral_focus)
 
@@ -45,8 +46,29 @@ class MainWindowNavMixin:
         is highlighted until the first Tab or Right enters the ring. Qt has
         already moved the focus by the time this signal arrives (measured, not
         assumed), so setting it here lands last and nothing overwrites it.
+
+        The menu-bar highlight is cleared too: a title left active from
+        before the switch outlives the focus move (the bar even reclaims
+        focus for it), so the ring would resume FROM the menu instead of
+        entering at the new view's declared entry stop.
         """
+        self.menuBar().setActiveAction(None)
         self._focus_sink.setFocus()
+
+    def _current_nav_entry(self):
+        """The active view's preferred ring entry point, else None.
+
+        The neutral start is untouched: nothing is highlighted on a switch.
+        This only decides where the FIRST Tab lands, so a view whose page is
+        what the tab is opened for (Solvency's page turn, a card's toggle)
+        puts the first press there rather than on the File menu.
+        """
+        index = self.tabs.currentIndex()
+        if not 0 <= index < len(self._tab_views):
+            return None
+        view = self._tab_views[index]
+        entry = view.nav_entry_stop if hasattr(view, "nav_entry_stop") else None
+        return entry() if callable(entry) else None
 
     def _current_nav_stops(self) -> list:
         index = self.tabs.currentIndex()

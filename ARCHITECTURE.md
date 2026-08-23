@@ -1134,7 +1134,36 @@ renderings of the same figures to hold in step. Every month any page shows
 - Each view's `nav_targets()` is the DECLARED ring order for its tab and it is
   READING order, which with two stacked trays means the UPPER tray first and
   the lower one after it, each left to right as drawn, then the page's own
-  controls. A ring that disagrees with the
+  controls. Two views override that with TASK-FLOW order by decision
+  (2026-08-24): Solvency places its visible pilot button just before the
+  Credit Cards tab (page turn, then next tab) and Credit Cards runs its card
+  panels (Active toggle, Edit, Delete per card) then Add Card between the
+  tab run and the graph icon, because the cards are what the tab is opened
+  for. Both overrides are deliberate and documented at the declaration.
+- A view may declare `nav_entry_stop()`: the control the FIRST Tab lands on
+  when the ring is entered from neutral (launch or a tab switch). Solvency
+  names its visible pilot; Credit Cards names the first card's Active toggle
+  (Add Card when there are no cards); Monthly Budget and Archive keep the
+  default menu-first entry. `MainWindow._current_nav_entry` hands the
+  navigator a callable and `KeyboardNavigator._entry` prefers the declared
+  stop on forward entry only; backward entry and every fallback keep the
+  ring's ends. The tab switch still restores the NEUTRAL sink (nothing is
+  highlighted); the entry stop decides only where the first press lands. The
+  switch handler also clears the menu-bar highlight, because a title left
+  active outlives the focus move (the bar even reclaims focus for it) and the
+  ring would resume from the menu instead of entering at the declared stop.
+  Wiring held by `tests/structural/test_nav_entry_invariants.py`; behaviour
+  by an offscreen probe
+- Turning a Solvency page (`_show_page`) hands focus to the surviving pilot,
+  the one that reverts, so flicking between the two readings costs one key
+  per flick; at build time the panel is not yet visible and the neutral
+  start stands
+- The card Active toggle is a QCheckBox drawn as a pill-and-knob slider
+  (`switch_images.py`, the spin-arrow image pattern: generated per theme
+  colour into the app data directory, because a checkbox indicator has no
+  knob subcontrol for QSS to draw). Its ring stays the widget's own border
+  (hover/focus green, disabled red), because a widget-state-then-subcontrol
+  selector is parsed and silently ignored A ring that disagrees with the
   drawing does not present as a wrong order, it presents as a SKIPPED control,
   because the user tabs past where a button visibly is and lands somewhere
   else. Two of the four declarations were already one pair out (the graph
@@ -1254,10 +1283,14 @@ renderings of the same figures to hold in step. Every month any page shows
   The current tab is dropped from the ring declaration (`ring_tab_stops`)
   rather than disabled, because a disabled control paints the permanent red
   ring and would read as broken rather than as current
-- The current tab is marked with the accent border the selected pill used to
-  carry, through a dynamic property plus a repolish (`mark_current_tab`), never
-  an inline stylesheet: an inline colour survives a theme switch and leaves the
-  mark painted in the outgoing theme
+- The current tab is marked with a panel fill plus an accent UNDERLINE,
+  through a dynamic property plus a repolish (`mark_current_tab`), never an
+  inline stylesheet: an inline colour survives a theme switch and leaves the
+  mark painted in the outgoing theme. It was a full accent rectangle once;
+  at 2px the accent teal is indistinguishable from the ring green, so on
+  launch the current tab read as though it were hover-focused. Rectangles are
+  the ring vocabulary (green hover/focus, red disabled); the mark keeps to a
+  fill and an underline so the two can never be confused
 
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`

@@ -57,12 +57,20 @@ _WIDGET = "widget"
 class KeyboardNavigator(QObject):
     """Single explicit focus ring for the main window plus dialog arrow keys."""
 
-    def __init__(self, *, window, menubar, current_stops) -> None:
-        """current_stops is a callable returning the active tab's widgets."""
+    def __init__(self, *, window, menubar, current_stops, entry_stop=None) -> None:
+        """current_stops is a callable returning the active tab's widgets.
+
+        entry_stop, when given, is a callable naming the widget the ring is
+        entered AT from a neutral start (launch or a tab switch): a view may
+        put the first Tab on the control its tab is opened for rather than on
+        the File menu. A None or a widget not currently on the ring falls
+        back to the ring's first stop.
+        """
         super().__init__(window)
         self._window = window
         self._menubar = menubar
         self._current_stops = current_stops
+        self._entry_stop = entry_stop
         QApplication.instance().installEventFilter(self)
 
     # ---- ring construction --------------------------------------------------
@@ -121,9 +129,23 @@ class KeyboardNavigator(QObject):
             return
         index = self._current_index(stops)
         if index < 0:
-            self._goto(stops[0 if delta > 0 else -1], delta)
+            self._goto(self._entry(stops, delta), delta)
             return
         self._goto(stops[(index + delta) % len(stops)], delta)
+
+    def _entry(self, stops: list, delta: int):
+        """The stop the ring is entered at from a neutral start.
+
+        Forward entry prefers the active view's declared entry stop when it
+        is on the ring; backward entry and every fallback keep the old ends.
+        """
+        if delta > 0 and self._entry_stop is not None:
+            preferred = self._entry_stop()
+            for stop in stops:
+                kind, target = stop
+                if kind != _MENU and target is preferred:
+                    return stop
+        return stops[0 if delta > 0 else -1]
 
     # ---- event filter -------------------------------------------------------
     def eventFilter(self, obj, event) -> bool:

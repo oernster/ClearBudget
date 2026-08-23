@@ -65,6 +65,76 @@ TABLE_ITEM_VPADDING_PX = 4
 TEXT_BREATHING_PX = 4
 
 
+def _card_toggle_qss(t: dict[str, str]) -> str:
+    """The card Active toggle as a pill-and-knob slider (see switch_images).
+
+    Lives here rather than in the per-surface builders because generating the
+    images needs a QApplication, which the pure string builders must not: the
+    highlight rule is testable Qt-free precisely because they touch no Qt.
+    The ring stays the widget's own border (hover/focus green, disabled red,
+    the three-state model), because a widget-state-then-subcontrol selector
+    (`QCheckBox:focus::indicator`) is parsed and then silently ignored.
+    """
+    from clear_budget.ui.switch_images import switch_size, switch_url
+
+    width, height = switch_size()
+    on_url = switch_url(track=t["ring"], knob=t["primary_text"], on=True)
+    off_url = switch_url(track=t["border"], knob=t["primary_text"], on=False)
+    on_off_urls_disabled = (
+        switch_url(track=t["border"], knob=t["text_disabled"], on=True),
+        switch_url(track=t["border"], knob=t["text_disabled"], on=False),
+    )
+    ring_radius = height // 2 + 2
+    return f"""
+QCheckBox#CardActiveToggle {{
+    border: 2px solid transparent;
+    border-radius: {ring_radius}px;
+}}
+
+QCheckBox#CardActiveToggle:enabled:hover {{
+    border-color: {t["ring"]};
+}}
+
+QCheckBox#CardActiveToggle:enabled:focus {{
+    border-color: {t["ring"]};
+}}
+
+QCheckBox#CardActiveToggle:disabled {{
+    border-color: {t["danger"]};
+}}
+
+QCheckBox#CardActiveToggle::indicator {{
+    width: {width}px;
+    height: {height}px;
+    border: none;
+    border-radius: {height // 2}px;
+    background: transparent;
+}}
+
+QCheckBox#CardActiveToggle::indicator:checked {{
+    image: url({on_url});
+    background: transparent;
+}}
+
+QCheckBox#CardActiveToggle::indicator:unchecked {{
+    image: url({off_url});
+    background: transparent;
+}}
+
+QCheckBox#CardActiveToggle::indicator:unchecked:hover {{
+    border: none;
+}}
+
+QCheckBox#CardActiveToggle::indicator:checked:disabled {{
+    image: url({on_off_urls_disabled[0]});
+}}
+
+QCheckBox#CardActiveToggle::indicator:unchecked:disabled {{
+    image: url({on_off_urls_disabled[1]});
+}}
+"""
+
+
 def build_qss(t: dict[str, str], s: dict[str, str]) -> str:
     """Render the whole app stylesheet from chrome tokens `t` and states `s`."""
     base_pt = round(14 * ui_scale.factor())
@@ -272,4 +342,5 @@ QCheckBox:enabled:focus {{
     color: {t["accent"]};
 }}
 
+{_card_toggle_qss(t)}
 {menu_qss(t)}"""

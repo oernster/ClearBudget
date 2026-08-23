@@ -39,6 +39,11 @@ class CreditCardViewLoaderMixin:
     """load_cards and _build_card_frame for CreditCardView."""
 
     def load_cards(self) -> None:
+        # The ring order over the card panels, rebuilt with them: toggle,
+        # Edit, Delete per card, in the order the panels are drawn. Declared
+        # rather than discovered (findChildren order is construction order,
+        # which silently omitted the toggles entirely).
+        self.card_nav_stops = []
         while self.cards_layout.count():
             taken = self.cards_layout.takeAt(0)
             widget = taken.widget()
@@ -222,6 +227,10 @@ class CreditCardViewLoaderMixin:
 
         header = QHBoxLayout()
         active_cb = QCheckBox()
+        # The object name selects the slider styling: the on/off state is
+        # drawn as a pill-and-knob switch (see switch_images.py), not the
+        # square tick box a selection mark gets.
+        active_cb.setObjectName("CardActiveToggle")
         active_cb.setToolTip("Active")
         active_cb.setChecked(card.active == 1)
         active_cb.setEnabled(not self.read_only)
@@ -264,6 +273,8 @@ class CreditCardViewLoaderMixin:
             )
         )
         header.addWidget(delete_btn)
+
+        self.card_nav_stops += [active_cb, edit_btn, delete_btn]
 
         outer.addLayout(header)
 

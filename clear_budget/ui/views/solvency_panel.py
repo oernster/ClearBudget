@@ -1,6 +1,6 @@
 """Solvency panel widget - displays financial health status and warnings."""
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
@@ -160,10 +160,23 @@ class SolvencyPanel(
         self.setLayout(layout)
 
     def _show_page(self, index: int) -> None:
-        """Show one reading and hide the button that would return to it."""
+        """Show one reading and hide the button that would return to it.
+
+        The surviving pilot (the one that reverts) takes focus when the
+        switch happens on a visible panel: turning the page moves the reader
+        to a control that is one press from turning it back, so flicking
+        between the two readings costs one key per flick (decided
+        2026-08-24). At build time the panel is not yet visible and the
+        window's neutral start stands.
+        """
         self.pages.setCurrentIndex(index)
+        revert = None
         for page_index, button in self.pilot_btns.items():
             button.setVisible(page_index != index)
+            if page_index != index:
+                revert = button
+        if revert is not None and self.isVisible():
+            revert.setFocus(Qt.FocusReason.TabFocusReason)
 
     def on_show_graph(self) -> None:
         """Open the month graph for the viewed month's bank balance.
@@ -212,7 +225,16 @@ class SolvencyPanel(
         # Archive was moved out of the tab run to the right-hand group,
         # so the ring has to walk it there. A ring that disagrees with the
         # drawing reads as a SKIPPED control, not as a wrong order.
-        others = ring_tab_stops(self.tab_btns[:-1])
+        #
+        # The visible pilot button sits just BEFORE the Credit Cards tab by
+        # decision (2026-08-24): entering this tab, the first Tab lands on
+        # the pilot (see nav_entry_stop) and the next press continues to
+        # Credit Cards, so the tab's own page turn and the next tab are the
+        # first two stops. A task-flow override of the strict reading order,
+        # chosen deliberately; the hidden pilot is skipped by the ring's own
+        # visibility filter.
+        before_tabs = ring_tab_stops(self.tab_btns[:2])
+        cards_tab = ring_tab_stops(self.tab_btns[2:3])
         archive_stop = ring_tab_stops(self.tab_btns[-1:])
         return [
             self.prev_btn,
@@ -222,13 +244,26 @@ class SolvencyPanel(
             self.budgets_btn,
             self.settings_btn,
             self.bank_btn,
-            *others,
+            *before_tabs,
+            *self.pilot_btns.values(),
+            *cards_tab,
             self.graph_btn,
             *archive_stop,
             self.theme_btn,
             self.info_btn,
-            *self.pilot_btns.values(),
         ]
+
+    def nav_entry_stop(self):
+        """Where the ring is entered from neutral on this tab.
+
+        The visible pilot button: arriving on Solvency, the first Tab lands
+        on the page turn (usually "Switch to safe to spend"), because the
+        other reading is what this tab is most often opened for.
+        """
+        for button in self.pilot_btns.values():
+            if not button.isHidden():
+                return button
+        return None
 
     def connect_signals(self) -> None:
         """Connect ViewModel signals to view updates."""
