@@ -62,7 +62,10 @@ SOURCE_PNG = "ClearBudget.png"
 ICON_BG = (0x0A, 0x0A, 0x0D)
 
 # Per-resolution PNGs bundled so the runtime QIcon lookup resolves, plus the
-# Windows-style assets carried for parity with the EXE build.
+# Windows-style assets carried for parity with the EXE build. The three
+# tab-strip images are in this list rather than a second one because they are
+# staged the same way and read through the same resource lookup; splitting
+# them would be two lists to keep in step with one packaging step.
 BUNDLED_ICONS = [
     "ClearBudget_16.png",
     "ClearBudget_32.png",
@@ -73,6 +76,9 @@ BUNDLED_ICONS = [
     "ClearBudget_512.png",
     "ClearBudget.png",
     "ClearBudget.ico",
+    "monthlybudget.png",
+    "solvency.png",
+    "creditcards.png",
 ]
 
 DEVELOPER_ID = os.environ.get(

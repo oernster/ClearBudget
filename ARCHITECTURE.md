@@ -676,8 +676,14 @@ bank statement. Both identities are tested.
   to current vs future month; composed of mixins (builders, table, edit, delete,
   apply-prompt) to stay under the LOC limit
 - `SolvencyPanel` - three pages in a `QStackedWidget`: bank, cards and
-  projection. Each has a pilot button naming it as a destination and the
-  button for the page being read is HIDDEN rather than disabled, so from
+  projection. Each has a pilot button naming the ANSWER that page holds rather
+  than the method behind it, which is why the third button reads "Switch to
+  safe to spend" and not "Switch to projection": the bank page carries months
+  ahead of its OWN, built from what is entered, so a button offering
+  "projection" read as though those were the assumed months and made the
+  entered figures look provisional. It also hid the figure most often wanted
+  behind a word nobody goes looking for, which is why that button now leads
+  the row. The button for the page being read is HIDDEN rather than disabled, so from
   anywhere each other page is one press away and the keyboard ring skips
   the control that would do nothing. The bank page carries overdraft status,
   overall health and the two forward months, all of it built from money
@@ -1023,6 +1029,33 @@ bank statement. Both identities are tested.
 - `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
   for the Credit Cards tab
 
+**Tab icons** (`ui/utils/tab_icons.py`):
+- The four primary tabs carry a picture and no text; the text moved to the
+  tooltip, so the strip still names itself on hover and nothing was lost but
+  four labels wide enough to push the strip across the window
+- Three are bundled PNG masters (`monthlybudget.png`, `solvency.png`,
+  `creditcards.png`, resolved by `shared.resources.find_tab_icon_path` through
+  the same candidate roots as every other asset) and the fourth is an emoji.
+  Those are different KINDS of image sized by different rules, so both are
+  reduced to one question, how tall the thing actually PAINTS, answered by
+  measuring opaque pixels in each case (`glyph_metrics`)
+- An image is cropped to its opaque content, then fitted to a square box by its
+  LONGER side. By height instead, the landscape card artwork would have come
+  out half again as wide as its neighbours and read as the strip's most
+  important tab rather than its third
+- The emoji is sized by HEIGHT to the full box, the opposite of
+  `nav_header.TOGGLE_GLYPH_SCALE`; the difference is the glyph rather than
+  the rule: a sun is a solid disc that looks heavy at equal size, a filing
+  cabinet is line work with space in it and looks light. Optical weight is
+  what the eye compares
+- A tab whose icon cannot be built keeps its label as visible text. A missing
+  asset costs the strip its looks, never a route into the tab
+- The keyboard model is untouched by any of this: every tab is still its own
+  stop, `NavTabBar` still paints the cursor ring on the pill geometry imported
+  from `theme_qss`, with the three-state ring re-measured on the icon tabs
+  in both themes (0 ring pixels at rest, ~420 on the cursor tab, the selected
+  pill keeping its accent border)
+
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
   - File menu: New Budget, then Load / Save / Save As (Save goes to the
@@ -1032,6 +1065,11 @@ bank statement. Both identities are tested.
   - Settings menu (adjacent to File): Preferences, Bank Account
   - Users menu: Switch User for every account; admins also get Manage Users
     (list, Add User, Delete Selected)
+  - Every tray glyph is drawn at `nav_header.NAV_GLYPH_SCALE` of the Previous
+    button's height rather than matching it. One number, applied inside
+    `nav_glyph_height`, so the app icon, the sun/moon toggle and the five icon
+    buttons can only ever be resized together; at full height the tray was the
+    heaviest band on the window, above a tab strip that is now pictograms too
   - Every tab's nav tray mirrors the common actions as icon buttons, built by
     `_save_load_flow.build_save_load_buttons` / `build_settings_bank_buttons` /
     `build_info_button` and sized against the app-icon button: folder (Load)

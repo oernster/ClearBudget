@@ -123,8 +123,8 @@ what is deliberately left and what only looks like debt.
   month rather than being deleted, so every month it really did arrive in
   keeps it. Deleting income offers the same two scopes bills have, stop from
   the viewed month or delete entirely
-- Safe to Spend Today: the headline of the Solvency tab's Projection page is
-  the single number you could spend today while every month that still stands
+- Safe to Spend Today: the headline of the Solvency tab's Safe to Spend page
+  is the single number you could spend today while every month that still stands
   on its own keeps standing. It lives there rather than beside your entered
   figures because it is a promise about months that have not happened: it
   counts the income this month has as arriving again in every later month with
@@ -143,8 +143,8 @@ what is deliberately left and what only looks like debt.
   the same stretch the headline promises, so waiting never conjures money a
   later month needs back; a month whose figure never moves shows nothing
   rather than repeating the headline
-- If the months ahead are like this one: a Projection page, reached by its own
-  button, says what the picture looks like if the income you entered
+- If the months ahead are like this one: a Safe to Spend page, reached by a
+  button naming that figure, says what the picture looks like if the income you entered
   for this month arrives again in every later month that has no entry of that
   name. Months ahead usually look poorer than they are simply because their
   ad hoc income has not been typed in yet, so a reading that counts only what
@@ -238,8 +238,13 @@ what is deliberately left and what only looks like debt.
 
 ## Application Tabs
 
+The four primary tabs carry a picture rather than a name: a calendar and cash
+for Monthly Budget, a shield over coins for Solvency, a pair of cards for Credit
+Cards and a filing cabinet for Archive. Hovering one names it; the keyboard ring
+still stops on each tab in turn.
+
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
-- **Solvency** - three pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the credit cards page carries the per-card utilisation bars and the same two months per card; the projection page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
+- **Solvency** - three pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the credit cards page carries the per-card utilisation bars and the same two months per card; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
@@ -480,7 +485,7 @@ entered before these existed continues to do.
 
 ## Solvency Panel
 
-- **Safe to Spend Today** (on the Projection page): the headline number, the
+- **Safe to Spend Today** (on the Safe to Spend page): the headline number, the
   most you could spend today while every month that currently survives still
   survives (buffer £20 by default, editable in Settings > Bank Account, zero
   if you want to plan to the wire). It sits on that page because the figure
@@ -505,7 +510,7 @@ entered before these existed continues to do.
   figure down, which is often in a LATER month: that is the point of it, since
   a bigger balance later this month does not mean a bigger balance to spend
   when September has to survive too
-- **Projection page**: Safe to Spend Today and its schedule, then the
+- **Safe to Spend page**: Safe to Spend Today and its schedule, then the
   assumption they rest on, then the months ahead run on it. The assumption is
   that income entered for this month arrives again in any later month with no
   entry of that name; the page states that outright rather than leaving you to

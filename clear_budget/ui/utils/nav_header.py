@@ -58,6 +58,13 @@ def _load_cropped_icon_pixmap():
 
 # Nav-icon height used when there is no Previous button to measure against.
 _FALLBACK_ICON_PX = 24
+# Every tray glyph is drawn at this fraction of the Previous button's height.
+# The buttons used to match that height exactly, which made the tray the
+# heaviest band on the window: seven pictograms at text-row height, above a
+# tab strip that is now pictograms too. Scaled down they read as chrome
+# rather than as content. Applied once inside `nav_glyph_height`, so the app
+# icon, the sun/moon toggle and the five icon buttons cannot drift apart.
+NAV_GLYPH_SCALE = 0.75
 # The nav icon buttons' chrome: 2px padding plus 2px border on each side (see
 # QPushButton#NavGraphButton in _theme_controls). Added to the glyph height it
 # gives every emoji tray button the same overall size as the app-icon button;
@@ -83,11 +90,17 @@ TOGGLE_GLYPH_SCALE = 0.8
 def nav_glyph_height(prev_btn) -> int:
     """The height every glyph in the nav tray is sized to.
 
-    One source for both the app icon and the theme toggle, taken from the
-    Previous button so the row reads as a single band. They are built in
-    different functions, so deriving it twice is how they drifted apart.
+    One source for the app icon, the theme toggle and every icon button in the
+    tray, taken from the Previous button so the row reads as a single band.
+    They are built in different functions, so deriving it twice is how they
+    drifted apart.
+
+    `NAV_GLYPH_SCALE` is applied HERE rather than at each call site for the
+    same reason: it is the one number the whole tray reads, so the icons can
+    only ever be resized together.
     """
-    return prev_btn.sizeHint().height() if prev_btn is not None else _FALLBACK_ICON_PX
+    base = prev_btn.sizeHint().height() if prev_btn is not None else _FALLBACK_ICON_PX
+    return max(1, round(base * NAV_GLYPH_SCALE))
 
 
 def _build_icon_graph_button(icon_pixmap, icon_height, on_click):

@@ -236,6 +236,8 @@ modules:
       # main.py resolves its runtime tray/window icon as clearbudget_256.png
       # beside itself (see _find_runtime_icon), so stage it under that name.
       - cp ClearBudget_256.png /app/share/clearbudget/clearbudget_256.png
+      # The tab-strip artwork, read at runtime by ui/utils/tab_icons.
+      - cp monthlybudget.png solvency.png creditcards.png /app/share/clearbudget/
       - install -Dm644 ClearBudget_16.png  /app/share/icons/hicolor/16x16/apps/${APP_ID}.png
       - install -Dm644 ClearBudget_32.png  /app/share/icons/hicolor/32x32/apps/${APP_ID}.png
       - install -Dm644 ClearBudget_48.png  /app/share/icons/hicolor/48x48/apps/${APP_ID}.png
@@ -268,6 +270,12 @@ modules:
         path: ClearBudget_256.png
       - type: file
         path: ClearBudget_512.png
+      - type: file
+        path: monthlybudget.png
+      - type: file
+        path: solvency.png
+      - type: file
+        path: creditcards.png
       - type: dir
         path: clear_budget
         dest: clear_budget

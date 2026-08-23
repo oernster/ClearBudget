@@ -55,7 +55,7 @@ QTabBar {{
 QTabBar::tab {{
     background-color: transparent;
     color: {t["text_muted"]};
-    padding: 9px 22px;
+    padding: 9px 14px;
     margin-right: {TAB_MARGIN_RIGHT_PX}px;
     margin-bottom: {TAB_MARGIN_BOTTOM_PX}px;
     border: {TAB_BORDER_PX}px solid transparent;
