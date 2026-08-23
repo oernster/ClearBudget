@@ -169,35 +169,24 @@ class SolvencyPanelDisplayMixin:
         )
         _repolish(self.position_banner)
 
+        # The dip and its wording live in _solvency_panel_midmonth, which also
+        # explains why the line reads its state against the agreed overdraft
+        # floor rather than against zero.
         self.midmonth_alert.hide()
-        if not is_current_month and summary and summary.income_sources:
-            income_days = [
-                (i.day_of_month or 1, i.amount.pence) for i in summary.income_sources
-            ]
-            max_income_day = max(d for d, _ in income_days)
-            if max_income_day > 1:
-                starting_pence = (
-                    report.balance_pence
-                    - summary.total_income.pence
-                    + summary.bank_bills.pence
-                )
-                early_income = sum(
-                    amt for day, amt in income_days if day < max_income_day
-                )
-                early_bills = sum(
-                    b.amount.pence
-                    for b in summary.bills
-                    if b.payment_method_id == 1
-                    and (b.day_of_month or 28) < max_income_day
-                )
-                mid_balance = starting_pence + early_income - early_bills
-                if mid_balance < 0:
-                    self.midmonth_alert.setText(
-                        f"Critical: overdrawn {fmt(abs(mid_balance))} "
-                        f"before day-{max_income_day} income"
-                        f" - rescued day {max_income_day}{facility_alert}"
-                    )
-                    self.midmonth_alert.show()
+        dip = (
+            self._midmonth_dip(report, summary)
+            if not is_current_month and summary
+            else None
+        )
+        if dip is not None:
+            shortfall_pence, income_day = dip
+            text, state = self._midmonth_alert_text(
+                shortfall_pence, income_day, overdraft_limit_pence
+            )
+            self.midmonth_alert.setText(text)
+            self.midmonth_alert.setProperty("state", state)
+            _repolish(self.midmonth_alert)
+            self.midmonth_alert.show()
 
         self.balance_label.setText(f"Projected Balance: {fmt(balance)}")
 

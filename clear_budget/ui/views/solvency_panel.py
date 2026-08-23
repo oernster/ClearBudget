@@ -28,6 +28,9 @@ from clear_budget.ui.widgets._save_load_flow import (
 from clear_budget.ui.views._solvency_panel_assumed import SolvencyPanelAssumedMixin
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
 from clear_budget.ui.views._solvency_panel_layout import SolvencyPanelLayoutMixin
+from clear_budget.ui.views._solvency_panel_midmonth import (
+    SolvencyPanelMidmonthMixin,
+)
 from clear_budget.ui.views._solvency_panel_forward import SolvencyPanelForwardMixin
 from clear_budget.ui.views._solvency_panel_narratives import (
     SolvencyPanelNarrativeMixin,
@@ -66,6 +69,7 @@ class SolvencyPanel(
     SolvencyPanelAssumedMixin,
     SolvencyPanelDisplayMixin,
     SolvencyPanelLayoutMixin,
+    SolvencyPanelMidmonthMixin,
     SolvencyPanelForwardMixin,
     SolvencyPanelNarrativeMixin,
     SolvencyPanelSafeToSpendMixin,

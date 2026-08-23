@@ -197,6 +197,11 @@ QLabel#SolvencyBanner[state="{STATE_SAFE}"] {{
     background-color: {s[STATE_SAFE]};
 }}
 
+/* The mid-month dip line carries its state the same way the banner does, so
+   a dip that stays inside an arranged overdraft is not painted in the red
+   reserved for a bounced payment. The base rule keeps the strong danger fill
+   as the fallback: the line is hidden unless there IS a dip, so the worse
+   reading is the safer default if a state ever fails to resolve. */
 QLabel#SolvencyMidmonthAlert {{
     font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
     font-weight: bold;
@@ -204,6 +209,14 @@ QLabel#SolvencyMidmonthAlert {{
     border-radius: 5px;
     background-color: {t["danger_strong"]};
     color: {t["primary_text"]};
+}}
+
+QLabel#SolvencyMidmonthAlert[state="{STATE_RED}"] {{
+    background-color: {s[STATE_RED]};
+}}
+
+QLabel#SolvencyMidmonthAlert[state="{STATE_AT_RISK}"] {{
+    background-color: {s[STATE_AT_RISK]};
 }}
 
 QLabel#SolvencySectionHeading {{

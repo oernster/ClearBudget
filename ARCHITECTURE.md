@@ -817,6 +817,21 @@ unrelated to what it had to hold.
   capitals reads as an alarm even in the Safe case, which is the one state
   that should read calmly. The palette key underneath is untouched, so
   the stylesheet and the traffic-light colours are unaffected.
+- The MID-MONTH line beneath the banner (`_solvency_panel_midmonth.py`) reads
+  its state the same way, against the agreed overdraft floor rather than
+  against zero: a dip that stays inside an arranged facility is a Caution,
+  since the facility exists to absorb it, while a dip beyond it (or any dip
+  when none is arranged) is Critical, since that is a payment bouncing. It
+  used to call every dip Critical, so a dip well inside an arranged overdraft
+  was reported in the words of a bounced payment. It carries its state as a
+  Qt property and lets the stylesheet supply the fill, exactly as the banner
+  does; without that the strip kept its fixed danger red and a line reading
+  "Caution" would have sat on a red field, moving the mismatch rather than
+  fixing it. The base rule keeps the strong danger fill as the fallback,
+  because the line only appears when there IS a dip, so the worse reading is
+  the safer default if a state ever fails to resolve. The income day is named
+  ONCE ("until the day-25 income lands"); it appeared twice in nine words
+  before ("before day-25 income - rescued day 25")
   Guarded by `tests/structural/test_solvency_headings.py`, which scans for
   the WORD in any `_heading()` literal rather than pinning the replacement
   copy, so the principle survives a future rewording. The PROJECTION page carries the Safe to Spend
