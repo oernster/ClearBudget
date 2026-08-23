@@ -4,7 +4,7 @@ Split out of `nav_header` to keep both modules clear of the 400-line cap and
 its danger band (`tests/structural/test_loc_limits.py`). One cohesive concern
 lives here: how a two-faced emoji button is sized so that neither face looks
 wrong beside the icon next to it. Every public name is re-exported by
-`nav_header`, and thence by `format_helpers`, so no call site moved.
+`nav_header`, thence by `format_helpers`, so no call site moved.
 """
 
 # The nav-icon height used when there is no Previous button to measure

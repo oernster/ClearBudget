@@ -145,7 +145,7 @@ class ArchiveView(QWidget):
         visibly is and lands somewhere else entirely.
 
         The tab being shown is not in the list. It is a stop that could do
-        nothing, and it is dropped here rather than disabled, because a
+        nothing, dropped here rather than disabled, because a
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """

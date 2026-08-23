@@ -16,7 +16,7 @@ class MainWindowNavMixin:
     """Neutral start and keyboard-ring setup for MainWindow."""
 
     def _setup_keyboard_nav(self, tab_views: list) -> None:
-        """Install the navigator over the menu bar, tab bar and tab views."""
+        """Install the navigator over the menu bar and the tab views."""
         self._tab_views = tab_views
         self._focus_sink = QWidget(self)
         self._focus_sink.setFixedSize(0, 0)
@@ -25,7 +25,6 @@ class MainWindowNavMixin:
         self._navigator = KeyboardNavigator(
             window=self,
             menubar=self.menuBar(),
-            tabbar=self.tabs.tabBar(),
             current_stops=self._current_nav_stops,
         )
 

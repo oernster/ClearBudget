@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
@@ -25,7 +25,6 @@ from clear_budget.ui.views.month_view import MonthView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
 from clear_budget.ui.update_check import UpdateCheckController
 from clear_budget.ui.utils.tab_icons import mark_current_tab
-from clear_budget.ui.widgets.nav_tab_bar import NavTabBar
 from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 
 if TYPE_CHECKING:
@@ -102,18 +101,11 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.tabs = QTabWidget()
-        # A tab bar whose keyboard cursor is separate from its selection, so
-        # stepping the focus ring into the strip never switches tab.
-        self.tabs.setTabBar(NavTabBar())
-        self.tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
-        self.tabs.tabBar().setExpanding(False)
-        # The tabs are styled as detached pills, so Qt's base line under the
-        # whole bar would read as a stray rule (it ignores QSS drawBase).
-        self.tabs.tabBar().setDrawBase(False)
-        # The strip itself is HIDDEN. The four tabs are icon buttons in each
-        # view's navigation tray, so a bar above them would be a second, empty
-        # copy of the same control. The QTabWidget is kept for what it is
-        # actually good at, owning the pages and switching between them.
+        # The bar is HIDDEN and stays that way. The four tabs are icon buttons
+        # in each view's navigation tray, so a strip above them would be a
+        # second, empty copy of the same control. The QTabWidget is kept for
+        # what it is actually good at, owning the pages and switching between
+        # them; nothing styles or navigates the bar, because nobody sees it.
         self.tabs.tabBar().hide()
 
         month_view = MonthView(self.month_view_model, read_only=self.read_only)
@@ -195,7 +187,7 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         """Point every view's tab buttons at the pages and keep them in step.
 
         Every view carries its OWN four buttons, because every view builds its
-        own tray. They all drive the one QTabWidget, and every set is marked
+        own tray. They all drive the one QTabWidget; every set is marked
         together on each switch, so the tab you are on is marked whichever
         tray you happen to be looking at.
         """

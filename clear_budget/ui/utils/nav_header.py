@@ -200,9 +200,9 @@ def build_centered_nav_header(
       then Next. Nothing else is in it, so it is centred on the window by its
       own emptiness rather than by balancing anything.
     * TRAY 2 carries everything that acts on the application: the `leading`
-      widgets (load and save, a separator, Preferences and Bank Account), then
+      widgets (load, save, Preferences, Bank Account and a separator), then
       the `tabs` (the four primary tabs, which live here rather than in a strip
-      of their own), and at the FAR RIGHT the sun/moon toggle (`theme_btn`)
+      of their own), then at the FAR RIGHT the sun/moon toggle (`theme_btn`)
       followed by the `trailing` widgets (How It Works).
 
     `icon_action`, when given, turns the tray icon into a tabbable month-graph
@@ -224,10 +224,10 @@ def build_centered_nav_header(
     align_v = Qt.AlignmentFlag.AlignVCenter
 
     # TRAY 1: the month cluster, alone. A stretch either side is enough to
-    # centre it exactly, and it is the whole reason this is now two trays: a
+    # centre it exactly. It is the whole reason this is now two trays: a
     # single row with the icon run in it could only centre the cluster by
     # reserving that run's width again on the empty side, which does not fit
-    # at the window's own width floor and cost the cluster its characters
+    # at the window's own width floor. It cost the cluster its characters
     # ("Previous" came out as "Previo"). Give the cluster a row of its own and
     # the arithmetic disappears rather than being balanced.
     month_tray = _bordered_tray()

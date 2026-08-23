@@ -984,7 +984,7 @@ bank statement. Both identities are tested.
   bar the current tab, which is correctly not a stop. That measurement is a PROBE rather than a test, because the
   suite is Qt-free by design and ring order is geometry
 - One application-level `KeyboardNavigator` event filter drives an explicit
-  focus ring: menu-bar titles, the tab bar, then the active tab's stops (each
+  focus ring: menu-bar titles, then the active tab's stops (each
   view's `nav_targets()`), recomputed live so disabled or hidden stops are
   skipped (a disabled Previous at the base month simply drops out)
 - Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
@@ -1005,28 +1005,22 @@ bank statement. Both identities are tested.
   focus being trapped. The stop paints the same green ring on focus and none at
   rest (measured: 0 pixels at rest, ~2980 focused, both themes), with no hover
   rule, since the pointer sits over the page most of the time the app is open
-- EVERY TAB IS A STOP on the ring, not the strip as a whole. Tab and Shift+Tab
-  walk the tabs in visual order and only leave the strip once there are none
-  left in that direction, so on Credit Cards with the cursor on Archive,
-  Shift+Tab reaches Solvency. Treating the strip as one stop sent that keypress
-  out to the menu bar and made the tab order wrong. The ring ENTERS at the side
-  it arrives from, leftmost tab going forward and rightmost coming back, rather
-  than beside the current tab: entering beside it meant a forward pass could
-  only ever reach the tabs to its right and the rest of the strip needed a
-  turn round. Two walks back this: `_tab_cursor.next_candidate` wraps and
-  belongs to Up and Down, the strip's own keys; `next_candidate_bounded` stops
-  at the ends and belongs to Tab, since wrapping there would trap the ring in
-  the tab bar for ever
-- The tab strip's cursor is SEPARATE from its selection (`NavTabBar`). Qt ties
-  a `QTabBar`'s focus to its current tab, so a plainly focused bar can only
-  ring the tab the user is already on, which is a dead stop. `NavTabBar` holds
-  its own cursor instead: the tab already showing is never a candidate and
-  only Enter or Space commits a switch. Stepping the ring therefore never
-  changes which tab is shown. The
-  cursor paints the green ring itself, on the pill geometry imported from
-  `theme_qss` (`TAB_MARGIN_*`, `TAB_BORDER_PX`, `TAB_RADIUS_PX`) so the ring
-  cannot drift from the pill; verified by matching its rendered pixel box
-  against the selected pill's border box
+- EVERY TAB IS A STOP on the ring, which now costs nothing to say: the
+  tabs are ordinary buttons in the navigation tray, so each is a stop like any
+  other. Walking the ring moves focus and switches nothing; Enter or Space
+  commits. The tab already showing is dropped from the declaration
+  (`ring_tab_stops`) rather than disabled, since a disabled control paints the
+  permanent red ring and would read as broken rather than as current
+- This used to need a `QTabBar` subclass, `NavTabBar`, carrying a keyboard
+  cursor separate from the bar's selection, plus a pair of walking helpers in
+  `_tab_cursor` (one wrapping for Up and Down, one bounded for Tab so the ring
+  could not be trapped in the strip) and a cursor ring painted by hand on the
+  pill geometry the stylesheet drew. All of it existed to work around one Qt
+  behaviour: a `QTabBar` ties its focus to its CURRENT tab, so a focused bar
+  can only ring the tab the user is already on, which is a dead stop. A button
+  carries no such tie. When the tabs moved into the tray the whole mechanism
+  became unreachable and was deleted rather than left as a hidden bar nobody
+  drives
 - Submenus keep Qt's native horizontal arrows: inside an open menu, Right on
   a submenu item (File > Import / Export) enters it with its first item
   active and Left inside a submenu exits back to the parent item; on plain
@@ -1070,7 +1064,7 @@ bank statement. Both identities are tested.
   asset costs the strip its looks, never a route into the tab
 - The tabs are BUTTONS in the navigation tray (`build_tab_buttons`), not a
   `QTabBar`. The `QTabWidget` is kept for what it is good at, owning the pages
-  and switching between them, and its bar is hidden. Every view builds its own
+  and switching between them; its bar is hidden. Every view builds its own
   four buttons because every view builds its own tray; `MainWindow` wires them
   all to the one tab widget and marks the current tab on every set at once, so
   the mark is right whichever tray is on screen
@@ -1249,16 +1243,14 @@ bank statement. Both identities are tested.
   object name instead of an inline stylesheet, which is what lets a live
   theme switch restyle it: `label_roles.set_role` repolishes when a severity
   role changes at runtime (a balance turning from good to danger)
-- The primary tabs are pills: unselected are transparent and quiet, the
-  selected one takes a panel fill with an accent border and hover gives the
-  green ring. There is deliberately NO `QTabBar::tab:selected:focus` rule:
-  the green ring belongs to `NavTabBar`'s keyboard cursor, which paints it on
-  whichever tab the cursor sits on and a focus rule on the selected pill
-  would put a second green ring on the strip. (If one is ever reinstated, the
-  subcontrol must come first: `QTabBar::tab:selected:focus` works while the
-  widget-state-first form `QTabBar:focus::tab:selected` is silently ignored by
-  Qt.) `MainWindow` sets `tabBar().setDrawBase(False)` because Qt ignores
-  drawBase from a stylesheet and would draw a rule under the strip
+- The tab strip carries no rules at all: the bar is hidden and the tabs are
+  `QPushButton#NavTabButton` in the tray, styled in `_theme_controls` with the
+  rest of the tray. `_theme_tabs` is down to the pane, the card the tab
+  CONTENT sits on. One Qt fact is worth keeping from what was deleted, because
+  it costs an afternoon to rediscover: in a subcontrol focus rule the
+  subcontrol must come FIRST (`QTabBar::tab:selected:focus` works, while the
+  widget-state-first `QTabBar:focus::tab:selected` is parsed and then silently
+  ignored, no warning and no effect)
 - Spin-box arrows are IMAGES, generated per colour (`spin_arrows.py`), not CSS
   triangles. Qt's stylesheet engine does not implement the `width: 0` plus
   transparent-side-borders idiom: it honours the zero size, draws nothing and
@@ -1507,13 +1499,12 @@ an option that read as "remove my data" removed nothing.
 - The suite is Qt-free: fragile widget-level PySide6 tests (which needed a
   `QApplication` and were flaky) have been removed
 - Pure UI-layer logic is still covered without Qt under `tests/ui_logic`,
-  thirteen modules covering the Solvency month-colour rule and its low-point
+  twelve modules covering the Solvency month-colour rule and its low-point
   line (by instantiating the mixins directly), the spendable headline's reach
   and shortfall sentences, the projection page's gap specification,
   the income one-off and edit-scope rules, the bill amount-change entry,
-  inline edits, the tab-strip keyboard cursor, highlight colour, theme and
-  save-location persistence, the skipped-update record and the window-geometry
-  arithmetic. What lands here is logic a widget happens to host, extracted far
+  inline edits, highlight colour, theme and save-location persistence, the
+  skipped-update record and the window-geometry arithmetic. What lands here is logic a widget happens to host, extracted far
   enough from Qt to be asserted on: where a mixin's method reads a widget, the
   state arrives as an argument instead so the decision can be made without a
   `QApplication`

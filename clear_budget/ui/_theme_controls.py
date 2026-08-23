@@ -198,7 +198,7 @@ QPushButton#ThemeToggleButton:disabled {{
    Marked through a dynamic property rather than an inline stylesheet, so a
    live theme switch repaints it (see tab_icons.mark_current_tab, which
    repolishes). The property selector needs the value quoted; Qt matches it as
-   a string, and an unquoted true silently never matches. */
+   a string, so an unquoted true silently never matches. */
 QPushButton#NavTabButton {{
     background: transparent;
     border: 2px solid transparent;

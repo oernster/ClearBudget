@@ -215,7 +215,7 @@ what is deliberately left and what only looks like debt.
   steps back (wrapping); Up/Down walk table rows; Enter equals Space; focus
   and hover show a green ring, disabled controls a red one; nothing is focused
   on launch until the first keypress
-- The tab strip is walked tab by tab in the order shown and marking a tab
+- The tabs are walked one at a time in the order shown and stepping onto a tab
   never switches to it: Enter or Space does that. The tab you are already
   reading is skipped
 - The page itself is the last stop on each tab whenever it has more content

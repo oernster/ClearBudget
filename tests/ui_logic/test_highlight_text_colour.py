@@ -1,18 +1,21 @@
 """Qt-free tests for one app-wide rule: highlight text is teal, never green.
 
 Green belongs to the RING, the border that says where the pointer or the
-keyboard is. The words inside that ring take the accent, the same colour the
-selected tab shows. Painting the text in the ring's own green made a hovered
-tab read as a second, slightly different selection sitting next to the real
-one, two greens a few degrees apart on the same strip.
+keyboard is. The words inside that ring take the accent. Painting the text in
+the ring's own green made a hovered tab read as a second, slightly different
+selection sitting next to the real one, two greens a few degrees apart on the
+same strip.
 
-The rule is not about the tab bar. It covers every surface where a green ring
-goes round text, so the menu bar and menu items are held to it as well; a fix
-scoped to the one place it was noticed would drift apart again.
+The rule was never about the tab bar, which is exactly why it outlived it. The
+strip that provoked it is gone, the tabs being icon buttons in the navigation
+tray now, yet the rule still binds every surface where a green ring goes round
+TEXT: the menu bar and the menu items, which is what is asserted below. The
+tab buttons carry no text, so there is nothing there for this rule to govern;
+their ring and their current-tab mark are held by `_theme_controls` instead.
 
 Asserted against the stylesheet these surfaces generate rather than a rendered
 widget, for two measured reasons: a hover state cannot be forced through
-`QWidget.render` (the hovered pill draws unhovered), and the whole-sheet
+`QWidget.render` (the hovered surface draws unhovered), plus the whole-sheet
 `build_qss` cannot run here at all, since it resolves the system font and
 generates the spin-box arrow images, both of which need a live QApplication.
 The rules under test come from pure string builders that touch no Qt.
@@ -23,22 +26,18 @@ import re
 import pytest
 
 from clear_budget.ui._theme_menus import menu_qss
-from clear_budget.ui._theme_tabs import tab_qss
 from clear_budget.ui.theme_tokens import THEME_DARK, THEME_LIGHT, tokens_for
 
 _THEMES = (THEME_DARK, THEME_LIGHT)
 
 # Selector -> the builder whose sheet carries it.
 _HIGHLIGHTS = {
-    "QTabBar::tab:!selected:hover": tab_qss,
-    "QTabBar::tab:selected": tab_qss,
     "QMenuBar::item:selected": menu_qss,
     "QMenu::item:selected": menu_qss,
 }
 
 # The highlights that put a green ring round the text: border and text differ.
 _RINGED = (
-    "QTabBar::tab:!selected:hover",
     "QMenuBar::item:selected",
     "QMenu::item:selected",
 )

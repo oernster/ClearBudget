@@ -14,27 +14,18 @@ from clear_budget.ui import ui_scale
 from clear_budget.ui._theme_controls import control_qss, widget_extras_qss
 from clear_budget.ui._theme_inputs import combo_qss, input_qss
 from clear_budget.ui._theme_menus import menu_qss
-from clear_budget.ui._theme_tabs import (
-    TAB_BAR_LEFT_INSET_PX,
-    TAB_BORDER_PX,
-    TAB_MARGIN_BOTTOM_PX,
-    TAB_MARGIN_RIGHT_PX,
-    TAB_RADIUS_PX,
-    tab_qss,
-)
+from clear_budget.ui._theme_tabs import TAB_BAR_LEFT_INSET_PX, tab_qss
 
 SCROLLBAR_WIDTH_PX = 8
 
-# The tab pill geometry lives in _theme_tabs beside the rules that use it and
-# is re-exported here, because NavTabBar and the keyboard-nav tests have always
-# imported it from this module.
+# TAB_BAR_LEFT_INSET_PX is re-exported from _theme_tabs, where it sits beside
+# the rule that uses it. The pill geometry that used to be re-exported here
+# (margins, border width, corner radius) went with NavTabBar: it existed so the
+# cursor ring could be painted on exactly the pill the stylesheet drew; there
+# is no longer a pill or a cursor.
 __all__ = [
     "SCROLLBAR_WIDTH_PX",
     "TAB_BAR_LEFT_INSET_PX",
-    "TAB_BORDER_PX",
-    "TAB_MARGIN_BOTTOM_PX",
-    "TAB_MARGIN_RIGHT_PX",
-    "TAB_RADIUS_PX",
     "build_qss",
 ]
 

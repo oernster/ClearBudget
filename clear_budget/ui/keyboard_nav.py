@@ -1,16 +1,18 @@
 """Application-wide keyboard navigation - the Meridian ring for widgets.
 
 One event filter drives a single explicit focus ring: the menu-bar titles,
-then the tab bar, then the active tab's stops (each view's nav_targets()).
-Tab and Right step forward, Shift+Tab and Backtab and Left step back, both
-wrapping, and the horizontal arrows are tested first so they step the ring
-everywhere: out of an open menu, out of a table, out of the tab bar. Up and
-Down stay internal to a stop that owns them (a table walks its rows, the tab
-bar walks its keyboard cursor); Enter and Space activate. The tab strip's
-cursor is deliberately separate from its selection, so stepping through the
-strip never switches tab: entering it lands on the next tab that is not the
-one already showing, and only Enter or Space commits the switch. Inside an
-open menu the toolkit
+then the active tab's stops (each view's nav_targets()). Tab and Right step
+forward, Shift+Tab and Backtab and Left step back, both wrapping; the
+horizontal arrows are tested first so they step the ring everywhere, out of an
+open menu or out of a table. Up and Down stay internal to a stop that owns
+them, such as a table walking its rows; Enter and Space activate.
+
+There is no tab-bar case here any more. The four tabs are ordinary buttons in
+each view's navigation tray, so each is a stop like any other: walking the
+ring moves focus and switches nothing, Enter or Space commits. That used to
+need a QTabBar subclass carrying its own cursor, because Qt ties a tab bar's
+focus to its CURRENT tab and a focused bar could therefore only ever ring the
+tab the user was already on. Inside an open menu the toolkit
 keeps two horizontal-arrow cases: Right on a submenu item enters the submenu
 and Left inside a submenu exits back to its parent; every other Left/Right
 still steps the ring. Inside a modal dialog the same arrows walk the dialog's
@@ -48,7 +50,6 @@ _TEXT_ENTRY_TYPES = (
 )
 
 _MENU = "menu"
-_TABS = "tabs"
 _TABLE = "table"
 _WIDGET = "widget"
 
@@ -56,12 +57,11 @@ _WIDGET = "widget"
 class KeyboardNavigator(QObject):
     """Single explicit focus ring for the main window plus dialog arrow keys."""
 
-    def __init__(self, *, window, menubar, tabbar, current_stops) -> None:
+    def __init__(self, *, window, menubar, current_stops) -> None:
         """current_stops is a callable returning the active tab's widgets."""
         super().__init__(window)
         self._window = window
         self._menubar = menubar
-        self._tabbar = tabbar
         self._current_stops = current_stops
         QApplication.instance().installEventFilter(self)
 
@@ -72,11 +72,6 @@ class KeyboardNavigator(QObject):
             for action in self._menubar.actions()
             if action.isVisible() and action.isEnabled()
         ]
-        # Only while it is SHOWN. The tabs moved into the navigation tray as
-        # ordinary buttons and the bar is hidden, so it would otherwise be a
-        # stop the user can neither see nor act on.
-        if self._tabbar.isVisible():
-            stops.append((_TABS, self._tabbar))
         for widget in self._current_stops():
             if widget is None or not (widget.isEnabled() and widget.isVisible()):
                 continue
@@ -119,10 +114,6 @@ class KeyboardNavigator(QObject):
         # bar keeps eating the arrows as native menu navigation.
         self._menubar.setActiveAction(None)
         target.setFocus(Qt.FocusReason.TabFocusReason)
-        if kind == _TABS:
-            # The tab already showing is not a stop, so the cursor enters on
-            # the next one along in whichever direction the ring is moving.
-            target.enter_cursor(delta)
 
     def _step(self, delta: int) -> None:
         stops = self._stops()
@@ -131,13 +122,6 @@ class KeyboardNavigator(QObject):
         index = self._current_index(stops)
         if index < 0:
             self._goto(stops[0 if delta > 0 else -1], delta)
-            return
-        kind, target = stops[index]
-        # Every TAB is a stop, not the strip as a whole: stepping back from
-        # Archive reaches Solvency rather than leaving for the menu bar. The
-        # strip reports when it has run out of tabs in that direction, and only
-        # then does the ring move on to the next stop.
-        if kind == _TABS and target.step_cursor(delta):
             return
         self._goto(stops[(index + delta) % len(stops)], delta)
 
@@ -190,15 +174,6 @@ class KeyboardNavigator(QObject):
                 return False
             self._step(1 if key in _FORWARD_KEYS else -1)
             return True
-
-        if key in (Qt.Key.Key_Up, Qt.Key.Key_Down) and focus is self._tabbar:
-            # The cursor moves; the shown tab does not change until it is
-            # committed, so walking the strip never switches under the user.
-            self._tabbar.move_cursor(1 if key == Qt.Key.Key_Down else -1)
-            return True
-
-        if key in _ACTIVATE_KEYS + (Qt.Key.Key_Space,) and focus is self._tabbar:
-            return self._tabbar.commit_cursor()
 
         if (
             key in _ACTIVATE_KEYS

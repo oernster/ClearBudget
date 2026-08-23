@@ -18,7 +18,7 @@ Two deliberate asymmetries survive that:
 * an image is fitted by its HEIGHT and then scaled up slightly, rather than
   fitted to a square box by its longer side. By the longer side the calendar
   came out 42 tall and the cards 35 against the emoji's 46, so the pictures
-  sat visibly small beside the glyphs and, worse, their BASES sat high: a row
+  sat visibly small beside the glyphs and worse, their BASES sat high: a row
   of icons that do not share a bottom edge reads as badly set rather than as
   differently sized. Fitting by height puts every icon on one baseline by
   construction. It does let the landscape card artwork run wider than its
@@ -51,7 +51,7 @@ TAB_ICON_PX = 26
 TAB_IMAGE_SCALE = 1.35
 # The archive glyph paints this multiple of the box's height, matched to
 # TAB_IMAGE_SCALE rather than left at the tray's own 1.0. Held equal on
-# purpose: the three pictures grew past the tray's emoji, and an archive glyph
+# purpose: the three pictures grew past the tray's emoji; an archive glyph
 # left behind at the smaller size stopped reading as their peer and started
 # reading as the runt of the four. It is a tab first and an emoji second.
 TAB_EMOJI_SCALE = TAB_IMAGE_SCALE
@@ -71,7 +71,7 @@ TAB_SPECS = (
     (CREDIT_CARDS_ICON, "Credit Cards"),
     (ARCHIVE_ICON, "Archive"),
 )
-# QSS hooks: the object name carrying the three-state ring rules, and the
+# QSS hooks: the object name carrying the three-state ring rules, plus the
 # dynamic property the stylesheet reads to mark the tab being shown.
 TAB_BUTTON_ROLE = "NavTabButton"
 TAB_CURRENT_PROPERTY = "currentTab"
