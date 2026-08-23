@@ -741,6 +741,25 @@ holding each budget's slug and display name plus which one is active.
   - `set_month()` fetches new month summary before refreshing
   - `update_month_summary()` called after balance edits via `month_summary_updated`
 
+**A tab is refreshed by the data it shows, not by the tab it sits on.**
+`month_summary_updated` fires on EVERY change to the month's bills and income; it
+drives both `SolvencyViewModel.update_month_summary` and
+`CreditCardView.on_month_summary_updated`. The card tab needs it because its
+figures are owned by another tab's data: a card's Payment Received, its closing
+balance and the six-month strip are all computed from the `credit_payment` bill
+that pays it; that bill is created and edited on Monthly Budget. Nothing on
+the Credit Cards tab moves when that happens; switching tabs does not
+recompute anything (`tabs.currentChanged` only marks the current tab), so
+without this connection the tab showed figures calculated when the window was
+built: a card paid off monthly projected a balance climbing past its own limit,
+with Payment Received reading zero beside the bill paying it. Neither number was
+wrong when calculated; neither was calculated again.
+`CreditCardView.set_month` deliberately does NOT reload, because
+`MonthViewModel.set_month` emits `month_changed` and THEN refreshes the summary,
+so reloading there would be the first of two for one month change. The wiring
+is held by `tests/structural/test_cross_tab_refresh.py`, a source scan rather
+than a widget test because the suite is Qt-free.
+
 **Views**:
 - `MonthView` - bill/income tables with inline editing; balance display adapts
   to current vs future month; composed of mixins (builders, table, edit, delete,

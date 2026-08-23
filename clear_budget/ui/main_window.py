@@ -148,6 +148,13 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         self.month_view_model.month_summary_updated.connect(
             self.solvency_view_model.update_month_summary
         )
+        # The card panels and the six-month strip are driven by the month's
+        # bills, which are edited on a DIFFERENT tab, so they need the same
+        # summary signal Solvency already takes. Without it the Credit Cards
+        # tab showed whatever was true when the window was built.
+        self.month_view_model.month_summary_updated.connect(
+            credit_card_view.on_month_summary_updated
+        )
 
         solvency_panel.prev_btn.clicked.connect(self.month_view_model.previous_month)
         solvency_panel.next_btn.clicked.connect(self.month_view_model.next_month)

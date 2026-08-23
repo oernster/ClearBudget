@@ -169,9 +169,30 @@ class CreditCardView(
             self.add_btn.setEnabled(False)
 
     def set_month(self, year_month: YearMonth) -> None:
-        """Update displayed month and refresh."""
+        """Update the displayed month. The reload follows on the summary.
+
+        This does NOT call `load_cards` itself. `MonthViewModel.set_month`
+        emits `month_changed` and then refreshes the summary, so a reload here
+        would be the first of two for one month change. The month is set first,
+        which matters: `load_cards` reads `current_month`.
+        """
         object.__setattr__(self, "current_month", year_month)
         self._refresh_month_label()
+
+    def on_month_summary_updated(self, _summary) -> None:
+        """Recompute the panels and the projection when the month's data changes.
+
+        A card's Payment Received and its whole projection are driven by a
+        `credit_payment` bill, which is created and edited on the Monthly
+        Budget tab. Nothing on THIS tab changes when that happens, so without
+        this the panels kept whatever was true when the window was built: a
+        card paid off every month still projected a balance climbing past its
+        limit; Payment Received sat at zero beside the bill paying it.
+
+        The summary is ignored. It arrives because the signal carries it and
+        because being told the month's data moved is the whole message; the
+        card figures are read from the service, not from the summary.
+        """
         self.load_cards()
 
     def _refresh_month_label(self) -> None:
