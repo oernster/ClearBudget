@@ -61,13 +61,17 @@ def _figures(totals) -> str:
     return f'<dl class="figures">{items}</dl>'
 
 
-def month_report_html(*, title: str, subtitle: str, series) -> str:
+def month_report_html(
+    *, title: str, subtitle: str, series, floor_pence: int = 0
+) -> str:
     """Render one month's graph as a standalone HTML document.
 
     Args:
         title: Page heading, e.g. "Bank balance, March 2026".
         subtitle: A line under it saying which account or cards are plotted.
         series: The GraphSeries the dialog is showing.
+        floor_pence: the arranged overdraft, so an exported bar inside it
+            reads amber exactly as it does on screen. Zero means no facility.
     """
     plotted = list(series)
     if not plotted or not plotted[0].values:
@@ -77,6 +81,9 @@ def month_report_html(*, title: str, subtitle: str, series) -> str:
     totals = daily_totals([s.values for s in plotted])
     labels = _day_labels(len(plotted[0].values))
     named = ", ".join(escape(s.label) for s in plotted)
+    # The bar rendering is the only one that reads the overdraft floor: bars
+    # carry a per-day fill, while the line is one stroke through every day.
+    bar_svg = chart_svg(plotted, mode="bar", labels=labels, floor_pence=floor_pence)
     body = (
         "<section>\n"
         f"{_figures(totals)}\n"
@@ -84,7 +91,7 @@ def month_report_html(*, title: str, subtitle: str, series) -> str:
         "</section>\n"
         "<section>\n<h2>Day by day</h2>\n"
         f"<p>{escape(_BAR_TEXT)}</p>\n"
-        f'<figure>{chart_svg(plotted, mode="bar", labels=labels)}</figure>\n'
+        f"<figure>{bar_svg}</figure>\n"
         "</section>\n"
         "<section>\n<h2>The month's path</h2>\n"
         f"<p>{escape(_LINE_TEXT)}</p>\n"

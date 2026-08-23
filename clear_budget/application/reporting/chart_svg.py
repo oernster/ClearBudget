@@ -44,6 +44,11 @@ SERIES = ("#60a5fa", "#34d399", "#fbbf24", "#c084fc", "#22d3ee", "#fb923c")
 SOLO_LINE = "#0ea5e9"
 SOLO_BAR = "#34d399"
 SOLO_CURVE = SOLO_LINE
+# A day below zero but inside an ARRANGED overdraft, mirroring
+# CHART_BAR_WITHIN_DARK. The facility is there to absorb that day, so red
+# would say a payment bounced when none did; red stays for a day past the
+# agreed floor. With no facility the floor is zero and this never appears.
+SOLO_BAR_WITHIN = "#f59e0b"
 
 WIDTH = 880
 HEIGHT = 380
@@ -91,8 +96,11 @@ def _money(pence: int) -> str:
 class _Plot:
     """The plotting area and the value-to-pixel mapping for one chart."""
 
-    def __init__(self, series, *, with_curve: bool) -> None:
+    def __init__(self, series, *, with_curve: bool, floor_pence: int = 0) -> None:
         self.series = list(series)
+        # How far below zero a bar may sit before it reads as red. Zero (no
+        # arranged overdraft) means every below-zero bar is red, as before.
+        self.floor_pence = -abs(int(floor_pence))
         self.days = len(self.series[0].values)
         self.totals = daily_totals([s.values for s in self.series])
         self.with_curve = with_curve
@@ -137,6 +145,12 @@ class _Plot:
     def bar_colour(self, index: int) -> str:
         """The fill for a positive bar of series `index`."""
         return SOLO_BAR if self.solo else self.colour(index)
+
+    def day_bar_colour(self, index: int, value: int) -> str:
+        """Three-state fill for one day: in credit, inside the overdraft, past it."""
+        if value >= 0:
+            return self.bar_colour(index)
+        return SOLO_BAR_WITHIN if value >= self.floor_pence else ZERO_LINE
 
     def line_colour(self, index: int) -> str:
         """The stroke for the plotted line of series `index`."""
@@ -200,7 +214,6 @@ def _bars(plot: _Plot) -> list[str]:
     zero_y = plot.y_at(0)
     parts = []
     for index, series in enumerate(plot.series):
-        colour = plot.bar_colour(index)
         for day in range(1, plot.days + 1):
             value = series.values[day - 1]
             y = plot.y_at(value)
@@ -211,9 +224,9 @@ def _bars(plot: _Plot) -> list[str]:
                 + bar_width * index
             )
             top, height = (y, zero_y - y) if value >= 0 else (zero_y, y - zero_y)
-            # A below-zero day fills in the zero line's red, matching the
-            # on-screen chart: an overdrawn stretch must read as a warning.
-            bar_fill = ZERO_LINE if value < 0 else colour
+            # Three states, matching the on-screen chart exactly: see
+            # _Plot.day_bar_colour.
+            bar_fill = plot.day_bar_colour(index, value)
             parts.append(
                 f'<rect x="{x:.1f}" y="{top:.1f}" width="{bar_width:.1f}" '
                 f'height="{max(0.0, height):.1f}" fill="{bar_fill}"/>'
@@ -281,16 +294,18 @@ def _legend(plot: _Plot) -> list[str]:
     return parts
 
 
-def chart_svg(series, *, mode: str, labels) -> str:
+def chart_svg(series, *, mode: str, labels, floor_pence: int = 0) -> str:
     """Render `series` as one SVG chart.
 
     Args:
         series: GraphSeries to plot; every one must have the same length.
         mode: "bar" or "line", matching the on-screen graph's two renderings.
         labels: (index, text) pairs for the x axis, 1-based like the days.
+        floor_pence: the arranged overdraft, so a bar inside it reads amber
+            rather than red. Zero means no facility, the previous behaviour.
     """
     with_curve = mode == "bar"
-    plot = _Plot(series, with_curve=with_curve)
+    plot = _Plot(series, with_curve=with_curve, floor_pence=floor_pence)
     body = _grid(plot)
     body += _bars(plot) if with_curve else _lines(plot)
     body += _zero_line(plot)

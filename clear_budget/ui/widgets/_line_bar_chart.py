@@ -72,12 +72,13 @@ def _active_palette():
 
 
 def _solo_palette():
-    """Role colours for a chart plotting a single series: (line, bar, curve)."""
+    """Role colours for one plotted series: (line, bar, curve, bar-in-facility)."""
     from PySide6.QtWidgets import QApplication
 
     from clear_budget.ui import theme
     from clear_budget.ui.theme_tokens import (
         chart_bar_colour_for,
+        chart_bar_within_facility_colour_for,
         chart_line_colour_for,
         solo_curve_colour_for,
     )
@@ -87,6 +88,7 @@ def _solo_palette():
         chart_line_colour_for(name),
         chart_bar_colour_for(name),
         solo_curve_colour_for(name),
+        chart_bar_within_facility_colour_for(name),
     )
 
 
@@ -100,6 +102,7 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         self._hover = None
         self._tokens, self._colours, self._curve_colour = _active_palette()
         self._solo_colours = _solo_palette()
+        self._overdraft_limit_pence = 0
         self.setMinimumHeight(ui_scale.px(260))
         # Hover readouts need move events without a button held down.
         self.setMouseTracking(True)
@@ -110,6 +113,32 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         self._mode = mode
         self._hover = None
         self.update()
+
+    def set_overdraft_limit_pence(self, limit_pence: int) -> None:
+        """The arranged overdraft a bar may dip into before it reads as red.
+
+        Zero, the default, means no facility: the floor is zero and every
+        below-zero bar is red, which is what the chart did before there was
+        anything to tell it otherwise. A card chart never sets this, since an
+        overdraft is a bank arrangement and a card has its own limit.
+        """
+        self._overdraft_limit_pence = max(0, int(limit_pence))
+        self.update()
+
+    def _bar_colour_for(self, value_pence: int, colour: QColor) -> QColor:
+        """Three-state fill for one day's bar, read against the agreed floor.
+
+        At or above zero the day is in credit and keeps the series colour.
+        Below zero but no further than the arranged overdraft it is amber: the
+        facility is there to absorb that day, so red would say a payment
+        bounced when none did. Past the floor it is red, where one would.
+        """
+        if value_pence >= 0:
+            return colour
+        _line, _bar, _curve, within = self._solo_colours
+        if value_pence >= -self._overdraft_limit_pence:
+            return QColor(within)
+        return QColor(self._tokens["danger"])
 
     def _series_colour(self, idx: int) -> QColor:
         """Return the palette colour for series `idx`, cycling the palette."""
@@ -129,14 +158,14 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         With several series the palette wins, because telling one card from
         another is the only job the colour has there.
         """
-        line_colour, bar_colour, _curve = self._solo_colours
+        line_colour, bar_colour, _curve, _within = self._solo_colours
         if not self._solo():
             return self._series_colour(idx)
         return QColor(bar_colour if self._mode == MODE_BAR else line_colour)
 
     def _active_curve_colour(self) -> QColor:
         """The curve's colour: the line's blue alone, else its own hue."""
-        _line, _bar, solo_curve = self._solo_colours
+        _line, _bar, solo_curve, _within = self._solo_colours
         return QColor(solo_curve if self._solo() else self._curve_colour)
 
     def _curve_values(self) -> tuple[int, ...]:
@@ -224,6 +253,10 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
 
     # ---- painting -----------------------------------------------------------
     def paintEvent(self, event) -> None:
+        # Colours are re-resolved per paint so a theme switch repaints; the
+        # overdraft limit is NOT, because it is data the caller set and not a
+        # property of the theme. Resetting it here silently painted every
+        # below-zero bar red however large the arranged facility was.
         self._tokens, self._colours, self._curve_colour = _active_palette()
         self._solo_colours = _solo_palette()
         painter = QPainter(self)
@@ -291,14 +324,12 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
     def _draw_bars(self, painter, geom) -> None:
         _left, _top, _plot_w, _plot_h, days, _low, _high = geom
         painter.setPen(Qt.PenStyle.NoPen)
-        # A day the balance is below zero paints in the danger colour, the
-        # same red the zero line wears, so an overdrawn stretch reads as a
-        # warning rather than one more healthy-looking bar.
-        danger = QColor(self._tokens["danger"])
+        # Three states per day, not two: in credit; inside an arranged
+        # overdraft; past it. See _bar_colour_for.
         for idx, series in enumerate(self._series):
             colour = self._plot_colour(idx)
             for day in range(1, days + 1):
-                bar_colour = danger if series.values[day - 1] < 0 else colour
+                bar_colour = self._bar_colour_for(series.values[day - 1], colour)
                 painter.fillRect(self._bar_rect(geom, idx, day), bar_colour)
 
     def _draw_curve(self, painter, geom) -> None:

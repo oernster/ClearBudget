@@ -1484,7 +1484,21 @@ renderings of the same figures to hold in step. Every month any page shows
   danger red below it, which is why the two marks take different colours from
   the same rule. The bar green is the palette's own first entry and the app's
   safe-state green; the collision is harmless because a solo chart and a
-  multi-series chart never appear together. Light blue and amber carry no
+  multi-series chart never appear together.
+- A bar carries THREE states, not two, read against the agreed overdraft floor
+  rather than against zero: green at or above zero, amber below zero but no
+  further than the arranged facility, red past it. That is the banner's own
+  reading applied to one day, so the graph and the banner above it never
+  describe the same position in two different colours. The floor reaches the
+  chart through `LineBarChart.set_overdraft_limit_pence` and the exporter
+  through `chart_svg(floor_pence=...)`; both default to ZERO, meaning no
+  facility, which collapses to the old two-state red-below-zero behaviour. A
+  CARD graph never passes one, since an overdraft is a bank arrangement
+- The limit is NOT re-resolved in `paintEvent`, where the colours are. The
+  colours follow the theme so they must be re-read per paint; the limit is
+  data a caller set, so re-reading it there zeroed it on every repaint and
+  painted every below-zero bar red however large the facility was. Caught by
+  a probe that counts painted pixels rather than by reading the branch back Light blue and amber carry no
   such reading. The rule is keyed on series COUNT, not on which view opened the
   chart, so the credit-card graph (one series per card) keeps the palette,
   because telling the cards apart is the whole job of colour there; its curve

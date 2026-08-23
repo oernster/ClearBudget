@@ -192,6 +192,7 @@ class SolvencyPanel(
             base_month=self.base_month,
             budget_service=svc,
             anchor_month=self.view_model.current_month,
+            overdraft_limit_pence=svc.get_overdraft_limit().pence,
         ).exec()
 
     def nav_targets(self) -> list:

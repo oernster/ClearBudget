@@ -71,6 +71,7 @@ class MonthGraphDialog(FirstStopDialog):
         base_month=None,
         budget_service=None,
         anchor_month=None,
+        overdraft_limit_pence: int = 0,
     ) -> None:
         """Build the dialog.
 
@@ -93,9 +94,14 @@ class MonthGraphDialog(FirstStopDialog):
         self._mode = MODE_BAR
         self._budget_service = budget_service
         self._anchor_month = anchor_month
+        # Zero means no facility, so a below-zero bar is red; a caller plotting
+        # a BANK balance passes the arranged limit and the bars inside it read
+        # amber instead. A card graph never passes one.
+        self._overdraft_limit_pence = overdraft_limit_pence
 
         layout = QVBoxLayout(self)
         self.chart = LineBarChart(self)
+        self.chart.set_overdraft_limit_pence(overdraft_limit_pence)
         layout.addWidget(self.chart, 1)
 
         button_row = QHBoxLayout()
@@ -168,6 +174,7 @@ class MonthGraphDialog(FirstStopDialog):
             title=self._title,
             subtitle=f"Projected day by day across {self._month_label}.",
             series=self._series,
+            floor_pence=self._overdraft_limit_pence,
         )
         self._write(html, suggested=f"{self._slug(self._title)}{_HTML_SUFFIX}")
 

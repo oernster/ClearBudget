@@ -142,6 +142,18 @@ CHART_LINE_LIGHT = "#075985"
 CHART_BAR_DARK = "#34d399"
 CHART_BAR_LIGHT = "#059669"
 
+# A day below zero but still inside an ARRANGED overdraft is amber, not red.
+# The facility exists to absorb exactly that day, so calling it red says a
+# payment bounced when nothing did; red is kept for a day past the agreed
+# floor, where one would. This is the banner's own three-state reading applied
+# to a bar (see _solvency_panel_narratives._state_key) and it takes the same
+# at-risk amber, so one day of the graph and the banner above it never
+# describe the same position in two different colours. With no facility
+# arranged the floor is zero, so this colour never appears and a below-zero
+# bar is red exactly as before.
+CHART_BAR_WITHIN_DARK = "#f59e0b"
+CHART_BAR_WITHIN_LIGHT = "#b45309"
+
 # The single-series curve follows the same days the line would, so it takes
 # the line's blue. The multi-series curve keeps its own hue: with up to eight
 # series on the axis it has to stay outside the palette or it reads as one
@@ -216,6 +228,13 @@ def chart_line_colour_for(theme_name: str) -> str:
 def chart_bar_colour_for(theme_name: str) -> str:
     """The bar fill for a chart plotting one series (negatives stay danger)."""
     return CHART_BAR_LIGHT if theme_name == THEME_LIGHT else CHART_BAR_DARK
+
+
+def chart_bar_within_facility_colour_for(theme_name: str) -> str:
+    """The bar fill for a day inside an arranged overdraft, not past it."""
+    return (
+        CHART_BAR_WITHIN_LIGHT if theme_name == THEME_LIGHT else CHART_BAR_WITHIN_DARK
+    )
 
 
 def solo_curve_colour_for(theme_name: str) -> str:
