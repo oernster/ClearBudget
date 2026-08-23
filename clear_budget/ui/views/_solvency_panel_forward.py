@@ -6,12 +6,6 @@ months' projection lines, the card-state text under each plus the title-bar
 colour broadcast that follows from the displayed month's own health.
 """
 
-from clear_budget.domain.services._card_live_projection import (
-    anchored_month_opening_pence,
-)
-from clear_budget.domain.services.card_monthly_calculator import (
-    calculate_card_monthly_state,
-)
 from clear_budget.ui import ui_scale
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES, apply_nav_label_color
 
@@ -36,8 +30,6 @@ class SolvencyPanelForwardMixin:
         m2_bank = self._bank_total(m2_summary)
         m1_end_pence = report.balance_pence + m1_summary.total_income.pence - m1_bank
 
-        self._rebuild_card_bars(report)
-
         m1_text, m1_color, m1_clarion = self._build_month_cashflow_summary(
             report.balance_pence,
             m1_summary,
@@ -51,28 +43,8 @@ class SolvencyPanelForwardMixin:
             overdraft_limit_pence,
         )
 
-        cards = service.get_credit_cards(include_inactive=False)
-        m1_card_opening = {
-            c.id: anchored_month_opening_pence(
-                card=c, bills=list(m1_summary.bills), year=m1.year, month=m1.month
-            )
-            for c in cards
-        }
-        m1_card_states = {
-            c.id: calculate_card_monthly_state(
-                card=c,
-                opening_balance_pence=m1_card_opening[c.id],
-                bills=list(m1_summary.bills),
-            )
-            for c in cards
-        }
-        m2_card_opening = {
-            c.id: m1_card_states[c.id].closing_balance.pence for c in cards
-        }
-
-        # The two readings render onto their own pages: the bank narrative
-        # here, the per-card lines on the cards page under the same month
-        # headings, so the pages can be held against each other.
+        # The card readings that used to render here moved out with the cards
+        # page: the Credit Cards tab is where a card's position is read now.
         m1_heading = f"{MONTH_NAMES[m1.month]} {m1.year}"
         m2_heading = f"{MONTH_NAMES[m2.month]} {m2.year}"
         self._set_projection_label(
@@ -88,20 +60,6 @@ class SolvencyPanelForwardMixin:
             body=m2_text,
             colour=m2_color,
             clarion=m2_clarion,
-        )
-        self._set_projection_label(
-            self.m1_cards_label,
-            heading=m1_heading,
-            body=self._build_card_state_text(cards, m1_summary.bills, m1_card_opening),
-            colour=m1_color,
-            clarion=False,
-        )
-        self._set_projection_label(
-            self.m2_cards_label,
-            heading=m2_heading,
-            body=self._build_card_state_text(cards, m2_summary.bills, m2_card_opening),
-            colour=m2_color,
-            clarion=False,
         )
 
         # The title-bar colour is the displayed month's OWN within-month health,

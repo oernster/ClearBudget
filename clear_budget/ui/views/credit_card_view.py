@@ -23,6 +23,7 @@ from clear_budget.ui.theme_tokens import STATE_CAUTION, STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     build_centered_nav_header,
+    build_graph_icon_button,
     nav_glyph_height,
 )
 from clear_budget.ui.views._credit_card_projection_strip import (
@@ -90,16 +91,15 @@ class CreditCardView(
         # own set; MainWindow wires them and keeps the current-tab mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
+        self.graph_btn = build_graph_icon_button(_glyph_h, self.on_show_graph)
         (
             self.nav_header,
             self.month_label,
-            self.graph_btn,
             self.theme_btn,
         ) = build_centered_nav_header(
             "",
             prev_btn=self.prev_btn,
             next_btn=self.next_btn,
-            icon_action=self.on_show_graph,
             leading=(
                 self.load_btn,
                 self.save_btn,
@@ -108,7 +108,8 @@ class CreditCardView(
                 self.bank_btn,
                 _sep,
             ),
-            tabs=self.tab_btns,
+            tabs=(*self.tab_btns[:-1], self.graph_btn),
+            pre_theme=(self.tab_btns[-1],),
             trailing=(self.info_btn,),
         )
         self._refresh_month_label()
@@ -247,11 +248,14 @@ class CreditCardView(
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """
-        others = ring_tab_stops(self.tab_btns)
+        # Archive was moved out of the tab run to the right-hand group,
+        # so the ring has to walk it there. A ring that disagrees with the
+        # drawing reads as a SKIPPED control, not as a wrong order.
+        others = ring_tab_stops(self.tab_btns[:-1])
+        archive_stop = ring_tab_stops(self.tab_btns[-1:])
         card_buttons = [b for b in self.cards_container.findChildren(QPushButton)]
         return [
             self.prev_btn,
-            self.graph_btn,
             self.next_btn,
             self.load_btn,
             self.save_btn,
@@ -259,6 +263,8 @@ class CreditCardView(
             self.settings_btn,
             self.bank_btn,
             *others,
+            self.graph_btn,
+            *archive_stop,
             self.theme_btn,
             self.info_btn,
             *card_buttons,

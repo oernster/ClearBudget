@@ -89,18 +89,36 @@ def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
     return btn
 
 
-def build_nav_month_widget(
-    initial_text: str, prev_btn=None, next_btn=None, icon_action=None
-):
-    """Return (QWidget, QLabel, icon_btn) - centered icon + month label for nav.
+def build_graph_icon_button(glyph_height: int, on_click):
+    """The app icon as a tabbable button that opens the month graph.
+
+    It used to sit in the upper tray beside the month, which put a control
+    that ACTS on the application in the row that only says which month is
+    being read. It belongs with the tabs it is sized against, so it is built
+    here for the lower tray and returns None when the icon cannot be resolved,
+    exactly as the decorative version did.
+    """
+    pixmap = _load_cropped_icon_pixmap()
+    if pixmap is None:
+        return None
+    return _build_icon_graph_button(pixmap, glyph_height, on_click)
+
+
+def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
+    """Return (QWidget, QLabel) - the month cluster for the upper tray.
 
     If `prev_btn`/`next_btn` are given, they are placed either side of the
-    month label so the navigation buttons flank the title. When `icon_action`
-    is given the icon becomes a tabbable button wired to it (the month-graph
-    opener); otherwise it stays a decorative label and icon_btn is None.
+    month label so the navigation buttons flank the title.
+
+    The app icon is NOT here any more. It opened the month graph, which acts
+    on the application, while this row only says which month is being read;
+    it now sits in the lower tray with the tabs it is sized against (see
+    `build_graph_icon_button`). Nothing decorative replaced it: a second copy
+    of the window icon said nothing the title bar had not; a dead icon in
+    a row of live buttons reads as a broken one.
     """
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
+    from PySide6.QtWidgets import QHBoxLayout, QWidget
 
     container = QWidget()
     layout = QHBoxLayout(container)
@@ -110,26 +128,6 @@ def build_nav_month_widget(
     if prev_btn is not None:
         layout.addWidget(prev_btn)
 
-    icon_height = nav_glyph_height(prev_btn)
-    icon_btn = None
-    icon_pixmap = _load_cropped_icon_pixmap()
-    if icon_pixmap is not None:
-        if icon_action is not None:
-            icon_btn = _build_icon_graph_button(icon_pixmap, icon_height, icon_action)
-            layout.addSpacing(10)
-            layout.addWidget(icon_btn)
-        else:
-            icon_lbl = QLabel()
-            icon_lbl.setPixmap(
-                icon_pixmap.scaledToHeight(
-                    icon_height, Qt.TransformationMode.SmoothTransformation
-                )
-            )
-            # Match the month label's own margin, so the gap before the icon
-            # equals the gap after the year (before the next/prev buttons).
-            icon_lbl.setContentsMargins(NAV_LABEL_MARGIN_PX, 0, 0, 0)
-            layout.addWidget(icon_lbl)
-
     month_lbl = NavLabel.create(initial_text)
     apply_nav_label_color(month_lbl, NAV_LABEL_DEFAULT_COLOR)
     month_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
@@ -138,7 +136,7 @@ def build_nav_month_widget(
     if next_btn is not None:
         layout.addWidget(next_btn)
 
-    return container, month_lbl, icon_btn
+    return container, month_lbl
 
 
 # Symmetric vertical padding (unscaled px) above and below the nav row, so the
@@ -182,28 +180,24 @@ def build_centered_nav_header(
     initial_text: str,
     prev_btn=None,
     next_btn=None,
-    icon_action=None,
     leading=(),
     tabs=(),
+    pre_theme=(),
     trailing=(),
 ):
-    """Return (QWidget, QLabel, icon_btn, theme_btn): the tab's two nav trays.
+    """Return (QWidget, QLabel, theme_btn): the tab's two nav trays.
 
     TWO trays, stacked, because they answer different questions and one row
     could not hold both without the month being pushed off the middle:
 
     * TRAY 1, topmost, carries ONLY what is about the month being viewed:
-      Previous, the app icon that opens the month graph, the month and year,
-      then Next. Nothing else is in it, so it is centred on the window by its
+      Previous, the month and year, then Next. Nothing else is in it, so it is centred on the window by its
       own emptiness rather than by balancing anything.
     * TRAY 2 carries everything that acts on the application: the `leading`
       widgets (load, save, Preferences, Bank Account and a separator), then
       the `tabs` (the four primary tabs, which live here rather than in a strip
       of their own), then at the FAR RIGHT the sun/moon toggle (`theme_btn`)
       followed by the `trailing` widgets (How It Works).
-
-    `icon_action`, when given, turns the tray icon into a tabbable month-graph
-    button wired to it; icon_btn is then that button (else None).
 
     The returned widget is meant to be placed OUTSIDE the scroll area (see
     ScrollableTab), so it spans the full tab width and reads identically on
@@ -214,8 +208,8 @@ def build_centered_nav_header(
 
     from clear_budget.ui import ui_scale
 
-    nav_center, month_lbl, icon_btn = build_nav_month_widget(
-        initial_text, prev_btn=prev_btn, next_btn=next_btn, icon_action=icon_action
+    nav_center, month_lbl = build_nav_month_widget(
+        initial_text, prev_btn=prev_btn, next_btn=next_btn
     )
     edge, vpad = _tray_margins()
     align_v = Qt.AlignmentFlag.AlignVCenter
@@ -245,6 +239,11 @@ def build_centered_nav_header(
     for widget in tabs:
         action_row.addWidget(widget, 0, align_v)
     action_row.addStretch(1)
+    # `pre_theme` is the RIGHT-hand group: everything here sits after the
+    # stretch, so it is pinned to the right edge beside the toggle rather than
+    # running on from the tabs.
+    for widget in pre_theme:
+        action_row.addWidget(widget, 0, align_v)
     theme_btn = _build_theme_toggle_button(nav_glyph_height(prev_btn))
     action_row.addWidget(theme_btn, 0, align_v)
     for widget in trailing:
@@ -258,4 +257,4 @@ def build_centered_nav_header(
     outer.setSpacing(floatm)
     outer.addWidget(month_tray)
     outer.addWidget(action_tray)
-    return header, month_lbl, icon_btn, theme_btn
+    return header, month_lbl, theme_btn

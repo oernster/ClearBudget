@@ -250,7 +250,7 @@ than in a strip of their own. Hovering one names it; the keyboard ring still
 stops on each tab in turn.
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
-- **Solvency** - three pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the credit cards page carries the per-card utilisation bars and the same two months per card; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
+- **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
@@ -275,11 +275,12 @@ stops on each tab in turn.
 
 Load, Save, Switch Budget, Preferences and Bank Account are also one click away
 in every tab's navigation tray, which is two rows. The upper row carries only
-the month or year: Previous, the app icon that opens the graph, the date and
-Next, centred. The lower row carries everything that acts on the application:
-the folder and diskette, the switch-budget arrows, the cog (Preferences), the
-bank, then a separator and the four tabs, with the sun/moon theme toggle and a
-blue information button opening How It Works at the far right.
+the month or year: Previous, the date and Next, centred. The lower row carries
+everything that acts on the application: the folder and diskette, the
+switch-budget arrows, the cog (Preferences), the bank, then a separator, then
+Monthly Budget, Solvency and Credit Cards followed by the app icon that opens
+the graph. Archive sits at the far right beside the sun/moon theme toggle and
+the blue information button opening How It Works.
 
 Read-only viewer accounts have most of these actions disabled and the window title
 shows "(Read-only)".
@@ -539,9 +540,8 @@ entered before these existed continues to do.
   first month you would go overdrawn; it also flags "no overdraft facility" when
   you have none
 - **Mid-month alert**: detects temporary overdraft when bills cluster before the last income payment of the month
-- **Credit Card Status**: one progress bar per card showing current balance vs limit; projected month-end closing balance, charges, payment, interest, minimum due and net direction all shown inline
-- **Next Two Months As Entered**: day-by-day cashflow narrative for the next two months
-  including card state, each stating that month's low point and the day it
+- **Next Two Months As Entered**: day-by-day cashflow narrative for the next two months,
+  each stating that month's low point and the day it
   falls on plus what it needs to hold flat; a dip within an agreed overdraft
   reads calmly, while going
   overdrawn with no facility (or beyond it) is rendered as a stark clarion

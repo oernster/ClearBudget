@@ -61,7 +61,7 @@ class ArchiveView(QWidget):
         # own set; MainWindow wires them and keeps the current-tab mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
-        self.nav_header, self.year_label, _, self.theme_btn = build_centered_nav_header(
+        self.nav_header, self.year_label, self.theme_btn = build_centered_nav_header(
             "",
             prev_btn=self.prev_year_btn,
             next_btn=self.next_year_btn,
@@ -73,7 +73,8 @@ class ArchiveView(QWidget):
                 self.bank_btn,
                 _sep,
             ),
-            tabs=self.tab_btns,
+            tabs=self.tab_btns[:-1],
+            pre_theme=(self.tab_btns[-1],),
             trailing=(self.info_btn,),
         )
 
@@ -154,7 +155,11 @@ class ArchiveView(QWidget):
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """
-        others = ring_tab_stops(self.tab_btns)
+        # Archive was moved out of the tab run to the right-hand group,
+        # so the ring has to walk it there. A ring that disagrees with the
+        # drawing reads as a SKIPPED control, not as a wrong order.
+        others = ring_tab_stops(self.tab_btns[:-1])
+        archive_stop = ring_tab_stops(self.tab_btns[-1:])
         return [
             self.prev_year_btn,
             self.next_year_btn,
@@ -164,6 +169,7 @@ class ArchiveView(QWidget):
             self.settings_btn,
             self.bank_btn,
             *others,
+            *archive_stop,
             self.theme_btn,
             self.info_btn,
             self.archive_table,

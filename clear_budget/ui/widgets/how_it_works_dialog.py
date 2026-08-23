@@ -88,12 +88,12 @@ def _body_html() -> str:
 
 <hr>
 <h3>The tray</h3>
-<p>{app_icon}the month as a graph &nbsp;&middot;&nbsp; &#128194; load
-&nbsp;&middot;&nbsp; &#128190; save &nbsp;&middot;&nbsp; &#128260; switch
-budget &nbsp;&middot;&nbsp; &#9881;&#65039;
-currency &nbsp;&middot;&nbsp; &#127974; overdraft plus the Safe to Spend
-buffer and window &nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or
-dark &nbsp;&middot;&nbsp; &#8505;&#65039; this screen</p>
+<p>&#128194; load &nbsp;&middot;&nbsp; &#128190; save
+&nbsp;&middot;&nbsp; &#128260; switch budget &nbsp;&middot;&nbsp;
+&#9881;&#65039; currency &nbsp;&middot;&nbsp; &#127974; overdraft plus the
+Safe to Spend buffer and window &nbsp;&middot;&nbsp; {app_icon}the month as a
+graph &nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or dark
+&nbsp;&middot;&nbsp; &#8505;&#65039; this screen</p>
 
 <hr>
 <h3>Three rules behind the numbers</h3>

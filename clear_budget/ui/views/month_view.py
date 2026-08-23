@@ -179,10 +179,13 @@ class MonthView(
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """
-        others = ring_tab_stops(self.tab_btns)
+        # Archive was moved out of the tab run to the right-hand group,
+        # so the ring has to walk it there. A ring that disagrees with the
+        # drawing reads as a SKIPPED control, not as a wrong order.
+        others = ring_tab_stops(self.tab_btns[:-1])
+        archive_stop = ring_tab_stops(self.tab_btns[-1:])
         return [
             self.prev_btn,
-            self.graph_btn,
             self.next_btn,
             self.load_btn,
             self.save_btn,
@@ -190,6 +193,8 @@ class MonthView(
             self.settings_btn,
             self.bank_btn,
             *others,
+            self.graph_btn,
+            *archive_stop,
             self.theme_btn,
             self.info_btn,
             self.edit_balance_btn,

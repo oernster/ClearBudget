@@ -786,9 +786,8 @@ unrelated to what it had to hold.
 - `MonthView` - bill/income tables with inline editing; balance display adapts
   to current vs future month; composed of mixins (builders, table, edit, delete,
   apply-prompt) to stay under the LOC limit
-- `SolvencyPanel` - three pages in a `QStackedWidget`: bank, cards and
-  projection. Each has a pilot button naming the ANSWER that page holds rather
-  than the method behind it, which is why the third button reads "Switch to
+- `SolvencyPanel` - two pages in a `QStackedWidget`: bank and projection. Each has a pilot button naming the ANSWER that page holds rather
+  than the method behind it, which is why the second button reads "Switch to
   safe to spend" and not "Switch to projection": the bank page carries months
   ahead of its OWN, built from what is entered, so a button offering
   "projection" read as though those were the assumed months and made the
@@ -820,11 +819,11 @@ unrelated to what it had to hold.
   hidden entirely when the figure never moves so a flat month does not
   restate the headline) and beneath both the assumption in words with the
   months that follow from it. The BANK page's own contents are the overdraft
-  alert, the mid-month alert and its two forward-projection blocks. The CARDS
-  page carries the per-card bars
-  (`_solvency_panel_card_bars.SolvencyPanelCardBarsMixin`: the per-card
-  utilisation bar, its scheduled-limit-change pills and the within-month
-  movement line) and the same two months per card. Every month any page shows
+alert, the mid-month alert and its two forward-projection blocks. A third
+page once carried per-card utilisation bars and the same two months per card.
+It was removed: the Credit Cards TAB answers a card's position in full, so the
+page restated another tab's job in a smaller space; keeping both meant two
+renderings of the same figures to hold in step. Every month any page shows
   states its low
   point on a line of its own, plus what that month needs to hold flat, in one
   shape, whether or not the month is in trouble: a figure printed only for a
@@ -1215,18 +1214,21 @@ unrelated to what it had to hold.
   - The nav tray is TWO stacked trays, built together by
     `nav_header.build_centered_nav_header`, because they answer different
     questions. The UPPER tray carries only what is about the month being
-    viewed: Previous, the app icon that opens the month graph, the month and
-    year, then Next. It holds nothing else, so a stretch either side centres it
+    viewed: Previous, the month and year, then Next. The app icon used to sit
+    here too. It OPENS the month graph, which acts on the application, while
+    this row only says which month is being read; it moved down to sit
+    with the tabs it is sized against. It holds nothing else, so a stretch either side centres it
     exactly. The LOWER tray carries everything that acts on the application,
     built by `_save_load_flow.build_save_load_buttons` /
     `build_budgets_button` / `build_settings_bank_buttons` /
     `build_info_button` and sized against the
-    app-icon button: folder (Load), diskette (Save), arrows (Switch Budget),
-    cog (Preferences), bank
-    (Bank Account), a themed separator, then the four primary tabs, with the
-    sun/moon toggle and the blue information button (How It Works) at the far
-    right. The separator divides the five controls that DO something from the
-    four that only decide which page is being looked at
+    tab buttons: folder (Load), diskette (Save), arrows (Switch Budget),
+    cog (Preferences), bank (Bank Account), a themed separator, then Monthly
+    Budget, Solvency and Credit Cards, then the app icon that opens the month
+    graph. Archive is pinned to the RIGHT of the stretch, beside the sun/moon
+    toggle and the blue information button (How It Works). The separator
+    divides the five controls that DO something from the tabs that only decide
+    which page is being looked at
   - Two trays rather than one row is what makes the centring free. In one row
     the cluster could be centred only by reserving the icon run's width again
     on the empty side. Two runs plus the cluster do not fit at the window's own

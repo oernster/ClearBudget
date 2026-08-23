@@ -231,33 +231,3 @@ class SolvencyPanelLayoutMixin:
             self.m1_assumed_projection_label,
             self.m2_assumed_projection_label,
         )
-
-    def _build_cards_page(self) -> QWidget:
-        """The cards' position: utilisation now, then the same two months.
-
-        The card lines used to sit inside the bank page's forward projection
-        blocks. They are the same two months, so they keep their headings
-        here and the reader can hold the two pages against each other.
-        """
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        layout.addWidget(_heading("Credit Card Status"))
-        self.card_interest_label = _line("SolvencyCommitted")
-        layout.addWidget(self.card_interest_label)
-
-        self.card_bars_container = QWidget()
-        self.card_bars_layout = QVBoxLayout(self.card_bars_container)
-        self.card_bars_layout.setSpacing(ui_scale.px(3))
-        self.card_bars_layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.card_bars_container)
-
-        layout.addWidget(_heading("Card Projection"))
-        self.m1_cards_label = _projection_label()
-        layout.addWidget(self.m1_cards_label)
-        self.m2_cards_label = _projection_label()
-        layout.addWidget(self.m2_cards_label)
-
-        layout.addStretch()
-        return page

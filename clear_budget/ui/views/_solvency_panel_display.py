@@ -307,14 +307,6 @@ class SolvencyPanelDisplayMixin:
         gap = self.view_model.budget_service.get_month_gap(year_month=year_month)
         month_name = MONTH_NAMES[year_month.month]
         self.gap_label.setText(f"{month_name} {self._gap_clause(gap.needed_pence)}")
-        if gap.card_interest_pence:
-            self.card_interest_label.setText(
-                f"Card interest adds {fmt(gap.card_interest_pence)} to your card"
-                f" balances this month (it does not leave your bank account)"
-            )
-        else:
-            self.card_interest_label.setText("")
-        self.card_interest_label.setVisible(bool(gap.card_interest_pence))
 
     def _title_health_color(
         self, report, is_current_month: bool, overdraft_limit_pence: int

@@ -1,8 +1,5 @@
 """Narrative-building helpers for SolvencyPanel - extracted for LOC limit."""
 
-from clear_budget.domain.services.card_monthly_calculator import (
-    calculate_card_monthly_state,
-)
 from clear_budget.ui import theme
 from clear_budget.ui.theme_tokens import (
     STATE_AT_RISK,
@@ -330,49 +327,3 @@ class SolvencyPanelNarrativeMixin:
             lines.append(f"Low point: {fmt(low_pence)} {when}")
         lines.append(f"Balance at end of month: {fmt(balance)}")
         return lines
-
-    @staticmethod
-    def _build_card_state_text(cards, bills, opening_balances: dict) -> str:
-        """Build per-card balance projection for one month.
-
-        opening_balances: {card_id: pence} - balance at start of this month.
-        Returns multi-line text block, empty string if no active cards.
-        """
-        if not cards:
-            return ""
-        # No "Cards:" prefix: this block now sits on the cards page under its
-        # own heading, where the word only repeats what the heading said. It
-        # earned its place when the block was buried inside the bank page's
-        # forward projection.
-        lines = []
-        for card in cards:
-            opening_pence = opening_balances.get(
-                card.id, card.current_balance_used.pence
-            )
-            state = calculate_card_monthly_state(
-                card=card, opening_balance_pence=opening_pence, bills=list(bills)
-            )
-            interest_str = (
-                f" +{fmt(state.monthly_interest.pence)} int"
-                if state.monthly_interest.pence > 0
-                else ""
-            )
-            paid_p = state.payment_received.pence
-            min_p = state.minimum_payment.pence
-            if paid_p < min_p:
-                shortfall_p = min_p - paid_p
-                payment_str = (
-                    f"paid {fmt(paid_p)} - "
-                    f"min {fmt(min_p)} - "
-                    f"SHORTFALL {fmt(shortfall_p)}"
-                )
-            elif paid_p == 0:
-                payment_str = f"no payment set (min {fmt(min_p)})"
-            else:
-                payment_str = f"paid {fmt(paid_p)} (min {fmt(min_p)}) ✓"
-            lines.append(
-                f"  {card.name}: {fmt(state.opening_balance.pence)}"
-                f"{interest_str} | {payment_str}"
-                f" | closes {fmt(state.closing_balance.pence)}"
-            )
-        return "\n".join(lines)

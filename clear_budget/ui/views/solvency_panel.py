@@ -25,9 +25,6 @@ from clear_budget.ui.widgets._save_load_flow import (
     build_settings_bank_buttons,
 )
 from clear_budget.ui.views._solvency_panel_assumed import SolvencyPanelAssumedMixin
-from clear_budget.ui.views._solvency_panel_card_bars import (
-    SolvencyPanelCardBarsMixin,
-)
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
 from clear_budget.ui.views._solvency_panel_layout import SolvencyPanelLayoutMixin
 from clear_budget.ui.views._solvency_panel_forward import SolvencyPanelForwardMixin
@@ -41,8 +38,7 @@ from clear_budget.ui.views._solvency_panel_safe_to_spend import (
 # Stack order. The bank page opens first: it answers "does the account hold",
 # which is the question the tab exists for.
 _PAGE_BANK = 0
-_PAGE_CARDS = 1
-_PAGE_PROJECTION = 2
+_PAGE_PROJECTION = 1
 
 # A pilot button names the page it goes TO, never the page you are on, the
 # same convention the month graph's pilot button uses. Every page has its own
@@ -62,13 +58,11 @@ _PAGE_PROJECTION = 2
 _PILOTS = (
     (_PAGE_BANK, "Switch to bank view"),
     (_PAGE_PROJECTION, "Switch to safe to spend"),
-    (_PAGE_CARDS, "Switch to credit cards"),
 )
 
 
 class SolvencyPanel(
     SolvencyPanelAssumedMixin,
-    SolvencyPanelCardBarsMixin,
     SolvencyPanelDisplayMixin,
     SolvencyPanelLayoutMixin,
     SolvencyPanelForwardMixin,
@@ -76,7 +70,7 @@ class SolvencyPanel(
     SolvencyPanelSafeToSpendMixin,
     QWidget,
 ):
-    """Displays account solvency status with three critical sections."""
+    """Displays account solvency status with two critical sections."""
 
     # Broadcasts the health colour applied to the month label so the other tabs'
     # nav labels can match it (Solvency is the single source of truth).
@@ -107,22 +101,21 @@ class SolvencyPanel(
         # own set; MainWindow wires them and keeps the current-tab mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
-        self.nav_header, self.month_label, _, self.theme_btn = (
-            build_centered_nav_header(
-                "May 2026",
-                prev_btn=self.prev_btn,
-                next_btn=self.next_btn,
-                leading=(
-                    self.load_btn,
-                    self.save_btn,
-                    self.budgets_btn,
-                    self.settings_btn,
-                    self.bank_btn,
-                    _sep,
-                ),
-                tabs=self.tab_btns,
-                trailing=(self.info_btn,),
-            )
+        self.nav_header, self.month_label, self.theme_btn = build_centered_nav_header(
+            "May 2026",
+            prev_btn=self.prev_btn,
+            next_btn=self.next_btn,
+            leading=(
+                self.load_btn,
+                self.save_btn,
+                self.budgets_btn,
+                self.settings_btn,
+                self.bank_btn,
+                _sep,
+            ),
+            tabs=self.tab_btns[:-1],
+            pre_theme=(self.tab_btns[-1],),
+            trailing=(self.info_btn,),
         )
 
         pilot_row = QHBoxLayout()
@@ -142,7 +135,6 @@ class SolvencyPanel(
         # the page rather than a rebuild that would drop scroll position.
         self.pages = QStackedWidget()
         self.pages.addWidget(self._build_bank_page())
-        self.pages.addWidget(self._build_cards_page())
         self.pages.addWidget(self._build_projection_page())
         layout.addWidget(self.pages)
         self._show_page(_PAGE_BANK)
@@ -170,7 +162,11 @@ class SolvencyPanel(
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """
-        others = ring_tab_stops(self.tab_btns)
+        # Archive was moved out of the tab run to the right-hand group,
+        # so the ring has to walk it there. A ring that disagrees with the
+        # drawing reads as a SKIPPED control, not as a wrong order.
+        others = ring_tab_stops(self.tab_btns[:-1])
+        archive_stop = ring_tab_stops(self.tab_btns[-1:])
         return [
             self.prev_btn,
             self.next_btn,
@@ -180,6 +176,7 @@ class SolvencyPanel(
             self.settings_btn,
             self.bank_btn,
             *others,
+            *archive_stop,
             self.theme_btn,
             self.info_btn,
             *self.pilot_btns.values(),
