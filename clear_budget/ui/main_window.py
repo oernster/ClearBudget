@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QSize, Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
@@ -24,14 +24,7 @@ from clear_budget.ui.views.credit_card_view import CreditCardView
 from clear_budget.ui.views.month_view import MonthView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
 from clear_budget.ui.update_check import UpdateCheckController
-from clear_budget.ui.utils.tab_icons import (
-    ARCHIVE_ICON,
-    CREDIT_CARDS_ICON,
-    MONTHLY_BUDGET_ICON,
-    SOLVENCY_ICON,
-    tab_icon,
-    tab_icon_box_px,
-)
+from clear_budget.ui.utils.tab_icons import mark_current_tab
 from clear_budget.ui.widgets.nav_tab_bar import NavTabBar
 from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 
@@ -117,15 +110,19 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         # The tabs are styled as detached pills, so Qt's base line under the
         # whole bar would read as a stray rule (it ignores QSS drawBase).
         self.tabs.tabBar().setDrawBase(False)
-        self.tabs.setIconSize(QSize(tab_icon_box_px(), tab_icon_box_px()))
+        # The strip itself is HIDDEN. The four tabs are icon buttons in each
+        # view's navigation tray, so a bar above them would be a second, empty
+        # copy of the same control. The QTabWidget is kept for what it is
+        # actually good at, owning the pages and switching between them.
+        self.tabs.tabBar().hide()
 
         month_view = MonthView(self.month_view_model, read_only=self.read_only)
-        self._add_icon_tab(month_view, MONTHLY_BUDGET_ICON, "Monthly Budget")
+        self.tabs.addTab(self._scrollable(month_view), "Monthly Budget")
 
         solvency_panel = SolvencyPanel(
             self.solvency_view_model, read_only=self.read_only
         )
-        self._add_icon_tab(solvency_panel, SOLVENCY_ICON, "Solvency")
+        self.tabs.addTab(self._scrollable(solvency_panel), "Solvency")
 
         credit_card_view = CreditCardView(
             self.month_view_model.budget_service,
@@ -133,12 +130,12 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
             read_only=self.read_only,
             base_month=self.month_view_model.base_month,
         )
-        self._add_icon_tab(credit_card_view, CREDIT_CARDS_ICON, "Credit Cards")
+        self.tabs.addTab(self._scrollable(credit_card_view), "Credit Cards")
 
         archive_view = ArchiveView(
             self.month_view_model.budget_service, read_only=self.read_only
         )
-        self._add_icon_tab(archive_view, ARCHIVE_ICON, "Archive")
+        self.tabs.addTab(self._scrollable(archive_view), "Archive")
 
         # Every tray carries the same icon shortcuts; all of them drive the
         # same window-level flows their menu items do.
@@ -186,28 +183,37 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
                 self.month_view_model.month_summary
             )
 
-        self._setup_keyboard_nav(
-            [month_view, solvency_panel, credit_card_view, archive_view]
-        )
+        _views = [month_view, solvency_panel, credit_card_view, archive_view]
+        self._wire_tab_buttons(_views)
+        self._setup_keyboard_nav(_views)
 
     @staticmethod
     def _scrollable(widget: QWidget) -> ScrollableTab:
         return ScrollableTab(widget)
 
-    def _add_icon_tab(self, view: QWidget, spec: str, label: str) -> None:
-        """Add one primary tab, carrying a picture with `label` as its tooltip.
+    def _wire_tab_buttons(self, views: list) -> None:
+        """Point every view's tab buttons at the pages and keep them in step.
 
-        The label is not discarded, it becomes the hover text, so the strip can
-        still say what each tab is to anyone who does not recognise the picture.
-        A tab whose icon could not be built keeps the label as visible TEXT
-        rather than showing an empty pill: an unbundled asset must cost the
-        strip its looks, never a route into the tab.
+        Every view carries its OWN four buttons, because every view builds its
+        own tray. They all drive the one QTabWidget, and every set is marked
+        together on each switch, so the tab you are on is marked whichever
+        tray you happen to be looking at.
         """
-        icon = tab_icon(spec, tab_icon_box_px())
-        index = self.tabs.addTab(self._scrollable(view), "" if icon else label)
-        if icon is not None:
-            self.tabs.setTabIcon(index, icon)
-        self.tabs.setTabToolTip(index, label)
+        for view in views:
+            for index, button in enumerate(view.tab_btns):
+                button.clicked.connect(
+                    lambda _checked=False, target=index: self.tabs.setCurrentIndex(
+                        target
+                    )
+                )
+        self._tab_button_sets = [view.tab_btns for view in views]
+        self.tabs.currentChanged.connect(self._mark_current_tab)
+        self._mark_current_tab(self.tabs.currentIndex())
+
+    def _mark_current_tab(self, index: int) -> None:
+        """Mark `index` as current on every view's copy of the tab buttons."""
+        for buttons in self._tab_button_sets:
+            mark_current_tab(buttons, index)
 
     def _on_new_budget(self) -> None:
         """Wipe all budget data after double-confirmation."""

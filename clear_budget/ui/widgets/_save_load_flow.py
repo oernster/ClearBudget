@@ -73,9 +73,13 @@ def build_settings_bank_buttons(
 ) -> tuple[QFrame, QPushButton, QPushButton]:
     """Return (separator, settings_btn, bank_btn) for a nav tray.
 
-    The separator is a themed vertical rule dividing the database actions
-    (load/save) from the settings shortcuts (Preferences, Bank Account),
-    which mirror the Settings menu. Both buttons are disabled for read-only
+    The separator is a themed vertical rule, returned here but placed by the
+    caller AFTER both buttons: it divides the four controls that act on the
+    application (load, save, Preferences, Bank Account) from the four tabs
+    that follow them, which only decide which page you are looking at. It used
+    to sit between load/save and the settings pair, back when the tabs were
+    a strip of their own and there was nothing else in the tray to divide
+    them from. Both buttons are disabled for read-only
     viewers, exactly as their menu items are.
     """
     separator = QFrame()

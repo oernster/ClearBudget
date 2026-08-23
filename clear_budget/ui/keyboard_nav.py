@@ -72,7 +72,11 @@ class KeyboardNavigator(QObject):
             for action in self._menubar.actions()
             if action.isVisible() and action.isEnabled()
         ]
-        stops.append((_TABS, self._tabbar))
+        # Only while it is SHOWN. The tabs moved into the navigation tray as
+        # ordinary buttons and the bar is hidden, so it would otherwise be a
+        # stop the user can neither see nor act on.
+        if self._tabbar.isVisible():
+            stops.append((_TABS, self._tabbar))
         for widget in self._current_stops():
             if widget is None or not (widget.isEnabled() and widget.isVisible()):
                 continue

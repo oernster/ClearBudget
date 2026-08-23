@@ -15,10 +15,15 @@ measuring painted pixels in both cases.
 
 Two deliberate asymmetries survive that:
 
-* an image is fitted to a SQUARE box by its longer side, not by its height.
-  The credit-card artwork is landscape where the other two are square; matching
-  heights would have made it half again as wide as its neighbours,
-  which reads as the strip's most important tab rather than its third.
+* an image is fitted by its HEIGHT and then scaled up slightly, rather than
+  fitted to a square box by its longer side. By the longer side the calendar
+  came out 42 tall and the cards 35 against the emoji's 46, so the pictures
+  sat visibly small beside the glyphs and, worse, their BASES sat high: a row
+  of icons that do not share a bottom edge reads as badly set rather than as
+  differently sized. Fitting by height puts every icon on one baseline by
+  construction. It does let the landscape card artwork run wider than its
+  neighbours, which is accepted deliberately: a shared bottom edge is what the
+  eye actually checks along a row.
 * the emoji is measured by HEIGHT rather than fitted to the box, because the
   archive glyph is a tall narrow shape: fitted by its longer side it would
   paint 26 tall and about 17 wide, so it would already be the lightest thing
@@ -38,11 +43,18 @@ from __future__ import annotations
 # Painted size of a tab icon, before UI scaling, as the side of the square box
 # each one is fitted into.
 TAB_ICON_PX = 26
-# An emoji tab icon paints at this fraction of the box's HEIGHT. 1.0 because
-# the archive glyph is narrow line work and reads light beside three solid
-# pictograms; see the module docstring for why this lands the opposite way
-# round from `nav_header.TOGGLE_GLYPH_SCALE`.
-TAB_EMOJI_SCALE = 1.0
+# An image tab icon paints this multiple of the box's height. Slightly over
+# 1.0 because these are dense pictograms sitting beside emoji that carry more
+# light space: at equal heights the pictures read as the smaller of the two,
+# which is the same optical-weight effect `TOGGLE_GLYPH_SCALE` corrects in the
+# other direction on the theme toggle.
+TAB_IMAGE_SCALE = 1.35
+# The archive glyph paints this multiple of the box's height, matched to
+# TAB_IMAGE_SCALE rather than left at the tray's own 1.0. Held equal on
+# purpose: the three pictures grew past the tray's emoji, and an archive glyph
+# left behind at the smaller size stopped reading as their peer and started
+# reading as the runt of the four. It is a tab first and an emoji second.
+TAB_EMOJI_SCALE = TAB_IMAGE_SCALE
 
 # The four tabs, in strip order. An entry is either a bundled image filename
 # or an emoji glyph; `_is_image` tells them apart by the suffix, so adding a
@@ -51,6 +63,18 @@ MONTHLY_BUDGET_ICON = "monthlybudget.png"
 SOLVENCY_ICON = "solvency.png"
 CREDIT_CARDS_ICON = "creditcards.png"
 ARCHIVE_ICON = "\U0001f5c4️"
+
+# The strip, in order, as (icon spec, the name that becomes the tooltip).
+TAB_SPECS = (
+    (MONTHLY_BUDGET_ICON, "Monthly Budget"),
+    (SOLVENCY_ICON, "Solvency"),
+    (CREDIT_CARDS_ICON, "Credit Cards"),
+    (ARCHIVE_ICON, "Archive"),
+)
+# QSS hooks: the object name carrying the three-state ring rules, and the
+# dynamic property the stylesheet reads to mark the tab being shown.
+TAB_BUTTON_ROLE = "NavTabButton"
+TAB_CURRENT_PROPERTY = "currentTab"
 
 # Cache of built pixmaps, keyed by (spec, height). Qt objects, so this cannot
 # be a functools cache built at import time: it needs a QApplication alive.
@@ -85,11 +109,10 @@ def _image_pixmap(spec: str, box_px: int):
     if cropped.isNull() or cropped.width() <= 0 or cropped.height() <= 0:
         return None
     pixmap = QPixmap.fromImage(cropped)
-    # By the LONGER side, so a landscape image shares the square box with its
-    # portrait and square neighbours instead of overrunning them.
-    if pixmap.width() >= pixmap.height():
-        return pixmap.scaledToWidth(box_px, Qt.TransformationMode.SmoothTransformation)
-    return pixmap.scaledToHeight(box_px, Qt.TransformationMode.SmoothTransformation)
+    # By HEIGHT, so every icon in the row shares a bottom edge whatever its
+    # aspect. Width is left to follow.
+    target = max(1, round(box_px * TAB_IMAGE_SCALE))
+    return pixmap.scaledToHeight(target, Qt.TransformationMode.SmoothTransformation)
 
 
 def _emoji_pixmap(glyph: str, box_px: int):
@@ -155,3 +178,77 @@ def tab_icon_box_px() -> int:
     from clear_budget.ui import ui_scale
 
     return max(1, ui_scale.px(TAB_ICON_PX))
+
+
+def build_tab_buttons(box_px: int) -> list:
+    """Return the four primary tabs as icon buttons, in strip order.
+
+    Buttons rather than a `QTabBar` because the tabs live in the navigation
+    tray now, beside the database and settings shortcuts, rather than in a
+    strip of their own. That SIMPLIFIES the keyboard model rather than
+    complicating it: `NavTabBar` existed because Qt ties a tab bar's focus to
+    its CURRENT tab, so a focused bar could only ever ring the tab the user
+    was already on. A button carries no such tie. Walking the ring moves focus
+    and changes nothing; Enter or Space activates and switches. That is
+    exactly what the cursor was built to fake.
+
+    Each button is sized to its OWN icon rather than to a shared square: the
+    artwork differs in aspect and the icons are matched by painted HEIGHT,
+    which is what puts them on one baseline (see `_image_pixmap`).
+    """
+    from PySide6.QtCore import QSize, Qt
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QPushButton
+
+    from clear_budget.ui.utils.nav_glyph_size import NAV_ICON_BTN_CHROME_PX
+
+    buttons = []
+    for spec, label in TAB_SPECS:
+        button = QPushButton()
+        button.setObjectName(TAB_BUTTON_ROLE)
+        button.setToolTip(label)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        pixmap = tab_icon_pixmap(spec, box_px)
+        if pixmap is None:
+            # No artwork: the tab keeps its NAME rather than becoming a blank
+            # square. A missing asset costs the tray its looks, never a route
+            # into the tab.
+            button.setText(label)
+        else:
+            button.setIcon(QIcon(pixmap))
+            button.setIconSize(QSize(pixmap.width(), pixmap.height()))
+            button.setFixedSize(
+                pixmap.width() + NAV_ICON_BTN_CHROME_PX,
+                pixmap.height() + NAV_ICON_BTN_CHROME_PX,
+            )
+        buttons.append(button)
+    return buttons
+
+
+def mark_current_tab(buttons, index: int) -> None:
+    """Mark button `index` as the tab being shown, clearing the others.
+
+    Through a dynamic property and a repolish rather than an inline
+    stylesheet, so a live theme switch restyles it: an inline colour would
+    survive the switch and leave the mark painted in the outgoing theme.
+
+    The current tab is deliberately NOT disabled to make it inert. A disabled
+    control paints the permanent red ring of the three-state model, which
+    reads as broken rather than as current; it is dropped from the ring
+    declaration instead, which is where "not a stop" belongs.
+    """
+    for i, button in enumerate(buttons):
+        button.setProperty(TAB_CURRENT_PROPERTY, i == index)
+        button.style().unpolish(button)
+        button.style().polish(button)
+
+
+def ring_tab_stops(buttons) -> list:
+    """The tab buttons that are keyboard-ring stops: every one but the current.
+
+    The tab already showing is not a stop. Landing on it would spend a
+    keypress to highlight the page the user is looking at, which is precisely
+    the dead stop `NavTabBar`'s separate cursor was built to avoid back when
+    these were a `QTabBar`. The rule survived the widget it was written for.
+    """
+    return [b for b in buttons if not b.property(TAB_CURRENT_PROPERTY)]

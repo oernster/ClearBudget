@@ -32,6 +32,10 @@ from clear_budget.ui.views._credit_card_projection_strip import (
 from clear_budget.ui.views._credit_card_view_loaders import (
     CreditCardViewLoaderMixin,
 )
+from clear_budget.ui.utils.tab_icons import (
+    build_tab_buttons,
+    ring_tab_stops,
+)
 from clear_budget.ui.widgets._save_load_flow import (
     build_info_button,
     build_save_load_buttons,
@@ -79,6 +83,10 @@ class CreditCardView(
             self.read_only, _glyph_h
         )
         self.info_btn = build_info_button(_glyph_h)
+        # The four primary tabs live in this tray, so every view builds its
+        # own set; MainWindow wires them and keeps the current-tab mark in
+        # step across all four.
+        self.tab_btns = build_tab_buttons(_glyph_h)
         (
             self.nav_header,
             self.month_label,
@@ -92,10 +100,11 @@ class CreditCardView(
             leading=(
                 self.load_btn,
                 self.save_btn,
-                _sep,
                 self.settings_btn,
                 self.bank_btn,
+                _sep,
             ),
+            tabs=self.tab_btns,
             trailing=(self.info_btn,),
         )
         self._refresh_month_label()
@@ -202,23 +211,30 @@ class CreditCardView(
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab.
 
-        READING order, left to right as drawn: the tray's one run of icon
-        buttons, then the month cluster centred beside it. A ring built any
-        other way presents as a SKIPPED control rather than as a wrong order,
-        because the user tabs past where a button visibly is and lands
-        somewhere else entirely.
+        READING order, which with two stacked trays means the TOP tray first
+        and the lower one after it, each left to right as drawn. A ring that
+        disagrees with the drawing does not present as a wrong order, it
+        presents as a SKIPPED control: the user tabs past where a button
+        visibly is and lands somewhere else entirely.
+
+        The tab being shown is not in the list. It is a stop that could do
+        nothing, and it is dropped here rather than disabled, because a
+        disabled control paints the permanent red ring and would read as
+        broken rather than as current.
         """
-        card_buttons = self.cards_container.findChildren(QPushButton)
+        others = ring_tab_stops(self.tab_btns)
+        card_buttons = [b for b in self.cards_container.findChildren(QPushButton)]
         return [
+            self.prev_btn,
+            self.graph_btn,
+            self.next_btn,
             self.load_btn,
             self.save_btn,
             self.settings_btn,
             self.bank_btn,
+            *others,
             self.theme_btn,
             self.info_btn,
-            self.prev_btn,
-            self.graph_btn,
-            self.next_btn,
             *card_buttons,
             self.add_btn,
             self.projection_table,

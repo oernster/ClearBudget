@@ -19,6 +19,7 @@ from clear_budget.ui.utils.format_helpers import (
     fmt,
     nav_glyph_height,
 )
+from clear_budget.ui.utils.tab_icons import build_tab_buttons
 from clear_budget.ui.widgets._save_load_flow import (
     build_info_button,
     build_save_load_buttons,
@@ -41,6 +42,10 @@ class MonthViewBuilderMixin:
             self.read_only, _glyph_h
         )
         self.info_btn = build_info_button(_glyph_h)
+        # The four primary tabs live in this tray, so every view builds its
+        # own set; MainWindow wires them and keeps the current-tab mark in
+        # step across all four.
+        self.tab_btns = build_tab_buttons(_glyph_h)
         _ym = self.view_model.current_month
         (
             self.nav_header,
@@ -55,10 +60,11 @@ class MonthViewBuilderMixin:
             leading=(
                 self.load_btn,
                 self.save_btn,
-                _sep,
                 self.settings_btn,
                 self.bank_btn,
+                _sep,
             ),
+            tabs=self.tab_btns,
             trailing=(self.info_btn,),
         )
 

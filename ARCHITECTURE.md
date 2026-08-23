@@ -971,16 +971,17 @@ bank statement. Both identities are tested.
 
 **Keyboard navigation** (`keyboard_nav.py` + `_main_window_nav.py`):
 - Each view's `nav_targets()` is the DECLARED ring order for its tab and it is
-  READING order, left to right as drawn: the tray's icon run, then the month
-  cluster, then the page's own controls. A ring that disagrees with the
+  READING order, which with two stacked trays means the UPPER tray first and
+  the lower one after it, each left to right as drawn, then the page's own
+  controls. A ring that disagrees with the
   drawing does not present as a wrong order, it presents as a SKIPPED control,
   because the user tabs past where a button visibly is and lands somewhere
   else. Two of the four declarations were already one pair out (the graph
   button was offered before Previous while it is drawn after it) and the tray
   rearrangement would have made all four wrong. Verified by mapping every
-  tray stop's centre to window x and requiring ascending on all four tabs,
-  plus a check that no enabled, visible tray button is missing from its
-  declaration. That measurement is a PROBE rather than a test, because the
+  tray stop's centre to (row, x) and requiring ascending on all four tabs, plus
+  a check that no enabled, visible tray button is missing from its declaration
+  bar the current tab, which is correctly not a stop. That measurement is a PROBE rather than a test, because the
   suite is Qt-free by design and ring order is geometry
 - One application-level `KeyboardNavigator` event filter drives an explicit
   focus ring: menu-bar titles, the tab bar, then the active tab's stops (each
@@ -1067,11 +1068,25 @@ bank statement. Both identities are tested.
   what the eye compares
 - A tab whose icon cannot be built keeps its label as visible text. A missing
   asset costs the strip its looks, never a route into the tab
-- The keyboard model is untouched by any of this: every tab is still its own
-  stop, `NavTabBar` still paints the cursor ring on the pill geometry imported
-  from `theme_qss`, with the three-state ring re-measured on the icon tabs
-  in both themes (0 ring pixels at rest, ~420 on the cursor tab, the selected
-  pill keeping its accent border)
+- The tabs are BUTTONS in the navigation tray (`build_tab_buttons`), not a
+  `QTabBar`. The `QTabWidget` is kept for what it is good at, owning the pages
+  and switching between them, and its bar is hidden. Every view builds its own
+  four buttons because every view builds its own tray; `MainWindow` wires them
+  all to the one tab widget and marks the current tab on every set at once, so
+  the mark is right whichever tray is on screen
+- That SIMPLIFIES the keyboard model rather than complicating it. `NavTabBar`
+  existed because Qt ties a tab bar's focus to its CURRENT tab, so a focused
+  bar could only ever ring the tab the user was already on, a dead stop; it
+  carried a separate cursor to work around that. A button has no such tie, so
+  walking the ring moves focus and changes nothing while Enter or Space
+  activates and switches, which is exactly what the cursor was built to fake.
+  The current tab is dropped from the ring declaration (`ring_tab_stops`)
+  rather than disabled, because a disabled control paints the permanent red
+  ring and would read as broken rather than as current
+- The current tab is marked with the accent border the selected pill used to
+  carry, through a dynamic property plus a repolish (`mark_current_tab`), never
+  an inline stylesheet: an inline colour survives a theme switch and leaves the
+  mark painted in the outgoing theme
 
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
@@ -1082,31 +1097,32 @@ bank statement. Both identities are tested.
   - Settings menu (adjacent to File): Preferences, Bank Account
   - Users menu: Switch User for every account; admins also get Manage Users
     (list, Add User, Delete Selected)
-  - Every tray glyph is drawn at `nav_header.NAV_GLYPH_SCALE` of the Previous
-    button's height rather than matching it. One number, applied inside
-    `nav_glyph_height`, so the app icon, the sun/moon toggle and the five icon
-    buttons can only ever be resized together; at full height the tray was the
-    heaviest band on the window, above a tab strip that is now pictograms too
-  - Every tab's nav tray mirrors the common actions as icon buttons, built by
-    `_save_load_flow.build_save_load_buttons` / `build_settings_bank_buttons` /
-    `build_info_button` and sized against the app-icon button. All of them sit
-    in ONE run at the tray's far left: folder (Load) and diskette (Save), a
-    themed separator, then cog (Preferences), bank (Bank Account), the sun/moon
-    toggle and the blue information button (How It Works). They were split
-    across both ends of the tray, four left and two right, with the month
-    cluster between them; two groups of the same KIND of control, divided by
-    something that is not one of them, read as two different kinds of control
-    and gave a user hunting the theme toggle no reason to look where every
-    other button was
-  - The month cluster is centred on the TRAY, not on what is left of it. That
-    costs a mirror of the icon run's width in the empty right column, which is
-    a spacer that PREFERS that width rather than a minimum: with the icons all
-    on one side, a hard minimum reserves the run twice and does not fit at the
-    window's own width floor, and what gave way was the cluster ("Previous"
-    came out as "Previo", the year lost digits). A shrinkable mirror orders the
-    two demands correctly, so the cluster is centred from 1280 logical px up
-    and slides right below that, never clipped (measured at 860, 1000, 1280,
-    1600 and 1920: no control below its size hint at any of them)
+  - The nav tray is TWO stacked trays, built together by
+    `nav_header.build_centered_nav_header`, because they answer different
+    questions. The UPPER tray carries only what is about the month being
+    viewed: Previous, the app icon that opens the month graph, the month and
+    year, then Next. It holds nothing else, so a stretch either side centres it
+    exactly. The LOWER tray carries everything that acts on the application,
+    built by `_save_load_flow.build_save_load_buttons` /
+    `build_settings_bank_buttons` / `build_info_button` and sized against the
+    app-icon button: folder (Load), diskette (Save), cog (Preferences), bank
+    (Bank Account), a themed separator, then the four primary tabs, with the
+    sun/moon toggle and the blue information button (How It Works) at the far
+    right. The separator divides the four controls that DO something from the
+    four that only decide which page is being looked at
+  - Two trays rather than one row is what makes the centring free. In one row
+    the cluster could be centred only by reserving the icon run's width again
+    on the empty side. Two runs plus the cluster do not fit at the window's own
+    width floor, so what gave way was the cluster: "Previous" came out as
+    "Previo" and the year lost its last digits, which is the one thing the tray
+    must never shed (`nav_label` pins its own width for the same reason). Give
+    the cluster a row of its own and the arithmetic disappears rather than
+    being balanced
+  - Tray glyphs are drawn at the Previous button's height, UNSCALED. A 0.75
+    factor lived in `nav_glyph_height` briefly, while the tabs were still a
+    strip of their own and the tray was the heaviest band on the window. With
+    the tabs now IN the tray, the tray is the band, so the icons are back at
+    the height they started at
   - Help menu: About, Check for Updates (runs the real update check via
     `UpdateCheckController` and reports the outcome, Up to date and unreachable
     included), How It Works, View Licence

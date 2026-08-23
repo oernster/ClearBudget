@@ -13,6 +13,7 @@ from clear_budget.ui.utils.format_helpers import (
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.views._month_view_apply_prompt import MonthViewApplyPromptMixin
 from clear_budget.ui.views._month_view_balance_mixin import MonthViewBalanceMixin
+from clear_budget.ui.utils.tab_icons import ring_tab_stops
 from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
 from clear_budget.ui.views._month_view_delete_mixin import MonthViewDeleteMixin
 from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
@@ -167,22 +168,29 @@ class MonthView(
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab.
 
-        READING order, left to right as drawn: the tray's one run of icon
-        buttons, then the month cluster centred beside it. A ring built any
-        other way presents as a SKIPPED control rather than as a wrong order,
-        because the user tabs past where a button visibly is and lands
-        somewhere else entirely.
+        READING order, which with two stacked trays means the TOP tray first
+        and the lower one after it, each left to right as drawn. A ring that
+        disagrees with the drawing does not present as a wrong order, it
+        presents as a SKIPPED control: the user tabs past where a button
+        visibly is and lands somewhere else entirely.
+
+        The tab being shown is not in the list. It is a stop that could do
+        nothing, and it is dropped here rather than disabled, because a
+        disabled control paints the permanent red ring and would read as
+        broken rather than as current.
         """
+        others = ring_tab_stops(self.tab_btns)
         return [
+            self.prev_btn,
+            self.graph_btn,
+            self.next_btn,
             self.load_btn,
             self.save_btn,
             self.settings_btn,
             self.bank_btn,
+            *others,
             self.theme_btn,
             self.info_btn,
-            self.prev_btn,
-            self.graph_btn,
-            self.next_btn,
             self.edit_balance_btn,
             self.bills_table,
             self.add_bill_btn,

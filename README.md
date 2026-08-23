@@ -194,8 +194,8 @@ what is deliberately left and what only looks like debt.
 - Dynamic payment methods: assign bills to bank account or specific credit cards
 - Database save to a remembered location and validated load (File menu and the
   folder/diskette buttons at the far left of every tab's navigation tray, with
-  cog and bank buttons beside them for Preferences and Bank Account, then the
-  theme toggle and a blue information button opening How It Works)
+  cog and bank buttons beside them for Preferences and Bank Account; the
+  theme toggle and a blue information button sit at its far right)
 - Display currency selection - 25 currencies covering English-speaking countries (Settings > Preferences)
 - Month graphs: the icon in the navigation tray opens the viewed month as a
   bar or line graph (a pilot button switches the style); Monthly Budget plots
@@ -220,8 +220,8 @@ what is deliberately left and what only looks like debt.
   reading is skipped
 - The page itself is the last stop on each tab whenever it has more content
   than fits, so Up/Down, Page Up/Down and Home/End scroll it from the keyboard
-- Dark and light themes: a sun/moon button in the navigation tray's icon run
-  on every tab switches between them, the whole app restyles immediately
+- Dark and light themes: a sun/moon button at the far right of the navigation
+  tray on every tab switches between them, the whole app restyles immediately
   (the sign-in screen included) and the choice is remembered between sessions
 - Scrollable tabs with scroll position indicators; a consistent, centred
   month/year navigation tray on every tab, with the date colour-coded by
@@ -240,8 +240,9 @@ what is deliberately left and what only looks like debt.
 
 The four primary tabs carry a picture rather than a name: a calendar and cash
 for Monthly Budget, a shield over coins for Solvency, a pair of cards for Credit
-Cards and a filing cabinet for Archive. Hovering one names it; the keyboard ring
-still stops on each tab in turn.
+Cards and a filing cabinet for Archive. They sit in the navigation tray rather
+than in a strip of their own. Hovering one names it; the keyboard ring still
+stops on each tab in turn.
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning; hint linking to the Solvency tab
 - **Solvency** - three pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the credit cards page carries the per-card utilisation bars and the same two months per card; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
@@ -267,12 +268,12 @@ still stops on each tab in turn.
 | Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
 
 Load, Save, Preferences and Bank Account are also one click away in every
-tab's navigation tray. Every icon button sits in one run at the tray's far
-left: the folder and diskette, a separator, then the cog (Preferences), the
-bank, the sun/moon theme toggle and a blue information button opening How It
-Works. The month or year cluster (Previous, the app icon, the date and Next)
-is centred on the tray beside them, with room to spare; on a narrow window
-the cluster keeps its size and slides right rather than losing characters.
+tab's navigation tray, which is two rows. The upper row carries only the
+month or year: Previous, the app icon that opens the graph, the date and Next,
+centred. The lower row carries everything that acts on the application: the
+folder and diskette, the cog (Preferences), the bank, then a separator and the
+four tabs, with the sun/moon theme toggle and a blue information button opening
+How It Works at the far right.
 
 Read-only viewer accounts have most of these actions disabled and the window title
 shows "(Read-only)".

@@ -11,7 +11,6 @@ from pathlib import Path
 
 from clear_budget.ui.utils.nav_glyph_size import (  # noqa: F401 (re-exported)
     FALLBACK_ICON_PX as _FALLBACK_ICON_PX,
-    NAV_GLYPH_SCALE,
     NAV_ICON_BTN_CHROME_PX,
     nav_glyph_height,
 )
@@ -159,135 +158,107 @@ NAV_TRAY_EDGE_INSET = 11
 NAV_TRAY_FLOAT_MARGIN = 8
 
 
+def _bordered_tray():
+    """An empty bordered nav tray, padded and ready for a layout.
+
+    WA_StyledBackground is required for a plain QWidget to paint a stylesheet
+    border; the #navTray id selector (styled by the theme QSS) keeps that
+    border off the child widgets.
+    """
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QWidget
+
+    tray = QWidget()
+    tray.setObjectName("navTray")
+    tray.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+    return tray
+
+
+def _tray_margins():
+    """The (edge, vertical) padding every tray uses, at the current UI scale."""
+    from clear_budget.ui import ui_scale
+
+    return ui_scale.px(NAV_HEADER_EDGE_PADDING), ui_scale.px(NAV_HEADER_V_PADDING)
+
+
 def build_centered_nav_header(
     initial_text: str,
     prev_btn=None,
     next_btn=None,
     icon_action=None,
     leading=(),
+    tabs=(),
     trailing=(),
 ):
-    """Return (QWidget, QLabel, icon_btn, theme_btn): the centred nav cluster.
+    """Return (QWidget, QLabel, icon_btn, theme_btn): the tab's two nav trays.
+
+    TWO trays, stacked, because they answer different questions and one row
+    could not hold both without the month being pushed off the middle:
+
+    * TRAY 1, topmost, carries ONLY what is about the month being viewed:
+      Previous, the app icon that opens the month graph, the month and year,
+      then Next. Nothing else is in it, so it is centred on the window by its
+      own emptiness rather than by balancing anything.
+    * TRAY 2 carries everything that acts on the application: the `leading`
+      widgets (load and save, a separator, Preferences and Bank Account), then
+      the `tabs` (the four primary tabs, which live here rather than in a strip
+      of their own), and at the FAR RIGHT the sun/moon toggle (`theme_btn`)
+      followed by the `trailing` widgets (How It Works).
 
     `icon_action`, when given, turns the tray icon into a tabbable month-graph
     button wired to it; icon_btn is then that button (else None).
 
-    EVERY icon button sits in one run at the tray's FAR LEFT, in this order:
-    the `leading` widgets (the load/save pair, then the settings shortcuts),
-    then the sun/moon toggle (`theme_btn`), then the `trailing` widgets (How
-    It Works). They used to be split, four on the left and two on the right,
-    with the month cluster between them. Two groups of the same KIND of
-    control, divided by something that is not one of them, reads as two
-    different kinds of control; a user hunting for the theme toggle had no
-    reason to look at the opposite end of the tray from every other button.
-    One run, one place to look. The centre is left to the one cluster that is
-    genuinely about the month being viewed.
-
     The returned widget is meant to be placed OUTSIDE the scroll area (see
-    ScrollableTab), so it spans the full tab width and centres identically on
+    ScrollableTab), so it spans the full tab width and reads identically on
     every tab, unaffected by that tab's scrollbar gutter or content overflow.
-
-    The nav cluster lives inside a bordered "navTray" widget that is inset from
-    the tab edges and floats with a gap above and below. The tray pads itself
-    symmetrically top and bottom so the cluster stays vertically centred inside
-    the border. The cluster is laid out in the centre column of a three-column
-    grid whose outer columns carry equal stretch, so it sits at the exact tray
-    midpoint on every tab. The outer cells are placed in the side columns (so
-    their buttons align vertically with the nav cluster) without moving the
-    cluster, since the centre column's position depends only on the equal
-    outer-column stretch, not on either cell's width.
     """
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import (
-        QGridLayout,
-        QHBoxLayout,
-        QSizePolicy,
-        QSpacerItem,
-        QVBoxLayout,
-        QWidget,
-    )
+    from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
     from clear_budget.ui import ui_scale
 
     nav_center, month_lbl, icon_btn = build_nav_month_widget(
         initial_text, prev_btn=prev_btn, next_btn=next_btn, icon_action=icon_action
     )
-
-    # Bordered tray. WA_StyledBackground is required for a plain QWidget to paint
-    # a stylesheet border; the #navTray id selector (styled by the theme QSS)
-    # keeps the border off the child widgets.
-    tray = QWidget()
-    tray.setObjectName("navTray")
-    tray.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-    # Three-column grid: the outer columns carry equal stretch, so the centre
-    # column (the nav cluster) is always positioned at the exact midpoint of the
-    # tray regardless of whether a trailing widget is present. This keeps the
-    # cluster in the identical horizontal position on every tab; the previous
-    # stretch-plus-spacer approach drifted by a pixel or two between the tab
-    # with a trailing button and those without it.
-    row = QGridLayout(tray)
-    edge = ui_scale.px(NAV_HEADER_EDGE_PADDING)
-    vpad = ui_scale.px(NAV_HEADER_V_PADDING)
-    row.setContentsMargins(edge, vpad, edge, vpad)
-    row.setHorizontalSpacing(0)
-    row.setColumnStretch(0, 1)
-    row.setColumnStretch(1, 0)
-    row.setColumnStretch(2, 1)
+    edge, vpad = _tray_margins()
     align_v = Qt.AlignmentFlag.AlignVCenter
-    row.addWidget(nav_center, 0, 1, Qt.AlignmentFlag.AlignHCenter | align_v)
-    # Left column: every icon button, in one run at the tray's far left.
-    left_cell = QWidget()
-    left_layout = QHBoxLayout(left_cell)
-    left_layout.setContentsMargins(0, 0, 0, 0)
-    left_layout.setSpacing(8)
+
+    # TRAY 1: the month cluster, alone. A stretch either side is enough to
+    # centre it exactly, and it is the whole reason this is now two trays: a
+    # single row with the icon run in it could only centre the cluster by
+    # reserving that run's width again on the empty side, which does not fit
+    # at the window's own width floor and cost the cluster its characters
+    # ("Previous" came out as "Previo"). Give the cluster a row of its own and
+    # the arithmetic disappears rather than being balanced.
+    month_tray = _bordered_tray()
+    month_row = QHBoxLayout(month_tray)
+    month_row.setContentsMargins(edge, vpad, edge, vpad)
+    month_row.addStretch(1)
+    month_row.addWidget(nav_center, 0, align_v)
+    month_row.addStretch(1)
+
+    # TRAY 2: the application's controls, left to right, with the toggle and
+    # How It Works at the far right where they have always been.
+    action_tray = _bordered_tray()
+    action_row = QHBoxLayout(action_tray)
+    action_row.setContentsMargins(edge, vpad, edge, vpad)
+    action_row.setSpacing(8)
     for widget in leading:
-        left_layout.addWidget(widget)
+        action_row.addWidget(widget, 0, align_v)
+    for widget in tabs:
+        action_row.addWidget(widget, 0, align_v)
+    action_row.addStretch(1)
     theme_btn = _build_theme_toggle_button(nav_glyph_height(prev_btn))
-    left_layout.addWidget(theme_btn)
+    action_row.addWidget(theme_btn, 0, align_v)
     for widget in trailing:
-        left_layout.addWidget(widget)
-    left_layout.addStretch(1)
-    row.addWidget(left_cell, 0, 0, Qt.AlignmentFlag.AlignLeft | align_v)
-    # Right column: deliberately EMPTY. Deliberately still here too: the centre
-    # column sits at the tray's exact midpoint only because the two outer
-    # columns carry equal stretch AND matching width; drop this cell and the
-    # month cluster drifts left by half the icon run on every tab.
-    right_cell = QWidget()
-    right_layout = QHBoxLayout(right_cell)
-    right_layout.setContentsMargins(0, 0, 0, 0)
-    right_layout.setSpacing(8)
-    right_layout.addStretch(1)
-    row.addWidget(right_cell, 0, 2, Qt.AlignmentFlag.AlignRight | align_v)
-    # That matching width is a PREFERENCE, never a minimum. The difference is
-    # the whole of this block. Every icon button now sits on the left, so a
-    # hard minimum reserves the width of the entire run twice over: once for
-    # the buttons and once for the empty mirror that centres them. Two runs
-    # plus the month cluster do not fit at the window's own width floor;
-    # what gave way was the cluster: "Previous" came out as "Previo" and the
-    # year lost its last digits, which is the one thing the tray must never
-    # shed (`nav_label` pins its own width for the same reason).
-    #
-    # A spacer that PREFERS the balancing width but may shrink to nothing puts
-    # the two demands in the right order: with room the mirror holds and the
-    # cluster is centred on the tray; when space runs out the mirror
-    # collapses first, so the cluster keeps its size and slides right rather
-    # than shedding characters. Nothing is ever clipped to buy symmetry.
-    balance_w = left_cell.sizeHint().width()
-    right_layout.addSpacerItem(
-        QSpacerItem(
-            balance_w,
-            0,
-            QSizePolicy.Policy.Maximum,
-            QSizePolicy.Policy.Minimum,
-        )
-    )
-    # Full-width header that insets the tray from the tab edges and lets it float
-    # with a symmetric gap above and below, keeping the cluster centred in the
-    # region between the tabs and the first content line.
+        action_row.addWidget(widget, 0, align_v)
+
     header = QWidget()
     outer = QVBoxLayout(header)
     inset = ui_scale.px(NAV_TRAY_EDGE_INSET)
     floatm = ui_scale.px(NAV_TRAY_FLOAT_MARGIN)
     outer.setContentsMargins(inset, floatm, inset, floatm)
-    outer.addWidget(tray)
+    outer.setSpacing(floatm)
+    outer.addWidget(month_tray)
+    outer.addWidget(action_tray)
     return header, month_lbl, icon_btn, theme_btn
