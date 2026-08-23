@@ -193,14 +193,3 @@ class TestReverseWithoutConnection:
         )
 
         assert reverse_applied_for_item(None, item_type="bill", item_id=1) == 0
-
-
-class TestResetClearsLog:
-    def test_reset_all_data_clears_applied_log(self, budget_service):
-        conn = budget_service.bill_repo.conn
-        _seed_balance(conn, pence=10000, iso="2026-07-24")
-        budget_service.add_bill(bill=_bill("Water", 3000, 25))
-        budget_service.apply_elapsed_bank_transactions(today=_TODAY)
-        assert _log_count(conn) == 1
-        budget_service.reset_all_data()
-        assert _log_count(conn) == 0

@@ -348,9 +348,6 @@ Key methods:
   source instead would remove it from months it really did arrive in, which is
   why this exists and why the income dialog offers no way to turn a recurring
   income into a one-off
-- `reset_all_data()` - wipes this budget's data, preserving the Bank Account
-  payment method. No longer reachable from the UI: "New Budget" creates a
-  separate budget rather than emptying the open one (see Named budgets)
 - `get_recorded_months()` → `list[YearMonth]` - months already snapshotted into the
   archive (drives the Archive tab)
 - `archive_month(year_month)` - snapshot one month's generated bills and income into

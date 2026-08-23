@@ -281,12 +281,6 @@ class BudgetService(
 
         return get_bank_balance_day(getattr(self.bill_repo, "conn", None))
 
-    def reset_all_data(self) -> None:
-        """Wipe all user data, preserving the Bank Account payment method."""
-        from clear_budget.application.services._budget_reset import reset_budget_data
-
-        reset_budget_data(self.bill_repo.conn)
-
     def set_bank_balance(self, *, amount: Amount) -> None:
         """Store a manually entered balance; supersedes prior auto-applications."""
         from clear_budget.application.services._balance_application import (
