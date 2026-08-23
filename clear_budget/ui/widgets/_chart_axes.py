@@ -100,12 +100,12 @@ class ChartAxesMixin:
         y = ui_scale.px(4)
         swatch = ui_scale.px(_LEGEND_SWATCH)
         entries = [
-            (self._series_colour(idx), series.label)
+            (self._plot_colour(idx), series.label)
             for idx, series in enumerate(self._series)
         ]
         if self._curve_shown():
             curve_label = _CURVE_TOTAL_LABEL if len(self._series) > 1 else _CURVE_LABEL
-            entries.append((QColor(self._curve_colour), curve_label))
+            entries.append((self._active_curve_colour(), curve_label))
         for colour, label in entries:
             painter.fillRect(QRectF(x, y + 3, swatch, swatch), colour)
             painter.setPen(QColor(self._tokens["text_muted"]))

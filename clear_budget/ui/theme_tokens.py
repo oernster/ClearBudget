@@ -118,6 +118,27 @@ LIGHT: dict[str, str] = {
 CURVE_DARK = "#e879f9"
 CURVE_LIGHT = "#a21caf"
 
+# ROLE colours, for a chart plotting a SINGLE series. With one series there is
+# nothing to tell apart, so the mark is free to say what it IS rather than
+# which series it is: a line reads as a running balance, bars read as one day
+# each. Green was the palette's first entry and it said "in credit" whatever
+# the figure actually was, which is exactly the wrong thing for a balance that
+# may be negative. Light blue carries no verdict.
+#
+# These do NOT apply to a multi-series chart (one series per credit card),
+# where telling one card from another is the whole job and the palette does it.
+CHART_LINE_DARK = "#7dd3fc"
+CHART_LINE_LIGHT = "#0284c7"
+CHART_BAR_DARK = "#fbbf24"
+CHART_BAR_LIGHT = "#d97706"
+
+# The single-series curve sits over amber bars, so it takes the same light blue
+# as the line. The multi-series curve keeps its own hue: with up to eight
+# series on the axis it has to stay outside the palette or it reads as one
+# more card.
+SOLO_CURVE_DARK = CHART_LINE_DARK
+SOLO_CURVE_LIGHT = CHART_LINE_LIGHT
+
 SERIES_DARK = (
     "#34d399",
     "#60a5fa",
@@ -175,6 +196,21 @@ def tokens_for(theme_name: str) -> dict[str, str]:
 def series_colours_for(theme_name: str) -> tuple[str, ...]:
     """Return the chart series palette for `theme_name`, defaulting to dark."""
     return _SERIES_BY_THEME.get(theme_name, SERIES_DARK)
+
+
+def chart_line_colour_for(theme_name: str) -> str:
+    """The line colour for a chart plotting one series."""
+    return CHART_LINE_LIGHT if theme_name == THEME_LIGHT else CHART_LINE_DARK
+
+
+def chart_bar_colour_for(theme_name: str) -> str:
+    """The bar fill for a chart plotting one series (negatives stay danger)."""
+    return CHART_BAR_LIGHT if theme_name == THEME_LIGHT else CHART_BAR_DARK
+
+
+def solo_curve_colour_for(theme_name: str) -> str:
+    """The following curve over a single series' bars."""
+    return SOLO_CURVE_LIGHT if theme_name == THEME_LIGHT else SOLO_CURVE_DARK
 
 
 def curve_colour_for(theme_name: str) -> str:

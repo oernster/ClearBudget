@@ -71,6 +71,25 @@ def _active_palette():
     return tokens_for(name), series_colours_for(name), curve_colour_for(name)
 
 
+def _solo_palette():
+    """Role colours for a chart plotting a single series: (line, bar, curve)."""
+    from PySide6.QtWidgets import QApplication
+
+    from clear_budget.ui import theme
+    from clear_budget.ui.theme_tokens import (
+        chart_bar_colour_for,
+        chart_line_colour_for,
+        solo_curve_colour_for,
+    )
+
+    name = theme.current_theme(QApplication.instance())
+    return (
+        chart_line_colour_for(name),
+        chart_bar_colour_for(name),
+        solo_curve_colour_for(name),
+    )
+
+
 class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
     """Draws GraphSeries values as a line or grouped bar chart."""
 
@@ -80,6 +99,7 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         self._mode = MODE_BAR
         self._hover = None
         self._tokens, self._colours, self._curve_colour = _active_palette()
+        self._solo_colours = _solo_palette()
         self.setMinimumHeight(ui_scale.px(260))
         # Hover readouts need move events without a button held down.
         self.setMouseTracking(True)
@@ -92,8 +112,31 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         self.update()
 
     def _series_colour(self, idx: int) -> QColor:
-        """Return the plot colour for series `idx`, cycling the palette."""
+        """Return the palette colour for series `idx`, cycling the palette."""
         return QColor(self._colours[idx % len(self._colours)])
+
+    def _solo(self) -> bool:
+        """Whether this chart plots exactly one series."""
+        return len(self._series) == 1
+
+    def _plot_colour(self, idx: int) -> QColor:
+        """The colour series `idx` is ACTUALLY drawn in, for the current mode.
+
+        A single series takes a role colour: light blue as a line, amber as
+        bars. It used to take the palette's first entry, which was green;
+        green on a bank balance reads as "in credit" whether or not it is.
+        With several series the palette wins, because telling one card from
+        another is the only job the colour has there.
+        """
+        line_colour, bar_colour, _curve = self._solo_colours
+        if not self._solo():
+            return self._series_colour(idx)
+        return QColor(bar_colour if self._mode == MODE_BAR else line_colour)
+
+    def _active_curve_colour(self) -> QColor:
+        """The curve's colour: light blue over a lone series, else its own hue."""
+        _line, _bar, solo_curve = self._solo_colours
+        return QColor(solo_curve if self._solo() else self._curve_colour)
 
     def _curve_values(self) -> tuple[int, ...]:
         """The day-end total the curve follows, across every plotted series.
@@ -181,6 +224,7 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
     # ---- painting -----------------------------------------------------------
     def paintEvent(self, event) -> None:
         self._tokens, self._colours, self._curve_colour = _active_palette()
+        self._solo_colours = _solo_palette()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.fillRect(self.rect(), QColor(self._tokens["window_bg"]))
@@ -218,7 +262,7 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         _left, _top, _plot_w, _plot_h, days, _low, _high = geom
         dot = ui_scale.px(_INFLECTION_DOT_PX)
         for idx, series in enumerate(self._series):
-            colour = self._series_colour(idx)
+            colour = self._plot_colour(idx)
             painter.setPen(QPen(colour, 2))
             painter.drawPolyline(
                 QPolygonF(
@@ -251,7 +295,7 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         # warning rather than one more healthy-looking bar.
         danger = QColor(self._tokens["danger"])
         for idx, series in enumerate(self._series):
-            colour = self._series_colour(idx)
+            colour = self._plot_colour(idx)
             for day in range(1, days + 1):
                 bar_colour = danger if series.values[day - 1] < 0 else colour
                 painter.fillRect(self._bar_rect(geom, idx, day), bar_colour)
@@ -276,7 +320,7 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.setPen(
             QPen(
-                QColor(self._curve_colour),
+                self._active_curve_colour(),
                 ui_scale.px(_CURVE_PEN_PX),
                 Qt.PenStyle.SolidLine,
                 Qt.PenCapStyle.RoundCap,

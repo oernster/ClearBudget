@@ -68,7 +68,7 @@ class ChartHoverMixin:
         value = series.values[day - 1]
         point = QPointF(self._x_at(geom, day), self._y_at(geom, value))
         radius = ui_scale.px(_HOVER_DOT_PX)
-        painter.setBrush(self._series_colour(idx))
+        painter.setBrush(self._plot_colour(idx))
         painter.setPen(QPen(QColor(self._tokens["text"]), 2))
         painter.drawEllipse(point, radius, radius)
         painter.setBrush(Qt.BrushStyle.NoBrush)

@@ -541,7 +541,9 @@ it is all under the coverage gate and testable without a QApplication.
   screenshotting the widget: vector output stays sharp, needs no image file beside
   the HTML and can be tested as a string. Fixed DARK palette mirroring the app's
   `DARK` / `SERIES_DARK` / `CURVE_DARK` tokens (mirrored, not imported, because the
-  application layer may not depend on the UI). Fixed rather than following the
+  application layer may not depend on the UI), including the single-series role
+  colours `SOLO_LINE` / `SOLO_BAR` / `SOLO_CURVE`, so an export and the screen
+  agree on when the palette gives way to them. Fixed rather than following the
   active theme, so an export does not change appearance depending on where the
   toggle happened to be. Each chart carries its own background rect so it reads
   correctly wherever it is embedded and the print rules keep the dark identity
@@ -1404,6 +1406,18 @@ renderings of the same figures to hold in step. Every month any page shows
   (`theme_tokens.series_colours_for` / `curve_colour_for`), so pastels plot on
   the dark canvas and saturated mid-tones on the light one, same hue order
   either way
+- A chart plotting exactly ONE series takes ROLE colours instead of the series
+  palette: the line light blue (`chart_line_colour_for`), the bars amber
+  (`chart_bar_colour_for`) and the curve over those bars light blue
+  (`solo_curve_colour_for`). The bank graph plots one series; green there read
+  as a positive balance whatever the figures actually were, so the colour was
+  making a claim the data does not support. Light blue and amber carry no
+  such reading. The rule is keyed on series COUNT, not on which view opened the
+  chart, so the credit-card graph (one series per card) keeps the palette,
+  because telling the cards apart is the whole job of colour there; its curve
+  keeps the magenta that holds it outside the palette. Negative values are
+  unaffected either way: a below-zero bar stays `danger` red, since that is a
+  state colour rather than a series one
 - Amber/red semantic warning colours (card thresholds, overdraft warnings) are
   theme-independent
 

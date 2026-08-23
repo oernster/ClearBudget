@@ -34,6 +34,16 @@ ZERO_LINE = "#f87171"
 CURVE = "#e879f9"
 SERIES = ("#60a5fa", "#34d399", "#fbbf24", "#c084fc", "#22d3ee", "#fb923c")
 
+# Role colours for a chart plotting a SINGLE series, mirroring
+# CHART_LINE_DARK / CHART_BAR_DARK / SOLO_CURVE_DARK in ui.theme_tokens. With
+# one series nothing needs telling apart, so the mark says what it IS: a light
+# blue line for the running balance, amber bars for the individual days. Green
+# used to do both and read as "in credit" whatever the figure was. A
+# below-zero bar still fills in ZERO_LINE's red.
+SOLO_LINE = "#7dd3fc"
+SOLO_BAR = "#fbbf24"
+SOLO_CURVE = SOLO_LINE
+
 WIDTH = 880
 HEIGHT = 380
 # The left margin grows to fit the widest y-axis label, mirroring the
@@ -118,6 +128,27 @@ class _Plot:
     def colour(self, index: int) -> str:
         return SERIES[index % len(SERIES)]
 
+    @property
+    def solo(self) -> bool:
+        """Whether this plot carries exactly one series."""
+        return len(self.series) == 1
+
+    def bar_colour(self, index: int) -> str:
+        """The fill for a positive bar of series `index`."""
+        return SOLO_BAR if self.solo else self.colour(index)
+
+    def line_colour(self, index: int) -> str:
+        """The stroke for the plotted line of series `index`."""
+        return SOLO_LINE if self.solo else self.colour(index)
+
+    def curve_colour(self) -> str:
+        """The following curve's stroke.
+
+        Light blue over a lone series' amber bars; its own hue when several
+        series share the axis, where it must not read as one more of them.
+        """
+        return SOLO_CURVE if self.solo else CURVE
+
 
 def _grid(plot: _Plot) -> list[str]:
     parts = []
@@ -168,7 +199,7 @@ def _bars(plot: _Plot) -> list[str]:
     zero_y = plot.y_at(0)
     parts = []
     for index, series in enumerate(plot.series):
-        colour = plot.colour(index)
+        colour = plot.bar_colour(index)
         for day in range(1, plot.days + 1):
             value = series.values[day - 1]
             y = plot.y_at(value)
@@ -198,7 +229,7 @@ def _lines(plot: _Plot) -> list[str]:
         )
         parts.append(
             f'<polyline points="{points}" fill="none" '
-            f'stroke="{plot.colour(index)}" stroke-width="{_LINE_WIDTH}"/>'
+            f'stroke="{plot.line_colour(index)}" stroke-width="{_LINE_WIDTH}"/>'
         )
     return parts
 
@@ -219,16 +250,21 @@ def _curve(plot: _Plot) -> list[str]:
         )
     return [
         (
-            f'<path d="{" ".join(path)}" fill="none" stroke="{CURVE}" '
+            f'<path d="{" ".join(path)}" fill="none" stroke="{plot.curve_colour()}" '
             f'stroke-width="{_CURVE_WIDTH}" stroke-linecap="round"/>'
         )
     ]
 
 
 def _legend(plot: _Plot) -> list[str]:
-    entries = [(plot.colour(i), s.label) for i, s in enumerate(plot.series)]
+    # The swatch has to be the colour actually drawn, which for one series
+    # differs between the two renderings: amber bars, a light blue line.
+    mark = plot.bar_colour if plot.with_curve else plot.line_colour
+    entries = [(mark(i), s.label) for i, s in enumerate(plot.series)]
     if plot.with_curve:
-        entries.append((CURVE, "Curve (total)" if len(plot.series) > 1 else "Curve"))
+        entries.append(
+            (plot.curve_colour(), "Curve (total)" if len(plot.series) > 1 else "Curve")
+        )
     parts = []
     x = plot.left
     for colour, label in entries:
