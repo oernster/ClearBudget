@@ -1397,8 +1397,19 @@ platform differences are isolated to a few well-defined seams:
   all databases and the lock file live there.
 - **File-dialog defaults**: `ui_paths` uses Qt `QStandardPaths`, so dialogs open
   in the correct per-OS location.
-- **Runtime assets**: `shared/resources.py` discovers icons and the splash image
-  across frozen (PyInstaller) and source layouts.
+- **Runtime assets**: `shared/resources.py` discovers icons, the splash image
+  and the tab artwork across frozen (PyInstaller) and source layouts. Every
+  caller that paints the app icon goes through `find_logo_png_path`; three
+  modules had each grown their own copy of the same "first PNG in the
+  candidate list" loop while a fourth (the sign-in dialog) had not, which is
+  how its logo went missing on two platforms.
+- **What the app bundle carries**: ONE sized PNG (the 256), the `.ico`, the
+  three tab images and VERSION. It used to carry all seven sizes plus the
+  1024 master. Since every consumer takes the first PNG from one ordered list
+  and the 256 heads it, the smaller five could never be selected by any code
+  path; the master appears in no lookup table at all: they shipped and
+  were never read. The SETUP program keeps its own full set, which its own UI
+  genuinely reads at several sizes.
 - **Display scaling**: `ui_scale` adapts the UI to the screen, scaling down on
   small laptops and capping growth on 4K.
 - **Conditional dependencies**: Windows-only packages (`pywin32`) are guarded by

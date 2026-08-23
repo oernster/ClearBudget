@@ -43,14 +43,22 @@ def build_exe() -> int:
         "--onedir",
         "--windowed",
         "--add-data=clear_budget:clear_budget",
-        "--add-data=clearbudget_16.png:.",
-        "--add-data=clearbudget_32.png:.",
-        "--add-data=clearbudget_48.png:.",
-        "--add-data=clearbudget_64.png:.",
-        "--add-data=clearbudget_128.png:.",
+        # ONE sized PNG, not the seven this used to carry. Every consumer of
+        # the app icon takes the FIRST png from one ordered list
+        # (`resources._QT_ICON_NAMES`) with the 256 at the head of it, so with
+        # the 256 present the 128, 64, 48, 32 and 16 could never be selected
+        # by any code path: they were bytes that shipped and were never read.
+        # `main._find_runtime_icon` and `find_splash_image_path` name the 256
+        # and nothing else. Staged lower-cased because that is the name those
+        # two look for; the repository ships it capitalised and PyInstaller
+        # stages a file under whatever name it is given here.
         "--add-data=clearbudget_256.png:.",
+        # The multi-resolution ICO, for the Windows shell rather than for any
+        # code path in the app: it is what a shortcut and the Apps list point
+        # at. The installer also deploys its own copy (ops/registration), so
+        # this covers running straight out of dist-pyinstaller.
         "--add-data=ClearBudget.ico:.",
-        "--add-data=ClearBudget.png:.",
+        # The tab-strip artwork, read at runtime by ui/utils/tab_icons.
         "--add-data=monthlybudget.png:.",
         "--add-data=solvency.png:.",
         "--add-data=creditcards.png:.",
