@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import ui_scale
+from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 
 class UserManagementDialog(QDialog):
@@ -48,6 +49,7 @@ class UserManagementDialog(QDialog):
         layout.addWidget(title)
 
         self.table = QTableWidget()
+        apply_comfortable_rows(self.table)
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["Username", "Role", "ID"])
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)

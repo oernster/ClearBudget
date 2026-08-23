@@ -760,6 +760,28 @@ so reloading there would be the first of two for one month change. The wiring
 is held by `tests/structural/test_cross_tab_refresh.py`, a source scan rather
 than a widget test because the suite is Qt-free.
 
+**Row heights are measured, never chosen.** A table row is
+`comfortable_row_height` (`ui/utils/text_metrics.py`): the polished widget's own
+`QFontMetrics.height()`, plus the vertical chrome the stylesheet actually draws,
+plus a comfort margin. The projection strip used to pin a literal 28 pixels. The
+base font is 14pt, a 26 pixel line box with a 5 pixel descent; a header
+section spends 4px padding plus a 1px border top and bottom, so 18 pixels were
+left for 26 pixels of text: every descender was cut at the baseline and the
+month column read "Auq 2026". The literal was not slightly small, it was
+unrelated to what it had to hold.
+- The chrome constants (`HEADER_SECTION_PADDING_PX`, `HEADER_SECTION_BORDER_PX`,
+  `TABLE_ITEM_VPADDING_PX`, `TEXT_BREATHING_PX`) live in `theme_qss` and are read
+  BOTH by the stylesheet f-string and by the height calculation, so the two
+  cannot drift apart
+- The row clears whichever of the header section or the cell spends more, since
+  one height serves both the cells and the vertical header label
+- `ensurePolished()` is not optional: a stylesheet `font-size` does not reach
+  `QWidget.font()` until the widget is polished, so measuring too early silently
+  returns the 9pt application default and reinstates the bug
+- Applied by `apply_comfortable_rows` at every table's construction, so the
+  height follows the font when the theme or `ui_scale` changes rather than being
+  correct only at one display size
+
 **Views**:
 - `MonthView` - bill/income tables with inline editing; balance display adapts
   to current vs future month; composed of mixins (builders, table, edit, delete,

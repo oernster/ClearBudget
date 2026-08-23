@@ -21,6 +21,7 @@ from clear_budget.domain.services.credit_limit_schedule import (
 from clear_budget.ui import theme, ui_scale
 from clear_budget.ui.theme_tokens import STATE_AT_RISK, STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES, fmt, percentage
+from clear_budget.ui.utils.text_metrics import comfortable_row_height
 
 # The solvency view presents the current month plus the next two (the forward
 # projection), so the card bars reflect a committed limit change landing within
@@ -128,7 +129,9 @@ class SolvencyPanelCardBarsMixin:
             bar = QProgressBar()
             bar.setMaximum(max(1, limit_pence))
             bar.setValue(min(closing_pence, limit_pence))
-            bar.setMinimumHeight(ui_scale.px(26))
+            # The bar draws its text centred inside itself, so its floor is
+            # the same line box a table row needs, not a guessed number.
+            bar.setMinimumHeight(comfortable_row_height(bar))
             bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
             bar.setFormat(
                 f"{month_name} month-end: {fmt(closing_pence)}"

@@ -43,6 +43,7 @@ from clear_budget.ui.widgets._save_load_flow import (
     build_settings_bank_buttons,
 )
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
+from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 
 class CreditCardView(
@@ -137,6 +138,7 @@ class CreditCardView(
         proj_group = QGroupBox(f"{_PROJECTION_MONTHS}-Month Balance Projection")
         proj_layout = QVBoxLayout()
         self.projection_table = QTableWidget()
+        apply_comfortable_rows(self.projection_table)
         self.projection_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.projection_table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
         _ph = self.projection_table.horizontalHeader()
@@ -147,7 +149,6 @@ class CreditCardView(
         self.projection_table.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        self.projection_table.verticalHeader().setDefaultSectionSize(ui_scale.px(28))
         # The strip is locked to exactly its rows in _build_projection_strip,
         # once the columns (and so the real header height) are populated.
         proj_layout.addWidget(self.projection_table)

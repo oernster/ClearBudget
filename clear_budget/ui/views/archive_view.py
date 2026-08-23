@@ -27,6 +27,7 @@ from clear_budget.ui.widgets._save_load_flow import (
     build_settings_bank_buttons,
 )
 from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
+from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 
 class ArchiveView(QWidget):
@@ -77,6 +78,7 @@ class ArchiveView(QWidget):
         )
 
         self.archive_table = QTableWidget()
+        apply_comfortable_rows(self.archive_table)
         self.archive_table.setColumnCount(5)
         self.archive_table.setHorizontalHeaderLabels(
             ["Month", "Income", "Bills", "Balance", "Status"]

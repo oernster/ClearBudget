@@ -26,6 +26,7 @@ from clear_budget.ui.widgets._save_load_flow import (
     build_save_load_buttons,
     build_settings_bank_buttons,
 )
+from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 INCOME_VISIBLE_ROWS = 5
 
@@ -110,6 +111,7 @@ class MonthViewBuilderMixin:
         bills_group = QGroupBox("Bills")
         bills_layout = QVBoxLayout()
         self.bills_table = QTableWidget()
+        apply_comfortable_rows(self.bills_table)
         self.bills_table.setColumnCount(8)
         self.bills_table.setHorizontalHeaderLabels(
             [
@@ -155,6 +157,7 @@ class MonthViewBuilderMixin:
         income_group = QGroupBox("Income")
         income_layout = QVBoxLayout()
         self.income_table = QTableWidget()
+        apply_comfortable_rows(self.income_table)
         self.income_table.setColumnCount(7)
         self.income_table.setHorizontalHeaderLabels(
             ["Name", "Amount", "Reliable", "Due Day", "Active", "Skip", "Received"]

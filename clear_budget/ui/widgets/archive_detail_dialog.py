@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import ui_scale
+from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 
 class ArchiveDetailDialog(QDialog):
@@ -59,6 +60,7 @@ class ArchiveDetailDialog(QDialog):
         layout.addWidget(bills_label)
 
         bills_table = QTableWidget()
+        apply_comfortable_rows(bills_table)
         bills_table.setColumnCount(5)
         bills_table.setHorizontalHeaderLabels(
             ["Name", "Amount", "Category", "Payment Method", "Due Day"]
@@ -93,6 +95,7 @@ class ArchiveDetailDialog(QDialog):
         layout.addWidget(income_label)
 
         income_table = QTableWidget()
+        apply_comfortable_rows(income_table)
         income_table.setColumnCount(4)
         income_table.setHorizontalHeaderLabels(
             ["Name", "Amount", "Reliable", "Due Day"]

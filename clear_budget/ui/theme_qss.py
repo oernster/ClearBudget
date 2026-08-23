@@ -47,6 +47,24 @@ def _ui_font_family() -> str:
     return family or _FALLBACK_FONT_FAMILY
 
 
+# Vertical chrome inside a table. These live here rather than inline in the
+# stylesheet because `utils.text_metrics` has to agree with them EXACTLY: a row
+# is only tall enough if it clears whichever of the two is larger. They were
+# the bug. A header section spends padding plus a border top and bottom, so a
+# row pinned at 28px left 18px for a line box needing 26px and the descender
+# was simply cut: "Aug" rendered as "Auq".
+HEADER_SECTION_PADDING_PX = 4
+HEADER_SECTION_BORDER_PX = 1
+# Breathing room above and below a cell's text. There was NO item rule at all,
+# so a cell was its font's line box with nothing spare.
+TABLE_ITEM_VPADDING_PX = 4
+# Comfort margin ON TOP of the exact line box. Fitting the descender exactly is
+# correct but sits on the bound, so a row reads cramped and any rounding at a
+# different display scale puts it back on the baseline. This is the deliberate
+# space, distinct from the chrome above, which is the arithmetic.
+TEXT_BREATHING_PX = 4
+
+
 def build_qss(t: dict[str, str], s: dict[str, str]) -> str:
     """Render the whole app stylesheet from chrome tokens `t` and states `s`."""
     base_pt = round(14 * ui_scale.factor())
@@ -98,8 +116,13 @@ QTableWidget:enabled:focus {{
 QHeaderView::section {{
     background-color: {t["window_bg"]};
     color: {t["text_muted"]};
-    border: 1px solid {t["border"]};
-    padding: 4px;
+    border: {HEADER_SECTION_BORDER_PX}px solid {t["border"]};
+    padding: {HEADER_SECTION_PADDING_PX}px;
+}}
+
+QTableWidget::item {{
+    padding-top: {TABLE_ITEM_VPADDING_PX}px;
+    padding-bottom: {TABLE_ITEM_VPADDING_PX}px;
 }}
 
 QTableWidget::item:selected {{
