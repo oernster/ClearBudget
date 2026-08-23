@@ -192,10 +192,14 @@ what is deliberately left and what only looks like debt.
   projections look ahead with the right limit and each change folds in
   automatically once its date passes
 - Dynamic payment methods: assign bills to bank account or specific credit cards
+- Several named budgets per account, each its own separate database: create one
+  from File > New Budget, then switch between them from the arrows button in
+  every tab's navigation tray. Creating, switching and renaming never touch
+  another budget's contents
 - Database save to a remembered location and validated load (File menu and the
   folder/diskette buttons at the far left of every tab's navigation tray, with
-  cog and bank buttons beside them for Preferences and Bank Account; the
-  theme toggle and a blue information button sit at its far right)
+  the switch-budget, cog and bank buttons beside them; the theme toggle and a
+  blue information button sit at its far right)
 - Display currency selection - 25 currencies covering English-speaking countries (Settings > Preferences)
 - Month graphs: the icon in the navigation tray opens the viewed month as a
   bar or line graph (a pilot button switches the style); Monthly Budget plots
@@ -256,7 +260,8 @@ stops on each tab in turn.
 
 | Menu | Action | Description |
 |------|--------|-------------|
-| File | New Budget... | Wipe all budget data and start fresh (double confirmation required) |
+| File | New Budget... | Create a named, empty budget alongside the ones you have and open it; nothing existing is touched |
+| File | Switch Budget... | List, switch between, rename and delete your budgets (also the switch button in the nav tray) |
 | File | Load... | Replace active database from a saved file (validated before write) |
 | File | Save | Copy the database to the remembered save file; the first save prompts for a filename, defaulting to Downloads |
 | File | Save As... | Choose a new save file; the location is remembered between runs |
@@ -268,13 +273,13 @@ stops on each tab in turn.
 | Users | Switch User | Return to login screen |
 | Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
 
-Load, Save, Preferences and Bank Account are also one click away in every
-tab's navigation tray, which is two rows. The upper row carries only the
-month or year: Previous, the app icon that opens the graph, the date and Next,
-centred. The lower row carries everything that acts on the application: the
-folder and diskette, the cog (Preferences), the bank, then a separator and the
-four tabs, with the sun/moon theme toggle and a blue information button opening
-How It Works at the far right.
+Load, Save, Switch Budget, Preferences and Bank Account are also one click away
+in every tab's navigation tray, which is two rows. The upper row carries only
+the month or year: Previous, the app icon that opens the graph, the date and
+Next, centred. The lower row carries everything that acts on the application:
+the folder and diskette, the switch-budget arrows, the cog (Preferences), the
+bank, then a separator and the four tabs, with the sun/moon theme toggle and a
+blue information button opening How It Works at the far right.
 
 Read-only viewer accounts have most of these actions disabled and the window title
 shows "(Read-only)".

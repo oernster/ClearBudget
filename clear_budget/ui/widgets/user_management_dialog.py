@@ -1,7 +1,5 @@
 """UserManagementDialog - admin screen to view and manage user accounts."""
 
-from pathlib import Path
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
@@ -17,12 +15,11 @@ from PySide6.QtWidgets import (
 
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
-from clear_budget.shared.config import Config
 from clear_budget.ui import ui_scale
 
 
 class UserManagementDialog(QDialog):
-    """Admin dialog to list users, add new ones, and delete existing ones."""
+    """Admin dialog to list users, add new ones and delete existing ones."""
 
     def __init__(
         self,
@@ -161,12 +158,12 @@ class UserManagementDialog(QDialog):
 
     @classmethod
     def _delete_user_data(cls, username: str) -> None:
-        """Delete the per-user budget database file and its sidecar files."""
-        cls._delete_db_files(Config.for_user(username).db_path)
+        """Delete EVERY budget database the account owns, plus its index.
 
-    @staticmethod
-    def _delete_db_files(db_path: Path) -> None:
-        for suffix in ("", "-wal", "-shm", "-journal"):
-            path = db_path.with_name(db_path.name + suffix)
-            if path.exists():
-                path.unlink()
+        A user can own several budgets. Deleting only the legacy path, which is
+        all there was to delete before named budgets, would leave the rest
+        orphaned in the data directory with no account able to reach them.
+        """
+        from clear_budget.shared.budget_registry import delete_all_budgets
+
+        delete_all_budgets(username)

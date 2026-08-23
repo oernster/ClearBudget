@@ -38,6 +38,7 @@ from clear_budget.ui.utils.tab_icons import (
 )
 from clear_budget.ui.widgets._save_load_flow import (
     build_info_button,
+    build_budgets_button,
     build_save_load_buttons,
     build_settings_bank_buttons,
 )
@@ -79,6 +80,7 @@ class CreditCardView(
         self.next_btn = QPushButton("Next →")
         _glyph_h = nav_glyph_height(self.prev_btn)
         self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
+        self.budgets_btn = build_budgets_button(self.read_only, _glyph_h)
         _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
             self.read_only, _glyph_h
         )
@@ -100,6 +102,7 @@ class CreditCardView(
             leading=(
                 self.load_btn,
                 self.save_btn,
+                self.budgets_btn,
                 self.settings_btn,
                 self.bank_btn,
                 _sep,
@@ -230,6 +233,7 @@ class CreditCardView(
             self.next_btn,
             self.load_btn,
             self.save_btn,
+            self.budgets_btn,
             self.settings_btn,
             self.bank_btn,
             *others,

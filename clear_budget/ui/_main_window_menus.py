@@ -31,6 +31,10 @@ class MainWindowMenuMixin:
         new_budget_action.triggered.connect(self._on_new_budget)
         new_budget_action.setEnabled(not self.read_only)
 
+        budgets_action = file_menu.addAction("S&witch Budget…")
+        budgets_action.triggered.connect(self._on_manage_budgets)
+        budgets_action.setEnabled(not self.read_only)
+
         file_menu.addSeparator()
 
         load_action = file_menu.addAction("&Load…")

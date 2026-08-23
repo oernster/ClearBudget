@@ -68,6 +68,19 @@ def build_save_load_buttons(
     return load_btn, save_btn
 
 
+def build_budgets_button(read_only: bool, glyph_height: int) -> QPushButton:
+    """Return the switch-budget button for a nav tray.
+
+    Sits with load and save, left of the separator, because it acts on the
+    application rather than deciding which page is being looked at. Disabled
+    for read-only viewers: a viewer's database arrives from an imported
+    package and that account owns exactly the one budget.
+    """
+    btn = _tray_icon_button("🔄", "Switch budget…", glyph_height)
+    btn.setEnabled(not read_only)
+    return btn
+
+
 def build_settings_bank_buttons(
     read_only: bool, glyph_height: int
 ) -> tuple[QFrame, QPushButton, QPushButton]:

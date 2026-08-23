@@ -348,7 +348,9 @@ Key methods:
   source instead would remove it from months it really did arrive in, which is
   why this exists and why the income dialog offers no way to turn a recurring
   income into a one-off
-- `reset_all_data()` - wipes all user budget data (New Budget feature)
+- `reset_all_data()` - wipes this budget's data, preserving the Bank Account
+  payment method. No longer reachable from the UI: "New Budget" creates a
+  separate budget rather than emptying the open one (see Named budgets)
 - `get_recorded_months()` → `list[YearMonth]` - months already snapshotted into the
   archive (drives the Archive tab)
 - `archive_month(year_month)` - snapshot one month's generated bills and income into
@@ -578,11 +580,59 @@ source, `opening + net == close` holds for every row and each month opens where
 the previous one closed, which is what makes the report checkable against a real
 bank statement. Both identities are tested.
 
+### Named budgets
+
+One account owns SEVERAL budgets, each a whole database of its own: separate
+bills, income, cards, overrides and settings. `budget_registry` is the record
+of that set (`clear_budget/shared/budget_registry.py`), a per-user JSON sidecar
+holding each budget's slug and display name plus which one is active.
+
+- The design constraint was that an install predating the feature must open the
+  same file it always did, with nothing moved and no migration step to get
+  wrong. So the FIRST budget keeps the reserved empty slug, whose filename is
+  the very `budget_<user>.db` that already exists; an absent or unreadable
+  sidecar SYNTHESISES exactly that one record rather than failing. The sidecar
+  is written the first time a second budget is created and not before, so the
+  migration is that there is no migration
+- Every failure mode of the sidecar collapses to that same single record: no
+  file, bad JSON, the wrong shape, a budget list holding nothing usable, an
+  active slug naming a budget that is gone. The databases are the data and the
+  sidecar is only the map to them, so a lost map means "the one budget I can
+  prove exists", never an error the user cannot act on
+- A slug is a run-collapsed alphanumeric reduction of the name, so it can never
+  itself contain the `__` that separates it from the username in the filename;
+  colliding slugs are numbered apart. Renaming changes the name only, never the
+  slug, so a rename never moves a file
+- `main._open_user_database` is the ONE place that decides which file a session
+  opens; it asks the registry. Switching budget is therefore a registry
+  write plus the existing `database_replaced` signal, which already tore down
+  and rebuilt a session for viewer-package import; no new session plumbing
+- `File > New Budget` creates. It used to be a double-confirmed WIPE, because a
+  user could own exactly one budget and the only way to hand them an empty one
+  was to empty the one they had. That is the whole reason the destructive
+  dialog existed and the whole reason it is gone
+- Delete is disabled on the ACTIVE budget, which is a hard constraint rather
+  than caution: this session holds that database open and Windows refuses to
+  unlink an open file. It also means the last remaining budget can never be
+  deleted, since it is always the active one
+- Deleting an ACCOUNT deletes every budget it owns plus the sidecar
+  (`delete_all_budgets`). Deleting only the legacy path, which was all there
+  was to delete before, would strand the named ones in the data directory with
+  no account able to reach them
+- Read-only viewer accounts stay single-budget. A viewer's database arrives
+  from an imported package and the account cannot write, so the button and both
+  menu items are disabled exactly as Load and Save already are
+
 ### Shared Layer
 
 **`Config`** (`clear_budget/shared/config.py`):
 - `Config.default()` → legacy single-user path (`budget.db`) - kept for reference only
-- `Config.for_user(username)` → `budget_<safe_username>.db`
+- `Config.for_user(username)` → `budget_<safe_username>.db`, the user's FIRST
+  budget; identical to `for_user_budget(username, "")`
+- `Config.for_user_budget(username, slug)` → `budget_<safe_username>__<slug>.db`,
+  one named budget. The empty slug is RESERVED for the first budget and yields
+  the unsuffixed legacy filename, which is why naming budgets moved no data
+- `Config.budgets_index_path(username)` → `budgets_<safe_username>.json`
 - `Config.users_db_path()` → `users.db`
 - `Config.app_dir()` → `~/.clearbudget/`
 - Every one of those derives from ONE function, `_resolve_app_dir()`, which
@@ -1117,8 +1167,8 @@ bank statement. Both identities are tested.
 
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
-  - File menu: New Budget, then Load / Save / Save As (Save goes to the
-    remembered save file, kept in `ui_settings.json`), then the
+  - File menu: New Budget and Switch Budget, then Load / Save / Save As (Save
+    goes to the remembered save file, kept in `ui_settings.json`), then the
     "Import / Export" submenu (Read-Only Viewer Package export/import, admin
     only), Exit
   - Settings menu (adjacent to File): Preferences, Bank Account
@@ -1131,11 +1181,13 @@ bank statement. Both identities are tested.
     year, then Next. It holds nothing else, so a stretch either side centres it
     exactly. The LOWER tray carries everything that acts on the application,
     built by `_save_load_flow.build_save_load_buttons` /
-    `build_settings_bank_buttons` / `build_info_button` and sized against the
-    app-icon button: folder (Load), diskette (Save), cog (Preferences), bank
+    `build_budgets_button` / `build_settings_bank_buttons` /
+    `build_info_button` and sized against the
+    app-icon button: folder (Load), diskette (Save), arrows (Switch Budget),
+    cog (Preferences), bank
     (Bank Account), a themed separator, then the four primary tabs, with the
     sun/moon toggle and the blue information button (How It Works) at the far
-    right. The separator divides the four controls that DO something from the
+    right. The separator divides the five controls that DO something from the
     four that only decide which page is being looked at
   - Two trays rather than one row is what makes the centring free. In one row
     the cluster could be centred only by reserving the icon run's width again

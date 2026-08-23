@@ -134,6 +134,7 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         for _tray_view in (month_view, solvency_panel, credit_card_view, archive_view):
             _tray_view.save_btn.clicked.connect(self._on_save_database)
             _tray_view.load_btn.clicked.connect(self._on_load_database)
+            _tray_view.budgets_btn.clicked.connect(self._on_manage_budgets)
             _tray_view.settings_btn.clicked.connect(self._on_preferences)
             _tray_view.bank_btn.clicked.connect(self._on_bank_account_settings)
             _tray_view.info_btn.clicked.connect(self._on_how_it_works)
@@ -208,33 +209,23 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
             mark_current_tab(buttons, index)
 
     def _on_new_budget(self) -> None:
-        """Wipe all budget data after double-confirmation."""
-        first = QMessageBox.question(
-            self,
-            "New Budget",
-            "This will permanently delete ALL bills, income sources, credit cards,\n"
-            "overrides and settings for this user.\n\n"
-            "This cannot be undone.  Are you sure you want to continue?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if first != QMessageBox.StandardButton.Yes:
-            return
-        second = QMessageBox.question(
-            self,
-            "New Budget - Final Confirmation",
-            "Really wipe everything and start fresh?\n\n" "Last chance to cancel.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if second == QMessageBox.StandardButton.Yes:
-            self.month_view_model.budget_service.reset_all_data()
-            self.month_view_model.refresh_month_summary()
-            QMessageBox.information(
-                self,
-                "New Budget",
-                "Budget data wiped.  You can now enter your new bills and income.",
-            )
+        """Create a named empty budget alongside the current one and open it.
+
+        Creating never destroys. This used to be a double-confirmed wipe
+        because a user could own only one budget, so an empty one could only
+        be had by emptying theirs; a user can now own several.
+        """
+        from clear_budget.ui.widgets._budgets_flow import run_new_budget_flow
+
+        if run_new_budget_flow(self, self.current_user.username):
+            self.database_replaced.emit()
+
+    def _on_manage_budgets(self) -> None:
+        """Open the budget manager; reload when the active budget changed."""
+        from clear_budget.ui.widgets._budgets_flow import run_budgets_flow
+
+        if run_budgets_flow(self, self.current_user.username):
+            self.database_replaced.emit()
 
     def _on_preferences(self) -> None:
         """Open currency preferences dialog; rebuild window on change."""
