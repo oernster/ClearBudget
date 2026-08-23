@@ -9,6 +9,19 @@ them.
 
 from pathlib import Path
 
+from clear_budget.ui.utils.nav_glyph_size import (  # noqa: F401 (re-exported)
+    FALLBACK_ICON_PX as _FALLBACK_ICON_PX,
+    NAV_GLYPH_SCALE,
+    NAV_ICON_BTN_CHROME_PX,
+    nav_glyph_height,
+)
+from clear_budget.ui.utils.nav_toggle import (  # noqa: F401 (re-exported names)
+    TOGGLE_GLYPH_SCALE,
+    TOGGLE_TARGET_PROPERTY,
+    _build_theme_toggle_button,
+    apply_toggle_glyph,
+)
+
 from clear_budget.ui.utils.nav_label import (  # noqa: F401 (re-exported names)
     NAV_LABEL_DEFAULT_COLOR,
     NAV_LABEL_MARGIN_PX,
@@ -56,53 +69,6 @@ def _load_cropped_icon_pixmap():
     return _ICON_PIXMAP_CACHE
 
 
-# Nav-icon height used when there is no Previous button to measure against.
-_FALLBACK_ICON_PX = 24
-# Every tray glyph is drawn at this fraction of the Previous button's height.
-# The buttons used to match that height exactly, which made the tray the
-# heaviest band on the window: seven pictograms at text-row height, above a
-# tab strip that is now pictograms too. Scaled down they read as chrome
-# rather than as content. Applied once inside `nav_glyph_height`, so the app
-# icon, the sun/moon toggle and the five icon buttons cannot drift apart.
-NAV_GLYPH_SCALE = 0.75
-# The nav icon buttons' chrome: 2px padding plus 2px border on each side (see
-# QPushButton#NavGraphButton in _theme_controls). Added to the glyph height it
-# gives every emoji tray button the same overall size as the app-icon button;
-# fixing the size is what stops Qt's default push-button minimum width making
-# an icon-sized control 80-odd pixels wide.
-NAV_ICON_BTN_CHROME_PX = 8
-# Dynamic property carrying the height a toggle button's glyph must paint at.
-# Stored on the button because the glyph changes with the theme long after the
-# tray was built and the refresh has only the button to work from.
-TOGGLE_TARGET_PROPERTY = "navGlyphTargetPx"
-# The toggle glyph's painted height as a fraction of the nav icon's.
-#
-# Deliberately NOT 1.0. Matching the two by measured height was tried and reads
-# wrong: the sun and the moon are solid saturated shapes that fill their whole
-# outline, while the nav icon is a pictogram with internal detail and light
-# space in it, so equal heights leave the emoji looking the heavier of the two.
-# Optical weight, not bounding box, is what the eye compares. The measurement
-# machinery still matters underneath this, since it is what puts the sun and
-# the moon on the same height as each other.
-TOGGLE_GLYPH_SCALE = 0.8
-
-
-def nav_glyph_height(prev_btn) -> int:
-    """The height every glyph in the nav tray is sized to.
-
-    One source for the app icon, the theme toggle and every icon button in the
-    tray, taken from the Previous button so the row reads as a single band.
-    They are built in different functions, so deriving it twice is how they
-    drifted apart.
-
-    `NAV_GLYPH_SCALE` is applied HERE rather than at each call site for the
-    same reason: it is the one number the whole tray reads, so the icons can
-    only ever be resized together.
-    """
-    base = prev_btn.sizeHint().height() if prev_btn is not None else _FALLBACK_ICON_PX
-    return max(1, round(base * NAV_GLYPH_SCALE))
-
-
 def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
     """Return the nav icon as a tabbable QPushButton wired to `on_click`.
 
@@ -124,68 +90,6 @@ def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
     btn.setToolTip("Show this month as a graph")
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
     btn.clicked.connect(on_click)
-    return btn
-
-
-def apply_toggle_glyph(btn, glyph: str) -> None:
-    """Show `glyph` on a theme toggle, sized against the nav icon beside it.
-
-    The painted height is `TOGGLE_GLYPH_SCALE` of the icon's, not equal to it;
-    see that constant for why.
-
-    Called on build and again after every theme switch, because the glyph
-    changes with the theme and each one paints a different fraction of its em
-    box: sizing the sun and then swapping in the moon leaves the moon short
-    and sizing the moon leaves the sun oversized against the nav icon. The font
-    size is therefore derived from THIS glyph every time, by measuring it.
-
-    The font is set as a WIDGET-level stylesheet, not setFont: the app
-    stylesheet sets a font-size on QWidget and a stylesheet rule beats setFont
-    however specific the font is. A widget's own sheet beats the application's
-    and setting only font-size leaves the object-name ring rules intact.
-
-    SELECTOR REQUIRED. A bare `font-size: 42px` cascades to everything in the
-    widget's subtree and a tooltip counts: the hover text came out in the
-    emoji's size. Scoping it to the button means nothing else can inherit it.
-    """
-    from clear_budget.ui.utils.glyph_metrics import glyph_font_px_for_height
-
-    icon_height = btn.property(TOGGLE_TARGET_PROPERTY) or _FALLBACK_ICON_PX
-    target = max(1, round(int(icon_height) * TOGGLE_GLYPH_SCALE))
-    glyph_px = glyph_font_px_for_height(glyph, target)
-    btn.setText(glyph)
-    btn.setStyleSheet(f"QPushButton#ThemeToggleButton {{ font-size: {glyph_px}px; }}")
-
-
-def _build_theme_toggle_button(glyph_height: int):
-    """Return the sun/moon theme toggle as a tabbable QPushButton.
-
-    Object-name styled by the theme QSS (three-state ring, transparent
-    fill). The glyph shows the mode a press switches TO; theme.apply_theme
-    refreshes every toggle's glyph and tooltip after each switch.
-
-    Sized from `glyph_height`, the same height the nav icon is scaled to, so
-    the two read as a matched pair rather than the toggle looking like an
-    afterthought beside it. That height rides on the button as a property, so
-    the refresh after a theme switch can size the incoming glyph to it too.
-    """
-    from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QApplication, QPushButton
-
-    from clear_budget.ui import theme
-
-    current = theme.current_theme(QApplication.instance())
-    btn = QPushButton()
-    btn.setObjectName("ThemeToggleButton")
-    # Fixed square, like every other emoji tray button: without it Qt's
-    # default push-button minimum width leaves a ring far wider than the sun.
-    side = glyph_height + NAV_ICON_BTN_CHROME_PX
-    btn.setFixedSize(side, side)
-    btn.setProperty(TOGGLE_TARGET_PROPERTY, glyph_height)
-    apply_toggle_glyph(btn, theme.toggle_glyph(current))
-    btn.setToolTip(theme.toggle_tooltip(current))
-    btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    btn.clicked.connect(lambda: theme.toggle_theme(QApplication.instance()))
     return btn
 
 
@@ -266,11 +170,18 @@ def build_centered_nav_header(
     """Return (QWidget, QLabel, icon_btn, theme_btn): the centred nav cluster.
 
     `icon_action`, when given, turns the tray icon into a tabbable month-graph
-    button wired to it; icon_btn is then that button (else None). `leading`
-    widgets (the load/save pair and the settings shortcuts) sit at the tray's
-    FAR LEFT, mirroring the theme toggle at its far right; `trailing` widgets
-    (the How It Works button) sit AFTER that sun/moon toggle (`theme_btn`),
-    all in line with the previous/next buttons.
+    button wired to it; icon_btn is then that button (else None).
+
+    EVERY icon button sits in one run at the tray's FAR LEFT, in this order:
+    the `leading` widgets (the load/save pair, then the settings shortcuts),
+    then the sun/moon toggle (`theme_btn`), then the `trailing` widgets (How
+    It Works). They used to be split, four on the left and two on the right,
+    with the month cluster between them. Two groups of the same KIND of
+    control, divided by something that is not one of them, reads as two
+    different kinds of control; a user hunting for the theme toggle had no
+    reason to look at the opposite end of the tray from every other button.
+    One run, one place to look. The centre is left to the one cluster that is
+    genuinely about the month being viewed.
 
     The returned widget is meant to be placed OUTSIDE the scroll area (see
     ScrollableTab), so it spans the full tab width and centres identically on
@@ -287,7 +198,14 @@ def build_centered_nav_header(
     outer-column stretch, not on either cell's width.
     """
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import (
+        QGridLayout,
+        QHBoxLayout,
+        QSizePolicy,
+        QSpacerItem,
+        QVBoxLayout,
+        QWidget,
+    )
 
     from clear_budget.ui import ui_scale
 
@@ -317,37 +235,52 @@ def build_centered_nav_header(
     row.setColumnStretch(2, 1)
     align_v = Qt.AlignmentFlag.AlignVCenter
     row.addWidget(nav_center, 0, 1, Qt.AlignmentFlag.AlignHCenter | align_v)
-    # Right column: the theme toggle at the far right of the tray, in line
-    # with the prev/next buttons, then any trailing widgets after it.
-    right_cell = QWidget()
-    right_layout = QHBoxLayout(right_cell)
-    right_layout.setContentsMargins(0, 0, 0, 0)
-    right_layout.setSpacing(8)
-    # The outer cells share one minimum width (below) so the centre stays put,
-    # which leaves the narrower cell wider than its contents: the stretch pins
-    # those contents to the tray's outer edge instead of the cell's inner one.
-    right_layout.addStretch(1)
-    theme_btn = _build_theme_toggle_button(nav_glyph_height(prev_btn))
-    right_layout.addWidget(theme_btn)
-    for widget in trailing:
-        right_layout.addWidget(widget)
-    row.addWidget(right_cell, 0, 2, Qt.AlignmentFlag.AlignRight | align_v)
-    # Left column: the leading widgets (the load/save pair) at the tray's far
-    # left, mirroring the toggle. Both outer cells take the same minimum width
-    # so they stay matched even when space is tight and the centre column
-    # never gets squeezed off the midpoint.
+    # Left column: every icon button, in one run at the tray's far left.
     left_cell = QWidget()
     left_layout = QHBoxLayout(left_cell)
     left_layout.setContentsMargins(0, 0, 0, 0)
     left_layout.setSpacing(8)
     for widget in leading:
         left_layout.addWidget(widget)
+    theme_btn = _build_theme_toggle_button(nav_glyph_height(prev_btn))
+    left_layout.addWidget(theme_btn)
+    for widget in trailing:
+        left_layout.addWidget(widget)
     left_layout.addStretch(1)
     row.addWidget(left_cell, 0, 0, Qt.AlignmentFlag.AlignLeft | align_v)
-    balance_w = max(left_cell.sizeHint().width(), right_cell.sizeHint().width())
-    left_cell.setMinimumWidth(balance_w)
-    right_cell.setMinimumWidth(balance_w)
-
+    # Right column: deliberately EMPTY. Deliberately still here too: the centre
+    # column sits at the tray's exact midpoint only because the two outer
+    # columns carry equal stretch AND matching width; drop this cell and the
+    # month cluster drifts left by half the icon run on every tab.
+    right_cell = QWidget()
+    right_layout = QHBoxLayout(right_cell)
+    right_layout.setContentsMargins(0, 0, 0, 0)
+    right_layout.setSpacing(8)
+    right_layout.addStretch(1)
+    row.addWidget(right_cell, 0, 2, Qt.AlignmentFlag.AlignRight | align_v)
+    # That matching width is a PREFERENCE, never a minimum. The difference is
+    # the whole of this block. Every icon button now sits on the left, so a
+    # hard minimum reserves the width of the entire run twice over: once for
+    # the buttons and once for the empty mirror that centres them. Two runs
+    # plus the month cluster do not fit at the window's own width floor;
+    # what gave way was the cluster: "Previous" came out as "Previo" and the
+    # year lost its last digits, which is the one thing the tray must never
+    # shed (`nav_label` pins its own width for the same reason).
+    #
+    # A spacer that PREFERS the balancing width but may shrink to nothing puts
+    # the two demands in the right order: with room the mirror holds and the
+    # cluster is centred on the tray; when space runs out the mirror
+    # collapses first, so the cluster keeps its size and slides right rather
+    # than shedding characters. Nothing is ever clipped to buy symmetry.
+    balance_w = left_cell.sizeHint().width()
+    right_layout.addSpacerItem(
+        QSpacerItem(
+            balance_w,
+            0,
+            QSizePolicy.Policy.Maximum,
+            QSizePolicy.Policy.Minimum,
+        )
+    )
     # Full-width header that insets the tray from the tab edges and lets it float
     # with a symmetric gap above and below, keeping the cluster centred in the
     # region between the tabs and the first content line.

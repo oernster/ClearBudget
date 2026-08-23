@@ -194,8 +194,8 @@ what is deliberately left and what only looks like debt.
 - Dynamic payment methods: assign bills to bank account or specific credit cards
 - Database save to a remembered location and validated load (File menu and the
   folder/diskette buttons at the far left of every tab's navigation tray, with
-  cog and bank buttons beside them for Preferences and Bank Account and a blue
-  information button at the far right opening How It Works)
+  cog and bank buttons beside them for Preferences and Bank Account, then the
+  theme toggle and a blue information button opening How It Works)
 - Display currency selection - 25 currencies covering English-speaking countries (Settings > Preferences)
 - Month graphs: the icon in the navigation tray opens the viewed month as a
   bar or line graph (a pilot button switches the style); Monthly Budget plots
@@ -220,8 +220,8 @@ what is deliberately left and what only looks like debt.
   reading is skipped
 - The page itself is the last stop on each tab whenever it has more content
   than fits, so Up/Down, Page Up/Down and Home/End scroll it from the keyboard
-- Dark and light themes: a sun/moon button at the far right of the navigation
-  tray on every tab switches between them, the whole app restyles immediately
+- Dark and light themes: a sun/moon button in the navigation tray's icon run
+  on every tab switches between them, the whole app restyles immediately
   (the sign-in screen included) and the choice is remembered between sessions
 - Scrollable tabs with scroll position indicators; a consistent, centred
   month/year navigation tray on every tab, with the date colour-coded by
@@ -267,9 +267,12 @@ still stops on each tab in turn.
 | Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
 
 Load, Save, Preferences and Bank Account are also one click away in every
-tab's navigation tray: the folder and diskette buttons sit at its far left,
-then a separator, then the cog (Preferences) and the bank. At the far right,
-after the theme toggle, a blue information button opens How It Works.
+tab's navigation tray. Every icon button sits in one run at the tray's far
+left: the folder and diskette, a separator, then the cog (Preferences), the
+bank, the sun/moon theme toggle and a blue information button opening How It
+Works. The month or year cluster (Previous, the app icon, the date and Next)
+is centred on the tray beside them, with room to spare; on a narrow window
+the cluster keeps its size and slides right rather than losing characters.
 
 Read-only viewer accounts have most of these actions disabled and the window title
 shows "(Read-only)".

@@ -145,16 +145,23 @@ class SolvencyPanel(
             button.setVisible(page_index != index)
 
     def nav_targets(self) -> list:
-        """Ordered keyboard-ring stops for this tab."""
+        """Ordered keyboard-ring stops for this tab.
+
+        READING order, left to right as drawn: the tray's one run of icon
+        buttons, then the month cluster centred beside it. A ring built any
+        other way presents as a SKIPPED control rather than as a wrong order,
+        because the user tabs past where a button visibly is and lands
+        somewhere else entirely.
+        """
         return [
             self.load_btn,
             self.save_btn,
             self.settings_btn,
             self.bank_btn,
-            self.prev_btn,
-            self.next_btn,
             self.theme_btn,
             self.info_btn,
+            self.prev_btn,
+            self.next_btn,
             *self.pilot_btns.values(),
         ]
 

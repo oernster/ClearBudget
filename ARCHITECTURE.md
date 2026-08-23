@@ -620,8 +620,13 @@ bank statement. Both identities are tested.
   `ScrollableTab`). The tray machinery itself (this builder, the app-icon
   graph button, the theme toggle and the glyph sizing) lives in
   `ui/utils/nav_header.py`, with the month/year label machinery in
-  `ui/utils/nav_label.py`; both are re-exported through `format_helpers`,
-  keeping every module clear of the LOC band with no call site moved. The
+  `ui/utils/nav_label.py`, the sun/moon toggle's glyph sizing and button in
+  `ui/utils/nav_toggle.py` and the one glyph height they all read in
+  `ui/utils/nav_glyph_size.py`; every one of them is re-exported through
+  `format_helpers`, keeping each module clear of the LOC band with no call
+  site moved. `nav_glyph_size` exists because the size is ONE number read
+  from two modules that must never disagree, so it could not go on living
+  inside either of them once they were split. The
   label carries its breathing room as a real `QLabel.setMargin` (never
   stylesheet padding, which is painted but not reliably in the size hints)
   and pins its minimum width to its text on every `setText` and recolour, so
@@ -965,6 +970,18 @@ bank statement. Both identities are tested.
   class, never per dialog
 
 **Keyboard navigation** (`keyboard_nav.py` + `_main_window_nav.py`):
+- Each view's `nav_targets()` is the DECLARED ring order for its tab and it is
+  READING order, left to right as drawn: the tray's icon run, then the month
+  cluster, then the page's own controls. A ring that disagrees with the
+  drawing does not present as a wrong order, it presents as a SKIPPED control,
+  because the user tabs past where a button visibly is and lands somewhere
+  else. Two of the four declarations were already one pair out (the graph
+  button was offered before Previous while it is drawn after it) and the tray
+  rearrangement would have made all four wrong. Verified by mapping every
+  tray stop's centre to window x and requiring ascending on all four tabs,
+  plus a check that no enabled, visible tray button is missing from its
+  declaration. That measurement is a PROBE rather than a test, because the
+  suite is Qt-free by design and ring order is geometry
 - One application-level `KeyboardNavigator` event filter drives an explicit
   focus ring: menu-bar titles, the tab bar, then the active tab's stops (each
   view's `nav_targets()`), recomputed live so disabled or hidden stops are
@@ -1072,10 +1089,24 @@ bank statement. Both identities are tested.
     heaviest band on the window, above a tab strip that is now pictograms too
   - Every tab's nav tray mirrors the common actions as icon buttons, built by
     `_save_load_flow.build_save_load_buttons` / `build_settings_bank_buttons` /
-    `build_info_button` and sized against the app-icon button: folder (Load)
-    and diskette (Save) at the far left, a themed separator, then cog
-    (Preferences) and bank (Bank Account); after the theme toggle at the far
-    right, a blue information button opens How It Works
+    `build_info_button` and sized against the app-icon button. All of them sit
+    in ONE run at the tray's far left: folder (Load) and diskette (Save), a
+    themed separator, then cog (Preferences), bank (Bank Account), the sun/moon
+    toggle and the blue information button (How It Works). They were split
+    across both ends of the tray, four left and two right, with the month
+    cluster between them; two groups of the same KIND of control, divided by
+    something that is not one of them, read as two different kinds of control
+    and gave a user hunting the theme toggle no reason to look where every
+    other button was
+  - The month cluster is centred on the TRAY, not on what is left of it. That
+    costs a mirror of the icon run's width in the empty right column, which is
+    a spacer that PREFERS that width rather than a minimum: with the icons all
+    on one side, a hard minimum reserves the run twice and does not fit at the
+    window's own width floor, and what gave way was the cluster ("Previous"
+    came out as "Previo", the year lost digits). A shrinkable mirror orders the
+    two demands correctly, so the cluster is centred from 1280 logical px up
+    and slides right below that, never clipped (measured at 860, 1000, 1280,
+    1600 and 1920: no control below its size hint at any of them)
   - Help menu: About, Check for Updates (runs the real update check via
     `UpdateCheckController` and reports the outcome, Up to date and unreachable
     included), How It Works, View Licence
@@ -1130,7 +1161,7 @@ bank statement. Both identities are tested.
 - Applied at `QApplication` level - covers all windows and dialogs
 - Two themes, dark and light, built from ONE stylesheet template
   (`theme_qss.build_qss(tokens)`) fed by semantic token dicts in
-  `theme_tokens.py`; the sun/moon toggle at the far right of every nav tray
+  `theme_tokens.py`; the sun/moon toggle in every nav tray's icon run
   switches them at runtime (`theme.toggle_theme`) and the choice persists in
   `~/.clearbudget/ui_settings.json`, applying from the login screen onward
 - The toggle's emoji is sized to MATCH the nav icon, both from
