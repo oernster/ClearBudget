@@ -615,9 +615,10 @@ bank statement. Both identities are tested.
 - `fmt(pence: int)` → `"{symbol}{pence/100:.2f}"`
 - `fmt(pounds: float)` → `"{symbol}{pounds:.2f}"`
 - Used throughout UI for all inline currency formatting not going through `Amount.__str__`
-- `build_centered_nav_header(...)` - the shared month/year navigation tray used
-  by all four tabs (bordered, centred, hoisted above the scroll area by
-  `ScrollableTab`). The tray machinery itself (this builder, the app-icon
+- `build_centered_nav_header(...)` - the shared navigation tray used by all
+  four tabs, built as TWO bordered rows and hoisted above the scroll area by
+  `ScrollableTab`: the month or year cluster centred in the upper row, every
+  icon button plus the four tabs in the lower one. The tray machinery itself (this builder, the app-icon
   graph button, the theme toggle and the glyph sizing) lives in
   `ui/utils/nav_header.py`, with the month/year label machinery in
   `ui/utils/nav_label.py`, the sun/moon toggle's glyph sizing and button in
@@ -663,7 +664,7 @@ bank statement. Both identities are tested.
 
 **`resources`** (`clear_budget/shared/resources.py`):
 - Runtime asset discovery for packaged builds: locates the app icon, the Qt
-  window/taskbar icon, the splash image and the tab-strip artwork across
+  window/taskbar icon, the splash image and the tab artwork across
   PyInstaller onefile (`sys._MEIPASS`), onedir (`_internal/`),
   beside-the-executable, dev repo layout and the working directory, with `.ico`
   preferred and `.png` fallbacks. Keeps every asset lookup robust however the
@@ -675,9 +676,10 @@ bank statement. Both identities are tested.
   Linux or case-sensitive APFS volume does not. One tuple against a class of
   bug that can only appear on someone else's machine.
 - `find_logo_png_path()` returns the largest bundled PNG, never the `.ico`,
-  for callers that PAINT the icon into a widget (the nav tray's graph button
-  and the sign-in dialog's logo). It exists so that no caller resolves an
-  asset by counting directory levels from its own module. One did, and was
+  for callers that PAINT the icon into a widget: the nav tray's graph button,
+  the About dialog and the sign-in dialog's logo, which had each grown their
+  own copy of the same loop. It exists so that no caller resolves an
+  asset by counting directory levels from its own module. One did so and was
   right on exactly one platform: the sign-in dialog reached three parents up
   for a 64px file that the Flatpak never stages and a PyInstaller bundle puts
   elsewhere, so the logo was silently absent on Linux and macOS. The
@@ -1069,25 +1071,30 @@ bank statement. Both identities are tested.
 
 **Tab icons** (`ui/utils/tab_icons.py`):
 - The four primary tabs carry a picture and no text; the text moved to the
-  tooltip, so the strip still names itself on hover and nothing was lost but
-  four labels wide enough to push the strip across the window
+  tooltip, so the row still names itself on hover and nothing was lost but
+  four labels wide enough to push the tabs across the window
 - Three are bundled PNG masters (`monthlybudget.png`, `solvency.png`,
   `creditcards.png`, resolved by `shared.resources.find_tab_icon_path` through
   the same candidate roots as every other asset) and the fourth is an emoji.
   Those are different KINDS of image sized by different rules, so both are
   reduced to one question, how tall the thing actually PAINTS, answered by
   measuring opaque pixels in each case (`glyph_metrics`)
-- An image is cropped to its opaque content, then fitted to a square box by its
-  LONGER side. By height instead, the landscape card artwork would have come
-  out half again as wide as its neighbours and read as the strip's most
-  important tab rather than its third
-- The emoji is sized by HEIGHT to the full box, the opposite of
-  `nav_header.TOGGLE_GLYPH_SCALE`; the difference is the glyph rather than
-  the rule: a sun is a solid disc that looks heavy at equal size, a filing
-  cabinet is line work with space in it and looks light. Optical weight is
-  what the eye compares
+- An image is cropped to its opaque content, then fitted by its HEIGHT and
+  scaled up by `TAB_IMAGE_SCALE`. Fitting to a square box by the LONGER side
+  was tried first and is what a picture-and-glyph row must not do: the
+  calendar came out 42 tall and the cards 35 against the emoji's 46, so the
+  pictures read small; worse still, their BASES sat high. A row of icons that
+  do not share a bottom edge reads as badly set rather than as differently
+  sized. Fitting by height puts every icon on one baseline by construction;
+  the landscape card artwork running wider than its neighbours is the accepted
+  cost, since a shared bottom edge is what the eye checks along a row
+- `TAB_EMOJI_SCALE` is held EQUAL to `TAB_IMAGE_SCALE` rather than left at the
+  tray's own 1.0. Once the three pictures grew past the tray's emoji, an
+  archive glyph left behind at the smaller size stopped reading as their peer
+  and started reading as the runt of the four. It is a tab first and an emoji
+  second, which is why it does not follow `nav_header.TOGGLE_GLYPH_SCALE`
 - A tab whose icon cannot be built keeps its label as visible text. A missing
-  asset costs the strip its looks, never a route into the tab
+  asset costs the tray its looks, never a route into the tab
 - The tabs are BUTTONS in the navigation tray (`build_tab_buttons`), not a
   `QTabBar`. The `QTabWidget` is kept for what it is good at, owning the pages
   and switching between them; its bar is hidden. Every view builds its own
@@ -1242,8 +1249,8 @@ bank statement. Both identities are tested.
   where the keyboard is rather than what is live; Qt gives no way to say
   otherwise anyway (measured: with a stylesheet active, `setTabTextColor` is
   ignored entirely)
-- The sheet is split by surface across `_theme_tabs.py` (the tab strip plus the
-  pill geometry NavTabBar paints its cursor on), `_theme_inputs.py` (the fields
+- The sheet is split by surface across `_theme_tabs.py` (down to the pane, the
+  card the tab content sits on), `_theme_inputs.py` (the fields
   the user types in), `_theme_menus.py`, `_theme_controls.py` and
   `_theme_labels.py`, each a pure string builder taking the token dict. The
   split is what keeps every module under the LOC limit and it is also what

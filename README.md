@@ -223,9 +223,9 @@ what is deliberately left and what only looks like debt.
 - Dark and light themes: a sun/moon button at the far right of the navigation
   tray on every tab switches between them, the whole app restyles immediately
   (the sign-in screen included) and the choice is remembered between sessions
-- Scrollable tabs with scroll position indicators; a consistent, centred
-  month/year navigation tray on every tab, with the date colour-coded by
-  financial health (green/amber/red)
+- Scrollable tabs with scroll position indicators; the same two-row navigation
+  tray on every tab, the month or year centred in its upper row with the date
+  colour-coded by financial health (green/amber/red)
 - Opens on the monitor you started it from, centred, rather than on whichever
   display the system calls primary; dialogs open over the window that raised
   them, focused on their first usable control
