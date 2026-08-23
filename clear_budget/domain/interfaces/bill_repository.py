@@ -14,7 +14,7 @@ class BillRepository(Protocol):
         ...
 
     def get_by_id(self, *, bill_id: int) -> Bill | None:
-        """Get a bill by ID, or None if not found."""
+        """Get a bill by ID; None if not found."""
         ...
 
     def add(self, *, bill: Bill) -> Bill:

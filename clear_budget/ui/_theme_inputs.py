@@ -56,7 +56,7 @@ def combo_qss(t: dict[str, str]) -> str:
     """Return the combo-box stylesheet.
 
     Separate from `input_qss` only because the two sit either side of the
-    control and widget-extra blocks in the sheet, and QSS is order sensitive:
+    control and widget-extra blocks in the sheet; QSS is order sensitive:
     a later rule of equal specificity wins, so the blocks keep their original
     order rather than being merged for tidiness.
     """

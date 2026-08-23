@@ -3,7 +3,7 @@
 These moved out of the UI layer, which is excluded from the coverage gate
 wholesale. Turning pence into a figure a person reads is not presentation: it
 is where a budgeting application gets a number wrong in a way the user
-believes, and until now it was the one part of `format_helpers` with nothing
+believes; until now it was the one part of `format_helpers` with nothing
 holding it.
 """
 

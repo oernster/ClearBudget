@@ -148,7 +148,7 @@ class TestImportViewerPackage:
 
         The landing directory is the scratch one every test runs against (see
         the `isolate_app_dir` fixture), rather than a locally faked home: the
-        data directory has ONE seam now, and a test that reaches around it
+        data directory has ONE seam now; a test that reaches around it
         stops proving where the app would really write.
         """
         package = tmp_path / "package.zip"

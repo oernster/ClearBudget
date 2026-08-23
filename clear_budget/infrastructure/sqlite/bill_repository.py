@@ -135,7 +135,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
             ):
                 # A change exists but starts later, so this month's amount is
                 # the bill's own. Recording a base here would say a schedule
-                # governs a month it does not reach, and the UI reads that as
+                # governs a month it does not reach; the UI reads that as
                 # "do not let this amount be edited directly".
                 resolved.append(with_changes)
                 continue

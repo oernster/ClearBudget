@@ -3,7 +3,7 @@
 
 Split out of builddmg.py so each build module stays within the project's
 400-line structural limit.  Contains the pure-Python PNG background compositor
-(no Pillow dependency), the .icns generator, and the routine that embeds a
+(no Pillow dependency), the .icns generator and the routine that embeds a
 custom volume icon into a finished DMG.
 """
 

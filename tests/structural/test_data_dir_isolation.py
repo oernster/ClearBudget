@@ -2,10 +2,10 @@
 
 `~/.clearbudget` holds live user data: both databases, the logs and the saved
 theme. Writing into it from outside the running app changes what the user sees
-at their next launch, and a settings write is silent, so it surfaces later as a
+at their next launch; a settings write is silent, so it surfaces later as a
 bug report against the app. It has happened: an offscreen probe applied the
-light theme in order to measure it, `apply_theme` persisted that choice, and
-the app opened in light mode from then on. Nothing was wrong with the app.
+light theme in order to measure it, `apply_theme` persisted that choice; the
+app opened in light mode from then on. Nothing was wrong with the app.
 
 Three rules, each with its own failure it is here to catch:
 
@@ -114,7 +114,7 @@ class TestTheInstallerLeavesUserDataAlone:
 
     The rule is that the installer has no business naming the app's data
     directory at all: it lays down program files and it does not know what is
-    in `~/.clearbudget`. If a future change reaches in there (to "clean up", or
+    in `~/.clearbudget`. If a future change reaches in there (to "clean up" or
     to seed a default), a reinstall could silently reset a setting the user
     chose, which is the same failure as the probe that prompted these guards.
 

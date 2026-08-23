@@ -1,7 +1,7 @@
 """Emit every icon asset from the single master PNG.
 
 Replaces two scripts that used to sit here. `create_icon.py` rebuilt the `.ico`
-from whichever PNGs happened to be on disk, and `create_icons.py` drew a wallet
+from whichever PNGs happened to be on disk; `create_icons.py` drew a wallet
 symbol procedurally with PIL. Neither was the source of the tracked assets:
 the procedural drawing does not match them at any size and paints an opaque
 background, where the real icon has fully transparent corners. Running it would

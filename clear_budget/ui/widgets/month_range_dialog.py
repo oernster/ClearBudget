@@ -1,7 +1,7 @@
 """MonthRangeDialog - pick the first and last month of a projected export.
 
 Two month pickers and nothing else. It opens focused on the first month's
-picker, ready to type, Escape closes, and the ring is the dialog's own tab
+picker, ready to type; Escape closes; the ring is the dialog's own tab
 order (the application navigator hands a modal its own arrows). Export stays
 disabled while the range runs backwards, so an impossible range cannot be
 submitted rather than being reported afterwards.

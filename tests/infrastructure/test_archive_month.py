@@ -142,7 +142,7 @@ class TestArchiveMonth:
         return service
 
     def test_auto_archive_seeds_previous_month_when_nothing_recorded(self, db) -> None:
-        """With no history yet, the month that just ended is archived, and no
+        """With no history yet, the month that just ended is archived; no
         earlier month is fabricated."""
         service = self._service_with_rent(db)
         current = YearMonth(2026, 7)

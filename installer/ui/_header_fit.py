@@ -113,7 +113,7 @@ class HeaderFitController:
         """Ensure the whole installer UI has enough room for all labels.
 
         This does not attempt to make *arbitrarily long* dynamic strings fit
-        horizontally (e.g. very long paths in editable controls), but it does
+        horizontally (e.g. very long paths in editable controls). It does
         ensure the window can expand to fit the layout's size hint so that
         labels are not clipped by an artificially-small window.
         """

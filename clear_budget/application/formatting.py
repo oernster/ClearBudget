@@ -1,10 +1,10 @@
 """Display formatting for money, percentages and categories. No Qt, no I/O.
 
 Moved out of `ui/utils/format_helpers.py`, which is excluded from the coverage
-gate wholesale. That exclusion is right for painting and Qt wiring, but these
-are not presentation: turning pence into a figure a person reads is exactly
-where a budgeting application gets a number wrong in a way the user believes,
-and it was the one part of that file with nothing holding it.
+gate wholesale. That exclusion is right for painting and Qt wiring; these are
+not presentation: turning pence into a figure a person reads is exactly where
+a budgeting application gets a number wrong in a way the user believes. It was
+the one part of that file with nothing holding it.
 
 The UI still calls `fmt`; `format_helpers` re-exports it, so no call site moved.
 
@@ -61,7 +61,7 @@ def fmt(amount: int | float) -> str:
     worth stating plainly: `fmt(100)` is one pound and `fmt(100.0)` is one
     hundred, so a caller passing the wrong type is silently out by a factor of
     a hundred with no error anywhere. It is preserved because sixty-two call
-    sites depend on it, and pinned by a test so it cannot change by accident.
+    sites depend on it; a test pins it so it cannot change by accident.
     Prefer `money_from_pence` in new code, where the unit is in the name.
     """
     if isinstance(amount, int):
@@ -70,14 +70,14 @@ def fmt(amount: int | float) -> str:
 
 
 def pounds_from_text(text: str) -> float | None:
-    """Read a typed amount back into whole currency units, or None.
+    """Read a typed amount back into whole currency units; None if unreadable.
 
-    The inverse of `_render`, and it has to live beside it: what the
-    application prints is what a person types back. `_render` groups thousands,
-    so a figure this module itself rendered as "1,400.00" was refused by a
-    plain `float()` and the entry was lost. The symbol, the grouping
-    separators, surrounding space and a leading sign are all things people
-    type; none of them make an entry invalid.
+    The inverse of `_render`; it has to live beside it: what the application
+    prints is what a person types back. `_render` groups thousands, so a
+    figure this module itself rendered as "1,400.00" was refused by a plain
+    `float()` and the entry was lost. The symbol, the grouping separators,
+    surrounding space and a leading sign are all things people type; none of
+    them make an entry invalid.
 
     Returns None rather than raising, because what an unreadable entry means
     belongs to the caller: one field warns, another leaves the cell alone.

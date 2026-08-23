@@ -7,7 +7,7 @@ uninstall started from Windows Settings. A setup program still on screen after
 it has finished reads as though something is pending.
 
 `installer/ui` is outside the coverage gate, so this is not counted; it runs
-regardless, and the decision under test is pure policy over an operation.
+regardless; the decision under test is pure policy over an operation.
 """
 
 from installer.state.model import Operation

@@ -20,7 +20,8 @@ class InstallerLicenceDialog(QDialog):
         # Delete on close to avoid stale windows accumulating.
         self.setAttribute(Qt.WA_DeleteOnClose, True)
 
-        # Large enough to read comfortably, but not absurd on smaller displays.
+        # Large enough to read comfortably without being absurd on smaller
+        # displays.
         self.resize(456, 560)
 
         layout = QVBoxLayout(self)

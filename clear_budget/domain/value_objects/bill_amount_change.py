@@ -1,7 +1,7 @@
 """BillAmountChange value object: a bill's amount changing from a given month.
 
 The worked case is a rent increase. The same bill costs one amount up to a
-month and another from that month on, and the report for an earlier month must
+month and another from that month on; the report for an earlier month must
 still show what it actually cost then.
 
 Month granularity, not day: a bill belongs to a month in this application, so a

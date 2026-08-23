@@ -90,7 +90,7 @@ class TestConfigAppDirOverride:
         assert Config.app_dir() == Path.home() / ".clearbudget"
 
     def test_the_override_is_read_at_call_time(self, tmp_path, monkeypatch) -> None:
-        """Not cached at import, or a test could never redirect it."""
+        """Not cached at import; otherwise a test could never redirect it."""
         first = Config.app_dir()
         monkeypatch.setenv(APP_DIR_ENV_VAR, str(tmp_path / "elsewhere"))
         assert Config.app_dir() != first

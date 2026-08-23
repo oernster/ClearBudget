@@ -1,15 +1,15 @@
 """FirstStopDialog - a QDialog that opens on its first usable control.
 
 The main window starts neutral: nothing is highlighted until the first Tab,
-because the window is a place you look at before you act in it, and a menu
-title lighting up on launch is noise. A dialog is the opposite. You opened it
+because the window is a place you look at before you act in it; a menu title
+lighting up on launch is noise. A dialog is the opposite. You opened it
 deliberately, to do the one thing it is for, so making you press Tab before
 anything is focused costs a keystroke and tells you nothing.
 
 So a dialog opens with focus already on its first stop: the first control in
 its own tab order that is enabled, visible and takes tab focus. Disabled and
 hidden controls are passed over, matching the ring's rule everywhere else
-that a dead stop is not a stop. Escape still closes, and the ring still wraps
+that a dead stop is not a stop. Escape still closes; the ring still wraps
 from the last control back to this one.
 
 Subclasses overriding showEvent must call super().

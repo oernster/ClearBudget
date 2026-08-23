@@ -205,7 +205,7 @@ class TestPaidForMonthExclusion:
             year_month=today_ym, month_summary=summary
         )
 
-        # Rent (still due by date, but marked paid) excluded from solvency calc.
+        # Rent (still due by date but marked paid) excluded from solvency calc.
         assert report.balance_pence == 200000
 
 

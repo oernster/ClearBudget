@@ -2,8 +2,8 @@
 
 Extracted from [`_main_window_actions`](installer/ui/_main_window_actions.py) to
 keep that module inside the 400-line limit.  Everything here answers one
-question: given the current state, which controls are visible, enabled, and
-what do they say.
+question: given the current state, which controls are visible, which are
+enabled and what do they say.
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ def _bind_primary(
     button,
     op: Operation | None,
 ) -> None:
-    """Show, label and re-wire one primary button, or hide it when unused."""
+    """Show, label and re-wire one primary button; hide it when unused."""
     if op is None:
         button.setVisible(False)
         return

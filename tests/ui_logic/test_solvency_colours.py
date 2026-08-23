@@ -28,7 +28,7 @@ from clear_budget.ui.views._solvency_panel_narratives import (
 
 RED = "#f87171"
 AMBER = "#fbbf24"
-AT_RISK = "#f59e0b"  # the "into the overdraft, but within facility" amber
+AT_RISK = "#f59e0b"  # the "into the overdraft but within facility" amber
 GREEN = "#34d399"
 _BANK = 1
 
@@ -89,7 +89,7 @@ def test_overdrawn_midmonth_is_red_even_when_closing_positive() -> None:
 
 
 def test_dips_low_but_stays_positive_is_amber() -> None:
-    """Never goes negative, but the low point is shallow against the monthly
+    """Never goes negative; the low point is shallow against the monthly
     drain: a warning, so amber."""
     mix = SolvencyPanelNarrativeMixin()
     summary = _summary([_bank_bill(25000, 1)], [_income(20000, 20)])

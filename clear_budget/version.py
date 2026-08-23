@@ -1,6 +1,6 @@
 """Application identity and version.
 
-Keep app identity in one place so the runtime UI, About dialog, logging, and
+Keep app identity in one place so the runtime UI, About dialog, logging and
 packaging metadata stay consistent.
 """
 

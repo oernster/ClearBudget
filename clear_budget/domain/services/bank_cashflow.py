@@ -42,7 +42,7 @@ class MonthCashflowProjection:
         Returns:
             "none" - balance never goes negative.
             "amber" - dips negative but stays within the overdraft facility.
-            "red" - dips negative with no facility, or exceeds the facility.
+            "red" - dips negative with no facility or exceeds the facility.
         """
         if self.min_balance_pence >= 0:
             return "none"
@@ -73,7 +73,7 @@ class BankCashflowService:
             events: List of daily cash flow events, sorted by day
 
         Returns:
-            Day of month (1-31) when balance goes negative, or None if never negative
+            Day of month (1-31) when balance goes negative; None if never negative
         """
         balance = starting_balance_pence
 

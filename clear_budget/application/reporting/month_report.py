@@ -1,10 +1,10 @@
 """One month exported as HTML: both renderings of the graph, plus the text.
 
 The dialog shows one rendering at a time because the screen has room for one.
-A report has room for both, and they answer different questions: the bars
-show what each individual day was worth, the line shows the shape of the
-month. So the export carries both rather than whichever happened to be on
-screen when the button was pressed, and says what each is for.
+A report has room for both; they answer different questions: the bars show
+what each individual day was worth, the line shows the shape of the month. So
+the export carries both rather than whichever happened to be on screen when
+the button was pressed, saying what each is for.
 
 Pure string building: no Qt, no file access, no clock.
 """
@@ -19,7 +19,7 @@ _X_TICK_STEP_DAYS = 5
 
 _BAR_TEXT = (
     "Each bar is the balance at the end of that day. Read it to find a "
-    "particular day: the day a large bill lands, or the day before payday. "
+    "particular day: the day a large bill lands or the day before payday. "
     "The curve follows the same figures through every day's real value, so "
     "it shows the shape of the month without inventing a balance the account "
     "never held."

@@ -95,10 +95,10 @@ class ScrollableTab(QWidget):
         # The indicators live in a COLUMN of their own beside the page, not
         # floating on top of it. Floating put them over whatever happened to be
         # under them: on a narrow window the down indicator landed on the
-        # Delete Income button, and a click there scrolled instead of reaching
-        # the button. A column cannot overlap anything, and it costs the
-        # layout, not a `move()` call, which is the same reason the up
-        # indicator once ended up in the navigation tray.
+        # Delete Income button; a click there scrolled instead of reaching the
+        # button. A column cannot overlap anything; it costs the layout, not a
+        # `move()` call, which is the same reason the up indicator once ended
+        # up in the navigation tray.
         #
         # The column is ALWAYS present, even while the buttons are hidden.
         # Showing and hiding it would change the page width, which can change
@@ -148,7 +148,7 @@ class ScrollableTab(QWidget):
         return self._scroll
 
     def nav_scroll_stop(self) -> QScrollArea | None:
-        """The page body as a ring stop, or None when there is nothing to scroll.
+        """The page body as a ring stop; None when there is nothing to scroll.
 
         A stop has to be ACTIONABLE. A page that fits its tab scrolls nowhere,
         so landing on it would spend a keypress and do nothing; a page that

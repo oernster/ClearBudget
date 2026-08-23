@@ -2,7 +2,7 @@
 
 A widget carries its colour role as an object name (styled by the theme QSS in
 `_theme_controls.label_roles_qss`) rather than an inline stylesheet. Two
-reasons: no view hardcodes a hex colour, and re-applying the app stylesheet on
+reasons: no view hardcodes a hex colour; re-applying the app stylesheet on
 a theme switch restyles every role at once, which an inline style set at build
 time cannot do.
 

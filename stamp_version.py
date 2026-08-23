@@ -39,7 +39,7 @@ _SOFTWARE_VERSION_PATTERN = re.compile(r'("softwareVersion"\s*:\s*")([^"]*)(")')
 
 
 def read_version(root: Path) -> str:
-    """Return the canonical version from the VERSION file, or a dev sentinel."""
+    """Return the canonical version from the VERSION file; else a dev sentinel."""
     version_file = root / VERSION_FILENAME
     if version_file.exists():
         return version_file.read_text(encoding="utf-8").strip()

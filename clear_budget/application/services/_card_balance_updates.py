@@ -19,7 +19,7 @@ def get_live_card_balance(payment_method_repo, get_month_summary, *, card, today
 
     The opening is derived from the card's anchor (`anchored_month_opening_pence`)
     so a balance set mid-month is honoured: on the day it was set the live
-    balance equals exactly that figure, and it then tracks the charges and
+    balance equals exactly that figure; it then tracks the charges and
     payments that post afterwards.
     """
     today_ym = YearMonth(today.year, today.month)

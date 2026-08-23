@@ -1,6 +1,6 @@
 """Painted-pixel measurement for images and text glyphs.
 
-Qt sizes text by the font's em box, never by what a glyph actually paints, and
+Qt sizes text by the font's em box, never by what a glyph actually paints; and
 emoji differ widely in how much of that box they fill. Measured on Windows at a
 42px font: the sun paints 43px tall, the moon 38px, a 13% spread between the two
 faces of the SAME button. A single fraction of the target height can therefore

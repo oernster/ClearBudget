@@ -1,7 +1,7 @@
 """Structural tests for the auth module.
 
 Verifies:
-- Auth module only imports from stdlib, third-party (bcrypt), and clear_budget.auth.
+- Auth module only imports from stdlib, third-party (bcrypt) and clear_budget.auth.
 - Auth module files stay under 400 LOC.
 - Auth module has no circular dependencies within itself.
 - UserStore protocol: required public methods exist.
@@ -57,7 +57,7 @@ _STDLIB_OR_THIRD_PARTY = {
 
 
 class TestAuthLayering:
-    """Auth module must not import from domain, application, infrastructure, or ui."""
+    """Auth module must not import from domain, application, infrastructure or ui."""
 
     def test_auth_has_no_forbidden_layer_imports(self) -> None:
         _FORBIDDEN_LAYERS = {

@@ -39,7 +39,7 @@ def _ui_font_family() -> str:
 
     Uses Qt's resolved system UI font so the app matches each desktop instead
     of hardcoding a Windows-only face: Segoe UI on Windows, the San Francisco
-    system font on macOS, and the desktop default (e.g. Ubuntu, Noto Sans,
+    system font on macOS and the desktop default (e.g. Ubuntu, Noto Sans,
     DejaVu Sans) on Debian/Ubuntu Linux.  Requires a running QApplication,
     which the composition root creates before applying this stylesheet.
     """

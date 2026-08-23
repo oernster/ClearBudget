@@ -4,7 +4,7 @@ Both are single self-contained files a user will email or print, so the two
 properties that matter are that everything is inline (no external reference
 that would break once the file moves) and that user text cannot inject
 markup. Beyond that: the month report must carry BOTH renderings, which is
-the whole reason it exists, and the projection report must show the in-month
+the whole reason it exists; the projection report must show the in-month
 low rather than only the closing balance, which is the case it exists to
 catch.
 """

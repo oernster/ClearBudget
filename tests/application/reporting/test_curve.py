@@ -3,7 +3,7 @@
 The maths lives in the UI layer but is pure Python, so it is tested here
 without a QApplication (the same arrangement as test_solvency_colours).
 
-What the curve promises, and why:
+What the curve promises and why:
   * it FOLLOWS the data, passing through every day's real value, rather than
     averaging across days. An averaged line cut through a tall day, which drew
     a balance the account never had;

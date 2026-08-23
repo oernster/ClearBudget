@@ -138,7 +138,7 @@ def staged_payload(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Point the payload anchor at a temporary tree holding a small bundle.
 
     Autouse because the real payload is over fifty megabytes: a test that
-    extracted it by accident would be slow enough to look like a hang, and
+    extracted it by accident would be slow enough to look like a hang; it
     would deploy the actual application into a temporary directory.
     """
     root = tmp_path / "resources"

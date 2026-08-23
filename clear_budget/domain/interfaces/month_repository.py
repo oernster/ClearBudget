@@ -6,7 +6,7 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 
 
 class Month(Protocol):
-    """A month record with id, year_month, and calculated totals."""
+    """A month record with id, year_month and calculated totals."""
 
     @property
     def id(self) -> int: ...

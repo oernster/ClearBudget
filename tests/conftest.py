@@ -1,7 +1,7 @@
 """Pytest configuration and shared fixtures.
 
 The test suite is deliberately Qt-free: the fragile widget-level PySide6 tests
-were removed, and the UI layer is excluded from the coverage gate (see
+were removed; the UI layer is excluded from the coverage gate (see
 .coveragerc). UI-layer logic that is pure Python is tested without a
 QApplication under tests/ui_logic.
 
@@ -20,7 +20,7 @@ def isolate_app_dir(tmp_path, monkeypatch):
     Autouse and unconditional, because the alternative is remembering. The real
     directory holds live user data: both databases, the logs and the saved
     theme. Anything that writes there from outside the app changes what the
-    user sees at their next launch, and a settings write is silent, so the
+    user sees at their next launch; a settings write is silent, so the
     damage surfaces later as a bug report against the app itself.
 
     The scratch directory is NAMED `.clearbudget` like the real one, so tests

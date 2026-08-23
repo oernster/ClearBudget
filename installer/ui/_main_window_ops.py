@@ -26,7 +26,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 # The operations that leave a usable application on disk, so the ones the user
 # may be offered a launch of once setup finishes. Repair belongs here for the
-# same reason the others do: it puts the executable back, and the "Launch when
+# same reason the others do: it puts the executable back; the "Launch when
 # setup finishes" box is on screen while it runs, so leaving it out meant a
 # ticked box that did nothing.
 LAUNCHABLE_OPS = frozenset(

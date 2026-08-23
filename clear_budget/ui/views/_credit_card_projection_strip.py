@@ -2,7 +2,7 @@
 
 Split out of `_credit_card_view_loaders.py`, which was at 399 lines and so one
 edit away from failing the size cap. The strip is a cohesive concern: it reads
-only the projection table and the budget service, and it owns the headroom
+only the projection table and the budget service; it owns the headroom
 banding that colours each cell.
 """
 

@@ -6,8 +6,9 @@ assets without hard-coding absolute paths.
 Every lookup is best-effort: a root that cannot be resolved on this platform is
 skipped rather than raised, because a missing icon must never stop the app from
 starting.  The guards below are narrow on purpose.  Only filesystem resolution
-(`Path.resolve`, `Path.cwd`, `Path.exists`) can realistically fail here, and only
-with `OSError`, plus `IndexError` where a parent directory is indexed.
+(`Path.resolve`, `Path.cwd`, `Path.exists`) can realistically fail here; when
+it does, only with `OSError`, plus `IndexError` where a parent directory is
+indexed.
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ _ICO_NAMES = ("ClearBudget.ico", "clearbudget.ico")
 # ships `ClearBudget_256.png` (that is what `generate_icons.py` writes and what
 # git tracks), while several build steps and this module historically staged
 # and looked for the lower-cased form. On Windows and on a default macOS
-# volume the filesystem hides the difference. On Linux, or on a case-sensitive
+# volume the filesystem hides the difference. On Linux or on a case-sensitive
 # APFS volume, it does not. Searching both is one tuple against a class of bug
 # that only ever shows up on someone else's machine.
 def _both_cases(stem: str) -> tuple[str, str]:
@@ -56,13 +57,13 @@ _INTERNAL_DIR = "_internal"
 
 
 def _meipass_root() -> Path | None:
-    """Return the PyInstaller onefile extraction dir, or None outside a bundle."""
+    """Return the PyInstaller onefile extraction dir; None outside a bundle."""
     meipass = getattr(sys, "_MEIPASS", None)
     return Path(meipass) if meipass else None
 
 
 def _exe_dir() -> Path | None:
-    """Return the directory holding the running executable, or None."""
+    """Return the directory holding the running executable, else None."""
     try:
         return Path(sys.executable).resolve().parent
     except OSError:
@@ -70,7 +71,7 @@ def _exe_dir() -> Path | None:
 
 
 def _repo_root() -> Path | None:
-    """Return the repo root for a source checkout, or None.
+    """Return the repo root for a source checkout, else None.
 
     Layout: clear_budget/shared/resources.py, so the root is parents[2].
     """
@@ -81,7 +82,7 @@ def _repo_root() -> Path | None:
 
 
 def _cwd() -> Path | None:
-    """Return the current working directory, or None if it is unavailable."""
+    """Return the current working directory; None if it is unavailable."""
     try:
         return Path.cwd()
     except OSError:
@@ -136,7 +137,7 @@ def find_app_icon_path(*, project_root: Path | None = None) -> Path | None:
 def find_qt_window_icon_path(*, project_root: Path | None = None) -> Path | None:
     """Locate an icon file suitable for Qt window/taskbar icons.
 
-    Prefer `.ico` (native Windows icon), but fall back to a bundled `.png` if
+    Prefer `.ico` (native Windows icon); fall back to a bundled `.png` if
     the Qt ICO plugin is unavailable in the frozen build.
     """
     exe_dir = _exe_dir()
@@ -234,7 +235,7 @@ def find_logo_png_path(*, project_root: Path | None = None) -> Path | None:
     is the whole reason `_QT_ICON_NAMES` lists PNG fallbacks at all).
 
     This exists so that no caller resolves the icon by counting directory
-    levels from its own module. One did, and worked only on Windows: the
+    levels from its own module. One did and worked only on Windows: the
     sign-in dialog reached three parents up for a 64px file that the Flatpak
     never stages and that a PyInstaller bundle puts somewhere else entirely,
     so the logo was silently absent on Linux and macOS. Every asset lookup

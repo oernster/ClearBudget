@@ -1,6 +1,6 @@
 """Which operations may launch the application when setup finishes.
 
-The sibling of `test_close_after_operation.py`, and the same shape of defect:
+The sibling of `test_close_after_operation.py`, with the same shape of defect:
 repair was left out of a set that decides post-operation behaviour. The launch
 checkbox is on screen during a repair, so a ticked box did nothing at all.
 
@@ -8,7 +8,7 @@ Uninstall is the only operation that must never launch: there is no longer an
 application to start.
 
 `installer/ui` is outside the coverage gate, so this is not counted; it runs
-regardless, and the decision under test is pure policy over an operation.
+regardless; the decision under test is pure policy over an operation.
 """
 
 from installer.state.model import Operation

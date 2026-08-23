@@ -84,7 +84,7 @@ def _text_width(field: QLineEdit, sample: str) -> int:
 def parse_amount_change(
     *, year: int, month: int, amount_text: str
 ) -> BillAmountChange | None:
-    """The change an entry row describes, or None when it will not parse.
+    """The change an entry row describes; None when it will not parse.
 
     The caller establishes that the text is not blank before asking. Blank
     means nothing is pending, which is a different answer from invalid: one
@@ -213,7 +213,7 @@ class BillAmountChangesSectionMixin:
         OK must never simply do nothing. Refusing to close while the reason sat
         in a small label inside a group box is how an edit gets abandoned along
         with everything else in the dialog: the end month, the due day, the
-        lot. So the question is put plainly, and staying is a choice the user
+        lot. So the question is put plainly; staying is a choice the user
         makes rather than one the dialog makes for them.
         """
         from PySide6.QtWidgets import QMessageBox

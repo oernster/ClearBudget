@@ -81,7 +81,7 @@ def test_overdraft_beyond_horizon_returns_none() -> None:
 
 
 def test_overdraft_within_horizon_returns_month() -> None:
-    # Same slide, but a horizon of 2 reaches September.
+    # Same slide but a horizon of 2 reaches September.
     svc = _service(income_pence=100000, bank_bill_pence=150000)
     result = first_overdrawn_month(
         get_month_summary=svc.get_month_summary,

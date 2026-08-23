@@ -49,10 +49,10 @@ _CHART_TEXT = (
     "month looks healthy on paper."
 )
 _STATE_TEXT_NOTE = (
-    "Safe means the balance stays above zero all month. Caution means it dips "
-    "below zero into an arranged overdraft, or the month ends lower than it "
-    "started. Below floor means it goes past the agreed overdraft limit, "
-    "where a payment stops clearing."
+    "Safe means the balance stays above zero all month. Caution means either "
+    "that it dips below zero into an arranged overdraft or that the month "
+    "ends lower than it started. Below floor means it goes past the agreed "
+    "overdraft limit, where a payment stops clearing."
 )
 
 

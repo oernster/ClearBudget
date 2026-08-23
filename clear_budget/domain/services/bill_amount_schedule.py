@@ -4,8 +4,8 @@ Mirrors `credit_limit_schedule`, at month granularity rather than day.
 
 THE RULE THIS ENFORCES: a change to a bill never restates history. A change
 recorded as effective from a month applies to that month and every month after
-it, and to no month before it. An earlier month keeps the amount it actually
-had, so a report run for it says what was really paid.
+it, never to any month before it. An earlier month keeps the amount it
+actually had, so a report run for it says what was really paid.
 """
 
 from __future__ import annotations

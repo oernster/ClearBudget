@@ -115,9 +115,10 @@ class MonthViewEditMixin:
     def _reject_inline_amount_edit(self, bill) -> None:
         """Refuse an inline amount edit on a month a scheduled change governs.
 
-        Typing over the figure is ambiguous here: it could mean this month cost
-        something else, or that the standing amount has moved again. Rather
-        than guess, say where the amount lives and put the cell back.
+        Typing over the figure is ambiguous here: it could mean either that
+        this month cost something else or that the standing amount has moved
+        again. Rather than guess, say where the amount lives and put the cell
+        back.
         """
         from PySide6.QtWidgets import QMessageBox
 
@@ -126,8 +127,8 @@ class MonthViewEditMixin:
             "Amount is scheduled",
             f"'{bill.name}' has a scheduled amount change, so this month's"
             " figure comes from that schedule.\n\nOpen the bill and use the"
-            " Amount changes section to alter it, or use 'This month only' for"
-            " a one-off difference.",
+            " Amount changes section to alter it or use 'This month only'"
+            " for a one-off difference.",
         )
         QTimer.singleShot(0, self.view_model.refresh_month_summary)
 

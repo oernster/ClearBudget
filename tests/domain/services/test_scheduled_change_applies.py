@@ -2,7 +2,7 @@
 
 Holding a change is not the same as being governed by one. A bill with an
 increase effective from September is, in August, still worth exactly what it
-says it is worth, and the listing has to say so: a base amount recorded for a
+says it is worth; the listing has to say so: a base amount recorded for a
 month no change reaches tells the UI the amount is not directly editable when
 it plainly is.
 """

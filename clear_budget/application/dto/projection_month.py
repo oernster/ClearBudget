@@ -21,7 +21,7 @@ class ProjectionMonth:
         label: Display name, e.g. "March 2026".
         opening_pence: Projected bank balance the month opens with, before any
             of its own bills or income. Equals the previous month's close, so
-            the range reads as one chain, and equals closing_pence less
+            the range reads as one chain; it also equals closing_pence less
             net_pence.
         closing_pence: Projected bank balance at the end of the month's last day.
         low_pence: The lowest day-end bank balance reached in the month.
@@ -54,9 +54,9 @@ class ProjectionMonth:
         """The month's traffic light, on the same rule as the Solvency page.
 
         Red is the balance going below the agreed floor, which is real
-        trouble. Caution is dipping below zero into an arranged facility, or
-        ending the month lower than it started, which is survivable but not
-        sustainable. Anything else is safe.
+        trouble. Caution is either dipping below zero into an arranged
+        facility or ending the month lower than it started, which is
+        survivable but not sustainable. Anything else is safe.
         """
         if self.low_pence < self.floor_pence:
             return STATE_RED

@@ -3,15 +3,15 @@
 The month graph answers "how does this month go". This answers "where is
 this heading", by running the same day-by-day projection over a range of
 months and reducing each to the handful of figures that describe it: where it
-opens, where it closes, and how low it gets on the way.
+opens, where it closes and how low it gets on the way.
 
 The low matters more than the close. A month that opens and closes in credit
-can still bounce a payment in the third week, and a report that only carried
+can still bounce a payment in the third week; a report that only carried
 opening and closing balances would hide exactly the problem it exists to
 surface.
 
 Every figure is a BANK BALANCE, chained from the balance actually recorded in
-the app: the opening is the projected balance the month starts with, and it
+the app: the opening is the projected balance the month starts with; it
 equals the previous month's close. `opening_pence` is therefore the real
 projected opening rather than day one's closing value (there is a test
 asserting opening + net == close).
@@ -24,10 +24,10 @@ trajectory passes through today's real figure on today's date. See
 
 That exception is the point rather than a defect. A forecast that opened the
 current month from a projection would be forecasting a fictional account: the
-recorded balance is the only figure here that is a fact, and the gap between
-it and the projected opening is exactly the drift the report exists to expose.
+recorded balance is the only figure here that is a fact; the gap between it
+and the projected opening is exactly the drift the report exists to expose.
 The cost is that the chain visibly breaks at one row, in whichever month you
-are currently in, and the report does not add up across that row.
+are currently in; the report does not add up across that row.
 """
 
 from calendar import month_name
@@ -68,7 +68,7 @@ class ProjectionSeriesMixin:
         draws, so the report and the graph can never disagree about a month
         they both cover.
 
-        `today` decides which month is the anchored one, and is injectable so
+        `today` decides which month is the anchored one; it is injectable so
         the result does not silently depend on the day the code runs. Without
         it a test covering a fixed range passed or failed according to the
         calendar.

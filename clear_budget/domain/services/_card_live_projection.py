@@ -70,8 +70,8 @@ def anchored_month_opening_pence(
     balance as of the day they set it (`balance_applied_day`). That figure
     already contains the charges and payments posted between the 1st and that
     day, so when this month needs a start-of-month opening to project from, the
-    pre-anchor movement is backed out. For any other month, or for a card with
-    no manual anchor day (the balance was folded at a month rollover, or is
+    pre-anchor movement is backed out. For any other month or for a card with
+    no manual anchor day (the balance was folded at a month rollover or is
     legacy data), the stored figure is already a start-of-month opening and is
     returned unchanged.
     """

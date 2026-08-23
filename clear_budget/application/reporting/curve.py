@@ -2,7 +2,7 @@
 
 The graph overlays ONE curve however many series are plotted: a smooth line
 that FOLLOWS the day-end totals, passing through every day's actual value
-(the bank balance on its own, or every card's balance added together).
+(either the bank balance on its own or every card's balance added together).
 
 It is deliberately an interpolation, not a smoothed average: a curve that cut
 across a tall day would draw a balance the account never had. Monotone cubic

@@ -8,7 +8,7 @@
 # from those local wheels with --no-index, so the build itself is offline.
 #
 # Usage:
-#   ./build_flatpak.sh             - build, install locally, AND produce clearbudget.flatpak
+#   ./build_flatpak.sh             - build, install locally then produce clearbudget.flatpak
 #   ./build_flatpak.sh --no-bundle - build + install only (skip the distributable bundle)
 
 set -euo pipefail

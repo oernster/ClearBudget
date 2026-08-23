@@ -8,7 +8,7 @@ be exercised on a one-screen machine, so the maths is what gets pinned.
 
 Rectangles are (x, y, width, height) in the virtual desktop's coordinate
 space, the same space QScreen.availableGeometry() reports. A monitor left of
-or above the primary one therefore has a negative x or y, and the arithmetic
+or above the primary one therefore has a negative x or y; the arithmetic
 carries a window onto it with no special case.
 """
 

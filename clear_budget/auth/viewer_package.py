@@ -67,7 +67,7 @@ def import_viewer_package(
     belongs to an existing account on this machine, raises
     ``UsernameClashError`` instead of silently overwriting it. Callers should
     then either re-invoke with ``username_override`` set to a username chosen
-    by the importing user, or - only if ``UsernameClashError.existing_is_viewer``
+    by the importing user or - only if ``UsernameClashError.existing_is_viewer``
     is True - re-invoke with ``refresh=True`` to update that viewer account's
     credentials and data in place. A real (non-viewer) account can never be
     overwritten, regardless of ``refresh``.

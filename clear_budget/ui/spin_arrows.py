@@ -3,14 +3,14 @@
 Qt gives a stylesheet exactly one way to put a glyph in a spin-box arrow:
 `image: url(...)` pointing at a real file. The CSS triangle trick (`width: 0`
 plus transparent side borders) is a browser idiom Qt does not implement; it
-honours the zero size, draws nothing, and leaves the button box behind, which
+honours the zero size, draws nothing and leaves the button box behind, which
 is what made the year pickers show two empty rectangles. Measured: with the
 triangle rules the up button was 366 pixels of one flat colour; with an image
 it carries the arrow.
 
 Shipping the images as assets would mean one file per colour per theme, kept
 in step with the palette by hand and added to every packaging script. They are
-drawn here instead, into the app data directory, and cached under a filename
+drawn here instead, into the app data directory, then cached under a filename
 made from the colour and size. A new theme colour simply produces a new file
 the first time it is used; nothing has to be remembered.
 """

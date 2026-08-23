@@ -10,7 +10,7 @@ from clear_budget.shared.errors import InvalidYearMonthError
 class YearMonth:
     """Year-month value object in YYYY-MM format.
 
-    Provides validated parsing, arithmetic (next/previous month), and comparison.
+    Provides validated parsing, arithmetic (next/previous month) and comparison.
     """
 
     year: int

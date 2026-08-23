@@ -7,13 +7,13 @@ the app picking one at random.
 
 Nothing in the shell tells a process which monitor its launch click happened
 on, so there is no exact answer to ask for. The pointer's screen at startup
-is the closest proxy available, and it is the one desktop apps generally use:
+is the closest proxy available; it is also the one desktop apps generally use:
 a double-clicked shortcut, a Start-menu or taskbar click and the installer's
 Launch button all happen under the pointer. A launch with no pointer involved
 (a keyboard-driven Start-menu search, a scheduled task) falls back to the
 primary screen, which is no worse than the behaviour it replaces.
 
-The screen is resolved ONCE, during startup, and every window in the session
+The screen is resolved ONCE, during startup; every window in the session
 uses that one. Re-reading the pointer per window would bring the same
 arbitrariness back from the other end, opening a dialog on whichever monitor
 the mouse happened to be resting on at the time.
@@ -59,7 +59,7 @@ def centre(window) -> None:
     monitor at roughly the right spot and never jumps across displays. Then
     again as soon as the event loop turns, because two things are unknown
     until the window actually exists: the frame margins Qt adds around the
-    client area, and whether the layout forced the window wider or taller
+    client area, plus whether the layout forced the window wider or taller
     than the size it was given. Either leaves a once-placed window off
     centre, the second badly so. The correction happens before the first
     paint, so it is not visible.

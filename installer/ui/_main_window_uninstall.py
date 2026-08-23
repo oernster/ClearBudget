@@ -14,7 +14,7 @@ def confirm_and_run_uninstall(window: InstallerMainWindow) -> None:
     box = QMessageBox(window)
     box.setIcon(QMessageBox.Warning)
     box.setWindowTitle("Confirm uninstall")
-    # The wording claimed it removed user data and cache. It did not, and now it
+    # The wording claimed it removed user data and cache. It did not; now it
     # deliberately does not: budgets, accounts and the saved theme live in
     # ~/.clearbudget and are left where they are, so a reinstall carries on from
     # where the user left off. Saying so is the point of the dialog.

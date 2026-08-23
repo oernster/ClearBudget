@@ -1,7 +1,7 @@
 """UserStore - manages the central users authentication database.
 
 Passwords are hashed with bcrypt (Blowfish-based).  A one-time recovery code
-is generated at account creation, shown to the user exactly once, and stored
+is generated at account creation, shown to the user exactly once and stored
 as a bcrypt hash.  It can be used to reset a forgotten password.
 """
 

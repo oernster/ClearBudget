@@ -250,7 +250,7 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
         """Commit a pending amount change, then close.
 
         An amount typed into the "costs" box and left there was silently
-        dropped: the entry only counted once Add had been pressed, and nothing
+        dropped: the entry only counted once Add had been pressed; nothing
         said so. That reads as the feature not working at all, because the
         figure was on screen when OK was pressed. Pressing OK now means the
         same as pressing Add and then OK.

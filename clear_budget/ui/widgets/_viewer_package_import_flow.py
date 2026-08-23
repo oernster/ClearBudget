@@ -15,7 +15,7 @@ def run_import_viewer_package_flow(
 ) -> User | None:
     """Run the file picker + username-clash resolution + import.
 
-    Returns the imported/refreshed User, or None if the user cancelled or
+    Returns the imported/refreshed User; None if the user cancelled or
     the import failed (an error dialog is shown in the failure case).
     """
     src, _ = QFileDialog.getOpenFileName(
@@ -46,7 +46,7 @@ def run_import_viewer_package_flow(
                 box.setText(
                     f"A viewer account '{exc.username}' is already installed "
                     "on this machine.\n\n"
-                    "Refresh it with this package's data, or choose a "
+                    "Refresh it with this package's data or choose a "
                     "different username for a new account?"
                 )
                 refresh_btn = box.addButton(

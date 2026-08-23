@@ -12,8 +12,8 @@ def _read_lgpl3_text() -> str:
     candidates: list[Path] = []
 
     # Each candidate is skipped rather than fatal: a location that cannot be
-    # formed is simply not a place to look, and the final FileNotFoundError
-    # names every path that was tried.
+    # formed is simply not a place to look; the final FileNotFoundError names
+    # every path that was tried.
     try:
         meipass = getattr(sys, "_MEIPASS", None)
         if meipass:

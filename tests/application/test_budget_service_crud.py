@@ -6,7 +6,7 @@ Ported from two scripts that sat at the repository root, `test_add_bill.py` and
 database in `~/.clearbudget` and asserted almost nothing.
 
 Nearly everything they touched is covered under `tests/` already. Two things
-were not: editing a bill, and listing credit cards. Both are here, against a
+were not: editing a bill and listing credit cards. Both are here, against a
 temp SQLite database like the rest of the application tests, so what the
 scripts were reaching for is kept and the risk they carried is not.
 
@@ -139,7 +139,7 @@ class TestUpdatingABill:
 
 
 class TestListingCreditCards:
-    """`get_credit_cards` had no test, and its repository is un-gated."""
+    """`get_credit_cards` had no test; its repository is un-gated."""
 
     def test_no_cards_reads_as_an_empty_list(self, budget_service) -> None:
         assert budget_service.get_credit_cards() == []

@@ -224,7 +224,7 @@ def on_app_running(window: InstallerMainWindow, op: Operation, msg: str) -> None
 
     The old behaviour asked the user to go and close it themselves and come
     back to click Retry. Closing it is something the setup program can do, so
-    it offers to, and only reports a failure when the process will not end.
+    it offers to; it only reports a failure when the process will not end.
     """
     del msg
 
@@ -292,9 +292,9 @@ def _should_close_after(window: InstallerMainWindow, op: Operation) -> bool:
     repair all did exactly that, because the launch branch returned without
     closing and repair fell past the uninstall check entirely.
 
-    Uninstall keeps its existing rule. Launched from Windows Settings it closes,
-    but if the user opened setup themselves and chose Uninstall, the window
-    stays so the result is visible and another operation can follow.
+    Uninstall keeps its existing rule. Launched from Windows Settings it
+    closes; if the user opened setup themselves and chose Uninstall, the
+    window stays so the result is visible and another operation can follow.
     """
     if op != Operation.UNINSTALL:
         return True
@@ -304,10 +304,10 @@ def _should_close_after(window: InstallerMainWindow, op: Operation) -> bool:
 def _close_shortly(window: InstallerMainWindow) -> None:
     """Close the window once the current work has unwound.
 
-    Deferred rather than immediate, and not only so the completion message can
-    be read. The operation's worker thread is being retired around this call,
-    and closing from inside that teardown is how a setup program ends up
-    waiting on the thread it is running on.
+    Deferred rather than immediate, not only so the completion message can
+    be read. The operation's worker thread is being retired around this call;
+    closing from inside that teardown is how a setup program ends up waiting
+    on the thread it is running on.
     """
     try:
         from PySide6.QtCore import QTimer

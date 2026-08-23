@@ -183,9 +183,12 @@ _LGPL3_NOTICE_HEAD = (
     "Clear Budget - Personal Budget Planner\n"
     "Copyright (C) 2025 Oliver Ernster\n"
     "\n"
-    "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"
+    # The two paragraphs below are the FSF's own notice, reproduced as the
+    # licence requires. Their punctuation is part of the quotation, so the
+    # house comma rule does not reach them; rewriting it would misquote.
+    "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"  # prose-sweep: allow
     "\n"
-    "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public Licence for more details.\n"
+    "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public Licence for more details.\n"  # prose-sweep: allow
     "\n"
     "You should have received a copy of the GNU Lesser General Public Licence along with this program. If not, see <https://www.gnu.org/licenses/>.\n"
     "\n"
