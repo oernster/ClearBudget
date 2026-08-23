@@ -663,10 +663,26 @@ bank statement. Both identities are tested.
 
 **`resources`** (`clear_budget/shared/resources.py`):
 - Runtime asset discovery for packaged builds: locates the app icon, the Qt
-  window/taskbar icon and the splash image across PyInstaller onefile
-  (`sys._MEIPASS`), onedir (`_internal/`), beside-the-executable, dev repo layout
-  and the working directory, with `.ico` preferred and `.png` fallbacks. Keeps
-  icon and splash loading robust however the app was packaged.
+  window/taskbar icon, the splash image and the tab-strip artwork across
+  PyInstaller onefile (`sys._MEIPASS`), onedir (`_internal/`),
+  beside-the-executable, dev repo layout and the working directory, with `.ico`
+  preferred and `.png` fallbacks. Keeps every asset lookup robust however the
+  app was packaged.
+- Every sized-PNG lookup searches BOTH capitalisations. The repository ships
+  `ClearBudget_256.png` (what `generate_icons.py` writes and what git tracks)
+  while several build steps stage and several call sites ask for the
+  lower-cased form; Windows and a default macOS volume hide the difference, a
+  Linux or case-sensitive APFS volume does not. One tuple against a class of
+  bug that can only appear on someone else's machine.
+- `find_logo_png_path()` returns the largest bundled PNG, never the `.ico`,
+  for callers that PAINT the icon into a widget (the nav tray's graph button
+  and the sign-in dialog's logo). It exists so that no caller resolves an
+  asset by counting directory levels from its own module. One did, and was
+  right on exactly one platform: the sign-in dialog reached three parents up
+  for a 64px file that the Flatpak never stages and a PyInstaller bundle puts
+  elsewhere, so the logo was silently absent on Linux and macOS. The
+  `exists()` guard around it is what made the failure silent instead of
+  loud.
 
 ### UI Layer
 
@@ -790,7 +806,9 @@ bank statement. Both identities are tested.
   check reports both
 
 **Widgets**:
-- `LoginDialog` - username/password form; a Remember me checkbox under the
+- `LoginDialog` - username/password form, its logo resolved through
+  `resources.find_logo_png_path` rather than a path built from this module's
+  own location; a Remember me checkbox under the
   password field (prefills both fields and ticks itself when `RememberedLogin`
   recalls credentials; unticking forgets them immediately; a successful sign-in
   stores or forgets according to the box); grid layout with "Forgot password?"

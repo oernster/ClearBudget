@@ -1,7 +1,5 @@
 """Login dialog - shown at startup and on lock/switch-user."""
 
-from pathlib import Path
-
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
@@ -20,6 +18,7 @@ from PySide6.QtWidgets import (
 from clear_budget.auth.models import User
 from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
+from clear_budget.shared.resources import find_logo_png_path
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.widgets._viewer_package_import_flow import (
     run_import_viewer_package_flow,
@@ -55,9 +54,14 @@ class LoginDialog(QDialog):
             ui_scale.px(32), ui_scale.px(28), ui_scale.px(32), ui_scale.px(24)
         )
 
-        # Logo / title
-        logo_path = Path(__file__).resolve().parents[3] / "clearbudget_64.png"
-        if logo_path.exists():
+        # Logo / title. Resolved through the shared asset lookup, never by
+        # counting parents from this module: doing that reached a 64px file at
+        # the repository root, which exists in a source checkout and in the
+        # Windows bundle but not in the Flatpak or the macOS app, so the logo
+        # was quietly missing on two platforms out of three. `exists()` made
+        # that failure silent rather than loud.
+        logo_path = find_logo_png_path()
+        if logo_path is not None:
             lbl = QLabel()
             pm = QPixmap(str(logo_path))
             lbl.setPixmap(

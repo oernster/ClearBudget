@@ -224,3 +224,24 @@ def find_tab_icon_path(name: str, *, project_root: Path | None = None) -> Path |
         _cwd(),
     ]
     return _first_existing(root / name for root in roots if root is not None)
+
+
+def find_logo_png_path(*, project_root: Path | None = None) -> Path | None:
+    """Locate the largest bundled PNG of the app icon; None if there is none.
+
+    A PNG specifically, never the `.ico`: the callers paint it into a widget,
+    while Qt's ICO support is a plugin a frozen build can be missing (which
+    is the whole reason `_QT_ICON_NAMES` lists PNG fallbacks at all).
+
+    This exists so that no caller resolves the icon by counting directory
+    levels from its own module. One did, and worked only on Windows: the
+    sign-in dialog reached three parents up for a 64px file that the Flatpak
+    never stages and that a PyInstaller bundle puts somewhere else entirely,
+    so the logo was silently absent on Linux and macOS. Every asset lookup
+    goes through the roots below, which already know where each packaging
+    step puts things.
+    """
+    for path in iter_qt_window_icon_candidates(project_root=project_root):
+        if path.suffix.lower() == ".png":
+            return path
+    return None

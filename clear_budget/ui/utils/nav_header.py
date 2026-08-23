@@ -30,12 +30,9 @@ from clear_budget.ui.utils.nav_label import (  # noqa: F401 (re-exported names)
 
 
 def _resolve_app_icon() -> Path | None:
-    from clear_budget.shared.resources import iter_qt_window_icon_candidates
+    from clear_budget.shared.resources import find_logo_png_path
 
-    for p in iter_qt_window_icon_candidates():
-        if p.suffix.lower() == ".png":
-            return p
-    return None
+    return find_logo_png_path()
 
 
 _APP_ICON_PATH: Path | None = _resolve_app_icon()
