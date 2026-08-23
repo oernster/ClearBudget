@@ -20,20 +20,30 @@ from pathlib import Path
 # while some build steps stage it lower-cased.
 _ICO_NAMES = ("ClearBudget.ico", "clearbudget.ico")
 
+
+# The sized PNGs, largest to smallest. Both capitalisations of each are
+# searched, for the same reason `_ICO_NAMES` carries both: the REPOSITORY
+# ships `ClearBudget_256.png` (that is what `generate_icons.py` writes and what
+# git tracks), while several build steps and this module historically staged
+# and looked for the lower-cased form. On Windows and on a default macOS
+# volume the filesystem hides the difference. On Linux, or on a case-sensitive
+# APFS volume, it does not. Searching both is one tuple against a class of bug
+# that only ever shows up on someone else's machine.
+def _both_cases(stem: str) -> tuple[str, str]:
+    """Return ("ClearBudget_x.png", "clearbudget_x.png") for one size stem."""
+    return (f"ClearBudget_{stem}.png", f"clearbudget_{stem}.png")
+
+
+_PNG_SIZES = ("256", "128", "64", "48", "32", "16")
+
 # Preference order for a Qt window icon: native ICO first, then PNGs largest
 # to smallest, so Qt gets the best available source when the ICO plugin is
 # missing from a frozen build.
-_QT_ICON_NAMES = (
-    "clearbudget.ico",
-    "clearbudget_256.png",
-    "clearbudget_128.png",
-    "clearbudget_64.png",
-    "clearbudget_48.png",
-    "clearbudget_32.png",
-    "clearbudget_16.png",
+_QT_ICON_NAMES = ("clearbudget.ico", "ClearBudget.ico") + tuple(
+    name for size in _PNG_SIZES for name in _both_cases(size)
 )
 
-_SPLASH_NAME = "clearbudget_256.png"
+_SPLASH_NAMES = _both_cases("256")
 
 # The tab-strip artwork, one file per tab that carries a picture rather than a
 # glyph. Looked up by filename through the same roots as every other asset, so
@@ -159,7 +169,9 @@ def find_splash_image_path(*, project_root: Path | None = None) -> Path | None:
         _repo_root(),
         _cwd(),
     ]
-    candidates = [root / _SPLASH_NAME for root in roots if root is not None]
+    candidates = [
+        root / name for root in roots if root is not None for name in _SPLASH_NAMES
+    ]
     return _first_existing(candidates)
 
 

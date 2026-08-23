@@ -62,6 +62,20 @@ multi-resolution `.ico`; it reproduces all eight tracked files byte for
 byte, so running it on a clean tree leaves `git status` empty. Change the
 artwork by replacing the master and re-running it.
 
+**The sized PNGs are `ClearBudget_<size>.png`, capitalised.** That is what
+`generate_icons.py` writes, what git tracks and what `build_flatpak.sh` and
+`builddmg.py` reference. It matters because Windows sets `core.ignorecase`
+and macOS volumes are case-insensitive by default, so a file renamed to
+`clearbudget_256.png` on either looks identical to git and to `ls`, while a
+Linux checkout still gets the capitalised name. The working tree drifted into
+exactly that state once and cost an afternoon of chasing a Flatpak bug that
+did not exist. If `ls` here disagrees with `git ls-files`, believe
+`git ls-files`. The Windows build steps (`buildexe.py`, `buildinstaller.py`)
+and several runtime lookups still name the lower-cased form; that is safe
+because they only ever run where the filesystem does not care. `shared/resources.py`
+searches both capitalisations, so a case-sensitive filesystem cannot lose the
+icon either way.
+
 ### Run, test and lint from source
 
 ```
