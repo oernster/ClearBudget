@@ -1152,6 +1152,17 @@ renderings of the same figures to hold in step. Every month any page shows
   is highlighted on launch and no menu drops open. Dialogs do the opposite and
   open on their first stop (`FirstStopDialog`); a window is looked at before it is
   acted in, a dialog was opened to do one specific thing
+- A TAB SWITCH returns to that same sink. Switching hides the control that was
+  clicked, so Qt hands its focus to whatever the newly shown page offers next
+  in its chain; that control then wore the green ring beside the current tab's
+  accent border and the tray read as two tabs being current at once. Qt has
+  already moved the focus by the time `currentChanged` arrives (measured, not
+  assumed), so the handler sets the sink last and nothing overwrites it. A new
+  page starts neutral for the same reason the window does. Guarded by
+  `tests/structural/test_tray_switch_invariants.py`, which asserts the signal
+  is connected AND that the handler it names touches the sink, because a
+  connection to a handler that had stopped focusing anything would otherwise
+  read as wired
 - Ring colours are three-state, enforced in the QSS: no ring at rest, a green
   ring while an enabled control is hovered or focused, a permanent red ring
   while disabled (hover/focus rules are gated on `:enabled`)
@@ -1231,6 +1242,20 @@ renderings of the same figures to hold in step. Every month any page shows
     toggle and the blue information button (How It Works). The separator
     divides the five controls that DO something from the tabs that only decide
     which page is being looked at
+  - Every view builds its OWN tray, so the graph icon is built per view and a
+    view that never calls the builder loses the capability silently: the tray
+    still draws and the app still runs, with the month graph simply gone from
+    that tab. Solvency lost it exactly that way. Every view that plots
+    something builds the button and lists it in `nav_targets()`, guarded by
+    `tests/structural/test_tray_switch_invariants.py`. Archive is excluded on
+    purpose, since it plots nothing. Solvency draws the BANK series the Budget
+    tab draws, because both tabs answer the same question about the same
+    account and two tabs disagreeing would read as two accounts
+  - `build_centered_nav_header` SKIPS a None entry rather than passing it to
+    `addWidget`. `build_graph_icon_button` returns None when the app icon
+    cannot be resolved, so that a missing asset costs the tray one control
+    rather than the window; without the skip that None took the application
+    down at startup, which is the failure the None was there to avoid
   - Two trays rather than one row is what makes the centring free. In one row
     the cluster could be centred only by reserving the icon run's width again
     on the empty side. Two runs plus the cluster do not fit at the window's own

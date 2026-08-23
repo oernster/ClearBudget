@@ -3,7 +3,9 @@
 Installs the application-wide KeyboardNavigator and gives the main window a
 neutral start: a 0x0 focus sink absorbs the initial focus on first show, so
 nothing is highlighted and no menu opens until the first Tab or Right enters
-the ring.
+the ring. Switching tabs returns to the same neutral start, because hiding
+the clicked control makes Qt hand its focus to whatever the new page happens
+to offer next.
 """
 
 from PySide6.QtCore import Qt
@@ -27,6 +29,24 @@ class MainWindowNavMixin:
             menubar=self.menuBar(),
             current_stops=self._current_nav_stops,
         )
+        self.tabs.currentChanged.connect(self._restore_neutral_focus)
+
+    def _restore_neutral_focus(self, _index: int) -> None:
+        """Send focus back to the sink whenever the shown tab changes.
+
+        Switching tabs hides the control that was clicked, so Qt hands its
+        focus to whatever happens to come next in the newly shown page's
+        chain. That painted the green ring on a tray control the user never
+        aimed at; beside the accent border on the current tab it read as two
+        tabs being current at once.
+
+        The sink is used rather than a chosen control because a new page
+        starts neutral for the same reason the window does on launch: nothing
+        is highlighted until the first Tab or Right enters the ring. Qt has
+        already moved the focus by the time this signal arrives (measured, not
+        assumed), so setting it here lands last and nothing overwrites it.
+        """
+        self._focus_sink.setFocus()
 
     def _current_nav_stops(self) -> list:
         index = self.tabs.currentIndex()

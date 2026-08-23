@@ -112,7 +112,9 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         self.tabs.addTab(self._scrollable(month_view), "Monthly Budget")
 
         solvency_panel = SolvencyPanel(
-            self.solvency_view_model, read_only=self.read_only
+            self.solvency_view_model,
+            read_only=self.read_only,
+            base_month=self.month_view_model.base_month,
         )
         self.tabs.addTab(self._scrollable(solvency_panel), "Solvency")
 

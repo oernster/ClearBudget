@@ -234,20 +234,29 @@ def build_centered_nav_header(
     action_row = QHBoxLayout(action_tray)
     action_row.setContentsMargins(edge, vpad, edge, vpad)
     action_row.setSpacing(8)
-    for widget in leading:
-        action_row.addWidget(widget, 0, align_v)
-    for widget in tabs:
-        action_row.addWidget(widget, 0, align_v)
+
+    def _place(widgets) -> None:
+        """Add each widget in order, skipping any that could not be built.
+
+        `build_graph_icon_button` returns None when the app icon cannot be
+        resolved, so that a missing asset costs the tray one control rather
+        than the whole window. Without this skip the None reached
+        `addWidget` and took the application down at startup instead.
+        """
+        for widget in widgets:
+            if widget is not None:
+                action_row.addWidget(widget, 0, align_v)
+
+    _place(leading)
+    _place(tabs)
     action_row.addStretch(1)
     # `pre_theme` is the RIGHT-hand group: everything here sits after the
     # stretch, so it is pinned to the right edge beside the toggle rather than
     # running on from the tabs.
-    for widget in pre_theme:
-        action_row.addWidget(widget, 0, align_v)
+    _place(pre_theme)
     theme_btn = _build_theme_toggle_button(nav_glyph_height(prev_btn))
     action_row.addWidget(theme_btn, 0, align_v)
-    for widget in trailing:
-        action_row.addWidget(widget, 0, align_v)
+    _place(trailing)
 
     header = QWidget()
     outer = QVBoxLayout(header)

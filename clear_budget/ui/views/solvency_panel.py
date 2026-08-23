@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from clear_budget.ui.utils.format_helpers import (
     build_centered_nav_header,
+    build_graph_icon_button,
     nav_glyph_height,
 )
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
@@ -76,11 +77,22 @@ class SolvencyPanel(
     # nav labels can match it (Solvency is the single source of truth).
     month_label_color_changed = Signal(str)
 
-    def __init__(self, view_model: SolvencyViewModel, read_only: bool = False) -> None:
-        """Initialize solvency panel widget."""
+    def __init__(
+        self,
+        view_model: SolvencyViewModel,
+        read_only: bool = False,
+        base_month=None,
+    ) -> None:
+        """Initialize solvency panel widget.
+
+        `base_month` is the month the tray's Previous arrow stops at, the same
+        bound the graph's own Previous uses; None means the month being read,
+        so a panel built without one never steps behind itself.
+        """
         super().__init__()
         self.view_model = view_model
         self.read_only = read_only
+        self.base_month = base_month or view_model.current_month
         self.init_ui()
         self.connect_signals()
 
@@ -101,6 +113,7 @@ class SolvencyPanel(
         # own set; MainWindow wires them and keeps the current-tab mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
+        self.graph_btn = build_graph_icon_button(_glyph_h, self.on_show_graph)
         self.nav_header, self.month_label, self.theme_btn = build_centered_nav_header(
             "May 2026",
             prev_btn=self.prev_btn,
@@ -113,7 +126,7 @@ class SolvencyPanel(
                 self.bank_btn,
                 _sep,
             ),
-            tabs=self.tab_btns[:-1],
+            tabs=(*self.tab_btns[:-1], self.graph_btn),
             pre_theme=(self.tab_btns[-1],),
             trailing=(self.info_btn,),
         )
@@ -148,6 +161,35 @@ class SolvencyPanel(
         for page_index, button in self.pilot_btns.items():
             button.setVisible(page_index != index)
 
+    def on_show_graph(self) -> None:
+        """Open the month graph for the viewed month's bank balance.
+
+        The same bank series the Budget tab plots, because this tab answers
+        the same question about the same account; a graph that disagreed with
+        the one a tab away would read as two different accounts. The
+        projection export is offered here too, since the months ahead are
+        what this tab is for.
+        """
+        from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+        from clear_budget.ui.widgets.month_graph_dialog import MonthGraphDialog
+
+        svc = self.view_model.budget_service
+
+        def series_for(ym):
+            """The bank series for `ym`, derived fresh so navigation is live."""
+            summary = svc.get_month_summary(year_month=ym)
+            series = svc.get_bank_graph_series(year_month=ym, summary=summary)
+            return f"{MONTH_NAMES[ym.month]} {ym.year}: bank balance by day", [series]
+
+        MonthGraphDialog(
+            self,
+            series_for=series_for,
+            start_month=self.view_model.current_month,
+            base_month=self.base_month,
+            budget_service=svc,
+            anchor_month=self.view_model.current_month,
+        ).exec()
+
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab.
 
@@ -176,6 +218,7 @@ class SolvencyPanel(
             self.settings_btn,
             self.bank_btn,
             *others,
+            self.graph_btn,
             *archive_stop,
             self.theme_btn,
             self.info_btn,
