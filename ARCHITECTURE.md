@@ -1302,8 +1302,11 @@ renderings of the same figures to hold in step. Every month any page shows
   Those are different KINDS of image sized by different rules, so both are
   reduced to one question, how tall the thing actually PAINTS, answered by
   measuring opaque pixels in each case (`glyph_metrics`)
-- An image is cropped to its opaque content, then fitted by its HEIGHT and
-  scaled up by `TAB_IMAGE_SCALE`. Fitting to a square box by the LONGER side
+- An image is cropped to its opaque content, then fitted by its HEIGHT. The
+  scale that lifts it lives in `nav_glyph_size.NAV_GLYPH_SCALE` now, applied to
+  the measured box before anything reads it, so the tray's own icons take it
+  too; `TAB_IMAGE_SCALE` is 1.0 because scaling again here would put the tabs
+  back above their neighbours. Fitting to a square box by the LONGER side
   was tried first and is what a picture-and-glyph row must not do: the
   calendar came out 42 tall and the cards 35 against the emoji's 46, so the
   pictures read small; worse still, their BASES sat high. A row of icons that
@@ -1311,11 +1314,19 @@ renderings of the same figures to hold in step. Every month any page shows
   sized. Fitting by height puts every icon on one baseline by construction;
   the landscape card artwork running wider than its neighbours is the accepted
   cost, since a shared bottom edge is what the eye checks along a row
-- `TAB_EMOJI_SCALE` is held EQUAL to `TAB_IMAGE_SCALE` rather than left at the
-  tray's own 1.0. Once the three pictures grew past the tray's emoji, an
-  archive glyph left behind at the smaller size stopped reading as their peer
-  and started reading as the runt of the four. It is a tab first and an emoji
-  second, which is why it does not follow `nav_header.TOGGLE_GLYPH_SCALE`
+- `TAB_EMOJI_SCALE` is held EQUAL to `TAB_IMAGE_SCALE`. It mattered when the
+  scale lifted the tabs alone: an archive glyph left at the smaller size read
+  as the runt of the four. The two are equal at 1.0 now, since the box arrives
+  pre-scaled, so the rule holds without either doing any work. The archive
+  glyph is a tab first and an emoji second, which is why it still does not
+  follow `nav_header.TOGGLE_GLYPH_SCALE`
+- EVERY icon in the tray paints at the same height; every button holding one
+  is the same size. The scale used to be the tabs' alone, which left the
+  load, save, switch, users, preferences, bank and help icons painting 47
+  against the tabs' 63 in the same band, a third smaller. Moving the scale to
+  the base fixed all of them at once. `NAV_ICON_BTN_PADDING_PX` went to zero in
+  the same pass, since a tray button carrying that padding was 8px taller than
+  a tab holding an icon of exactly the same height
 - A tab whose icon cannot be built keeps its label as visible text. A missing
   asset costs the tray its looks, never a route into the tab
 - The tabs are BUTTONS in the navigation tray (`build_tab_buttons`), not a
@@ -1437,9 +1448,10 @@ renderings of the same figures to hold in step. Every month any page shows
     purpose, since it plots nothing. Solvency draws the BANK series the Budget
     tab draws, because both tabs answer the same question about the same
     account and two tabs disagreeing would read as two accounts
-  - The graph icon is scaled by `tab_icons.TAB_IMAGE_SCALE`, the same factor
-    the three tab pictures take, because it is drawn INSIDE that run rather
-    than among the tray's emoji. Left at the tray's bare glyph height it
+  - The graph icon takes the same height as the three tab pictures, because it
+    is drawn INSIDE that run. That used to need `TAB_IMAGE_SCALE` and now comes
+    from the pre-scaled box every icon in the tray shares. Left at the tray's
+    old bare glyph height it
     painted 46 tall against their 62 and its base sat 8px above theirs; a row
     of icons that do not share a bottom edge reads as badly set rather than as
     deliberately varied, which is the effect that constant exists to cure.

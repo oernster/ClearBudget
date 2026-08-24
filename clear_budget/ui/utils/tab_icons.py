@@ -43,12 +43,12 @@ from __future__ import annotations
 # Painted size of a tab icon, before UI scaling, as the side of the square box
 # each one is fitted into.
 TAB_ICON_PX = 26
-# An image tab icon paints this multiple of the box's height. Slightly over
-# 1.0 because these are dense pictograms sitting beside emoji that carry more
-# light space: at equal heights the pictures read as the smaller of the two,
-# which is the same optical-weight effect `TOGGLE_GLYPH_SCALE` corrects in the
-# other direction on the theme toggle.
-TAB_IMAGE_SCALE = 1.35
+# A tab icon paints this multiple of the box it is given. 1.0 because the box
+# ALREADY carries the scale: `nav_glyph_size.NAV_GLYPH_SCALE` used to live here
+# and lift the tabs alone, which is exactly what left every other icon in the
+# tray a third smaller than the tabs sitting beside them. Scaling here again
+# would restore that gap in the other direction.
+TAB_IMAGE_SCALE = 1.0
 # The archive glyph paints this multiple of the box's height, matched to
 # TAB_IMAGE_SCALE rather than left at the tray's own 1.0. Held equal on
 # purpose: the three pictures grew past the tray's emoji; an archive glyph

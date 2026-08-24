@@ -16,10 +16,20 @@ FALLBACK_ICON_PX = 24
 # an icon-sized control 80-odd pixels wide.
 NAV_ICON_BTN_CHROME_PX = 8
 
-# Breathing room between the glyph and the hover or focus ring drawn around
-# it, on every side. The chrome above is the ring itself and the 2px the QSS
-# already reserves; with only that, the ring sits hard against the artwork.
-NAV_ICON_BTN_PADDING_PX = 4
+# Breathing room between the glyph and the hover or focus ring drawn around it,
+# on every side. Zero: the tabs carry none and their rings do not sit hard
+# against the artwork, so the tray's icon buttons taking any made their boxes
+# 8px taller than a tab's while holding an icon of exactly the same height. One
+# band of controls wants one box size.
+NAV_ICON_BTN_PADDING_PX = 0
+
+# Every glyph in the tray paints this multiple of the measured box. Slightly
+# over 1.0 because the tabs' artwork is dense pictograms: at a height equal to
+# an emoji's they read as the smaller of the two. It lived in `tab_icons` and
+# applied to the tabs alone, which is what left the tray's own icons a third
+# smaller than the tabs beside them in the same band. It is the base now, so
+# every icon in the tray is sized through it and they end up equal.
+NAV_GLYPH_SCALE = 1.35
 
 
 def nav_glyph_height(prev_btn) -> int:
@@ -30,12 +40,16 @@ def nav_glyph_height(prev_btn) -> int:
     They are built in different functions, so deriving it twice is how they
     drifted apart.
 
-    Deliberately UNSCALED. A 0.75 factor lived here briefly, while the tabs
-    were still a strip of their own and the tray was the heaviest band on the
-    window. With the tabs now in the tray, the tray IS the band, so the icons
-    are back at the height they started at.
+    Scaled by `NAV_GLYPH_SCALE`, which the tabs used to apply on their own.
+    A 0.75 factor lived here briefly, while the tabs were still a strip of their
+    own and the tray was the heaviest band on the window. With the tabs now in
+    the tray, the tray IS the band, so it scales UP rather than down and every
+    icon in it is sized through the one number.
     """
-    return prev_btn.sizeHint().height() if prev_btn is not None else FALLBACK_ICON_PX
+    measured = (
+        prev_btn.sizeHint().height() if prev_btn is not None else FALLBACK_ICON_PX
+    )
+    return max(1, round(measured * NAV_GLYPH_SCALE))
 
 
 def nav_icon_button_size(
