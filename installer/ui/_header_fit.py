@@ -42,11 +42,15 @@ class HeaderFitController:
         title.setProperty("_base_header_font_px", base_px)
         title.setProperty("_base_header_font_pt", base_pt)
 
-        # Lock in a minimum size based on the post-style size hint. This prevents
-        # the header row from being sized to a slightly-too-small height/width
-        # due to font metric rounding.
+        # Lock in a minimum size measured from the FONT, not from sizeHint().
+        # This prevents the header row from being sized slightly too small by
+        # font-metric rounding, without the runaway that reading sizeHint()
+        # here produced: the hint is derived from the minimum, so writing it
+        # back as the new minimum added the label's safety buffer again on
+        # every theme change (see SafeLabel.metric_minimum_size).
         try:
-            title.setMinimumSize(title.sizeHint())
+            measured = getattr(title, "metric_minimum_size", None)
+            title.setMinimumSize(measured() if measured else title.sizeHint())
         except RuntimeError:
             # The label's C++ half can be gone if the page was torn down while
             # this was queued. The minimum size is an anti-clipping refinement,
@@ -95,6 +99,16 @@ class HeaderFitController:
         try:
             QApplication.processEvents()
 
+            # FIRST, unconditionally. This used to run only after the
+            # title was found to be clipped, so a window too small for its
+            # own layout was never corrected as long as the title itself had
+            # room. It did not: Qt squeezed the header ROW instead, from the
+            # 69px it asked for down to 43; the title then overflowed the row
+            # it was supposed to sit in. The version and the buttons centred
+            # in the squeezed row while the title hung below it. Nothing was
+            # clipped, so nothing here noticed.
+            self._ensure_window_minimum_for_layout()
+
             missing_w, missing_h = self._ensure_label_has_bbox_room(title)
             if self._fits(title):
                 return
@@ -116,6 +130,14 @@ class HeaderFitController:
         horizontally (e.g. very long paths in editable controls). It does
         ensure the window can expand to fit the layout's size hint so that
         labels are not clipped by an artificially-small window.
+
+        The floor is the layout's MINIMUM size hint, not its preferred one.
+        Those are different numbers and the difference is the whole point:
+        the preferred hint is what the layout would like, while the minimum
+        is the height below which Qt starts taking room away from rows that
+        asked for it. Measured here at 562 against a preferred 550 and a
+        window pinned at 520, so the header row was being squeezed by 26px
+        while the preferred hint said everything was comfortable.
         """
 
         w = self.window
@@ -123,7 +145,7 @@ class HeaderFitController:
         if cw is None:
             return
 
-        hint = cw.sizeHint()
+        hint = cw.minimumSizeHint()
         if not hint.isValid():
             return
 

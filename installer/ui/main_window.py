@@ -32,6 +32,7 @@ from installer.ui._main_window_buttons import (
 )
 from installer.ui._main_window_types import UiSelections
 from installer.ui._main_window_uninstall import confirm_and_run_uninstall
+from installer.ui._theme_toggle import apply_toggle_face
 from installer.ui.icons import build_installer_window_icon
 from installer.ui.themes import DARK, LIGHT, Theme
 from installer.ui.worker import OperationController, OperationResult
@@ -114,7 +115,7 @@ class InstallerMainWindow(QMainWindow):
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(self._theme.qss)
-        self._theme_toggle_btn.setText(self._theme.toggle_label)
+        apply_toggle_face(self._theme_toggle_btn, self._theme)
         self._header_fit.on_theme_applied()
         self._header_fit.schedule()
 

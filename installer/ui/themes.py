@@ -22,17 +22,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# The sun and the moon come FROM the application, never a second copy of
+# them. See installer.ui._theme_toggle for why the installer borrows its
+# toggle face rather than declaring one.
+from clear_budget.ui.theme import toggle_glyph, toggle_tooltip
+from clear_budget.ui.theme_tokens import THEME_DARK, THEME_LIGHT
+
 
 @dataclass(frozen=True, slots=True)
 class Theme:
     name: str
-    toggle_label: str
+    toggle_glyph: str
+    toggle_tooltip: str
     qss: str
 
 
 LIGHT = Theme(
     name="light",
-    toggle_label="Dark Theme",
+    toggle_glyph=toggle_glyph(THEME_LIGHT),
+    toggle_tooltip=toggle_tooltip(THEME_LIGHT),
     qss="""
         QWidget { background: #f4f4f4; color: #1f2937; font-family: 'Segoe UI'; }
         QLabel#HeaderTitle { font-size: 38px; font-weight: 700; }
@@ -45,7 +53,7 @@ LIGHT = Theme(
 
         QPushButton#ThemeToggle {
             background: #5b7799; color: white; border: none;
-            padding: 10px 18px; border-radius: 18px; font-weight: 600;
+            padding: 0px; border-radius: 18px; font-weight: 600;
         }
         QPushButton#ThemeToggle:hover { background: #4f6885; }
 
@@ -102,7 +110,8 @@ LIGHT = Theme(
 
 DARK = Theme(
     name="dark",
-    toggle_label="Light Theme",
+    toggle_glyph=toggle_glyph(THEME_DARK),
+    toggle_tooltip=toggle_tooltip(THEME_DARK),
     qss="""
         QWidget { background: #161827; color: #e5e7eb; font-family: 'Segoe UI'; }
         QLabel#HeaderTitle { font-size: 38px; font-weight: 700; color: #a3a8c9; }
@@ -115,7 +124,7 @@ DARK = Theme(
 
         QPushButton#ThemeToggle {
             background: #5b7799; color: white; border: none;
-            padding: 10px 18px; border-radius: 18px; font-weight: 600;
+            padding: 0px; border-radius: 18px; font-weight: 600;
         }
         QPushButton#ThemeToggle:hover { background: #4f6885; }
 

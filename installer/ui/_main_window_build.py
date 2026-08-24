@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from clear_budget.version import APP_NAME, __version__
 from installer.ui._safe_label import SafeLabel
+from installer.ui._theme_toggle import apply_toggle_face
 
 
 def build_installer_main_window_ui(window: Any) -> None:
@@ -46,6 +47,10 @@ def build_installer_main_window_ui(window: Any) -> None:
         # Bias rendering slightly up-left to avoid descender/edge clipping.
         draw_dx_px=-1,
         draw_dy_px=-1,
+        # Centre the TITLE on its ink rather than on its line box, so it reads
+        # level with the version and the two buttons beside it. See
+        # SafeLabel.ink_offset_px: at 38px the difference measured 8px.
+        centre_on_ink=True,
     )
     title.setObjectName("HeaderTitle")
     title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -59,25 +64,32 @@ def build_installer_main_window_ui(window: Any) -> None:
     window._header_title = title
     window._header_version = version
 
+    # Vertical centring is stated on every item in this row rather than left
+    # to the layout. Without it each widget was laid from the TOP of a row
+    # sized by the tallest of them, so the title's box centred 13px below the
+    # buttons' before its ink had even been considered. Only the VERTICAL
+    # flag is given: adding a horizontal one would stop the title expanding
+    # and put the zero-truncation guarantee above back at risk.
     header_left = QHBoxLayout()
     header_left.setSpacing(14)
-    header_left.addWidget(title)
-    header_left.addWidget(version)
+    header_left.addWidget(title, 0, Qt.AlignVCenter)
+    header_left.addWidget(version, 0, Qt.AlignVCenter)
 
     window._licence_btn = QPushButton("Licence")
     window._licence_btn.setObjectName("LicenceButton")
     window._licence_btn.setToolTip("Installer licence")
 
-    window._theme_toggle_btn = QPushButton(window._theme.toggle_label)
+    window._theme_toggle_btn = QPushButton()
     window._theme_toggle_btn.setObjectName("ThemeToggle")
+    apply_toggle_face(window._theme_toggle_btn, window._theme)
 
     # Give the left side stretch so the header title has priority in width
     # allocation (prevents font-metric rounding causing clipping). Do not add an
     # extra stretch item, otherwise the free space is split and the title can be
     # under-allocated on some DPI/font configurations.
     header_row.addLayout(header_left, 1)
-    header_row.addWidget(window._licence_btn)
-    header_row.addWidget(window._theme_toggle_btn)
+    header_row.addWidget(window._licence_btn, 0, Qt.AlignVCenter)
+    header_row.addWidget(window._theme_toggle_btn, 0, Qt.AlignVCenter)
 
     outer.addLayout(header_row)
 
