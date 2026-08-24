@@ -43,13 +43,8 @@ def opaque_bounding_rect(image):
     return QRect(cols[0], rows[0], cols[-1] - cols[0] + 1, rows[-1] - rows[0] + 1)
 
 
-def painted_glyph_height(glyph: str, font_px: int) -> int:
-    """Return the height in pixels that `glyph` paints at a `font_px` font.
-
-    Rendered to an off-screen ARGB canvas and measured by its opaque pixels,
-    which is the only reading that accounts for a colour emoji font, where the
-    glyph is a bitmap whose extents owe nothing to the font's own metrics.
-    """
+def _render_glyph(glyph: str, font_px: int):
+    """Paint `glyph` alone on a transparent canvas and return that QImage."""
     from PySide6.QtCore import QRect, Qt
     from PySide6.QtGui import QColor, QFont, QImage, QPainter
 
@@ -64,7 +59,52 @@ def painted_glyph_height(glyph: str, font_px: int) -> int:
     painter.setFont(font)
     painter.drawText(QRect(0, 0, side, side), Qt.AlignmentFlag.AlignCenter.value, glyph)
     painter.end()
-    return opaque_bounding_rect(canvas).height()
+    return canvas
+
+
+def cropped_glyph_pixmap(glyph: str, target_px: int):
+    """Return `glyph` as a QPixmap cropped to the pixels it actually paints.
+
+    Drawn as an ICON rather than left to Qt as button text, because Qt centres
+    text by the FONT's em box and not by the artwork inside it. Reaching a
+    given painted height needs a different font size for every emoji, so the
+    em boxes differ in size too; the wide glyphs, which need the largest
+    fonts, end up sitting lowest. Measured on Windows at a 30px target: two
+    busts needed a 39px font and settled 6px below the centre of a button
+    where a diskette at 30px sat 1px off it.
+
+    Cropping to the opaque bounding box removes the em box from the question
+    entirely. What is left is the artwork, which Qt then centres exactly.
+    """
+    from PySide6.QtGui import QPixmap
+
+    canvas = _render_glyph(glyph, glyph_font_px_for_height(glyph, target_px))
+    rect = opaque_bounding_rect(canvas)
+    if rect.isEmpty():
+        return QPixmap()
+    return QPixmap.fromImage(canvas.copy(rect))
+
+
+def painted_glyph_size(glyph: str, font_px: int) -> tuple[int, int]:
+    """Return the (width, height) in pixels that `glyph` paints at `font_px`.
+
+    Rendered to an off-screen ARGB canvas and measured by its opaque pixels,
+    which is the only reading that accounts for a colour emoji font, where the
+    glyph is a bitmap whose extents owe nothing to the font's own metrics.
+
+    The WIDTH matters as much as the height. Emoji are not square: measured on
+    Windows, two busts paint a third wider than they are tall, while a diskette
+    is square. Fit such a glyph into a square cut for the diskette and the
+    style shrinks the whole bitmap to make the width fit, so it loses height
+    too and ends up visibly smaller than its neighbours.
+    """
+    rect = opaque_bounding_rect(_render_glyph(glyph, font_px))
+    return rect.width(), rect.height()
+
+
+def painted_glyph_height(glyph: str, font_px: int) -> int:
+    """Return the height in pixels that `glyph` paints at a `font_px` font."""
+    return painted_glyph_size(glyph, font_px)[1]
 
 
 @cache
@@ -84,3 +124,14 @@ def glyph_font_px_for_height(glyph: str, target_px: int) -> int:
     if painted <= 0:
         return target_px
     return max(1, round(target_px * target_px / painted))
+
+
+@cache
+def glyph_painted_width_for_height(glyph: str, target_px: int) -> int:
+    """Return the width `glyph` paints once scaled to `target_px` tall.
+
+    What a button holding this glyph has to be wide enough for. Measured at
+    the font size the height fit chose, so the two readings describe the same
+    drawn glyph rather than two different ones.
+    """
+    return painted_glyph_size(glyph, glyph_font_px_for_height(glyph, target_px))[0]

@@ -28,8 +28,8 @@ from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.save_location import load_save_location, store_save_location
 from clear_budget.ui.ui_paths import default_downloads_dir
 
-# One source for the icon-button chrome, shared with the theme toggle.
-from clear_budget.ui.utils.format_helpers import NAV_ICON_BTN_CHROME_PX
+# One source for the icon-button geometry, shared with the theme toggle.
+from clear_budget.ui.utils.nav_glyph_size import nav_icon_button_size
 
 # Default backup filename offered the first time the user saves.
 _DEFAULT_SAVE_NAME = "clearbudget_backup.db"
@@ -39,24 +39,39 @@ _DB_FILTER = "ClearBudget Database (*.db)"
 def _tray_icon_button(glyph: str, tooltip: str, glyph_height: int) -> QPushButton:
     """One emoji icon button for the nav tray's far-left group.
 
-    IconAction-styled so it carries the standard three-state ring. The glyph
-    is measured and scaled to paint at `glyph_height`, the same height the
-    tray's app-icon button is scaled to, so the group reads as one matched
-    family. The font goes on as a widget-level stylesheet WITH a selector,
-    for the same reasons as the theme toggle: a stylesheet rule beats setFont
-    and a bare font-size would cascade to the tooltip. The size is fixed to
-    the glyph plus the ring chrome, because Qt's default push-button minimum
-    would otherwise make an icon-sized control 80-odd pixels wide.
-    """
-    from clear_budget.ui.utils.glyph_metrics import glyph_font_px_for_height
+    IconAction-styled so it carries the standard three-state ring.
 
-    btn = QPushButton(glyph)
+    The glyph is painted once, cropped to its own opaque pixels and set as the
+    button's ICON rather than left as button text. Text would be placed by the
+    font's em box; every emoji needs a different font size to reach the same
+    painted height, so the em boxes differ too. The wide glyphs need the
+    largest fonts and sat lowest, two busts finishing 6px below the centre of
+    a button where a diskette sat 1px off it. An icon is centred on the
+    artwork, so every glyph in the row lands on the same line.
+
+    The size is fixed because Qt's default push-button minimum would otherwise
+    make an icon-sized control 80-odd pixels wide; it is taken from what
+    THIS glyph paints: the buttons match on height, so a wide glyph is given
+    the width it needs rather than being shrunk to fit a narrow one's square.
+    """
+    from PySide6.QtCore import QSize
+    from PySide6.QtGui import QIcon
+
+    from clear_budget.ui.utils.glyph_metrics import cropped_glyph_pixmap
+
+    btn = QPushButton()
     btn.setToolTip(tooltip)
     btn.setObjectName(label_roles.ICON_ACTION)
-    glyph_px = glyph_font_px_for_height(glyph, glyph_height)
-    btn.setStyleSheet(f"QPushButton#IconAction {{ font-size: {glyph_px}px; }}")
-    side = glyph_height + NAV_ICON_BTN_CHROME_PX
-    btn.setFixedSize(side, side)
+    pixmap = cropped_glyph_pixmap(glyph, glyph_height)
+    if pixmap.isNull():
+        # No glyph painted (a font without it, a headless font database):
+        # the button keeps working as text rather than becoming a blank
+        # square, exactly as a tab does when its artwork is missing.
+        btn.setText(glyph)
+    else:
+        btn.setIcon(QIcon(pixmap))
+        btn.setIconSize(QSize(pixmap.width(), pixmap.height()))
+    btn.setFixedSize(*nav_icon_button_size(glyph, glyph_height))
     return btn
 
 

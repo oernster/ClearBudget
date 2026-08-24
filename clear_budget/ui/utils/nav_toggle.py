@@ -12,7 +12,7 @@ wrong beside the icon next to it. Every public name is re-exported by
 # number for the same reason and is imported rather than repeated.
 from clear_budget.ui.utils.nav_glyph_size import (
     FALLBACK_ICON_PX,
-    NAV_ICON_BTN_CHROME_PX,
+    nav_icon_button_size,
 )
 
 # Dynamic property carrying the height a toggle button's glyph must paint at.
@@ -52,13 +52,20 @@ def apply_toggle_glyph(btn, glyph: str) -> None:
     widget's subtree and a tooltip counts: the hover text came out in the
     emoji's size. Scoping it to the button means nothing else can inherit it.
     """
-    from clear_budget.ui.utils.glyph_metrics import glyph_font_px_for_height
+    from PySide6.QtCore import QSize
+    from PySide6.QtGui import QIcon
+
+    from clear_budget.ui.utils.glyph_metrics import cropped_glyph_pixmap
 
     icon_height = btn.property(TOGGLE_TARGET_PROPERTY) or FALLBACK_ICON_PX
     target = max(1, round(int(icon_height) * TOGGLE_GLYPH_SCALE))
-    glyph_px = glyph_font_px_for_height(glyph, target)
-    btn.setText(glyph)
-    btn.setStyleSheet(f"QPushButton#ThemeToggleButton {{ font-size: {glyph_px}px; }}")
+    pixmap = cropped_glyph_pixmap(glyph, target)
+    if pixmap.isNull():
+        btn.setText(glyph)
+        return
+    btn.setText("")
+    btn.setIcon(QIcon(pixmap))
+    btn.setIconSize(QSize(pixmap.width(), pixmap.height()))
 
 
 def _build_theme_toggle_button(glyph_height: int):
@@ -81,10 +88,17 @@ def _build_theme_toggle_button(glyph_height: int):
     current = theme.current_theme(QApplication.instance())
     btn = QPushButton()
     btn.setObjectName("ThemeToggleButton")
-    # Fixed square, like every other emoji tray button: without it Qt's
-    # default push-button minimum width leaves a ring far wider than the sun.
-    side = glyph_height + NAV_ICON_BTN_CHROME_PX
-    btn.setFixedSize(side, side)
+    # Fixed size, like every other emoji tray button: without it Qt's default
+    # push-button minimum width leaves a ring far wider than the sun. Sized to
+    # the WIDER of the two faces, because this button's glyph changes under it
+    # and a size taken from the sun alone would jump when the moon arrived.
+    # Boxed at the tray's OWN glyph height, never at this button's reduced
+    # one. TOGGLE_GLYPH_SCALE shrinks the sun and moon for optical weight;
+    # sizing the box from that reduced figure shrank the button too, leaving
+    # it visibly smaller than the buttons either side of it. The glyph is
+    # drawn smaller inside a box that still matches its neighbours.
+    faces = [nav_icon_button_size(face, glyph_height) for face in theme.toggle_glyphs()]
+    btn.setFixedSize(max(w for w, _ in faces), max(h for _, h in faces))
     btn.setProperty(TOGGLE_TARGET_PROPERTY, glyph_height)
     apply_toggle_glyph(btn, theme.toggle_glyph(current))
     btn.setToolTip(theme.toggle_tooltip(current))

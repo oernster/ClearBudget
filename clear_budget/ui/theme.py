@@ -100,6 +100,15 @@ def toggle_glyph(theme_name: str) -> str:
     return _TOGGLE_GLYPHS[theme_name]
 
 
+def toggle_glyphs() -> tuple[str, ...]:
+    """Every glyph a toggle button can show, for sizing one that swaps.
+
+    The button's glyph changes under it, so a size taken from whichever face
+    happened to be showing would jump at the next theme switch.
+    """
+    return tuple(_TOGGLE_GLYPHS.values())
+
+
 def toggle_tooltip(theme_name: str) -> str:
     """Return the toggle button tooltip under `theme_name`."""
     return _TOGGLE_TOOLTIPS[theme_name]
