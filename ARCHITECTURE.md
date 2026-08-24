@@ -16,6 +16,7 @@ Everything below this section explains how the code satisfies them.
 | No source file exceeds 400 lines and none sits in the 381 to 399 danger band: a file refactored down from over the cap lands at 350 or below rather than stopping the moment it clears 400 | `tests/structural/test_loc_limits.py` (both halves) |
 | Only `shared/config.py` derives the real data directory. The suite never resolves it; the installer never so much as names it, so no test and no install can disturb live user data | `tests/structural/test_data_dir_isolation.py` (plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py`) |
 | The data-directory migration cannot lose data: resolution prefers the legacy `~/.clearbudget` while it exists (its disappearance is the completion signal), the copied tree verifies byte for byte before the old directory is removed and `main()` migrates before the single-instance lock, never under the override | `tests/shared/test_data_migration.py`, `tests/shared/test_config.py` and `tests/structural/test_data_dir_isolation.py::TestTheMigrationRunsFirstAtStartup` |
+| A full restore that cannot complete changes nothing: every file in the backup is staged and schema-validated before a single live file is replaced, strays and path-traversal names are refused and files not named in the backup survive untouched | `tests/auth/test_full_backup.py` |
 | 100% line AND branch coverage over `clear_budget`, `main` and the Qt-free half of the setup program | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
 | An exported report adds up: `opening + net == close` for every month whose Paid/Received flags agree with the calendar. In the anchored month an item actioned early (or missed) moves the close off the totals by exactly that amount, because the series never charges twice what the recorded balance already contains | `tests/application/test_projection_series.py::test_opening_plus_net_equals_the_close` and `::test_a_bill_paid_early_moves_the_anchored_close` |
 | The exported report and the on-screen month graph can never disagree about a month they both cover, because both run the same day-by-day projection | `tests/application/test_projection_series.py::test_the_projection_agrees_with_the_month_graph` |
@@ -536,6 +537,28 @@ Separate from budget infrastructure. Manages user identity and credentials.
   the UI ticks the box and prefills both fields when `recall()` returns
   credentials, forgets on untick and remembers (or forgets) on a successful
   sign-in according to the box
+
+**`full_backup`** (`clear_budget/auth/full_backup.py`):
+- Back Up Everything / Restore Everything behind File > Import / Export.
+  File > Save covers only the active budget; `users.db` sat outside every
+  backup path the app offered, so this module bundles the whole set into one
+  zip: `users.db`, every `budget_*.db` and the `budgets_*.json` registry
+  sidecars. Caches are excluded (regenerated) and so is the Remember-me
+  sidecar, whose password lives in the OS keychain and cannot travel in a file
+- `create_full_backup(app_dir, dest_path)` → the member names bundled
+- `validate_full_backup(package_path)` → the member names, refusing a zip
+  with no `users.db`, a stray member or a path-traversal name
+- `restore_full_backup(package_path, app_dir)` stages first: members are
+  extracted to `_restore_staging` inside the data directory, each budget
+  database is schema-checked via `shared.db_validation` and `users.db` is
+  confirmed to hold a `users` table; only then are live files replaced one by
+  one. Strays and path-traversal names refuse the whole restore before any
+  replacement. The caller must have closed every open connection (Windows
+  refuses to replace an open database); `main.py` tears the session down,
+  rebinds a fresh `UserStore` and returns to the sign-in screen
+- Pure stdlib (`zipfile`, `sqlite3`, `shutil`) and inside the coverage gate;
+  the UI flow (`ui/widgets/_full_backup_flow.py`: dialogs, unencrypted
+  warning, double confirmation) sits outside it like the rest of the UI layer
 
 ### Reporting (`clear_budget/application/reporting/`)
 
@@ -1309,8 +1332,10 @@ renderings of the same figures to hold in step. Every month any page shows
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
   - File menu: New Budget and Switch Budget, then Load / Save / Save As (Save
     goes to the remembered save file, kept in `ui_settings.json`), then the
-    "Import / Export" submenu (Read-Only Viewer Package export/import, admin
-    only), Exit
+    "Import / Export" submenu (Read-Only Viewer Package export/import, then
+    Back Up Everything / Restore Everything, all admin only), Exit; a full
+    restore travels the `full_restore_requested` signal to `main.py`, which
+    tears the session down before touching a file
   - Settings menu (adjacent to File): Preferences, Bank Account
   - Users menu: Switch User for every account; admins also get Manage Users
     (list, Add User, Delete Selected)

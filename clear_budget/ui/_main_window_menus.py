@@ -62,6 +62,14 @@ class MainWindowMenuMixin:
             )
             import_viewer_action.triggered.connect(self._on_import_viewer_package)
 
+            import_export_menu.addSeparator()
+
+            backup_all_action = import_export_menu.addAction("&Back Up Everything…")
+            backup_all_action.triggered.connect(self._on_backup_everything)
+
+            restore_all_action = import_export_menu.addAction("Restore E&verything…")
+            restore_all_action.triggered.connect(self._on_restore_everything)
+
         file_menu.addSeparator()
 
         exit_action = file_menu.addAction("E&xit")

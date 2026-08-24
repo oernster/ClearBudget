@@ -42,6 +42,10 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
     logout_requested = Signal()
     # Emitted after a database import - signals main to reload without restart.
     database_replaced = Signal()
+    # Emitted with a validated full-backup zip path. Only main.py can act on
+    # it: the open databases must close before the files can be replaced and
+    # the session returns to the sign-in screen afterwards.
+    full_restore_requested = Signal(str)
 
     def __init__(
         self,
@@ -326,6 +330,18 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
 
         dlg = ExportViewerPackageDialog(self.db_path, parent=self)
         dlg.exec()
+
+    def _on_backup_everything(self) -> None:
+        """Write every account and every budget into one backup zip."""
+        from clear_budget.ui.widgets._full_backup_flow import backup_everything
+
+        backup_everything(self)
+
+    def _on_restore_everything(self) -> None:
+        """Validate and double-confirm a full restore, then hand it to main."""
+        from clear_budget.ui.widgets._full_backup_flow import restore_everything
+
+        restore_everything(self)
 
     def _build_window_chrome(self) -> None:
         """Build the status bar and menus.

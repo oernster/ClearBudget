@@ -91,6 +91,9 @@ what is deliberately left and what only looks like debt.
   launch (only the very first account ever created is an admin)
 - Read-only viewer accounts: export a snapshot of a budget as a "viewer
   package" for someone else to import and browse without editing
+- Back Up Everything / Restore Everything (admin only): one zip holding every
+  account and every budget, restorable in full after a lost or reinstalled
+  machine; a restore is validated before a single live file is replaced
 - Per-user isolated budget databases
 - Month-by-month budget tracking with income and bill templates
 - Per-bill monthly skip (exclude a bill from one month without deleting it)
@@ -267,6 +270,8 @@ stops on each tab in turn.
 | File | Save As... | Choose a new save file; the location is remembered between runs |
 | File | Import / Export > Export Read-Only Viewer Package... (admin only) | Bundle a snapshot of the budget into a zip for a viewer account |
 | File | Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
+| File | Import / Export > Back Up Everything... (admin only) | Save every account and every budget as one zip file |
+| File | Import / Export > Restore Everything... (admin only) | Replace all accounts and budgets from a full backup (validated before anything is touched; signs everyone out) |
 | File | Exit | Close application |
 | Settings | Preferences... | Choose display currency |
 | Settings | Bank Account | Configure an overdraft facility (limit and APR) plus the Safe to Spend Today buffer and window |
@@ -348,6 +353,17 @@ The directory holds:
   Manager, macOS Keychain, Linux Secret Service), encrypted and managed by the
   OS. Unticking Remember me deletes both the file and the credential-store
   entry.
+
+**Backing the whole directory up.** File > Save covers the active budget
+only; the accounts database sits outside it. File > Import / Export >
+Back Up Everything (admin only) writes the whole set, `users.db`, every
+`budget_<username>.db` and the budget registry sidecars, into one zip and
+Restore Everything puts it all back. A restore is validated in a staging
+area first: every database in the zip is schema-checked and only then are
+the live files replaced, so a broken backup changes nothing. The zip is as
+unencrypted as the files it contains; it carries bcrypt hashes rather than
+passwords but it is still every account and every budget in one portable
+file, so treat it with the same care as the data directory itself.
 
 Installing, upgrading, repairing and uninstalling do not touch any of this.
 They deal in program files, shortcuts and the registry entry only, so

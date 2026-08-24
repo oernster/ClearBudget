@@ -290,6 +290,9 @@ def main() -> int:
         launch_screen.centre(window)
         window.logout_requested.connect(_session_loop)
         window.database_replaced.connect(lambda: _reload_database(user, window))
+        window.full_restore_requested.connect(
+            lambda path: _restore_everything(path, window)
+        )
 
     def _reload_database(user: "User", old_window: "MainWindow") -> None:
         """Reload the database in-place after an import or settings change."""
@@ -303,6 +306,34 @@ def main() -> int:
         window = _build_main_window(database, user, user_store)
         _show_window(user, window)
         old_window.deleteLater()
+
+    def _restore_everything(zip_path: str, old_window: "MainWindow") -> None:
+        """Swap in a full backup, then return to the sign-in screen.
+
+        Only this composition root can do it: the open budget database and
+        the accounts store must CLOSE before the files can be replaced (an
+        open database cannot be swapped on Windows) and the user signing in
+        afterwards may not even exist any more, so the session is torn down
+        rather than reloaded. The zip was validated and double-confirmed by
+        the UI flow before the signal fired; the restore validates again in
+        staging before touching a live file, so a failure leaves everything
+        as it was and simply returns to sign-in.
+        """
+        nonlocal user_store
+        from clear_budget.auth.full_backup import FullBackupError, restore_full_backup
+
+        old_window.hide()
+        if _active_database:
+            _active_database[0].close()
+            _active_database.clear()
+        user_store.close()
+        try:
+            restore_full_backup(package_path=Path(zip_path), app_dir=Config.app_dir())
+        except (FullBackupError, OSError) as exc:
+            QMessageBox.warning(None, "Restore Everything", str(exc))
+        user_store = UserStore(Config.users_db_path())
+        old_window.deleteLater()
+        _session_loop()
 
     def _session_loop() -> None:
         """Run login → main window → (optional) re-login cycle."""
