@@ -164,9 +164,12 @@ h1 {
 }
 
 .card p {
-    margin: 0;
+    margin: 0 0 12px;
     font-size: 14px;
     color: var(--muted);
+}
+.card p:last-child {
+    margin-bottom: 0;
 }
 
 #features .card h3,
