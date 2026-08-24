@@ -52,7 +52,23 @@ _SPLASH_NAMES = _both_cases("256")
 # The tab-strip artwork, one file per tab that carries a picture rather than a
 # glyph. Looked up by filename through the same roots as every other asset, so
 # a frozen build finds them wherever the packaging step staged them.
-_TAB_ICON_NAMES = frozenset(("monthlybudget.png", "solvency.png", "creditcards.png"))
+_TAB_ICON_NAMES = frozenset(
+    (
+        "monthlybudget.png",
+        "solvency.png",
+        "creditcards.png",
+        # The Graph tab wears the app icon, which is the picture that tab
+        # has always carried, from back when it was an icon button.
+        "ClearBudget_256.png",
+        # The tray's Bank Account button.
+        "bank-icon.png",
+        # The Graph page's bank/cards switch, deliberately a DIFFERENT
+        # bank from the tray's: one opens the account settings and one
+        # plots a balance, so they should not be the same picture.
+        "bank-icon2.png",
+        "creditcards2.png",
+    )
+)
 
 # In onedir PyInstaller builds, user-added data files can end up under
 # `_internal/` depending on how the `.spec` is generated.

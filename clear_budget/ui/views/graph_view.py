@@ -44,6 +44,7 @@ from clear_budget.ui.utils.format_helpers import (
     build_centered_nav_header,
     nav_glyph_height,
 )
+from clear_budget.ui.utils.image_icons import image_icon_pixmap
 from clear_budget.ui.utils.tab_icons import build_tab_buttons, ring_tab_stops
 from clear_budget.ui.views._graph_exports import GraphExportsMixin
 from clear_budget.ui.widgets._line_bar_chart import MODE_BAR, MODE_LINE, LineBarChart
@@ -58,8 +59,23 @@ from clear_budget.ui.widgets._save_load_flow import (
 # What the two switches say. Each names what a press will DO rather than what
 # is currently shown, matching the rendering switch this page inherited from
 # the dialog; the heading above the chart is what states the current mode.
+#
+# The source switch says it in a PICTURE, with the words as its hover. It
+# shows what a press will give you: the bank, else the cards. The card picture
+# is the Credit Cards tab's own, so the switch names its destination in the
+# same artwork the destination wears everywhere else.
 _TO_CARDS_LABEL = "Show card balances"
 _TO_BANK_LABEL = "Show bank balance"
+# The switch's two faces. Deliberately NOT the pictures the tray and the
+# Credit Cards tab wear: those two open an account's settings and a tab, while
+# these plot a balance; a control that repeats another control's picture
+# reads as the same control in a second place.
+_BANK_ICON = "bank-icon2.png"
+_CARDS_ICON = "creditcards2.png"
+# The switch's picture is sized from the BUTTONS BESIDE IT rather than from a
+# number of its own, so the row keeps one height whatever the display's UI
+# scale does to the text. A fixed 18 was tried and came out 13px tall on a
+# 0.72 scale, a stamp in a button twice its height.
 _PILOT_TO_LINE = "Switch to line graph"
 _PILOT_TO_BAR = "Switch to bar graph"
 _PROJECTION_LABEL = "Export projection HTML…"
@@ -139,13 +155,16 @@ class GraphView(QWidget, GraphExportsMixin):
         layout.addWidget(self.chart, 1)
 
         button_row = QHBoxLayout()
-        self.source_btn = QPushButton(_TO_CARDS_LABEL)
+        self.source_btn = QPushButton()
         self.source_btn.clicked.connect(self._toggle_source)
         button_row.addWidget(self.source_btn)
 
         self.pilot_btn = QPushButton(_PILOT_TO_LINE)
         self.pilot_btn.clicked.connect(self._toggle_mode)
         button_row.addWidget(self.pilot_btn)
+        # After the pilot exists: the switch takes its height from it, so it
+        # cannot be dressed before the button it measures has been built.
+        self._apply_source_face()
 
         self.export_btn = QPushButton("Export HTML…")
         self.export_btn.clicked.connect(self._export_month)
@@ -209,11 +228,48 @@ class GraphView(QWidget, GraphExportsMixin):
         # something other than what is on screen, so it goes with the switch.
         self.projection_btn.setVisible(self._showing_bank())
 
+    def _apply_source_face(self) -> None:
+        """Show the picture of what a press will PLOT, words in the tooltip.
+
+        Falls back to the words on the button when the artwork cannot be
+        resolved, on the same rule the tray and the tabs follow: a missing
+        asset costs a control its picture, never its purpose.
+        """
+        from PySide6.QtCore import QSize
+        from PySide6.QtGui import QIcon
+
+        from clear_budget.ui.utils.nav_glyph_size import (
+            NAV_ICON_BTN_CHROME_PX,
+            NAV_ICON_BTN_PADDING_PX,
+            nav_icon_button_size,
+        )
+
+        showing_bank = self._showing_bank()
+        label = _TO_CARDS_LABEL if showing_bank else _TO_BANK_LABEL
+        spec = _CARDS_ICON if showing_bank else _BANK_ICON
+        self.source_btn.setToolTip(label)
+        # Cropped to its own opaque pixels and fitted by HEIGHT, which is what
+        # puts this picture on the same footing as every other icon in the
+        # window whatever margin its author left around it.
+        surround = 2 * NAV_ICON_BTN_PADDING_PX + NAV_ICON_BTN_CHROME_PX
+        target = max(1, self.pilot_btn.sizeHint().height() - surround)
+        pixmap = image_icon_pixmap(spec, target)
+        if pixmap is None:
+            self.source_btn.setIcon(QIcon())
+            self.source_btn.setText(label)
+            return
+        self.source_btn.setText("")
+        self.source_btn.setIcon(QIcon(pixmap))
+        self.source_btn.setIconSize(QSize(pixmap.width(), pixmap.height()))
+        # Fixed to the same total height as the text buttons beside it, by the
+        # arithmetic the tray's icon buttons already use.
+        self.source_btn.setFixedSize(
+            *nav_icon_button_size(spec, target, measure_width=lambda *_: pixmap.width())
+        )
+
     def _toggle_source(self) -> None:
         self._source = _SOURCE_CARDS if self._showing_bank() else _SOURCE_BANK
-        self.source_btn.setText(
-            _TO_CARDS_LABEL if self._showing_bank() else _TO_BANK_LABEL
-        )
+        self._apply_source_face()
         self.replot()
 
     def _toggle_mode(self) -> None:

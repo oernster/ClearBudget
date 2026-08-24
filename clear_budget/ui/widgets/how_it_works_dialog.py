@@ -67,7 +67,13 @@ def _tab_row(spec: str, name: str, text: str, px: int) -> str:
 
 def _body_html() -> str:
     """Build the help text, resolving the real icons at open time."""
+    from clear_budget.shared.resources import find_tab_icon_path
+
     px = ui_scale.px(_INLINE_ICON_PX)
+    # The Bank Account button is a PICTURE in the tray, so it is a
+    # picture here. An icon guide showing something other than the icon
+    # is worse than no guide.
+    bank_icon = _img(find_tab_icon_path("bank-icon.png"), px)
     return f"""\
 <h2>How ClearBudget Works</h2>
 
@@ -96,8 +102,8 @@ def _body_html() -> str:
 <p>&#128194; load &nbsp;&middot;&nbsp; &#128190; save
 &nbsp;&middot;&nbsp; &#128260; switch budget &nbsp;&middot;&nbsp;
 &#128101; switch user &nbsp;&middot;&nbsp; &#9881;&#65039; currency
-&nbsp;&middot;&nbsp; &#127974; overdraft plus the Safe to Spend buffer and
-window &nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or dark
+&nbsp;&middot;&nbsp; {bank_icon}overdraft plus the Safe to Spend buffer
+and window &nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or dark
 &nbsp;&middot;&nbsp; &#8505;&#65039; this screen</p>
 <p>Load and save open in the app's own data folder, where the live budgets
 already are. Your signed-in name sits at the left of the row above, beside

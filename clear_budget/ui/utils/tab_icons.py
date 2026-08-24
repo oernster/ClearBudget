@@ -1,11 +1,11 @@
-"""The tab strip's icons: three bundled images and two emoji, matched in size.
+"""The tab strip's icons: four bundled images and one emoji, matched in size.
 
 The primary tabs carry pictures rather than words. The words are not
 gone, they moved into the tooltips, so the strip still names itself to anyone
 who pauses on a tab; what went is a row of text labels wide enough to push
 the strip most of the way across the window.
 
-Three are bundled PNGs and two are emoji, which is the whole difficulty
+Four are bundled PNGs and one is an emoji, which is the whole difficulty
 here. They are different KINDS of image and Qt sizes them by
 different rules: a PNG has real pixels to scale, while a glyph is laid out by
 a font's em box, which no emoji actually fills (see `glyph_metrics`). Sized
@@ -62,12 +62,10 @@ TAB_EMOJI_SCALE = TAB_IMAGE_SCALE
 MONTHLY_BUDGET_ICON = "monthlybudget.png"
 SOLVENCY_ICON = "solvency.png"
 CREDIT_CARDS_ICON = "creditcards.png"
-# A bar chart; an emoji rather than a bundled picture for the same reason
-# Archive is one: a tab is added by adding a line here, while the images are a
-# whitelisted set this application ships and there is no chart among them.
-# The graph used to be a plain icon button wearing the APP LOGO, which said
-# what the program is rather than what the tab shows.
-GRAPH_ICON = "\U0001f4ca"
+# The app icon. This tab was an icon button wearing exactly this picture
+# before it became a tab, so becoming a tab changed where it sits and what it
+# does, never what it looks like.
+GRAPH_ICON = "ClearBudget_256.png"
 ARCHIVE_ICON = "\U0001f5c4️"
 
 # The strip, in order, as (icon spec, the name that becomes the tooltip).

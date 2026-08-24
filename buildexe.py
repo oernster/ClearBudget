@@ -63,6 +63,12 @@ def build_exe() -> int:
         "--add-data=monthlybudget.png:.",
         "--add-data=solvency.png:.",
         "--add-data=creditcards.png:.",
+        # The Graph tab wears the app icon and its bank/cards switch wears
+        # the bank picture; both are read through the same lookup.
+        "--add-data=ClearBudget_256.png:.",
+        "--add-data=bank-icon.png:.",
+        "--add-data=bank-icon2.png:.",
+        "--add-data=creditcards2.png:.",
         "--add-data=VERSION:.",
         # keyring discovers its OS backends via entry points, which PyInstaller
         # cannot see statically; collect them all so Remember me works frozen.
