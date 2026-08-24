@@ -24,9 +24,29 @@ class Database:
         return self.conn
 
     def close(self) -> None:
-        """Close database connection."""
-        if self.conn:
+        """Close the connection, leaving the file complete on disk.
+
+        Closing has to succeed. It is what the composition root does before
+        replacing a database; a close that raises part way leaves the
+        connection open on a file about to be swapped, which is how a budget
+        gets destroyed.
+
+        Two things could raise here and both are handled rather than hoped
+        against. An uncommitted transaction blocks the checkpoint, so it is
+        rolled back first: SQLite discards it on close anyway, so this only
+        makes the existing outcome explicit and early. And a checkpoint that
+        still cannot run (another connection reading, perhaps no WAL at all)
+        is not a reason to leave the connection open, so the close proceeds.
+        """
+        if not self.conn:
+            return
+        try:
+            if self.conn.in_transaction:
+                self.conn.rollback()
             self.conn.execute("PRAGMA wal_checkpoint(RESTART)")
+        except sqlite3.Error:
+            pass
+        finally:
             self.conn.close()
 
     def create_schema(self) -> None:

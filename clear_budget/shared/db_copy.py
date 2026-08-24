@@ -74,12 +74,21 @@ def backup_open_database(conn: sqlite3.Connection, dest: Path) -> None:
     Uses SQLite's online backup API rather than copying the file, so the
     result is a database as of one instant even though the source is live.
 
+    Any write still in flight on ``conn`` is COMMITTED first, for two
+    reasons learned the hard way. Backing up through a connection sitting on
+    its own uncommitted write DEADLOCKS: the read waits on a transaction only
+    the caller can end, so the application hangs rather than failing. And a
+    save that silently dropped the edit the user had just made would be its
+    own kind of data loss, so work in hand belongs in the backup.
+
     The snapshot is built in a scratch file beside the destination and only
     then renamed over it, so a failure part way through leaves an existing
     backup exactly as it was rather than truncated.
     """
     temp = _temp_beside(dest)
     try:
+        if conn.in_transaction:
+            conn.commit()
         target = sqlite3.connect(str(temp))
         try:
             conn.backup(target)
