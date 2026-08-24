@@ -1230,7 +1230,15 @@ renderings of the same figures to hold in step. Every month any page shows
   colour into the app data directory, because a checkbox indicator has no
   knob subcontrol for QSS to draw). Its ring stays the widget's own border
   (hover/focus the ring colour, disabled red), because a widget-state-then-subcontrol
-  selector is parsed and silently ignored A ring that disagrees with the
+  selector is parsed and silently ignored. The rule also sets
+  `background: transparent` and `spacing: 0px`, both load-bearing: the blanket
+  `QWidget` background paints every widget in the WINDOW colour, which is
+  darker than the card panel; a checkbox with no text still reserves the
+  gap its label would occupy, so the pill sat on a dark block roughly a third
+  as wide again as itself (measured: `#0a0a0d` running eight pixels past the
+  pill, against a `#242938` panel). Transparent lets the panel through and the
+  zero spacing takes the widget down to the pill, so the ring hugs the switch
+  instead of trailing off to the right of it A ring that disagrees with the
   drawing does not present as a wrong order, it presents as a SKIPPED control,
   because the user tabs past where a button visibly is and lands somewhere
   else. Two of the four declarations were already one pair out (the graph

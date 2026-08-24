@@ -90,6 +90,15 @@ def _card_toggle_qss(t: dict[str, str]) -> str:
 QCheckBox#CardActiveToggle {{
     border: 2px solid transparent;
     border-radius: {ring_radius}px;
+    /* The card panel must show through. Without this the blanket
+       `QWidget` background paints the whole checkbox rect in the window
+       colour, which is darker than the panel it sits on, while the pill is
+       narrower than that rect: a checkbox with no text still reserves its
+       spacing, so a dark block sat to the right of the switch. */
+    background: transparent;
+    /* No text on this one, so the reserved gap is dead space that only ever
+       widened the ring away from the pill. */
+    spacing: 0px;
 }}
 
 QCheckBox#CardActiveToggle:enabled:hover {{
