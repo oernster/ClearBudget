@@ -1556,9 +1556,11 @@ renderings of the same figures to hold in step. Every month any page shows
   the dark canvas and saturated mid-tones on the light one, same hue order
   either way
 - A chart plotting exactly ONE series takes ROLE colours instead of the series
-  palette: the line light blue (`chart_line_colour_for`), the bars amber
-  (`chart_bar_colour_for`) and the curve over those bars light blue
-  (`solo_curve_colour_for`). The LINE is blue and carries no verdict, because
+  palette: the line light blue (`chart_line_colour_for`), the bars GREEN at or
+  above zero (`chart_bar_colour_for`, `#34d399` dark / `#059669` light) and
+  the curve over those bars light blue (`solo_curve_colour_for`). Amber
+  (`chart_bar_within_facility_colour_for`) is the WITHIN-FACILITY state
+  below, never the resting bar fill. The LINE is blue and carries no verdict, because
   one stroke spans the whole month and green there read as a positive balance
   over days that were not. A BAR is one day, so green is honest on it: a bar
   fills green only where that day's value is at or above zero and keeps the
@@ -1665,8 +1667,17 @@ startup migration completes.
 | File | Purpose |
 |------|---------|
 | `users.db` | Central user accounts (all users) |
-| `budget_<username>.db` | Per-user budget data |
+| `budget_<username>.db` | The user's FIRST budget (the reserved empty slug), the filename that predates named budgets |
+| `budget_<username>__<slug>.db` | One database per additional named budget |
+| `budgets_<username>.json` | The registry sidecar: that user's budgets and which is active. A map to the databases, never the data itself |
+| `ui_settings.json` | Theme, remembered save-file location and any skipped update version. No budget data |
 | `remembered_login.json` | The Remember me username (the password is in the OS credential store, never on disk) |
+| `arrows/`, `switches/` | Generated per-theme images (spin-box arrows, the card toggle slider); regenerated on demand |
+| `logs/` | Application log directory |
+
+The first three are what `full_backup` bundles; the generated images and the
+Remember-me sidecar are deliberately excluded (regenerated; a keychain
+password cannot travel in a file).
 
 Username is sanitised to lowercase alphanumeric + `_-` before use in filename.
 
@@ -1706,7 +1717,12 @@ platform differences are isolated to a few well-defined seams:
   and the 256 heads it, the smaller five could never be selected by any code
   path; the master appears in no lookup table at all: they shipped and
   were never read. The SETUP program keeps its own full set, which its own UI
-  genuinely reads at several sizes.
+  genuinely reads at several sizes. It also DEPLOYS that set (the seven sized
+  PNGs plus the `.ico`) beside the installed executable
+  (`ops/registration.py` over `APP_ICON_PNG_NAMES`), as a Qt runtime fallback
+  for the window and taskbar icon where the ICO plugin is unavailable. So an
+  installed directory holds all seven while the PyInstaller bundle inside it
+  carries one; the two counts differ on purpose and neither is a leftover.
 - **Display scaling**: `ui_scale` adapts the UI to the screen, scaling down on
   small laptops and capping growth on 4K.
 - **Conditional dependencies**: Windows-only packages (`pywin32`) are guarded by
@@ -1844,14 +1860,16 @@ an option that read as "remove my data" removed nothing.
 ### Setup Program
 - `tests/installer/` covers everything under `installer/` except `app.py` and
   `installer/ui`, at 100% line and branch
-- `conftest.py` carries four autouse isolations, each guarding one way a test
-  could reach the real machine: the profile directories are redirected through
-  the environment variables the code reads; the platformdirs lookups the legacy
-  migration makes are redirected in their own right, because platformdirs asks
-  Windows for the known folder rather than reading `%LOCALAPPDATA%`; the
-  payload anchor is redirected so a small stand-in bundle replaces the real
-  fifty-megabyte payload; and `scratch_identity` yields an `InstallerIdentity`
-  whose HKCU key lives under a test-only root and is deleted in teardown
+- `conftest.py` carries four isolations, each guarding one way a test could
+  reach the real machine. THREE are autouse: the profile directories are
+  redirected through the environment variables the code reads; the
+  platformdirs lookups the legacy migration makes are redirected in their own
+  right, because platformdirs asks Windows for the known folder rather than
+  reading `%LOCALAPPDATA%`; and the payload anchor is redirected so a small
+  stand-in bundle replaces the real fifty-megabyte payload. The fourth,
+  `scratch_identity`, is requested by name: it yields an `InstallerIdentity`
+  whose HKCU key lives under a test-only root and is deleted in teardown;
+  a test reaches the registry only by taking it
 - `fakes.py` holds the hand-written doubles for the three seams. No mocking
   library is used
 - What is exercised for real is exercised for real: shortcuts are written

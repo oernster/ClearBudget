@@ -2,12 +2,15 @@
 
 The setup program does the most privileged work in this repository: it writes
 the HKCU registration, creates shortcuts in the user's profile, deploys a
-bundle and deletes directories. Four isolations, each autouse and
-unconditional, because the alternative is remembering:
+bundle and deletes directories. Four isolations close the four routes to the
+real machine, because the alternative is remembering. THREE are autouse and
+unconditional; the fourth is requested by name:
 
-  * the HKCU keys the installer writes come from an `InstallerIdentity`, so
-    every test is given a scratch identity under a test-only root and that key
-    is removed afterwards;
+  * the HKCU keys the installer writes come from an `InstallerIdentity`, so a
+    test that registers anything asks for `scratch_identity` and gets one
+    under a test-only root, removed again afterwards. This one is NOT autouse:
+    a test only reaches the registry by taking the identity, so requesting it
+    is the same act as needing it;
   * the per-user locations come from environment variables, so the profile
     directories are redirected into a temporary tree;
   * the platformdirs lookups the legacy migration makes do NOT read those

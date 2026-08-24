@@ -115,8 +115,8 @@ says which parts sit outside it.
 
 `tests/installer/` exercises everything under `installer/` except `app.py` and
 `installer/ui`. Nothing in it touches a real installation and that is held in
-place by four autouse fixtures in `tests/installer/conftest.py`, each closing
-one route to the real machine:
+place by four fixtures in `tests/installer/conftest.py`, each closing one
+route to the real machine. Three are autouse and unconditional:
 
 - the per-user profile directories are redirected through the environment
   variables the code reads;
@@ -125,9 +125,12 @@ one route to the real machine:
   `%LOCALAPPDATA%`. Without this fixture the legacy-directory migration would
   find and move your actual data;
 - the payload anchor is redirected so a small stand-in bundle stands in for the
-  real fifty-megabyte payload;
-- `scratch_identity` yields an `InstallerIdentity` whose HKCU key lives under a
-  test-only root and is deleted in teardown.
+  real fifty-megabyte payload.
+
+The fourth is requested by name rather than autouse: `scratch_identity` yields
+an `InstallerIdentity` whose HKCU key lives under a test-only root and is
+deleted in teardown. A test can only reach the registry by taking that
+identity, so asking for it is the same act as needing it.
 
 `tests/installer/fakes.py` holds the hand-written doubles for the three
 injectable seams (`CommandRunner`, `ProcessController` and the identity value).

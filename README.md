@@ -341,7 +341,14 @@ The directory holds:
 - `users.db` - account records. Passwords and recovery codes are stored only as
   bcrypt hashes, never in plain text.
 - `budget_<username>.db` - one separate database per user. Accounts cannot read
-  each other's budget data through the application.
+  each other's budget data through the application. This is the user's FIRST
+  budget and keeps the name it has always had, so naming budgets moved no file.
+- `budget_<username>__<slug>.db` - one database per additional named budget,
+  each entirely separate: its own bills, income, cards and settings.
+- `budgets_<username>.json` - the list of that user's budgets and which one is
+  active. It is only a map to the databases above, so losing it costs names
+  rather than data: the app falls back to the one budget it can prove exists.
+  Written the first time a second budget is created and not before.
 - `ui_settings.json` - the chosen theme, the remembered save-file location and
   any release version you told the update prompt to skip, so the app opens the
   way you left it and Save goes back to the same file. No budget data is kept
@@ -353,6 +360,9 @@ The directory holds:
   Manager, macOS Keychain, Linux Secret Service), encrypted and managed by the
   OS. Unticking Remember me deletes both the file and the credential-store
   entry.
+- `arrows/`, `switches/` and `logs/` - small images the app draws for itself
+  (spin-box arrows and the card on/off slider, one set per theme colour) plus
+  its log directory. All of it regenerates, so none of it is backed up.
 
 **Backing the whole directory up.** File > Save covers the active budget
 only; the accounts database sits outside it. File > Import / Export >
@@ -624,6 +634,12 @@ stale.
 | Windows 10/11, 64-bit | `ClearBudgetSetup.exe` | Run it. The install is per-user, so no administrator rights are needed. Run the same file again later to upgrade, repair or uninstall | Start menu or desktop shortcut; or tick "Launch ClearBudget when setup finishes" |
 | macOS (Apple Silicon) | `clearbudget.dmg` | Open the disk image and drag ClearBudget into Applications | Launchpad or Applications |
 | Linux (any distribution with Flatpak) | `clearbudget.flatpak` | `flatpak install --user clearbudget.flatpak` | `flatpak run com.oliverernster.clearbudget` |
+
+On Windows a fresh install goes to `%LOCALAPPDATA%\Programs\ClearBudget`,
+the per-user convention for user applications; you can choose another
+location during setup. An existing install stays exactly where it was
+registered: maintenance reads the recorded location, so upgrading or
+repairing never moves the program and never disturbs a shortcut aimed at it.
 
 On Windows, if ClearBudget is running when you install, upgrade, repair or
 uninstall, setup offers to close it and says plainly that the running session

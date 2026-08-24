@@ -189,6 +189,39 @@ h1 {
     border-radius: 8px;
 }
 
+.shot {
+    max-width: 920px;
+    margin: 36px auto 0;
+    text-align: left;
+}
+
+.shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel);
+}
+
+.shot h3 {
+    margin: 0 0 6px;
+    font-size: 17px;
+    font-weight: 650;
+    color: var(--teal);
+}
+
+.shot p {
+    color: var(--muted);
+    margin: 0 0 14px;
+}
+
+.shot figcaption {
+    color: var(--faint);
+    font-size: 14px;
+    margin-top: 10px;
+}
+
 .prose {
     max-width: 720px;
     margin: 0 auto;
