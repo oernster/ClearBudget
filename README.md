@@ -720,7 +720,7 @@ Used to build and test it, not shipped but no less owed:
 
 - **PyInstaller** - PyInstaller contributors (GPL-2.0 + bootloader exception)
 - **Pillow** - Jeffrey A. Clark and contributors; builds the application icons (HPND)
-- **pytest**, **pytest-qt**, **pytest-cov** (MIT) and **coverage.py** (Apache-2.0)
+- **pytest**, **pytest-cov** (MIT) and **coverage.py** (Apache-2.0)
 - **black** - Lukasz Langa et al. (MIT)
 - **Flake8** - Tarek Ziade, Ian Stapleton Cordasco and contributors (MIT)
 - **Ruff** - Astral Software Inc. (MIT)

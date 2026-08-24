@@ -45,7 +45,7 @@ _IS_LINUX = sys.platform.startswith("linux")
 # which lists neither the transitive native libraries nor shiboken6.
 _SHIPPED: list[str] = [
     (
-        "<li><b>Python</b> - Copyright &copy; 2001&ndash;2025 Python Software "
+        "<li><b>Python</b> - Copyright &copy; 2001 to 2025 Python Software "
         "Foundation. Licensed under the PSF Licence.</li>"
     ),
     (
@@ -110,7 +110,7 @@ if _IS_LINUX:
 # they are courtesy rather than obligation but the work is no less owed.
 _TOOLING: list[str] = [
     (
-        "<li><b>PyInstaller</b> - Copyright &copy; 2010&ndash;2025 PyInstaller "
+        "<li><b>PyInstaller</b> - Copyright &copy; 2010 to 2025 PyInstaller "
         "contributors. Licensed under GPL-2.0 with a bootloader exception for "
         "bundled applications.</li>"
     ),
@@ -120,12 +120,8 @@ _TOOLING: list[str] = [
         "HPND (MIT-CMU) licence.</li>"
     ),
     (
-        "<li><b>pytest</b> - Copyright &copy; 2004&ndash;2025 Holger Krekel and "
+        "<li><b>pytest</b> - Copyright &copy; 2004 to 2025 Holger Krekel and "
         "pytest contributors. Licensed under the MIT Licence.</li>"
-    ),
-    (
-        "<li><b>pytest-qt</b> - Copyright &copy; Bruno Oliveira and "
-        "contributors. Licensed under the MIT Licence.</li>"
     ),
     (
         "<li><b>pytest-cov</b> - Copyright &copy; Marc Schlaich and "
@@ -136,7 +132,7 @@ _TOOLING: list[str] = [
         "contributors. Licensed under the Apache Licence 2.0.</li>"
     ),
     (
-        "<li><b>black</b> - Copyright &copy; 2018&ndash;2025 Łukasz Langa and "
+        "<li><b>black</b> - Copyright &copy; 2018 to 2025 Łukasz Langa and "
         "contributors. Licensed under the MIT Licence.</li>"
     ),
     (

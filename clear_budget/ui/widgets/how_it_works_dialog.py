@@ -60,7 +60,7 @@ def _tab_row(spec: str, name: str, text: str, px: int) -> str:
     from clear_budget.shared.resources import find_tab_icon_path
 
     lead = _img(find_tab_icon_path(spec), px) if spec.endswith(".png") else f"{spec} "
-    return f"<p>{lead}<b>{name}</b> &ndash; {text}</p>"
+    return f"<p>{lead}<b>{name}</b>: {text}</p>"
 
 
 def _body_html() -> str:
