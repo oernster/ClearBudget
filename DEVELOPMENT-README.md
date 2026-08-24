@@ -147,7 +147,7 @@ what ships. Measure those on the real platform.
 
 **Always point a probe at a scratch data directory.** The real data
 directory (`%LOCALAPPDATA%\ClearBudget` on Windows; see README's Data
-Storage section for the other platforms, plus a surviving pre-5.1
+Storage section for the other platforms, plus a surviving legacy
 `~/.clearbudget`) holds live user data: both databases, the saved UI
 settings (theme, remembered save-file location and any skipped update
 version) and the Remember me sidecar (`remembered_login.json`). Set

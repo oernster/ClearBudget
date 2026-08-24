@@ -600,7 +600,8 @@ it is all under the coverage gate and testable without a QApplication.
   and closes in credit can still bounce a payment mid-month and a report drawn
   from closing balances alone would show that month as healthy. Given
   `month_links` it becomes a package INDEX and each row leads to that month's
-  page; given none it is the standalone report, linking nowhere
+  page; given none it renders standalone, linking nowhere, a mode only the
+  tests exercise now that the UI's range export always writes the package
 - `package_report.py` - a month range as a FOLDER: the projection as
   `index.html`, then `<year>-<month>.html` per month, each carrying the same
   day-by-day pair the single-month export does plus a link home. ISO-ish names
@@ -685,7 +686,7 @@ holding each budget's slug and display name plus which one is active.
 - `Config.app_dir()` → the app data directory: `%LOCALAPPDATA%\ClearBudget`
   on Windows, `~/Library/Application Support/ClearBudget` on macOS,
   `$XDG_DATA_HOME/clearbudget` (default `~/.local/share/clearbudget`) on
-  Linux. The pre-5.1 `~/.clearbudget` is PREFERRED for as long as it exists:
+  Linux. The legacy `~/.clearbudget` is PREFERRED for as long as it exists:
   its disappearance is the startup migration's completion signal
   (`shared/data_migration.py`), so a failed or interrupted move leaves the
   app running on the data it always had and retries next launch. The
@@ -726,10 +727,10 @@ holding each budget's slug and display name plus which one is active.
 - `fmt(pounds: float)` → `"{symbol}{pounds:.2f}"`
 - Used throughout UI for all inline currency formatting not going through `Amount.__str__`
 - `build_centered_nav_header(...)` - the shared navigation tray used by all
-  four tabs, built as TWO bordered rows and hoisted above the scroll area by
+  five tabs, built as TWO bordered rows and hoisted above the scroll area by
   `ScrollableTab`: the month or year cluster centred in the upper row, every
-  icon button plus the four tabs in the lower one. The tray machinery itself (this builder, the app-icon
-  graph button, the theme toggle and the glyph sizing) lives in
+  icon button plus the five tabs in the lower one. The tray machinery itself
+  (this builder, the theme toggle and the glyph sizing) lives in
   `ui/utils/nav_header.py`, with the month/year label machinery in
   `ui/utils/nav_label.py`, the sun/moon toggle's two faces and button in
   `ui/utils/nav_toggle.py` and the one glyph height they all read in
@@ -1158,14 +1159,19 @@ renderings of the same figures to hold in step. Every month any page shows
 - `_month_view_balance_mixin.py` (`MonthViewBalanceMixin`) - the balance
   label (stored balance for the month the user is in, projected month-end
   for any other) and the overdraft warning strip under the nav row
-- `MonthGraphDialog` / `_line_bar_chart.py` (`LineBarChart`) - the month graph
-  opened by the nav-tray icon button on Monthly Budget (bank balance by day)
-  and Credit Cards (one series per card, with a legend); a pilot button
-  toggles bar vs line rendering, drawn with QPainter (no chart dependency).
-  ← Previous / Next → inside the dialog step it between months without
-  closing it: the caller passes a `series_for(year_month)` callback the
-  dialog re-queries on each step, with Previous bounded by the same base
-  month the tray's own arrows stop at. The axes chrome lives in
+- `GraphView` (`views/graph_view.py`) / `_line_bar_chart.py` (`LineBarChart`) -
+  the Graph tab: the viewed month plotted as a PAGE, stepped between months by
+  the tray's own arrows. It was a modal dialog opened from a tray icon, the
+  one control in the application that behaved that way; it even built its own
+  ← Previous / Next → pair stepping months "exactly as the tray's arrows
+  do", a working copy of the tray it had been launched from. As a page it
+  uses the real tray, so the duplicate pair and the Close button went with
+  the dialog. What is plotted is chosen ON the page rather than inherited
+  from wherever the user came from: a switch swaps the bank balance for one
+  series per card (its face a picture of what a press will plot, words in the
+  tooltip) and a heading above the chart names the current reading. A pilot
+  button toggles bar vs line rendering, drawn with QPainter (no chart
+  dependency). The axes chrome lives in
   `_chart_axes.py` (`ChartAxesMixin`): the y-axis left margin is MEASURED
   per paint from the widest tick label via QFontMetrics (with a floor), so a
   large balance widens the margin rather than truncating; the SVG exporter
@@ -1189,17 +1195,20 @@ renderings of the same figures to hold in step. Every month any page shows
     `_curve_shown()` predicate gates the drawing, the legend entry and the
     axis range together, so the axis is never padded for a curve that is not
     there
-  - "Export HTML" writes THIS month as a standalone page carrying BOTH renderings
-    at once, since a page has room for both where the dialog has room for one. It
-    exports whatever is plotted, so it is offered from both pages
-  - "Export projection HTML" opens `MonthRangeDialog` for a first and last month,
-    then writes the BANK balance across that range. It is built only when the caller
-    supplies a `budget_service` and an `anchor_month`: Monthly Budget does, Credit
-    Cards deliberately does NOT. A bank-balance projection offered from a graph of
-    card balances claims to project what is on screen and does not, which is why the
-    button is scoped rather than the report being retitled. A card-balance projection
-    would be a separate report with its own state rule (headroom against each card's
-    limit, not an overdraft floor)
+  - "Export HTML" writes the VIEWED month as a standalone page carrying BOTH
+    renderings at once, since a page has room for both where the chart has room
+    for one. It exports whatever is plotted, so it is offered for the bank and
+    the cards alike
+  - "Export a folder of months" opens `MonthRangeDialog` for a first and last
+    month, then writes the BANK balance across that range as a package
+    (`package_report`). It follows the SWITCH rather than the tab: offered
+    while the bank series is on screen and withdrawn while the cards are,
+    because a bank-balance projection beside a graph of card balances would
+    claim to project what is shown and would not. A card-balance projection
+    would be a separate report with its own state rule (headroom against each
+    card's limit, not an overdraft floor). The standalone single-file range
+    export folded into this package: `projection_report` now renders in
+    production only as the package's index
   - Both default to the user's Downloads folder (`ui_paths.default_downloads_dir`,
     Qt's `DownloadLocation` so it is right on Windows, macOS and Linux, falling back
     to home)
@@ -1425,15 +1434,16 @@ renderings of the same figures to hold in step. Every month any page shows
   SMALLER SHIPPED ASSETS rather than more caching
 
 **Tab icons** (`ui/utils/tab_icons.py`):
-- The four primary tabs carry a picture and no text; the text moved to the
+- The five primary tabs carry a picture and no text; the text moved to the
   tooltip, so the row still names itself on hover and nothing was lost but
-  four labels wide enough to push the tabs across the window
-- Three are bundled PNG masters (`monthlybudget.png`, `solvency.png`,
-  `creditcards.png`, resolved by `shared.resources.find_tab_icon_path` through
-  the same candidate roots as every other asset) and the fourth is an emoji.
-  Those are different KINDS of image sized by different rules, so both are
-  reduced to one question, how tall the thing actually PAINTS, answered by
-  measuring opaque pixels in each case (`glyph_metrics`)
+  a run of labels wide enough to push the tabs across the window
+- All five are bundled images (`monthlybudget.png`, `solvency.png`,
+  `creditcards.png`, the app icon for Graph, `archive.png`, resolved by
+  `shared.resources.find_tab_icon_path` through the same candidate roots as
+  every other asset). The archive was an emoji once and the graph an icon
+  button; both are pictures in `TAB_SPECS` now, so adding a tab is one line
+  there and nothing else. Sizing is one question, how tall the thing
+  actually PAINTS, answered by measuring opaque pixels (`glyph_metrics`)
 - An image is cropped to its opaque content, then fitted by its HEIGHT. The
   scale that lifts it lives in `nav_glyph_size.NAV_GLYPH_SCALE` now, applied to
   the measured box before anything reads it, so the tray's own icons take it
@@ -1446,12 +1456,6 @@ renderings of the same figures to hold in step. Every month any page shows
   sized. Fitting by height puts every icon on one baseline by construction;
   the landscape card artwork running wider than its neighbours is the accepted
   cost, since a shared bottom edge is what the eye checks along a row
-- `TAB_EMOJI_SCALE` is held EQUAL to `TAB_IMAGE_SCALE`. It mattered when the
-  scale lifted the tabs alone: an archive glyph left at the smaller size read
-  as the runt of the four. The two are equal at 1.0 now, since the box arrives
-  pre-scaled, so the rule holds without either doing any work. The archive
-  glyph is a tab first and an emoji second, which is why it still does not
-  follow `nav_header.TOGGLE_GLYPH_SCALE`
 - EVERY icon in the tray paints at the same height; every button holding one
   is the same size. The scale used to be the tabs' alone, which left the
   load, save, switch, users, preferences, bank and help icons painting 47
@@ -1464,7 +1468,7 @@ renderings of the same figures to hold in step. Every month any page shows
 - The tabs are BUTTONS in the navigation tray (`build_tab_buttons`), not a
   `QTabBar`. The `QTabWidget` is kept for what it is good at, owning the pages
   and switching between them; its bar is hidden. Every view builds its own
-  four buttons because every view builds its own tray; `MainWindow` wires them
+  five buttons because every view builds its own tray; `MainWindow` wires them
   all to the one tab widget and marks the current tab on every set at once, so
   the mark is right whichever tray is on screen
 - That SIMPLIFIES the keyboard model rather than complicating it. `NavTabBar`
@@ -1614,44 +1618,35 @@ renderings of the same figures to hold in step. Every month any page shows
   - The nav tray is TWO stacked trays, built together by
     `nav_header.build_centered_nav_header`, because they answer different
     questions. The UPPER tray carries only what is about the month being
-    viewed: Previous, the month and year, then Next. The app icon used to sit
-    here too. It OPENS the month graph, which acts on the application, while
-    this row only says which month is being read; it moved down to sit
-    with the tabs it is sized against. It holds nothing else, so a stretch either side centres it
-    exactly. The LOWER tray carries everything that acts on the application,
-    built by `_save_load_flow.build_save_load_buttons` /
+    viewed: the signed-in account at its left (with an empty mirror at the
+    right so the cluster stays centred on the window), then Previous, the
+    month and year, then Next. The LOWER tray carries everything that acts on
+    the application, built by `_save_load_flow.build_save_load_buttons` /
     `build_budgets_button` / `build_settings_bank_buttons` /
     `build_info_button` and sized against the
-    tab buttons: folder (Load), diskette (Save), arrows (Switch Budget),
-    cog (Preferences), bank (Bank Account), a themed separator, then Monthly
-    Budget, Solvency and Credit Cards, then the app icon that opens the month
-    graph. Archive is pinned to the RIGHT of the stretch, beside the sun/moon
+    tab buttons: folder (Load), diskette (Save), arrows (Switch Budget), two
+    figures (Switch User), cog (Preferences), bank (Bank Account), a themed
+    separator, then the Monthly Budget, Solvency, Credit Cards and Graph
+    tabs. Archive is pinned to the RIGHT of the stretch, beside the sun/moon
     toggle and the blue information button (How It Works). The separator
-    divides the five controls that DO something from the tabs that only decide
+    divides the controls that DO something from the tabs that only decide
     which page is being looked at
-  - Every view builds its OWN tray, so the graph icon is built per view and a
-    view that never calls the builder loses the capability silently: the tray
-    still draws and the app still runs, with the month graph simply gone from
-    that tab. Solvency lost it exactly that way. Every view that plots
-    something builds the button and lists it in `nav_targets()`, guarded by
-    `tests/structural/test_tray_switch_invariants.py`. Archive is excluded on
-    purpose, since it plots nothing. Solvency draws the BANK series the Budget
-    tab draws, because both tabs answer the same question about the same
-    account and two tabs disagreeing would read as two accounts
-  - The graph icon takes the same height as the three tab pictures, because it
-    is drawn INSIDE that run. That used to need `TAB_IMAGE_SCALE` and now comes
-    from the pre-scaled box every icon in the tray shares. Left at the tray's
-    old bare glyph height it
-    painted 46 tall against their 62 and its base sat 8px above theirs; a row
-    of icons that do not share a bottom edge reads as badly set rather than as
-    deliberately varied, which is the effect that constant exists to cure.
-    Verified by measuring every icon's bottom edge in window coordinates on
-    all three tabs that carry one
+  - Every view builds its OWN tray, so a view that never calls a builder
+    loses that control silently: the tray still draws and the app still runs,
+    with the shortcut simply gone from that tab. Solvency lost the graph
+    button exactly that way while the graph was still a dialog. The graph is
+    a TAB now, so what guards it is the tab wiring rather than a per-view
+    button: `tests/structural/test_tray_switch_invariants.py` asserts every
+    tray view builds the shared controls AND lists them as keyboard stops,
+    plus that the tab buttons map onto the pages BY POSITION, each index
+    handed straight to `setCurrentIndex`, because a page inserted in the
+    wrong slot silently points every tab button at the wrong page while the
+    tray looks unchanged
   - `build_centered_nav_header` SKIPS a None entry rather than passing it to
-    `addWidget`. `build_graph_icon_button` returns None when the app icon
-    cannot be resolved, so that a missing asset costs the tray one control
-    rather than the window; without the skip that None took the application
-    down at startup, which is the failure the None was there to avoid
+    `addWidget`. A builder that cannot resolve its artwork returns None, so
+    a missing asset costs the tray one control rather than the window;
+    without the skip that None took the application down at startup, which
+    is the failure the None was there to avoid
   - Two trays rather than one row is what makes the centring free. In one row
     the cluster could be centred only by reserving the icon run's width again
     on the empty side. Two runs plus the cluster do not fit at the window's own
@@ -1954,7 +1949,7 @@ window = MainWindow(
 All files live in the app data directory: `%LOCALAPPDATA%\ClearBudget` on
 Windows, `~/Library/Application Support/ClearBudget` on macOS,
 `$XDG_DATA_HOME/clearbudget` (default `~/.local/share/clearbudget`) on
-Linux; a surviving pre-5.1 `~/.clearbudget` is still used until its
+Linux; a surviving legacy `~/.clearbudget` is still used until its
 startup migration completes.
 
 | File | Purpose |
@@ -1994,7 +1989,7 @@ platform differences are isolated to a few well-defined seams:
   on Windows, `fcntl` advisory file lock on macOS and Linux).
 - **Data directory**: `Config.app_dir()` resolves to each platform's
   conventional application-data location (see Database Locations); all
-  databases and the lock file live there. A pre-5.1 `~/.clearbudget` is
+  databases and the lock file live there. A legacy `~/.clearbudget` is
   migrated at startup by `shared/data_migration.py`.
 - **File-dialog defaults**: `ui_paths` uses Qt `QStandardPaths`, so dialogs open
   in the correct per-OS location.
@@ -2147,13 +2142,14 @@ an option that read as "remove my data" removed nothing.
 ### UI Layer
 - The suite is Qt-free: fragile widget-level PySide6 tests (which needed a
   `QApplication` and were flaky) have been removed
-- Pure UI-layer logic is still covered without Qt under `tests/ui_logic`,
-  twelve modules covering the Solvency month-colour rule and its low-point
+- Pure UI-layer logic is still covered without Qt under `tests/ui_logic`:
+  the Solvency month-colour rule and its low-point
   line (by instantiating the mixins directly), the spendable headline's reach
   and shortfall sentences, the projection page's gap specification,
   the income one-off and edit-scope rules, the bill amount-change entry,
-  inline edits, highlight colour, theme and save-location persistence, the
-  skipped-update record and the window-geometry arithmetic. What lands here is logic a widget happens to host, extracted far
+  inline edits, highlight colour, ring order, theme, theme-token keys and
+  save-location persistence, the default data directory, nav icon-button
+  sizing, the skipped-update record and the window-geometry arithmetic. What lands here is logic a widget happens to host, extracted far
   enough from Qt to be asserted on: where a mixin's method reads a widget, the
   state arrives as an argument instead so the decision can be made without a
   `QApplication`

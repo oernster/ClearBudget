@@ -205,23 +205,26 @@ what is deliberately left and what only looks like debt.
   the switch-budget, cog and bank buttons beside them; the theme toggle and a
   blue information button sit at its far right)
 - Display currency selection - 25 currencies covering English-speaking countries (Settings > Preferences)
-- Month graphs: the icon in the navigation tray opens the viewed month as a
-  bar or line graph (a pilot button switches the style); Monthly Budget plots
-  the bank balance day by day, Credit Cards plots every card on one chart.
-  Previous/Next buttons inside the graph step it between months without
-  closing it, stopping at the same earliest month the tray does; hovering a
-  bar or a marked point reads out that day's balance; any day the balance
-  sits below zero paints in red, on screen and in the export alike
+- A Graph tab: the viewed month plotted as a page of its own, stepped between
+  months by the same Previous/Next arrows every tab shares. A switch on the
+  page chooses what is plotted, the bank balance day by day or every credit
+  card on one chart, with a heading naming the current reading; a pilot
+  button swaps bar and line renderings; hovering a bar or a marked point
+  reads out that day's balance. Each day's bar is read against the overdraft
+  you have arranged: its calm resting colour at or above zero, amber inside
+  an arranged facility, red only where a payment would actually bounce, on
+  screen and in the export alike
 - Export the graph as a single HTML file: one page carrying both the bar and
   the line rendering with text explaining what each shows. A second export
-  takes a range of months and charts your bank balance across them, month end
-  against the lowest point reached inside each month, with a table and a
-  traffic light per month. A third writes that range as a FOLDER: an
-  `index.html` holding the same summary, with every row leading to that
-  month's own day-by-day page and every page leading back. Nothing is ever
-  fetched from anywhere: styles and charts are inline, in the dark theme, so a
-  single file can be emailed and a folder can be copied to a stick and opened
-  offline. All three default to your Downloads folder
+  writes a range of months as a FOLDER: an `index.html` charting your bank
+  balance across the range, month end against the lowest point reached inside
+  each month, with a table that adds up and a traffic light per month, every
+  row leading to that month's own day-by-day page and every page leading
+  back. It is offered while the bank series is on screen, never beside a
+  graph of card balances it would not describe. Nothing is ever fetched from
+  anywhere: styles and charts are inline, in the dark theme, so a single file
+  can be emailed and a folder can be copied to a stick and opened offline.
+  Both default to your Downloads folder
 - Full keyboard navigation: Tab or Right steps forward, Shift+Tab or Left
   steps back (wrapping); Up/Down walk table rows; Enter equals Space; focus
   and hover show a neutral ring, disabled controls a red one; nothing is focused
@@ -254,15 +257,16 @@ what is deliberately left and what only looks like debt.
 
 ## Application Tabs
 
-The four primary tabs carry a picture rather than a name: a calendar and cash
-for Monthly Budget, a shield over coins for Solvency, a pair of cards for Credit
-Cards and a filing cabinet for Archive. They sit in the navigation tray rather
-than in a strip of their own. Hovering one names it; the keyboard ring still
-stops on each tab in turn.
+The five primary tabs carry a picture rather than a name: a calendar and cash
+for Monthly Budget, a shield over coins for Solvency, a pair of cards for
+Credit Cards, the app's own icon for Graph and a filing box for Archive. They
+sit in the navigation tray rather than in a strip of their own. Hovering one
+names it; the keyboard ring still stops on each tab in turn.
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning
 - **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
+- **Graph** - The viewed month as a chart. A switch chooses what is plotted (the bank balance day by day or every card on one chart), a pilot button swaps bar and line renderings and the exports live here: a self-contained page for the month, plus a folder of months offered while the bank series is shown
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
 ---
@@ -291,9 +295,9 @@ carries only the month or year: Previous, the date and Next, centred. The lower
 row carries everything that acts on the application: the folder and diskette,
 the switch-budget arrows, the two figures (Switch User), the cog (Preferences),
 the bank, then a separator, then
-Monthly Budget, Solvency and Credit Cards followed by the app icon that opens
-the graph. Archive sits at the far right beside the sun/moon theme toggle and
-the blue information button opening How It Works.
+the Monthly Budget, Solvency, Credit Cards and Graph tabs. Archive sits at
+the far right beside the sun/moon theme toggle and the blue information
+button opening How It Works.
 
 The account you are signed in as is shown at the left of the month row on every
 tab, in the same size as the month itself, rather than in the title bar. A name
