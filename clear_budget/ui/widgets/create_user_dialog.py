@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.auth.models import User
+from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.widgets.login_dialog import LoginDialog
@@ -45,10 +46,15 @@ class CreateUserDialog(QDialog):
         user_store: UserStore,
         is_first_user: bool = False,
         parent=None,
+        remembered_login: "RememberedLogin | None" = None,
     ) -> None:
         super().__init__(parent)
         self.user_store = user_store
         self.is_first_user = is_first_user
+        # Given only when the person creating the account is the person who
+        # will sign in with it. An admin adding an account for somebody else
+        # gets no offer to remember it, because it is not theirs to remember.
+        self.remembered_login = remembered_login
         self.created_user: User | None = None
         self.recovery_code: str = ""
         title = (
@@ -107,6 +113,15 @@ class CreateUserDialog(QDialog):
         self.confirm_edit.returnPressed.connect(self._on_create)
         layout.addWidget(self.confirm_edit)
 
+        # Offered here so the name is on the sign-in screen from the very
+        # next launch. Only the NAME: the password decision belongs on the
+        # sign-in screen, where the password is typed to sign in rather than
+        # to open an account.
+        self.remember_user_check = QCheckBox("Remember my username")
+        self.remember_user_check.setStyleSheet(ui_scale.style("font-size: 13px;"))
+        self.remember_user_check.setVisible(self.remembered_login is not None)
+        layout.addWidget(self.remember_user_check)
+
         self.error_label = QLabel("")
         self.error_label.setObjectName(label_roles.ERROR)
         self.error_label.setVisible(False)
@@ -153,6 +168,8 @@ class CreateUserDialog(QDialog):
         )
         self.created_user = user
         self.recovery_code = recovery_code
+        if self.remembered_login is not None and self.remember_user_check.isChecked():
+            self.remembered_login.remember_username(username)
         self._show_recovery_code(recovery_code)
         self.accept()
 

@@ -298,12 +298,29 @@ shows "(Read-only)".
 
 On first launch, a setup wizard creates an admin account - the only account that is
 ever an admin. A one-time recovery code is displayed and must be acknowledged before
-the wizard completes.
+the wizard completes. The wizard also offers **Remember my username**, so the name
+is waiting on the sign-in screen from the very next launch.
 
-Subsequent launches show a login screen with username/password fields plus:
-- **Remember me** - prefill these credentials at the next launch. The password
-  goes into the operating system's credential store, not a file; untick the box
-  and the stored credentials are forgotten immediately
+Subsequent launches show a sign-in screen. Once more than one account has asked to
+be remembered, the username field becomes a dropdown listing them; with one or none
+it stays a plain field. The dropdown is editable, so a name that is not on it can
+still be typed. Only accounts that asked to be remembered appear, so anyone who
+never ticks the box stays off the screen entirely.
+
+Two independent ticks control what is kept:
+- **Remember my username** - list this account on the sign-in screen. Unticking it
+  removes the account from the list, password included
+- **Remember my password** - fill the password in as well. Only available while the
+  username is being remembered, since a password has nowhere to be filed without a
+  name. The password goes into the operating system's credential store (Windows
+  Credential Manager, macOS Keychain, Linux Secret Service) and never into a file;
+  the file beside it records only which accounts are remembered and which of them
+  asked for a password to be kept
+
+Both take effect on a completed sign-in, so a tick cleared and restored while
+thinking about it costs nothing. Every credential-store failure degrades to
+"nothing remembered": sign-in still works on a machine whose keychain is locked,
+absent or refused.
 - **Forgot password?** - reset using the recovery code
 - **Import Viewer Package...** - import a read-only viewer account from a package file
 - **Create Account...** - create a new (non-admin) account at any time, without

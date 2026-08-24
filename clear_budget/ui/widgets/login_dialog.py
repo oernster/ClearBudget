@@ -4,10 +4,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QFrame,
     QGridLayout,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -23,6 +23,11 @@ from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.widgets._viewer_package_import_flow import (
     run_import_viewer_package_flow,
 )
+
+# How many remembered accounts it takes for the username field to become a
+# dropdown. With one there is no choice to offer, so a dropdown would only
+# make the field harder to type into.
+_DROPDOWN_FROM = 2
 
 
 class LoginDialog(QDialog):
@@ -84,14 +89,13 @@ class LoginDialog(QDialog):
 
         layout.addSpacing(ui_scale.px(4))
 
-        # Username
+        # Username. A plain field until there is more than one account to
+        # choose between, because a dropdown of one is a field that has learnt
+        # to be harder to type in.
         lbl_user = QLabel("Username")
         lbl_user.setStyleSheet(ui_scale.style("font-size: 13px;"))
         layout.addWidget(lbl_user)
-        self.username_edit = QLineEdit()
-        self.username_edit.setPlaceholderText("Enter username")
-        self.username_edit.setStyleSheet(self._input_style())
-        layout.addWidget(self.username_edit)
+        layout.addWidget(self._build_username_control())
 
         # Password
         lbl_pass = QLabel("Password")
@@ -104,13 +108,18 @@ class LoginDialog(QDialog):
         self.password_edit.returnPressed.connect(self._on_login)
         layout.addWidget(self.password_edit)
 
-        # Remember me - unticking forgets the stored credentials immediately.
-        self.remember_check = QCheckBox("Remember me")
-        self.remember_check.setStyleSheet(ui_scale.style("font-size: 13px;"))
-        self.remember_check.toggled.connect(self._on_remember_toggled)
-        if self.remembered_login is None:
-            self.remember_check.setVisible(False)
-        layout.addWidget(self.remember_check)
+        # Two ticks, not one. Remembering a username is a convenience;
+        # remembering a password is a trust decision, so one must never imply
+        # the other. The password tick is live only while the username one is,
+        # since a password has nowhere to be filed without a name.
+        self.remember_user_check = QCheckBox("Remember my username")
+        self.remember_password_check = QCheckBox("Remember my password")
+        for check in (self.remember_user_check, self.remember_password_check):
+            check.setStyleSheet(ui_scale.style("font-size: 13px;"))
+            check.setVisible(self.remembered_login is not None)
+            layout.addWidget(check)
+        self.remember_user_check.toggled.connect(self._on_remember_user_toggled)
+        self.remember_password_check.setEnabled(False)
 
         # Error label (hidden until needed)
         self.error_label = QLabel("")
@@ -190,22 +199,67 @@ class LoginDialog(QDialog):
             "}"
         )
 
+    def _build_username_control(self):
+        """The username field, as a dropdown when there is a choice to offer.
+
+        Only REMEMBERED accounts are listed. An account that never ticked the
+        box does not appear, so the screen never becomes a directory of who
+        holds an account on this machine for whoever is sitting at it. The
+        dropdown stays editable, so a name that is not on it can still be
+        typed straight in.
+        """
+        remembered = (
+            () if self.remembered_login is None else self.remembered_login.usernames()
+        )
+        if len(remembered) < _DROPDOWN_FROM:
+            self.username_combo = None
+            self.username_edit = QLineEdit()
+        else:
+            self.username_combo = QComboBox()
+            self.username_combo.setEditable(True)
+            self.username_combo.addItems(remembered)
+            self.username_combo.currentTextChanged.connect(self._on_username_chosen)
+            self.username_edit = self.username_combo.lineEdit()
+        self.username_edit.setPlaceholderText("Enter username")
+        self.username_edit.setStyleSheet(self._input_style())
+        return self.username_combo or self.username_edit
+
     def _prefill_remembered(self) -> None:
-        """Fill both fields from a remembered login, ticking the box to match."""
+        """Offer the account that signed in last, filled in as far as it asked."""
         if self.remembered_login is None:
             return
-        credentials = self.remembered_login.recall()
-        if credentials is None:
+        remembered = self.remembered_login.usernames()
+        if not remembered:
             return
-        username, password = credentials
+        # Falling back to the first remembered account matters: nothing has
+        # signed in yet on a machine whose only account was remembered when
+        # it was CREATED; offering an empty screen there would read as the
+        # checkbox never having worked.
+        username = self.remembered_login.last_username() or remembered[0]
         self.username_edit.setText(username)
-        self.password_edit.setText(password)
-        self.remember_check.setChecked(True)
-        self.login_btn.setFocus()
+        self._fill_for(username)
+        if self.password_edit.text():
+            self.login_btn.setFocus()
 
-    def _on_remember_toggled(self, checked: bool) -> None:
-        if self.remembered_login is not None and not checked:
-            self.remembered_login.forget()
+    def _on_username_chosen(self, username: str) -> None:
+        """Re-fill the password and the ticks for the account now selected."""
+        self._fill_for(username.strip())
+
+    def _fill_for(self, username: str) -> None:
+        """Show what is remembered about `username`; nothing about anyone else."""
+        if self.remembered_login is None:
+            return
+        known = username in self.remembered_login.usernames()
+        password = self.remembered_login.recall_password(username)
+        self.password_edit.setText(password or "")
+        self.remember_user_check.setChecked(known)
+        self.remember_password_check.setChecked(password is not None)
+
+    def _on_remember_user_toggled(self, checked: bool) -> None:
+        """A password cannot be kept for a username that is not."""
+        self.remember_password_check.setEnabled(checked)
+        if not checked:
+            self.remember_password_check.setChecked(False)
 
     def _on_login(self) -> None:
         username = self.username_edit.text().strip()
@@ -219,13 +273,28 @@ class LoginDialog(QDialog):
             self.password_edit.clear()
             self.password_edit.setFocus()
             return
-        if self.remembered_login is not None:
-            if self.remember_check.isChecked():
-                self.remembered_login.remember(user.username, password)
-            else:
-                self.remembered_login.forget()
+        self._record_choices(user.username, password)
         self.authenticated_user = user
         self.accept()
+
+    def _record_choices(self, username: str, password: str) -> None:
+        """Apply the two ticks to what is remembered about this account.
+
+        Applied on a COMPLETED sign-in rather than the moment a box is
+        clicked, so a tick cleared and restored while thinking about it costs
+        nothing. Only a sign-in that succeeded says what was meant.
+        """
+        if self.remembered_login is None:
+            return
+        if not self.remember_user_check.isChecked():
+            self.remembered_login.forget(username)
+            return
+        if self.remember_password_check.isChecked():
+            self.remembered_login.remember_password(username, password)
+        else:
+            self.remembered_login.remember_username(username)
+            self.remembered_login.forget_password(username)
+        self.remembered_login.note_signed_in(username)
 
     def _on_import_viewer_package(self) -> None:
         user = run_import_viewer_package_flow(self, self.user_store)
@@ -245,7 +314,12 @@ class LoginDialog(QDialog):
     def _on_create_account(self) -> None:
         from clear_budget.ui.widgets.create_user_dialog import CreateUserDialog
 
-        dlg = CreateUserDialog(self.user_store, is_first_user=False, parent=self)
+        dlg = CreateUserDialog(
+            self.user_store,
+            is_first_user=False,
+            parent=self,
+            remembered_login=self.remembered_login,
+        )
         if (
             dlg.exec() != CreateUserDialog.DialogCode.Accepted
             or dlg.created_user is None
@@ -263,113 +337,10 @@ class LoginDialog(QDialog):
         )
 
     def _on_forgot_password(self) -> None:
-        dlg = ResetPasswordDialog(self.user_store, parent=self)
-        dlg.exec()
+        from clear_budget.ui.widgets.reset_password_dialog import ResetPasswordDialog
+
+        ResetPasswordDialog(self.user_store, parent=self).exec()
 
     def _show_error(self, msg: str) -> None:
         self.error_label.setText(msg)
         self.error_label.setVisible(True)
-
-
-class ResetPasswordDialog(QDialog):
-    """Two-step password reset using the recovery code."""
-
-    def __init__(self, user_store: UserStore, parent=None) -> None:
-        super().__init__(parent)
-        self.user_store = user_store
-        self.setWindowTitle("Reset Password")
-        self.setMinimumWidth(ui_scale.px(400))
-        self._build_ui()
-
-    def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setSpacing(ui_scale.px(8))
-        layout.setContentsMargins(
-            ui_scale.px(24), ui_scale.px(20), ui_scale.px(24), ui_scale.px(20)
-        )
-
-        info = QLabel(
-            "Enter your username and the recovery code that was shown when your\n"
-            "account was created, then choose a new password."
-        )
-        info.setWordWrap(True)
-        info.setObjectName(label_roles.SUBTLE)
-        layout.addWidget(info)
-
-        layout.addSpacing(ui_scale.px(4))
-
-        for attr, label_text, placeholder, echo in [
-            ("_r_user", "Username", "Your username", QLineEdit.EchoMode.Normal),
-            (
-                "_r_code",
-                "Recovery Code",
-                "Paste your recovery code",
-                QLineEdit.EchoMode.Normal,
-            ),
-            ("_r_pass1", "New Password", "New password", QLineEdit.EchoMode.Password),
-            (
-                "_r_pass2",
-                "Confirm New Password",
-                "Repeat new password",
-                QLineEdit.EchoMode.Password,
-            ),
-        ]:
-            lbl = QLabel(label_text)
-            lbl.setStyleSheet(ui_scale.style("font-size: 13px;"))
-            layout.addWidget(lbl)
-            edit = QLineEdit()
-            edit.setEchoMode(echo)
-            edit.setPlaceholderText(placeholder)
-            edit.setStyleSheet(LoginDialog._input_style())
-            setattr(self, attr, edit)
-            layout.addWidget(edit)
-
-        self._err = QLabel("")
-        self._err.setObjectName(label_roles.ERROR)
-        self._err.setVisible(False)
-        layout.addWidget(self._err)
-
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.clicked.connect(self.reject)
-        ok_btn = QPushButton("Reset Password")
-        ok_btn.setDefault(True)
-        ok_btn.clicked.connect(self._on_reset)
-        btn_layout.addWidget(cancel_btn)
-        btn_layout.addWidget(ok_btn)
-        layout.addLayout(btn_layout)
-
-    def _on_reset(self) -> None:
-        username = self._r_user.text().strip()
-        code = self._r_code.text().strip()
-        pw1 = self._r_pass1.text()
-        pw2 = self._r_pass2.text()
-
-        if not all([username, code, pw1, pw2]):
-            self._show_error("All fields are required.")
-            return
-        if pw1 != pw2:
-            self._show_error("Passwords do not match.")
-            return
-        if len(pw1) < 6:
-            self._show_error("Password must be at least 6 characters.")
-            return
-        if self.user_store.find_user(username) is None:
-            self._show_error("No account with that username exists.")
-            return
-        if not self.user_store.verify_recovery_code(username, code):
-            self._show_error("Recovery code is incorrect.")
-            return
-
-        self.user_store.change_password(username, pw1)
-        QMessageBox.information(
-            self,
-            "Password Reset",
-            "Password changed successfully. You can now sign in.",
-        )
-        self.accept()
-
-    def _show_error(self, msg: str) -> None:
-        self._err.setText(msg)
-        self._err.setVisible(True)

@@ -29,7 +29,9 @@ def run_login_flow(
     from clear_budget.ui.widgets.login_dialog import LoginDialog
 
     if not user_store.has_users():
-        dlg = CreateUserDialog(user_store, is_first_user=True)
+        dlg = CreateUserDialog(
+            user_store, is_first_user=True, remembered_login=remembered_login
+        )
         # These have no parent to be centred on, so without this they take
         # Qt's default placement on the primary screen.
         launch_screen.centre(dlg)

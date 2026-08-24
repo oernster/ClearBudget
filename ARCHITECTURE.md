@@ -1329,6 +1329,20 @@ renderings of the same figures to hold in step. Every month any page shows
   the ring vocabulary (green hover/focus, red disabled); the mark keeps to a
   fill and an underline so the two can never be confused
 
+**Sign-in and remembered accounts**:
+- `auth/remembered_login.RememberedLogin` - remembers sign-in details PER ACCOUNT,
+  never one slot for the machine. The JSON sidecar holds only which accounts are
+  remembered and which asked for a password kept; the password itself lives in the
+  OS credential store through `keyring`, reached behind the `SecretBackend`
+  Protocol so the suite drives a hand-written fake. It also reads the earlier
+  single-account file, which is on every machine the app has already run on
+- `ui/widgets/login_dialog.LoginDialog` - offers a dropdown once more than one
+  account is remembered and a plain field otherwise, with two independent ticks
+  (username, password) applied on a completed sign-in
+- `ui/widgets/reset_password_dialog.ResetPasswordDialog` - split out of
+  login_dialog.py for the 400-line limit; imported where it is used so the two
+  modules need not import each other
+
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `switch_user_requested`,
   `sign_out_requested`, `database_replaced`
