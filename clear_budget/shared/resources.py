@@ -74,6 +74,13 @@ _TAB_ICON_NAMES = frozenset(
         # The tray's Switch user and Switch budget buttons.
         "switchuser.png",
         "switchbudget.png",
+        # The tray's Load, Save, Preferences and How It Works buttons.
+        "opendb.png",
+        "savedb.png",
+        "preferences.png",
+        "information.png",
+        # The Archive tab, which was the last emoji on the strip.
+        "archive.png",
     )
 )
 

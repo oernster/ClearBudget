@@ -66,7 +66,7 @@ CREDIT_CARDS_ICON = "creditcards.png"
 # before it became a tab, so becoming a tab changed where it sits and what it
 # does, never what it looks like.
 GRAPH_ICON = "ClearBudget_256.png"
-ARCHIVE_ICON = "\U0001f5c4️"
+ARCHIVE_ICON = "archive.png"
 
 # The strip, in order, as (icon spec, the name that becomes the tooltip).
 TAB_SPECS = (

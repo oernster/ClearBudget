@@ -76,6 +76,10 @@ def _body_html() -> str:
     bank_icon = _img(find_tab_icon_path("bank-icon.png"), px)
     users_icon = _img(find_tab_icon_path("switchuser.png"), px)
     budgets_icon = _img(find_tab_icon_path("switchbudget.png"), px)
+    load_icon = _img(find_tab_icon_path("opendb.png"), px)
+    save_icon = _img(find_tab_icon_path("savedb.png"), px)
+    settings_icon = _img(find_tab_icon_path("preferences.png"), px)
+    info_icon = _img(find_tab_icon_path("information.png"), px)
     return f"""\
 <h2>How ClearBudget Works</h2>
 
@@ -101,12 +105,12 @@ def _body_html() -> str:
 
 <hr>
 <h3>The tray</h3>
-<p>&#128194; load &nbsp;&middot;&nbsp; &#128190; save
+<p>{load_icon}load &nbsp;&middot;&nbsp; {save_icon}save
 &nbsp;&middot;&nbsp; {budgets_icon}switch budget &nbsp;&middot;&nbsp;
-{users_icon}switch user &nbsp;&middot;&nbsp; &#9881;&#65039; currency
+{users_icon}switch user &nbsp;&middot;&nbsp; {settings_icon}currency
 &nbsp;&middot;&nbsp; {bank_icon}overdraft plus the Safe to Spend buffer
 and window &nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or dark
-&nbsp;&middot;&nbsp; &#8505;&#65039; this screen</p>
+&nbsp;&middot;&nbsp; {info_icon}this screen</p>
 <p>Load and save open in the app's own data folder, where the live budgets
 already are. Your signed-in name sits at the left of the row above, beside
 the month; the arrows there step every tab together.</p>

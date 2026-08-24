@@ -86,6 +86,11 @@ BUNDLED_ICONS = [
     "switchuser.png",
     "switchbudget.png",
     "exportprojection.png",
+    "opendb.png",
+    "savedb.png",
+    "preferences.png",
+    "information.png",
+    "archive.png",
 ]
 
 DEVELOPER_ID = os.environ.get(
