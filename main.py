@@ -20,79 +20,23 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from clear_budget.application.services.budget_service import BudgetService
-from clear_budget.application.services.month_generator import MonthGenerator
-from clear_budget.application.services.update_service import (
-    UpdateService,
-    platform_key_for,
-)
 from clear_budget.auth.models import User
 from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
-from clear_budget.domain.value_objects.year_month import YearMonth
-from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
 from clear_budget.infrastructure.sqlite.database import Database
-from clear_budget.infrastructure.sqlite.income_source_repository import (
-    SQLiteIncomeSourceRepository,
-)
-from clear_budget.infrastructure.sqlite.payment_method_repository import (
-    SQLitePaymentMethodRepository,
-)
 from clear_budget.infrastructure.sqlite.session_database import (
     load_currency,
     open_user_database,
-)
-from clear_budget.infrastructure.update.github_release_source import (
-    GitHubReleaseSource,
 )
 from clear_budget.shared import diagnostics
 from clear_budget.shared.config import Config
 from clear_budget.ui import _window_geometry as geom
 from clear_budget.ui import startup
 from clear_budget.ui.login_flow import run_login_flow
+from clear_budget.ui.window_builder import build_main_window
 from clear_budget.ui._window_geometry import default_window_rect
-from clear_budget.version import __version__
 from clear_budget.ui.main_window import MainWindow
 from clear_budget.ui.theme import apply_theme, load_saved_theme
-from clear_budget.ui.view_models.month_view_model import MonthViewModel
-from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
-
-
-def _build_main_window(
-    database: Database,
-    current_user: User,
-    user_store: UserStore,
-) -> MainWindow:
-    """Wire all services and return a ready MainWindow."""
-    bill_repo = SQLiteBillRepository(database.conn)
-    income_repo = SQLiteIncomeSourceRepository(database.conn)
-    payment_method_repo = SQLitePaymentMethodRepository(database.conn)
-    month_generator = MonthGenerator(bill_repo, income_repo)
-    budget_service = BudgetService(
-        bill_repo=bill_repo,
-        income_repo=income_repo,
-        payment_method_repo=payment_method_repo,
-        month_generator=month_generator,
-    )
-    budget_service.update_card_balances_for_elapsed_dates()
-    budget_service.apply_elapsed_limit_changes()
-    budget_service.apply_elapsed_bank_transactions()
-    budget_service.auto_archive_elapsed_months(current_month=YearMonth.today())
-    month_view_model = MonthViewModel(budget_service=budget_service)
-    solvency_view_model = SolvencyViewModel(budget_service=budget_service)
-    update_service = UpdateService(
-        source=GitHubReleaseSource(),
-        current_version=__version__,
-        platform_key=platform_key_for(sys.platform),
-    )
-    return MainWindow(
-        month_view_model=month_view_model,
-        solvency_view_model=solvency_view_model,
-        current_user=current_user,
-        user_store=user_store,
-        db_path=database.db_path,
-        update_service=update_service,
-    )
 
 
 def main() -> int:
@@ -244,7 +188,7 @@ def main() -> int:
         _active_database.append(database)
         load_currency(database)
         diagnostics.log("reloaded budget %s", database.db_path)
-        window = _build_main_window(database, user, user_store)
+        window = build_main_window(database, user, user_store)
         _show_window(user, window)
         diagnostics.log("main window rebuilt")
 
@@ -278,8 +222,8 @@ def main() -> int:
 
     def _session_loop() -> None:
         """Run login → main window → (optional) re-login cycle."""
-        user = run_login_flow(user_store, remembered_login)
-        if user is None:
+        signed_in = run_login_flow(user_store, remembered_login)
+        if signed_in is None:
             if _active_window:
                 # Switch User was cancelled. The window that asked for the
                 # switch is merely hidden and its database is still open, so
@@ -296,38 +240,57 @@ def main() -> int:
             app.quit()
             return
 
-        if _active_database:
-            _active_database[0].close()
-            _active_database.clear()
-
-        diagnostics.log("signed in as %s", user.username)
+        user = signed_in.user
+        # The sign-in screen stays up from here until there is a window to
+        # hand over to. Building one takes seconds on a slower machine and
+        # the screen was empty for every one of them.
         try:
-            database = open_user_database(user.username)
-        except sqlite3.DatabaseError as exc:
-            diagnostics.log("FAILED opening budget for %s: %s", user.username, exc)
-            # Without this the sign-in simply produced NOTHING: the error
-            # escaped the timer slot, a windowed build has nowhere to print
-            # it and no window was ever shown. An unreadable budget is the
-            # one failure the user must be told about, since it is the one
-            # a backup exists to answer.
-            QMessageBox.critical(
-                None,
-                "Budget Could Not Be Opened",
-                "This account's budget database could not be opened:\n\n"
-                f"{exc}\n\n"
-                "The file may be damaged. Restore it from a backup or use "
-                "File > Import / Export > Restore Everything after signing "
-                "in as an administrator.",
-            )
-            _session_loop()
-            return
-        _active_database.append(database)
-        load_currency(database)
+            signed_in.screen.begin_handover()
+            if _active_database:
+                _active_database[0].close()
+                _active_database.clear()
 
-        diagnostics.log("opened budget %s", database.db_path)
-        window = _build_main_window(database, user, user_store)
-        _show_window(user, window)
-        diagnostics.log("main window shown")
+            diagnostics.log("signed in as %s", user.username)
+            try:
+                database = open_user_database(user.username)
+            except sqlite3.DatabaseError as exc:
+                diagnostics.log("FAILED opening budget for %s: %s", user.username, exc)
+                # Without this the sign-in simply produced NOTHING: the error
+                # escaped the timer slot, a windowed build has nowhere to print
+                # it and no window was ever shown. An unreadable budget is the
+                # one failure the user must be told about, since it is the one
+                # a backup exists to answer.
+                QMessageBox.critical(
+                    None,
+                    "Budget Could Not Be Opened",
+                    "This account's budget database could not be opened:\n\n"
+                    f"{exc}\n\n"
+                    "The file may be damaged. Restore it from a backup or use "
+                    "File > Import / Export > Restore Everything after signing "
+                    "in as an administrator.",
+                )
+                signed_in.screen.end_handover()
+                _session_loop()
+                return
+            _active_database.append(database)
+            load_currency(database)
+
+            diagnostics.log("opened budget %s", database.db_path)
+            window = build_main_window(
+                database, user, user_store, progress=signed_in.screen.report_progress
+            )
+            _show_window(user, window)
+            # Only now: the window it hands over to exists and is on screen.
+            signed_in.screen.end_handover()
+            diagnostics.log("main window shown")
+        finally:
+            # The backstop, not the ordinary route: both paths above close
+            # the screen themselves, at the exact moment they have something
+            # to hand over to. This catches the third case, an exception,
+            # which would otherwise strand the screen on top of nothing,
+            # inert and unclosable, the guard that makes it inert being
+            # lifted only here. `end_handover` is idempotent for this.
+            signed_in.screen.end_handover()
 
     QTimer.singleShot(0, _session_loop)
 

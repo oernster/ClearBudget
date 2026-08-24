@@ -18,7 +18,9 @@ from clear_budget.auth.models import User
 from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
 from clear_budget.shared.resources import find_logo_png_path
-from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui import label_roles
+from clear_budget.ui import ui_scale
+from clear_budget.ui.widgets._handover_progress import HandoverProgressMixin
 from clear_budget.ui.widgets._login_styles import (
     combo_style,
     input_style,
@@ -32,7 +34,7 @@ from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 _DROPDOWN_FROM = 2
 
 
-class LoginDialog(QDialog):
+class LoginDialog(HandoverProgressMixin, QDialog):
     """Username/password login screen.
 
     On accepted, ``authenticated_user`` holds the logged-in User.
@@ -155,6 +157,10 @@ class LoginDialog(QDialog):
 
         grid.setColumnStretch(0, 1)
         layout.addLayout(grid)
+        # Hidden until the password is accepted, when this screen stops being
+        # a form and becomes the only thing on screen while the window is
+        # built behind it.
+        self.install_handover_progress(layout)
 
     def _build_username_control(self):
         """The username field, as a dropdown when there is a choice to offer.

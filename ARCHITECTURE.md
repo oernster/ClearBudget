@@ -31,6 +31,7 @@ Everything below this section explains how the code satisfies them.
 | Money is integer pence everywhere. No financial value is ever a float, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object; signed balances are plain `int` pence |
 | Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
 | A budget belonging to another account cannot be opened without that account's password. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
+| A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
 
 ## Overview
@@ -1289,6 +1290,17 @@ renderings of the same figures to hold in step. Every month any page shows
   is connected AND that the handler it names touches the sink, because a
   connection to a handler that had stopped focusing anything would otherwise
   read as wired
+- A CLICK LEAVES NO RING. The ring means one thing, the keyboard is here, so
+  focus a mouse brought to a BUTTON is refused: `KeyboardNavigator` handles
+  `FocusIn` then clears the focus when the reason is `MouseFocusReason` and the
+  target is a `QAbstractButton`. It never consumes the event, so the click
+  still fires; only the focus it dragged along is dropped. Without it, pressing
+  Export HTML and cancelling the file dialog left the button outlined with the
+  keyboard nowhere near it and the next Tab carried on from a place the user
+  had not chosen. Buttons ONLY: a text field, a spin box, a combo box and a
+  table must take a click, because clicking into one is how you say where to
+  type. Inside a modal the toolkit keeps its own behaviour, as everywhere else
+  in this filter
 - Ring colours are three-state, enforced in the QSS: no ring at rest, the ring
   colour while an enabled control is hovered or focused, a permanent red ring
   while disabled (hover/focus rules are gated on `:enabled`)
@@ -1300,6 +1312,21 @@ renderings of the same figures to hold in step. Every month any page shows
   collision is what made a ticked box the loudest thing on the login screen
 - `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
   for the Credit Cards tab
+
+**Every built pixmap is cached** (`ui/utils/icon_buttons.py`, matching
+`tab_icons`):
+- The sources are full-size masters over a megapixel each, so decoding and
+  scaling one costs about a tenth of a second; EVERY TAB BUILDS THE SAME
+  TRAY. Uncached, `image_icon_pixmap` was called 53 times for roughly a dozen
+  distinct pictures and the window took 8.04s to build, 6.83s of it here.
+  Keying built pixmaps on `(spec, height, bottom padding)` took the same build
+  to 2.72s. Measured on both sides, not estimated
+- The cache is a plain module dict rather than a `functools` cache built at
+  import time, because the values are Qt objects and need a live
+  `QApplication`. `tab_icons` was written first and caches the same way, which
+  is why the tab strip never showed this cost
+- What is left is one decode per distinct picture. Going below it means
+  SMALLER SHIPPED ASSETS rather than more caching
 
 **Tab icons** (`ui/utils/tab_icons.py`):
 - The four primary tabs carry a picture and no text; the text moved to the
@@ -1382,6 +1409,49 @@ renderings of the same figures to hold in step. Every month any page shows
   inner line edit: styling only the child left an unthemed control whose edit
   fell back to a point-sized font too tall for the box, which clipped the name
   it was showing
+
+**The sign-in screen stays up until there is a window to hand over to**
+(`ui/widgets/_handover_progress.py`, mixed into `LoginDialog` and
+`CreateUserDialog`):
+- Accepting a password used to close the dialog immediately, leaving nothing on
+  screen for the seconds the window took to build. So the dialog is handed back
+  from the login flow rather than closed: `run_login_flow` returns a frozen
+  `SignedIn(user, screen)` and the caller owns the screen until it has
+  something to replace it with
+- `begin_handover` swaps in a determinate progress bar, `report_progress` moves
+  it as each stage completes and `end_handover` closes the screen. The bar is
+  DETERMINATE by necessity, not by preference: the build runs on the GUI
+  thread, so an indeterminate bar would be frozen for exactly as long as it was
+  meant to reassure. Each report repaints the one widget that changed, which is
+  also what keeps the dialog drawing at all
+- The form is left looking exactly as it did and made INERT instead, by an
+  application-level filter that swallows mouse and key events aimed at the
+  screen and its children. Disabling the widgets was tried and is wrong here: a
+  disabled control in this application wears the permanent red ring, so the
+  whole screen turned red at the moment it was meant to say "working". Nothing
+  is removed either, since taking the form out would resize the dialog and move
+  it on screen at the one moment the user is watching it
+- That filter is also what makes the screen unrecoverable if it is ever left
+  up, which is why the composition root ends the handover in a `finally` and
+  `end_handover` returns early when there is nothing left to end. Both halves
+  are pinned by `tests/structural/test_handover_invariants.py`; the rendering
+  is verified by an offscreen probe
+
+**Building a window** (`ui/window_builder.py`):
+- `build_main_window(database, current_user, user_store, progress=None)` is the
+  wiring for ONE open budget: the repositories over that connection, the
+  services above them, the catch-up those services run for the days since the
+  last launch, the view models and `MainWindow` itself
+- Split out of `main.py` when that file reached the band the size cap treats as
+  one edit from failing. The composition root keeps what only it can hold: the
+  session, the windows, the database connection and the order in which one
+  replaces another
+- The stage count (`SERVICE_STAGES`, `TAB_STAGES`, `BUILD_STAGES`) lives here
+  because this is the only place that knows both halves of the build, the
+  services counted here and the tabs counted by the window; the window is
+  handed the offset it starts at rather than counting for itself
+- `progress=None` builds silently, which is what a rebuild behind an
+  already-visible window wants (Load, Save As, a restore)
 
 **Who is signed in**:
 - The account name sits at the left of every tab's month tray, built by
@@ -1710,13 +1780,23 @@ main()
                                when Remember me was ticked last time)
                     └── Create Account...     → CreateUserDialog(is_first_user=False)
               └── X button   → app.quit() → process exits
-        └── _open_user_database(username)       # budget_<username>.db
-        └── _load_currency(database)            # set_currency() from settings
-        └── _build_main_window(database, user, user_store)
-        └── _show_window(user, window)
-              └── window.database_replaced → _reload_database()
-              └── window.logout_requested  → _session_loop()
+        └── try:                                 # finally: screen.end_handover()
+              └── screen.begin_handover()        # sign-in screen stays up,
+                                                 # inert, now a progress bar
+              └── _open_user_database(username)  # budget_<username>.db
+              └── _load_currency(database)       # set_currency() from settings
+              └── build_main_window(database, user, user_store,
+                                    progress=screen.report_progress)
+              └── _show_window(user, window)
+                    └── window.database_replaced → _reload_database()
+                    └── window.logout_requested  → _session_loop()
+              └── screen.end_handover()          # only now: there is a window
 ```
+
+The `finally` is the backstop, not the route: both paths above close the screen
+themselves, at the moment they have something to hand over to. It catches the
+third case, an exception, which would otherwise leave the screen up and inert
+with nothing behind it.
 
 ## Dependency Injection
 
@@ -1985,6 +2065,10 @@ an option that read as "remove my data" removed nothing.
   danger band, so a file is never shaved to just under the cap only to break
   it again on the next edit
 - `test_auth_structure.py` - Auth layer structure validation
+- `test_handover_invariants.py` - the composition root begins a handover only
+  inside a `try` whose `finally` ends it; `end_handover` still returns
+  early when there is nothing left to end, so that backstop cannot raise from
+  a cleanup block
 - `test_data_dir_isolation.py` - the suite cannot resolve the real data
   directory (legacy or platform), only `shared/config.py` derives it, the
   installer never names it and `main()` migrates before the lock, never

@@ -9,20 +9,36 @@ there.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from clear_budget.auth.models import User
 from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
 
 
+@dataclass(frozen=True, slots=True)
+class SignedIn:
+    """Who signed in plus the screen they signed in on, still displayed.
+
+    The screen is handed back rather than closed because building the window
+    takes long enough to be seen: it stays up showing progress and closes
+    only once there is something to hand over to. The caller MUST call
+    `end_handover` on it; otherwise the sign-in screen never goes away.
+    """
+
+    user: User
+    screen: object
+
+
 def run_login_flow(
     user_store: UserStore, remembered_login: RememberedLogin
-) -> User | None:
+) -> SignedIn | None:
     """Show the first-run or the sign-in dialog.
 
-    Returns the authenticated user; None when the user backed out without
-    signing in. What that None MEANS is the caller's to decide: it is a
-    cancelled switch when a session is already running and a refusal to start
-    when one is not.
+    Returns who signed in plus the screen they did it on; None when the user
+    backed out without signing in. What that None MEANS is the caller's to
+    decide: it is a cancelled switch when a session is already running and a
+    refusal to start when one is not.
     """
     from clear_budget.ui import launch_screen
     from clear_budget.ui.widgets.create_user_dialog import CreateUserDialog
@@ -38,10 +54,10 @@ def run_login_flow(
         if dlg.exec() != CreateUserDialog.Accepted or dlg.created_user is None:
             return None
         # First user just created - log them in directly.
-        return dlg.created_user
+        return SignedIn(user=dlg.created_user, screen=dlg)
 
     dlg = LoginDialog(user_store, remembered_login)
     launch_screen.centre(dlg)
     if dlg.exec() != LoginDialog.Accepted:
         return None
-    return dlg.authenticated_user
+    return SignedIn(user=dlg.authenticated_user, screen=dlg)

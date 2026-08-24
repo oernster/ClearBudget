@@ -59,6 +59,9 @@ class MainWindow(
         user_store: UserStore,
         db_path: Path,
         update_service: "UpdateService",
+        progress=None,
+        first_stage: int = 0,
+        total_stages: int = 0,
     ) -> None:
         """Initialize main window and tabs."""
         super().__init__()
@@ -73,8 +76,14 @@ class MainWindow(
         # the left of every tab's month tray, in the size the month is.
         self.setWindowTitle("ClearBudget")
         self.setMinimumSize(ui_scale.px(900), ui_scale.px(580))
+        # Reported through rather than held: the tabs are the slow half of a
+        # build and the sign-in screen is showing how far along it is.
+        self._progress = progress or (lambda *_args, **_kw: None)
+        self._first_stage = first_stage
+        self._total_stages = total_stages
         self.init_ui()
         self._build_window_chrome()
+        self._progress(total_stages, total_stages, "ready")
         # Parented to the window so it stops firing once the window is gone.
         self._midnight_timer = QTimer(self)
         self._midnight_timer.setSingleShot(True)

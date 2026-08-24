@@ -1,4 +1,8 @@
-"""CreateUserDialog - new account creation (first-run wizard, login screen, add-user)."""
+"""CreateUserDialog - new account creation.
+
+The first-run wizard, the sign-in screen's Create Account and an admin's
+Add User all open this one dialog.
+"""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -17,7 +21,9 @@ from PySide6.QtWidgets import (
 from clear_budget.auth.models import User
 from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
-from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui import label_roles
+from clear_budget.ui import ui_scale
+from clear_budget.ui.widgets._handover_progress import HandoverProgressMixin
 from clear_budget.ui.widgets._login_styles import input_style
 
 # Flags that give a titled dialog window WITHOUT a close button on Windows.
@@ -34,7 +40,7 @@ _NO_CLOSE_FLAGS = (
 )
 
 
-class CreateUserDialog(QDialog):
+class CreateUserDialog(HandoverProgressMixin, QDialog):
     """Dialog for creating a new user account.
 
     On accepted, ``created_user`` holds the new User and
@@ -138,6 +144,8 @@ class CreateUserDialog(QDialog):
         create_btn.clicked.connect(self._on_create)
         btn_layout.addWidget(create_btn)
         layout.addLayout(btn_layout)
+        # First run hands over the same way a later sign-in does.
+        self.install_handover_progress(layout)
 
     def _on_create(self) -> None:
         username = self.username_edit.text().strip()

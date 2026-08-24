@@ -221,7 +221,9 @@ what is deliberately left and what only looks like debt.
 - Full keyboard navigation: Tab or Right steps forward, Shift+Tab or Left
   steps back (wrapping); Up/Down walk table rows; Enter equals Space; focus
   and hover show a neutral ring, disabled controls a red one; nothing is focused
-  on launch until the first keypress
+  on launch until the first keypress. The ring says one thing, the keyboard is
+  here, so clicking a button never leaves one behind; a text field, a spin box
+  and a table still take a click, because that is how you say where to type
 - The tabs are walked one at a time in the order shown and stepping onto a tab
   never switches to it: Enter or Space does that. The tab you are already
   reading is skipped
@@ -324,6 +326,12 @@ absent or refused.
 - **Forgot password?** - reset using the recovery code
 - **Create Account...** - create a new (non-admin) account at any time, without
   needing an admin
+
+A completed sign-in does not leave you looking at nothing. The screen stays up
+and turns into a progress bar naming what is being prepared, tab by tab, then
+closes at the moment the window is ready to be looked at. It is inert while it
+does so: the form is still there and still readable, it simply no longer takes
+input.
 
 The **Users** menu offers every account two ways out of a session, which differ
 only in what cancelling the sign-in screen then does. **Switch User...**

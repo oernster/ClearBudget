@@ -30,6 +30,15 @@ from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 class MainWindowTabsMixin:
     """Builds the tab pages and keeps every tray's tab buttons in step."""
 
+    def _report_tab(self, index: int, name: str) -> None:
+        """Say which tab is being built, so the sign-in screen can show it.
+
+        Reported BEFORE the tab is constructed rather than after: the label
+        names what is happening now; the bar's position is what says how
+        much is done.
+        """
+        self._progress(self._first_stage + index, self._total_stages, name)
+
     def init_ui(self) -> None:
         """Build main window with tabs."""
         central_widget = QWidget()
@@ -44,15 +53,18 @@ class MainWindowTabsMixin:
         # them; nothing styles or navigates the bar, because nobody sees it.
         self.tabs.tabBar().hide()
 
+        self._report_tab(0, "Monthly Budget")
         month_view = MonthView(self.month_view_model)
         self.tabs.addTab(self._scrollable(month_view), "Monthly Budget")
 
+        self._report_tab(1, "Solvency")
         solvency_panel = SolvencyPanel(
             self.solvency_view_model,
             base_month=self.month_view_model.base_month,
         )
         self.tabs.addTab(self._scrollable(solvency_panel), "Solvency")
 
+        self._report_tab(2, "Credit Cards")
         credit_card_view = CreditCardView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
@@ -64,12 +76,14 @@ class MainWindowTabsMixin:
         # always been drawn. It was an icon button opening a modal dialog; it
         # is a page now, so the tray looks the same and behaves like the rest
         # of it.
+        self._report_tab(3, "Graph")
         graph_view = GraphView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
         )
         self.tabs.addTab(self._scrollable(graph_view), "Graph")
 
+        self._report_tab(4, "Archive")
         archive_view = ArchiveView(self.month_view_model.budget_service)
         self.tabs.addTab(self._scrollable(archive_view), "Archive")
 
