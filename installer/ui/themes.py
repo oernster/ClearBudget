@@ -1,4 +1,22 @@
-"""Light and dark themes (QSS) for the installer UI."""
+"""Light and dark themes (QSS) for the installer UI.
+
+ONE accent hue family, deliberately muted. The palette used to run three
+fully saturated colours from three unrelated hue families at once: a sky
+blue button (100% saturation), a hot magenta progress bar (100%) and a
+violet heading (92%). Side by side they competed rather than agreed; the
+blue also failed its own label, since white text on #7fb0ff measures 2.20:1,
+well under the 4.5:1 needed to be read comfortably.
+
+So every accent now sits in the same blue family at roughly a quarter
+saturation, differing by lightness rather than by hue; each one is chosen
+against a measured contrast rather than by eye. The button fill carries its
+white label at 4.62:1, the progress chunk reads against both backgrounds and
+the dark heading improved from 6.46:1 to 7.54:1 on the way past.
+
+The danger red is untouched. It is already muted (59.5% saturation, dark)
+and it is the one control that SHOULD stand apart from the accent family,
+since standing apart is its whole job.
+"""
 
 from __future__ import annotations
 
@@ -26,23 +44,23 @@ LIGHT = Theme(
         QCheckBox::indicator { width: 16px; height: 16px; }
 
         QPushButton#ThemeToggle {
-            background: #7fb0ff; color: white; border: none;
+            background: #5b7799; color: white; border: none;
             padding: 10px 18px; border-radius: 18px; font-weight: 600;
         }
-        QPushButton#ThemeToggle:hover { background: #6aa2ff; }
+        QPushButton#ThemeToggle:hover { background: #4f6885; }
 
         QPushButton#LicenceButton {
-            background: #7fb0ff; color: white; border: none;
+            background: #5b7799; color: white; border: none;
             padding: 10px 18px; border-radius: 18px; font-weight: 600;
         }
-        QPushButton#LicenceButton:hover { background: #6aa2ff; }
+        QPushButton#LicenceButton:hover { background: #4f6885; }
 
         QPushButton#PrimaryAction {
-            background: #7fb0ff; color: white; border: none;
+            background: #5b7799; color: white; border: none;
             padding: 14px 26px; border-radius: 26px; font-size: 14px;
             font-weight: 700; min-width: 150px;
         }
-        QPushButton#PrimaryAction:hover { background: #6aa2ff; }
+        QPushButton#PrimaryAction:hover { background: #4f6885; }
 
         QPushButton#DangerAction {
             background: #7a1f25; color: white; border: none;
@@ -73,7 +91,7 @@ LIGHT = Theme(
             text-align: center;
         }
         QProgressBar#ProgressBar::chunk {
-            background: #ff4db8;
+            background: #6b89ab;
             border-radius: 8px;
             width: 10px;
             margin: 1px;
@@ -87,32 +105,32 @@ DARK = Theme(
     toggle_label="Light Theme",
     qss="""
         QWidget { background: #161827; color: #e5e7eb; font-family: 'Segoe UI'; }
-        QLabel#HeaderTitle { font-size: 38px; font-weight: 700; color: #a78bfa; }
+        QLabel#HeaderTitle { font-size: 38px; font-weight: 700; color: #a3a8c9; }
         QLabel#HeaderVersion { font-size: 14px; color: #9ca3af; }
-        QLabel#SubTitle { font-size: 22px; font-weight: 700; color: #a78bfa; }
+        QLabel#SubTitle { font-size: 22px; font-weight: 700; color: #a3a8c9; }
         QLabel#StatusLine { font-size: 13px; color: #cbd5e1; }
 
         QCheckBox { spacing: 10px; font-size: 13px; }
         QCheckBox::indicator { width: 16px; height: 16px; }
 
         QPushButton#ThemeToggle {
-            background: #7fb0ff; color: white; border: none;
+            background: #5b7799; color: white; border: none;
             padding: 10px 18px; border-radius: 18px; font-weight: 600;
         }
-        QPushButton#ThemeToggle:hover { background: #6aa2ff; }
+        QPushButton#ThemeToggle:hover { background: #4f6885; }
 
         QPushButton#LicenceButton {
-            background: #7fb0ff; color: white; border: none;
+            background: #5b7799; color: white; border: none;
             padding: 10px 18px; border-radius: 18px; font-weight: 600;
         }
-        QPushButton#LicenceButton:hover { background: #6aa2ff; }
+        QPushButton#LicenceButton:hover { background: #4f6885; }
 
         QPushButton#PrimaryAction {
-            background: #7fb0ff; color: white; border: none;
+            background: #5b7799; color: white; border: none;
             padding: 14px 26px; border-radius: 26px; font-size: 14px;
             font-weight: 700; min-width: 150px;
         }
-        QPushButton#PrimaryAction:hover { background: #6aa2ff; }
+        QPushButton#PrimaryAction:hover { background: #4f6885; }
 
         QPushButton#DangerAction {
             background: #7a1f25; color: white; border: none;
@@ -144,7 +162,7 @@ DARK = Theme(
             text-align: center;
         }
         QProgressBar#ProgressBar::chunk {
-            background: #ff4db8;
+            background: #6b89ab;
             border-radius: 8px;
             width: 10px;
             margin: 1px;
