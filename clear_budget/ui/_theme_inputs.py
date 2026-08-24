@@ -12,6 +12,14 @@ The spin BUTTONS and the calendar popup are a different concern and live in
 
 from __future__ import annotations
 
+# How wide the combo's drop-down subcontrol is drawn. It is the only
+# handle on where the arrow sits: the subcontrol hugs the right border and
+# centres the arrow inside itself, so padding on the combo does not move
+# the arrow and widening this does. Qt's own default leaves the chevron
+# hard against the border; this stands it in from the right by about the
+# 8px the text stands in from the left.
+_DROP_DOWN_WIDTH_PX = 34
+
 
 def input_qss(t: dict[str, str]) -> str:
     """Return the stylesheet for every field the user types or picks in."""
@@ -78,11 +86,16 @@ QComboBox:disabled {{
     color: {t["text_disabled"]};
 }}
 
-/* ::drop-down is deliberately NOT styled. Giving that subcontrol any rule at
-   all, even `border: none`, stops the platform painting the chevron in it;
-   every dropdown in the app then reads as a plain field. There is no
-   asset-free way to draw a replacement: Qt paints ::down-arrow as an image,
-   so the CSS trick of a zero-sized box with borders renders as a blank
-   block. Leaving the subcontrol alone is what puts the arrow back. */
+/* ::drop-down carries a WIDTH and nothing else, which is the whole trick.
+   `border: none` here stops the platform painting the chevron at all, which
+   is how every dropdown in the app came to read as a plain field; no
+   asset-free rule draws a replacement either, because Qt paints ::down-arrow as
+   an image, so the CSS zero-sized-box-with-borders trick renders as a blank
+   block. Width is safe; it is also the only handle on where the arrow
+   sits: the subcontrol hugs the right border and centres the arrow inside
+   itself, so padding on the combo does not move it and widening this does. */
+QComboBox::drop-down {{
+    width: {_DROP_DOWN_WIDTH_PX}px;
+}}
 
 """

@@ -59,12 +59,12 @@ def combo_style() -> str:
     unstyled inner edit falls back to a POINT-sized font that renders
     taller than the box the combo gives it and clips the name.
 
-    The arrow is left to the platform and NOTHING here touches ::drop-down,
-    which is the whole reason one is visible: styling that subcontrol at all
-    stops the native chevron being painted, which is how every dropdown in
-    the app came to have no arrow at all. Drawing a replacement from CSS
-    borders was tried too and rendered as a small white block, since Qt
-    paints ::down-arrow as an image subcontrol rather than a box.
+    The arrow is left to the platform and nothing here touches ::drop-down,
+    so this dropdown takes the app-wide rule for it and cannot drift from
+    every other one. That rule is a width and nothing more: `border: none`
+    there stops the native chevron being painted at all; a replacement drawn
+    from CSS borders renders as a blank block, since Qt paints
+    ::down-arrow as an image subcontrol rather than a box.
     """
     from PySide6.QtWidgets import QApplication
 
