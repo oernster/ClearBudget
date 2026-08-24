@@ -31,6 +31,7 @@ Everything below this section explains how the code satisfies them.
 | Money is integer pence everywhere. No financial value is ever a float, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object; signed balances are plain `int` pence |
 | Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
 | A budget belonging to another account cannot be opened without that account's password. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
+| One Return press runs a dialog's submit ONCE. A `QLineEdit` emits `returnPressed` and then ignores the key so it reaches the dialog's default button, so connecting both gives one press two routes. No slot may answer both `returnPressed` and `clicked` in the same module | `tests/structural/test_return_key_invariants.py` |
 | A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
 
@@ -1275,6 +1276,21 @@ renderings of the same figures to hold in step. Every month any page shows
   Manage Users) and Tab or Left/Right leave it in a single press
 - Enter equals Space on buttons and checkboxes (main window and dialogs);
   inside modal dialogs the arrows walk the dialog's own tab order
+- RETURN IN A FIELD SUBMITS THROUGH THE DEFAULT BUTTON AND NOTHING ELSE. A
+  `QLineEdit` emits `returnPressed` and then IGNORES the key, on purpose, so it
+  carries on to the dialog's default button; connecting `returnPressed` to the
+  same slot that button calls therefore runs the submit twice on one press.
+  Four dialogs did (owner challenge, sign-in, create account, set balance) and
+  three of them hid it: a dialog that accepts on the first run is closed before
+  the key lands; an inline error label is simply written twice with the
+  same words. The owner challenge answers a wrong password with a MODAL, so
+  there the second run was plain: the warning came back the moment it was
+  dismissed, because the key had been waiting behind it. Every one of the four
+  now names its submit `setDefault(True)`, marks Cancel `setAutoDefault(False)`
+  so a reordered button row cannot put Return on it, then connects
+  `returnPressed` nowhere. Held by
+  `tests/structural/test_return_key_invariants.py`; the counts (2 before, 1
+  after, on all four) came from an offscreen probe
 - Neutral start, MAIN WINDOW ONLY: a 0x0 sink takes the initial focus so nothing
   is highlighted on launch and no menu drops open. Dialogs do the opposite and
   open on their first stop (`FirstStopDialog`); a window is looked at before it is
@@ -2065,6 +2081,8 @@ an option that read as "remove my data" removed nothing.
   danger band, so a file is never shaved to just under the cap only to break
   it again on the next edit
 - `test_auth_structure.py` - Auth layer structure validation
+- `test_return_key_invariants.py` - no slot answers both `returnPressed` and
+  `clicked` in one module, so a Return press cannot submit twice
 - `test_handover_invariants.py` - the composition root begins a handover only
   inside a `try` whose `finally` ends it; `end_handover` still returns
   early when there is nothing left to end, so that backstop cannot raise from

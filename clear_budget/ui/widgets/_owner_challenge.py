@@ -68,12 +68,17 @@ class OwnerChallengeDialog(QDialog):
         self._password.setEchoMode(QLineEdit.EchoMode.Password)
         self._password.setPlaceholderText(f"{self._owner}'s password")
         self._password.setStyleSheet(input_style())
-        self._password.returnPressed.connect(self._attempt)
+        # No returnPressed connection here; "Open Budget" below is the
+        # dialog's default button and a QLineEdit ignores Return so that it
+        # reaches it. Connecting both is what showed the rejection warning
+        # a second time: one press, two attempts, the modal in between
+        # hiding the fact that the key was still travelling.
         layout.addWidget(self._password)
 
         row = QHBoxLayout()
         row.addStretch()
         cancel = QPushButton("Cancel")
+        cancel.setAutoDefault(False)
         cancel.clicked.connect(self.reject)
         row.addWidget(cancel)
         unlock = QPushButton("Open Budget")

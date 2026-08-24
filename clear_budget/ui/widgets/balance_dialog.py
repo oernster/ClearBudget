@@ -42,7 +42,12 @@ class BalanceDialog(QDialog):
 
         btn_layout = QHBoxLayout()
         ok_btn = QPushButton("OK")
+        # Named the default rather than left as the first autoDefault
+        # button in the row: reordering the row would otherwise put Return
+        # on Cancel.
+        ok_btn.setDefault(True)
         cancel_btn = QPushButton("Cancel")
+        cancel_btn.setAutoDefault(False)
         btn_layout.addWidget(ok_btn)
         btn_layout.addWidget(cancel_btn)
         layout.addLayout(btn_layout)
@@ -51,7 +56,9 @@ class BalanceDialog(QDialog):
 
         ok_btn.clicked.connect(self.on_ok)
         cancel_btn.clicked.connect(self.reject)
-        self.amount_edit.returnPressed.connect(self.on_ok)
+        # No returnPressed connection: OK is the default button and a
+        # QLineEdit ignores Return so that it reaches OK. Both would run
+        # on_ok twice on one press.
 
     def on_ok(self) -> None:
         """Handle OK button press."""

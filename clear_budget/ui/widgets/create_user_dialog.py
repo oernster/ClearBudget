@@ -116,7 +116,9 @@ class CreateUserDialog(HandoverProgressMixin, QDialog):
         self.confirm_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.confirm_edit.setPlaceholderText("Repeat password")
         self.confirm_edit.setStyleSheet(input_style())
-        self.confirm_edit.returnPressed.connect(self._on_create)
+        # No returnPressed connection: a QLineEdit IGNORES Return so the
+        # dialog's default button gets it, which is the one mechanism that
+        # submits. Connecting both ran the submit TWICE on one press.
         layout.addWidget(self.confirm_edit)
 
         # Offered here so the name is on the sign-in screen from the very
@@ -136,6 +138,7 @@ class CreateUserDialog(HandoverProgressMixin, QDialog):
         btn_layout = QHBoxLayout()
         if not self.is_first_user:
             cancel_btn = QPushButton("Cancel")
+            cancel_btn.setAutoDefault(False)
             cancel_btn.clicked.connect(self.reject)
             btn_layout.addWidget(cancel_btn)
         btn_layout.addStretch()

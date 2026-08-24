@@ -109,7 +109,9 @@ class LoginDialog(HandoverProgressMixin, QDialog):
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_edit.setPlaceholderText("Enter password")
         self.password_edit.setStyleSheet(input_style())
-        self.password_edit.returnPressed.connect(self._on_login)
+        # No returnPressed connection: a QLineEdit IGNORES Return so the
+        # dialog's default button gets it, which is the one mechanism that
+        # submits. Connecting both ran the submit TWICE on one press.
         layout.addWidget(self.password_edit)
 
         # Two ticks, not one. Remembering a username is a convenience;
