@@ -9,6 +9,7 @@ an administrator's included.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 
 import pytest
@@ -192,3 +193,39 @@ def test_an_unstamped_budget_of_anothers_is_still_challenged(tmp_path) -> None:
     """The case every pre-existing database falls into."""
     path = _budget(tmp_path, "budget_alice.db")
     assert challenge_required(path, "mallory", _USERS) == "alice"
+
+
+class TestTheStampReadReleasesTheFile:
+    """Reading the stamp must not leave a handle on the database.
+
+    `sqlite3.Connection` as a context manager commits and does NOT close. The
+    read handle that left behind was enough for Windows to refuse `os.replace`
+    on the file, which was measured taking a full restore down part way
+    through: the accounts database had already been swapped when the first
+    budget failed to move.
+    """
+
+    def test_a_stamped_database_can_be_replaced_afterwards(self, tmp_path) -> None:
+        path = tmp_path / "budget_alice.db"
+        conn = sqlite3.connect(path)
+        conn.execute("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT)")
+        stamp_owner(conn, "alice")
+        conn.close()
+
+        assert owner_from_stamp(path) == "alice"
+
+        replacement = tmp_path / "replacement.db"
+        replacement.write_bytes(path.read_bytes())
+        os.replace(replacement, path)
+        assert path.is_file()
+
+    def test_an_unreadable_file_leaves_nothing_open_either(self, tmp_path) -> None:
+        path = tmp_path / "budget_bob.db"
+        path.write_bytes(b"not a database at all")
+
+        assert owner_from_stamp(path) is None
+
+        replacement = tmp_path / "replacement.db"
+        replacement.write_bytes(b"x")
+        os.replace(replacement, path)
+        assert path.is_file()

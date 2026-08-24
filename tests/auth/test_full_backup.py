@@ -1,5 +1,6 @@
 """Tests for the full backup: accounts plus every budget in one zip."""
 
+import pathlib
 import zipfile
 
 import pytest
@@ -30,7 +31,7 @@ def _real_budget_db(path) -> None:
 
 def _data_dir(tmp_path):
     app_dir = tmp_path / "data"
-    app_dir.mkdir()
+    app_dir.mkdir(parents=True)
     _real_users_db(app_dir / USERS_DB_NAME)
     _real_budget_db(app_dir / "budget_oliver.db")
     _real_budget_db(app_dir / "budget_oliver__household.db")
@@ -161,3 +162,65 @@ class TestRestore:
         with pytest.raises(FullBackupError):
             restore_full_backup(package_path=dest, app_dir=app_dir)
         assert (app_dir / "budget_oliver.db").read_bytes() == live_budget
+
+
+class TestARestoreThatFailsPartWayThrough:
+    """A half-applied restore is worse than a refused one.
+
+    The files are replaced one at a time and there is no atomic multi-file
+    move, so a failure on the second file used to leave the accounts database
+    already swapped: every account from the backup paired with every budget
+    from before it. Measured, not imagined: one stray read handle on a budget
+    was enough to raise PermissionError at exactly that point.
+    """
+
+    def test_the_original_files_are_put_back(self, tmp_path, monkeypatch):
+        app_dir = _data_dir(tmp_path)
+        package = tmp_path / "full.zip"
+        create_full_backup(app_dir=app_dir, dest_path=package)
+
+        before = {
+            name: (app_dir / name).read_bytes()
+            for name in (USERS_DB_NAME, "budget_oliver.db", "budgets_oliver.json")
+        }
+        # Make the live files distinguishable from the backup's copies.
+        for name in before:
+            (app_dir / name).write_bytes(before[name] + b"LIVE")
+        live_now = {name: (app_dir / name).read_bytes() for name in before}
+
+        real_replace = pathlib.Path.replace
+
+        def flaky(self, target):
+            # One budget refuses to move, which is what a stray read handle
+            # on Windows looks like. Everything else, the undo included,
+            # behaves normally.
+            if self.name == "budget_oliver.db":
+                raise PermissionError("Access is denied")
+            return real_replace(self, target)
+
+        monkeypatch.setattr(pathlib.Path, "replace", flaky)
+        with pytest.raises(PermissionError):
+            restore_full_backup(package_path=package, app_dir=app_dir)
+        monkeypatch.undo()
+
+        for name, content in live_now.items():
+            assert (
+                app_dir / name
+            ).read_bytes() == content, (
+                f"{name} was left in the backup's state after a failed restore"
+            )
+
+    def test_a_budget_the_machine_does_not_have_yet_still_arrives(self, tmp_path):
+        """Restoring onto a machine with fewer budgets than the backup holds."""
+        source = _data_dir(tmp_path / "source")
+        package = tmp_path / "full.zip"
+        create_full_backup(app_dir=source, dest_path=package)
+
+        target = tmp_path / "target"
+        target.mkdir()
+        _real_users_db(target / USERS_DB_NAME)
+
+        restore_full_backup(package_path=package, app_dir=target)
+
+        assert (target / "budget_oliver.db").is_file()
+        assert (target / "budget_oliver__household.db").is_file()

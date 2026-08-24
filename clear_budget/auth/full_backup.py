@@ -36,6 +36,9 @@ USERS_DB_NAME = "users.db"
 _BUDGET_PATTERN = "budget_*.db"
 _SIDECAR_PATTERN = "budgets_*.json"
 _STAGING_DIR_NAME = "_restore_staging"
+# What a live file is renamed to while its replacement moves in, so a
+# failure part way through can be undone.
+_DISPLACED_SUFFIX = ".pre_restore"
 
 
 class FullBackupError(ValueError):
@@ -137,8 +140,38 @@ def restore_full_backup(*, package_path: Path, app_dir: Path) -> list[str]:
                 budget_error = validate_db(staging / name)
                 if budget_error:
                     raise FullBackupError(f"'{name}' in the backup: {budget_error}")
-        for name in names:
-            (staging / name).replace(app_dir / name)
+        _replace_all(names, staging=staging, app_dir=app_dir)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
     return names
+
+
+def _replace_all(names: list[str], *, staging: Path, app_dir: Path) -> None:
+    """Move every staged file into place; else put back what was there before.
+
+    The replacement is file by file, so a failure half way through used to
+    leave the accounts database swapped and the budgets not: every account
+    from the backup, every budget from before it, which is a state neither
+    the user nor the app has any way to reason about. It is not theoretical.
+    A stray read handle on one budget was measured taking a restore down at
+    exactly that point.
+
+    There is no atomic multi-file replace, so the next best thing is an undo:
+    each live file is moved aside first and moved back if anything raises.
+    """
+    displaced: list[tuple[Path, Path]] = []
+    try:
+        for name in names:
+            live = app_dir / name
+            if live.exists():
+                aside = staging / (name + _DISPLACED_SUFFIX)
+                live.replace(aside)
+                displaced.append((aside, live))
+            (staging / name).replace(live)
+    except OSError:
+        # Unconditional: a file whose replacement already landed is exactly
+        # the one that must be put back, so testing whether it exists would
+        # skip every case worth undoing.
+        for aside, live in displaced:
+            aside.replace(live)
+        raise

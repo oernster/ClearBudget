@@ -70,10 +70,19 @@ def owner_from_stamp(path: Path) -> str | None:
     falls back to the file name; a file that answers neither is unowned.
     """
     try:
-        with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
-            row = conn.execute(_OWNER_QUERY, (OWNER_SETTING_KEY,)).fetchone()
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     except sqlite3.Error:
         return None
+    # Closed explicitly rather than with `with`: sqlite3's context manager
+    # commits and does NOT close, so the read handle outlived the call. On
+    # Windows that handle is enough to make os.replace refuse the file, which
+    # is how a restore was measured failing part way through.
+    try:
+        row = conn.execute(_OWNER_QUERY, (OWNER_SETTING_KEY,)).fetchone()
+    except sqlite3.Error:
+        return None
+    finally:
+        conn.close()
     if row is None or not row[0]:
         return None
     return str(row[0])
