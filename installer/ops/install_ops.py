@@ -23,10 +23,7 @@ from pathlib import Path
 
 from installer.constants import APP_INTERNAL_DIR_NAME, InstallerIdentity
 from installer.ops.errors import AppRunningError, InstallerOperationError
-from installer.ops.legacy import (
-    cleanup_orphaned_legacy_install,
-    migrate_legacy_appdata_dirs,
-)
+from installer.ops.legacy import migrate_legacy_appdata_dirs
 from installer.ops.payload import extract_archive, payload_zip_path
 from installer.ops.progress import (
     CLEANUP_MESSAGE,
@@ -150,10 +147,11 @@ def _finish(
     logger.info("Applying shortcuts")
     apply_shortcuts(identity, target_dir, opts)
 
-    # Now the new install is fully in place, remove the stale, unreferenced
-    # install directory left behind by the app rename (if any).
+    # No stale-install cleanup any more: the helper that removed the
+    # pre-rename install directory deleted the app's DATA directory once the
+    # data moved to that path. The tidy-up is gone for good; see
+    # installer/ops/legacy.py for the account.
     report(progress, CLEANUP_PCT, CLEANUP_MESSAGE)
-    cleanup_orphaned_legacy_install(target_dir)
 
     report(progress, COMPLETE_PCT, DONE_MESSAGE)
 

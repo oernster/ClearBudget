@@ -19,7 +19,6 @@ from installer.constants import APP_EXE_NAME, APP_ICO_NAME, InstallerIdentity
 from installer.ops import legacy as legacy_module
 from installer.ops.errors import InstallerOperationError
 from installer.ops.legacy import (
-    cleanup_orphaned_legacy_install,
     local_appdata_root,
     migrate_legacy_appdata_dirs,
 )
@@ -282,46 +281,13 @@ class TestMigrateLegacyAppdataDirs:
         migrate_legacy_appdata_dirs()
 
 
-class TestCleanupOrphanedLegacyInstall:
-    def test_the_pre_rename_install_directory_is_removed(
-        self, isolated_profile: Path, tmp_path: Path
-    ) -> None:
-        legacy = local_appdata_root() / LEGACY_APP_NAME
-        legacy.mkdir(parents=True)
+class TestNoStaleInstallCleanupExists:
+    """The orphan-install tidy-up is gone and must stay gone.
 
-        cleanup_orphaned_legacy_install(tmp_path / "current")
+    It rmtree'd `%LOCALAPPDATA%\\ClearBudget` as the pre-rename INSTALL
+    directory; the app's DATA directory then moved to exactly that path and
+    a setup run deleted live user data believing it was an orphaned install.
+    """
 
-        assert not legacy.exists()
-
-    def test_the_directory_just_installed_into_is_never_removed(
-        self, isolated_profile: Path
-    ) -> None:
-        """An in-place upgrade where the user kept the legacy path."""
-        legacy = local_appdata_root() / LEGACY_APP_NAME
-        legacy.mkdir(parents=True)
-        (legacy / APP_EXE_NAME).write_bytes(b"exe")
-
-        cleanup_orphaned_legacy_install(legacy)
-
-        assert (legacy / APP_EXE_NAME).is_file()
-
-    def test_nothing_to_clean_up_is_not_an_error(
-        self, isolated_profile: Path, tmp_path: Path
-    ) -> None:
-        cleanup_orphaned_legacy_install(tmp_path / "current")
-
-    def test_the_directory_hosting_the_running_installer_is_never_removed(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """Windows would lock it and leave a half-deleted install behind."""
-        import sys
-
-        running_dir = Path(sys.executable).resolve().parent
-        monkeypatch.setattr(
-            legacy_module, "local_appdata_root", lambda: running_dir.parent
-        )
-        monkeypatch.setattr(legacy_module, "LEGACY_APP_NAME", running_dir.name)
-
-        cleanup_orphaned_legacy_install(tmp_path / "current")
-
-        assert running_dir.is_dir()
+    def test_the_legacy_install_cleanup_helper_no_longer_exists(self) -> None:
+        assert not hasattr(legacy_module, "cleanup_orphaned_legacy_install")

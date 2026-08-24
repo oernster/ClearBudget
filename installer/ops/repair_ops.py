@@ -22,7 +22,6 @@ from pathlib import Path
 from clear_budget.version import APP_AUTHOR, APP_NAME, __version__
 from installer.constants import InstallerIdentity
 from installer.ops.errors import AppRunningError, InstallerOperationError
-from installer.ops.legacy import cleanup_orphaned_legacy_install
 from installer.ops.payload import (
     ManifestEntry,
     iter_manifest_entries,
@@ -164,9 +163,9 @@ def repair(
         installer_path=entry.installer_path or "",
     )
 
-    # Remove the pre-rename orphan install dir (a no-op once it is gone), so a
-    # repair leaves the machine as clean as a fresh install or upgrade does.
+    # No stale-install cleanup any more: the helper that removed the
+    # pre-rename install directory deleted the app's DATA directory once the
+    # data moved to that path (see installer/ops/legacy.py).
     report(progress, REPAIR_CLEANUP_PCT, REPAIR_CLEANUP_MESSAGE)
-    cleanup_orphaned_legacy_install(install_dir)
 
     report(progress, COMPLETE_PCT, DONE_MESSAGE)

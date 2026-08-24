@@ -204,6 +204,31 @@ class TestTheInstallerLeavesUserDataAlone:
             not offenders
         ), "The installer references the app's data directory:\n" + "\n".join(offenders)
 
+    def test_no_installer_module_builds_the_platform_data_directory(self):
+        """`%LOCALAPPDATA%\\ClearBudget` is the app's DATA directory (5.1).
+
+        The installer once joined its Local AppData root to the pre-rename
+        app name to remove an "orphaned old install"; after the data
+        directory moved to exactly that path, one setup run deleted live
+        user data. This is the expression that did it; it must never come
+        back in any spelling.
+        """
+        pattern = re.compile(
+            r"local_appdata_root\(\)\s*/\s*(?:LEGACY_APP_NAME|[\"']ClearBudget[\"'])"
+        )
+        installer_root = _PROJECT_ROOT / "installer"
+        offenders = [
+            str(path.relative_to(_PROJECT_ROOT))
+            for path in installer_root.rglob("*.py")
+            if "__pycache__" not in path.parts
+            and pattern.search(path.read_text(encoding="utf-8"))
+        ]
+        assert not offenders, (
+            "The installer joins its AppData root to the app's data-directory "
+            "name, the exact expression that deleted user data:\n"
+            + "\n".join(offenders)
+        )
+
 
 class TestTheSavedThemeStaysInTheScratchDirectory:
     """The exact write that clobbered a real setting."""

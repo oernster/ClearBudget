@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-import sys
 from pathlib import Path
 
 from platformdirs import user_cache_dir, user_data_dir
@@ -55,35 +54,12 @@ def migrate_legacy_appdata_dirs() -> None:
             logger.exception("Failed migrating legacy app data dir")
 
 
-def cleanup_orphaned_legacy_install(target_dir: Path) -> None:
-    """Remove the orphaned legacy-named install directory, if present.
-
-    Renaming the app also moved the default install directory. The uninstall
-    registry key, the Start Menu folder and the shortcut name are all
-    unchanged, so once a new-named install exists they point at it and the old
-    directory is left behind as an unreferenced orphan. Removing it means
-    installing the renamed app cleans up the pre-rename install.
-
-    Only the stale install directory is touched. Per-user data and cache dirs
-    are handled by :func:`migrate_legacy_appdata_dirs`; the Start Menu
-    folder still points at the active install, so neither is removed here.
-    """
-    try:
-        legacy_dir = (local_appdata_root() / LEGACY_APP_NAME).resolve()
-        target_dir = target_dir.resolve()
-    except OSError:  # pragma: no cover
-        # Defensive: resolve() does not raise for any path this environment can
-        # produce. Doing nothing leaves a stale directory, which is harmless.
-        return
-
-    # Never remove the directory just installed into (an in-place upgrade where
-    # the user kept the legacy path); never the one hosting the running
-    # installer exe, which Windows would lock into a half-deleted state.
-    if legacy_dir == target_dir or not legacy_dir.is_dir():
-        return
-    running = Path(sys.executable).resolve()
-    if running == legacy_dir or legacy_dir in running.parents:
-        return
-
-    logger.info("Removing orphaned legacy install directory %s", legacy_dir)
-    shutil.rmtree(legacy_dir, ignore_errors=True)
+# There is deliberately NO cleanup of `%LOCALAPPDATA%\ClearBudget` here any
+# more. A cleanup_orphaned_legacy_install helper used to rmtree that path as
+# the pre-rename INSTALL directory; the application's DATA directory then
+# moved to exactly that path (5.1) and the next setup run deleted live user
+# data believing it was an orphaned install. The stale-install tidy-up was
+# never worth a codepath that can delete a directory it does not own; a
+# leftover pre-rename install is harmless and the user can remove it by
+# hand. tests/structural/test_data_dir_isolation.py now forbids the
+# installer from naming that directory at all.
