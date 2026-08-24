@@ -7,6 +7,11 @@ horizontal arrows are tested first so they step the ring everywhere, out of an
 open menu or out of a table. Up and Down stay internal to a stop that owns
 them, such as a table walking its rows; Enter and Space activate.
 
+Focus ARRIVES from the ring and from nowhere else: a mouse click on a button
+is refused its focus, so the outline never marks a control the keyboard is not
+on. Text inputs are exempt, since clicking into one is how a mouse says where
+to type.
+
 There is no tab-bar case here any more. The four tabs are ordinary buttons in
 each view's navigation tray, so each is a stop like any other: walking the
 ring moves focus and switches nothing, Enter or Space commits. That used to
@@ -22,6 +27,7 @@ their arrows for the caret.
 
 from PySide6.QtCore import QEvent, QObject, Qt
 from PySide6.QtWidgets import (
+    QAbstractButton,
     QAbstractSpinBox,
     QApplication,
     QCheckBox,
@@ -149,6 +155,8 @@ class KeyboardNavigator(QObject):
 
     # ---- event filter -------------------------------------------------------
     def eventFilter(self, obj, event) -> bool:
+        if event.type() == QEvent.Type.FocusIn:
+            return self._focus_arriving(obj, event)
         if event.type() != QEvent.Type.KeyPress:
             return False
         modal = QApplication.activeModalWidget()
@@ -157,6 +165,35 @@ class KeyboardNavigator(QObject):
         if not self._window.isActiveWindow():
             return False
         return self._window_keys(event)
+
+    # ---- where focus may come from ------------------------------------------
+    def _focus_arriving(self, obj, event) -> bool:
+        """Refuse focus that a MOUSE brought to a button. Never consumes.
+
+        The ring is the only way focus reaches a control, because the ring is
+        what the green outline means: the keyboard is here. Qt gives a clicked
+        button focus as well, so pressing Export HTML and cancelling the file
+        dialog left the button outlined with the keyboard nowhere near it;
+        the next Tab carried on from a place the user had not chosen.
+
+        Only BUTTONS. A text field, a spin box, a combo box and a table must
+        take a click: clicking into one is how you say where to type, so
+        taking that away would make the app unusable with a mouse.
+
+        Inside a modal the toolkit keeps its own behaviour, as it does for
+        every other case in this filter: a dialog is a small ring the user
+        opened deliberately; it closes with the focus it had.
+
+        False either way: the press is not swallowed, so the click still
+        fires. Only the focus it dragged along is dropped.
+        """
+        if event.reason() != Qt.FocusReason.MouseFocusReason:
+            return False
+        if QApplication.activeModalWidget() is not None:
+            return False
+        if isinstance(obj, QAbstractButton):
+            obj.clearFocus()
+        return False
 
     # ---- dialog surface -----------------------------------------------------
     def _dialog_keys(self, modal, event) -> bool:
