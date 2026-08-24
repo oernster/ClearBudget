@@ -30,7 +30,7 @@ Everything below this section explains how the code satisfies them.
 | Every colour value in the tree lives in `clear_budget/shared/palette.py` and nowhere else. `ui.theme_tokens` and `application.reporting` hold what a colour is FOR and reference it by name; the setup program asks `ui.theme_tokens` for the same ROLES rather than choosing its own, so the two surfaces cannot drift apart; a hex literal anywhere else fails the build. Prose is exempt, so a docstring may still quote a hex it is recording a decision about | `tests/structural/test_colour_source.py` |
 | Money is integer pence everywhere. No financial value is ever a float, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object; signed balances are plain `int` pence |
 | Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
-| A budget belonging to another account cannot be opened without that account's password. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
+| A budget belonging to another account cannot be opened without that account's password; it cannot be SAVED OVER at all: loading one is recoverable and is offered behind their password, while a save replaces their figures and leaves nothing to recover from. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
 | One Return press runs a dialog's submit ONCE. A `QLineEdit` emits `returnPressed` and then ignores the key so it reaches the dialog's default button, so connecting both gives one press two routes. No slot may answer both `returnPressed` and `clicked` in the same module | `tests/structural/test_return_key_invariants.py` |
 | Focus follows the KEYBOARD, never the pointer, wherever a click has nothing to act on: a button refuses mouse-reason focus outright and every table is `TabFocus` rather than Qt's default `StrongFocus`, so no pane is ever ringed by a click. Selection is untouched, since selection is not focus | `tests/structural/test_table_focus_invariants.py` (both halves), plus `KeyboardNavigator._focus_arriving` for buttons |
 | A destructive confirmation is never raised over a file that will be refused. The Load flow asks the accounts store, the schema and the owner challenge FIRST; the overwrite question is the last gate before the path is handed back | `tests/structural/test_load_refusal_order.py` |
@@ -1103,6 +1103,21 @@ renderings of the same figures to hold in step. Every month any page shows
   location persists in `ui_settings.json` through
   `clear_budget/ui/save_location.py`, which shares the file with the theme
   without disturbing it (`tests/ui_logic/test_save_location.py`)
+- SAVING OVER ANOTHER ACCOUNT'S BUDGET IS REFUSED, never challenged. The Load
+  side offers another account's file behind that account's password, because
+  loading it is recoverable; saving over one replaces their figures with yours
+  and leaves nothing to recover from, so `_belongs_to_another_account` says
+  whose file it is and stops. Both entry points ask, Save before its overwrite
+  question and Save As the moment the file dialog returns, so nothing is
+  written or remembered before anyone asks whose it is. Ownership comes from
+  `shared.db_ownership.owner_of`, the same stamp-then-filename answer the Load
+  challenge uses, which means the same reach: a budget carrying its stamp is
+  recognised wherever it is moved or renamed to, while one written before
+  stamping existed is recognised by its name alone until the account that owns
+  it next signs in (opening a budget stamps it). A file nobody owns, which is
+  what an ordinary backup destination is, passes straight through, including
+  the account's own earlier backups. Ordering held by
+  `tests/structural/test_load_refusal_order.py`
 - THE REMEMBERED SAVE FILE IS PER ACCOUNT, keyed by username under
   `save_files`. It was one `save_file` value for the machine, so it held
   whatever the LAST account to save had chosen and the next account to press

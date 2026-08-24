@@ -170,13 +170,23 @@ class MainWindow(
         """Save the database to the remembered location (first time: Save As)."""
         from clear_budget.ui.widgets._save_load_flow import run_save_flow
 
-        run_save_flow(self, self._live_connection(), self.current_user.username)
+        run_save_flow(
+            self,
+            self._live_connection(),
+            self.current_user.username,
+            self.user_store,
+        )
 
     def _on_save_as_database(self) -> None:
         """Prompt for a save file, remember it, then save the database."""
         from clear_budget.ui.widgets._save_load_flow import run_save_as_flow
 
-        run_save_as_flow(self, self._live_connection(), self.current_user.username)
+        run_save_as_flow(
+            self,
+            self._live_connection(),
+            self.current_user.username,
+            self.user_store,
+        )
 
     def _live_connection(self):
         """The session's open SQLite connection, for a consistent snapshot."""

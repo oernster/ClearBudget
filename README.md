@@ -570,6 +570,9 @@ entered before these existed continues to do.
   person's file
 - **Save As** (File > Save As...): choose a new save file (`.db` extension
   enforced); becomes the remembered location for future saves by that account
+- Neither Save nor Save As will write over another account's budget. It is
+  refused outright rather than offered behind their password, unlike Load:
+  loading someone else's budget can be undone, replacing it cannot
 - **Load** (File > Load... or the folder button beside the diskette): file
   validated as SQLite and verified to contain all required ClearBudget tables
   and columns before any write; confirmation required if active database has

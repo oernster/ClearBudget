@@ -24,7 +24,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from clear_budget.shared.db_copy import DatabaseCopyError, backup_open_database
-from clear_budget.shared.db_ownership import safe_username
+from clear_budget.shared.db_ownership import owner_of, safe_username
 from clear_budget.shared.db_validation import is_accounts_database, validate_db
 from clear_budget.ui import ui_scale
 from clear_budget.ui.save_location import load_save_location, store_save_location
@@ -42,6 +42,35 @@ _DB_FILTER = "ClearBudget Database (*.db)"
 def _default_save_name(username: str) -> str:
     """The backup filename offered to `username` on a first save."""
     return f"{_DEFAULT_SAVE_STEM}_{safe_username(username)}.db"
+
+
+def _belongs_to_another_account(parent, dest: Path, username: str, user_store) -> bool:
+    """Whether `dest` is someone else's budget; says so and refuses if it is.
+
+    The mirror of the Load side's owner challenge, only stricter. Loading
+    another account's budget is recoverable and is therefore offered behind
+    that account's password; saving OVER one is not, because the write
+    replaces their figures with yours and there is nothing left to prove
+    anything with afterwards. So this refuses outright and never asks.
+
+    Ownership comes from the stamp inside the file first and its name second
+    (`shared.db_ownership.owner_of`), so a renamed or relocated budget is
+    still recognised; a snapshot of one carries the stamp with it. A file
+    nobody owns, which is what an ordinary backup destination is, passes
+    straight through.
+    """
+    owner = owner_of(dest, [user.username for user in user_store.get_all_users()])
+    if owner is None or owner == username:
+        return False
+    QMessageBox.critical(
+        parent,
+        "That Budget Belongs to Another Account",
+        f"{dest}\n\n"
+        f"This file is {owner}'s budget. Saving here would replace "
+        f"{owner}'s figures with yours. There would be no way back.\n\n"
+        "Nothing has been changed. Choose a different file.",
+    )
+    return True
 
 
 def _report_saved(parent, dest: Path) -> None:
@@ -133,7 +162,7 @@ def _copy_and_report(parent, conn, dest: Path) -> None:
         QMessageBox.critical(parent, "Save Failed", str(exc))
 
 
-def run_save_flow(parent, conn, username: str) -> None:
+def run_save_flow(parent, conn, username: str, user_store) -> None:
     """Save the database to the remembered location, confirming overwrite.
 
     With no remembered location yet this IS Save As: the user is prompted
@@ -141,7 +170,12 @@ def run_save_flow(parent, conn, username: str) -> None:
     """
     target = load_save_location(username)
     if target is None:
-        run_save_as_flow(parent, conn, username)
+        run_save_as_flow(parent, conn, username, user_store)
+        return
+    # Refused before the overwrite question, for the reason the Load flow
+    # orders its checks the same way: a threat raised over a write that
+    # cannot happen teaches the user to click through threats.
+    if _belongs_to_another_account(parent, target, username, user_store):
         return
     # Nothing is being overwritten when the target IS the open database, so
     # asking would be a question about a file that is not at risk.
@@ -158,7 +192,7 @@ def run_save_flow(parent, conn, username: str) -> None:
     _copy_and_report(parent, conn, target)
 
 
-def run_save_as_flow(parent, conn, username: str) -> None:
+def run_save_as_flow(parent, conn, username: str, user_store) -> None:
     """Prompt for a save file, remember it, then save the database to it.
 
     Defaults to the app's own data directory, where the live databases are.
@@ -175,6 +209,8 @@ def run_save_as_flow(parent, conn, username: str) -> None:
     dest_path = Path(dest)
     if dest_path.suffix.lower() != ".db":
         dest_path = dest_path.with_suffix(".db")
+    if _belongs_to_another_account(parent, dest_path, username, user_store):
+        return
     # A save location that IS the open database would make every later Save a
     # silent no-op, so the choice is honoured once and not remembered. Save
     # then keeps prompting, which is the truthful state: there is no separate
