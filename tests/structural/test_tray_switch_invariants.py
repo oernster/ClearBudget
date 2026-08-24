@@ -6,9 +6,11 @@ lower tray.
 The first is the GRAPH ICON. It is built per view, because every view builds
 its own tray, so a view that simply never calls the builder loses the control
 silently: the tray still draws, the app still runs and the capability is just
-gone from that tab. Solvency lost it exactly that way. Every view that plots
-something must build the button AND list it as a keyboard stop, since a
-control the ring skips is one the keyboard cannot reach.
+gone from that tab. Solvency lost it exactly that way; Archive never had it,
+which cost the tray a control on that tab alone and changed the row's shape
+on the way in. Every view that draws a tray must build the button AND list it
+as a keyboard stop, since a control the ring skips is one the keyboard cannot
+reach.
 
 The second is the NEUTRAL START on a switch. Switching tabs hides the control
 that was clicked; Qt then hands its focus to whatever comes next in the newly
@@ -29,17 +31,6 @@ _ROOT = Path(__file__).resolve().parents[2]
 _UI = _ROOT / "clear_budget" / "ui"
 _NAV_MIXIN = _UI / "_main_window_nav.py"
 
-# Archive is absent on purpose: it plots nothing, so it has nothing to graph.
-_PLOTTING_VIEWS = (
-    _UI / "views" / "_month_view_builders.py",
-    _UI / "views" / "solvency_panel.py",
-    _UI / "views" / "credit_card_view.py",
-)
-# Where each view's ring order is declared, when that is not the same file.
-_RING_DECLARATIONS = {
-    "_month_view_builders.py": _UI / "views" / "month_view.py",
-}
-
 # Every view that draws a nav tray. All four draw the SAME shortcuts, so a
 # view that skips one loses that shortcut on that tab alone and nowhere else,
 # which reads as the button having moved rather than as a defect.
@@ -49,6 +40,24 @@ _TRAY_VIEWS = (
     _UI / "views" / "credit_card_view.py",
     _UI / "views" / "archive_view.py",
 )
+
+# The graph button is drawn on every one of them, Archive included. Archive
+# was left out originally on the reading that it plots nothing, so it had
+# nothing to graph. That reading treated the button as a readout of the tab
+# it sits on. It is not: it is an ACTION, so wherever it is clicked it plots
+# the current month. Under that reading Archive being organised by year stops
+# mattering, because the button never asks the tab what it is showing.
+# Leaving it off cost the tray a control on one tab alone, so the row visibly
+# changed shape on the way in.
+#
+# One tuple rather than a second copy of the same four paths: two lists that
+# have to stay equal are two lists that eventually do not.
+_PLOTTING_VIEWS = _TRAY_VIEWS
+
+# Where each view's ring order is declared, when that is not the same file.
+_RING_DECLARATIONS = {
+    "_month_view_builders.py": _UI / "views" / "month_view.py",
+}
 
 _BUILDER = "build_graph_icon_button"
 _ATTR = "graph_btn"
