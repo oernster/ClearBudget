@@ -8,7 +8,6 @@ submitted rather than being reported afterwards.
 """
 
 from PySide6.QtWidgets import (
-    QComboBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -21,6 +20,7 @@ from PySide6.QtWidgets import (
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import ui_scale
 from clear_budget.ui.widgets.first_stop_dialog import FirstStopDialog
+from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 
 _MONTH_NAMES = (
     "January",
@@ -92,7 +92,7 @@ class MonthRangeDialog(FirstStopDialog):
         self._refresh()
 
     def _picker(self, at: YearMonth) -> tuple:
-        month = QComboBox()
+        month = ThemedComboBox()
         month.addItems(_MONTH_NAMES)
         month.setCurrentIndex(at.month - 1)
         year = QSpinBox()
@@ -104,7 +104,7 @@ class MonthRangeDialog(FirstStopDialog):
         return month, year
 
     @staticmethod
-    def _row(month: QComboBox, year: QSpinBox) -> QWidget:
+    def _row(month: ThemedComboBox, year: QSpinBox) -> QWidget:
         """Month and year side by side as one form row."""
         container = QWidget()
         row = QHBoxLayout(container)

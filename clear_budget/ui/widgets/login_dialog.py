@@ -4,7 +4,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QDialog,
     QFrame,
     QGridLayout,
@@ -28,6 +27,7 @@ from clear_budget.ui.widgets._login_styles import (
 from clear_budget.ui.widgets._viewer_package_import_flow import (
     run_import_viewer_package_flow,
 )
+from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 
 # How many remembered accounts it takes for the username field to become a
 # dropdown. With one there is no choice to offer, so a dropdown would only
@@ -182,7 +182,7 @@ class LoginDialog(QDialog):
             self.username_edit = QLineEdit()
             self.username_edit.setStyleSheet(input_style())
         else:
-            self.username_combo = QComboBox()
+            self.username_combo = ThemedComboBox()
             self.username_combo.setEditable(True)
             self.username_combo.addItems(remembered)
             # textActivated, never currentTextChanged: the latter fires on

@@ -1,7 +1,6 @@
 """CurrencyDialog - lets the user pick a display currency."""
 
 from PySide6.QtWidgets import (
-    QComboBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -11,6 +10,7 @@ from PySide6.QtWidgets import (
 
 from clear_budget.shared.currency import CURRENCIES
 from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 
 
 class CurrencyDialog(QDialog):
@@ -42,7 +42,7 @@ class CurrencyDialog(QDialog):
         info.setObjectName(label_roles.SUBTLE)
         layout.addWidget(info)
 
-        self._combo = QComboBox()
+        self._combo = ThemedComboBox()
         self._combo.setMinimumHeight(ui_scale.px(32))
         current_index = 0
         for i, c in enumerate(CURRENCIES):

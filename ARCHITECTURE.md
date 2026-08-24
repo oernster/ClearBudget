@@ -1359,13 +1359,14 @@ renderings of the same figures to hold in step. Every month any page shows
     restore travels the `full_restore_requested` signal to `main.py`, which
     tears the session down before touching a file
   - Settings menu (adjacent to File): Preferences, Bank Account
-  - `ui/_theme_inputs` gives `QComboBox::drop-down` a WIDTH and nothing else.
-    `border: none` on that subcontrol stops the platform painting the chevron
-    inside it, which left every dropdown in the app reading as a plain field;
-    Qt paints `::down-arrow` as an image, so there is no asset-free CSS
-    replacement to draw. Width is safe and is also the only handle on where
-    the arrow sits: the subcontrol hugs the right border and centres the
-    arrow within itself, so padding on the combo does not move it
+  - Every combo box is a `ui/widgets/themed_combo_box.ThemedComboBox`, which
+    paints its own arrow; `ui/_theme_inputs` makes `QComboBox::drop-down`
+    transparent. The two halves only work together: Qt draws that subcontrol
+    as a square native button over the right end of the field, so it paints
+    across the corner the border-radius rounds; the one rule that stops it
+    also stops the platform drawing the chevron. A plain `QComboBox` would
+    still work and simply have no arrow, so
+    `tests/structural/test_combo_box_invariants.py` pins that none is built
   - Users menu: Switch User and Log Out for every account; admins also get
     Manage Users (list, Add User, Delete Selected). The two ways out are
     separate signals on purpose and differ only in what a cancelled sign-in

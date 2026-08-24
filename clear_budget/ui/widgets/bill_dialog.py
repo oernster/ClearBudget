@@ -5,7 +5,6 @@ from typing import ClassVar
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QDateEdit,
     QDialog,
     QHBoxLayout,
@@ -24,6 +23,7 @@ from clear_budget.ui import label_roles
 from clear_budget.ui.widgets._bill_amount_changes_section import (
     BillAmountChangesSectionMixin,
 )
+from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 
 # Opened wide enough for the amount-change row (a full month name, an amount
 # and the Add button) to sit on one line without anything being squeezed.
@@ -98,18 +98,18 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
         layout.addWidget(self.amount_edit)
 
         layout.addWidget(QLabel("Payment Method:"))
-        self.payment_method_combo = QComboBox()
+        self.payment_method_combo = ThemedComboBox()
         self._populate_payment_methods()
         layout.addWidget(self.payment_method_combo)
 
         layout.addWidget(QLabel("Category:"))
-        self.category_combo = QComboBox()
+        self.category_combo = ThemedComboBox()
         display_categories = [self._display_category(cat) for cat in self.CATEGORIES]
         self.category_combo.addItems(display_categories)
         layout.addWidget(self.category_combo)
 
         layout.addWidget(QLabel("Type:"))
-        self.type_combo = QComboBox()
+        self.type_combo = ThemedComboBox()
         self.type_combo.addItems(self.BILL_TYPES)
         layout.addWidget(self.type_combo)
 
@@ -122,7 +122,7 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
 
         self.pays_card_label = QLabel("Pays Card:")
         layout.addWidget(self.pays_card_label)
-        self.pays_card_combo = QComboBox()
+        self.pays_card_combo = ThemedComboBox()
         self.pays_card_combo.addItem("(none)", None)
         if self.payment_method_repo:
             for card in self.payment_method_repo.get_all_credit_cards(
