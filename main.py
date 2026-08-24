@@ -8,7 +8,7 @@ Handles the full login lifecycle:
 5. On MainWindow.logout_requested → close window, loop back to step 3.
 """
 
-import ctypes
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -42,95 +42,15 @@ import os
 from clear_budget.shared.config import APP_DIR_ENV_VAR, Config
 from clear_budget.shared.currency import set_currency
 from clear_budget.shared.data_migration import migrate_legacy_data
+from clear_budget.shared.resources import find_runtime_window_icon
+from clear_budget.shared import single_instance
+from clear_budget.ui import _window_geometry as geom
 from clear_budget.ui._window_geometry import default_window_rect
 from clear_budget.version import __version__
 from clear_budget.ui.main_window import MainWindow
 from clear_budget.ui.theme import apply_theme, load_saved_theme
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
-
-
-def _find_runtime_icon() -> Path | None:
-    """Locate runtime PNG icon.
-
-    Checks beside the executable first (installed/frozen), then falls back
-    to the project root beside main.py (dev mode).
-    """
-    beside_exe = Path(sys.executable).resolve().parent / "clearbudget_256.png"
-    if beside_exe.exists():
-        return beside_exe
-    beside_main = Path(__file__).resolve().parent / "clearbudget_256.png"
-    return beside_main if beside_main.exists() else None
-
-
-_MUTEX_NAME = "Global\\ClearBudget_SingleInstance"
-_LOCK_FILENAME = "clearbudget.lock"
-
-# Win32 GetLastError code returned by CreateMutexW when the named mutex already
-# exists (i.e. another instance is running).
-_WIN_ERROR_ALREADY_EXISTS = 183
-
-# Default main-window geometry, expressed as a fraction of the available screen
-# area.  The fractions keep the window compact on large monitors (e.g. a 34in
-# widescreen); the minimum floors below guarantee the multi-column Bills/Income
-# tables stay readable on small displays such as a 13in MacBook.
-_WINDOW_WIDTH_FRACTION = 0.33
-_WINDOW_HEIGHT_FRACTION = 0.92
-
-# Absolute floors in logical screen points (device-independent, so NOT scaled by
-# the UI factor).  These bind only on small screens where the fractional size
-# would clip table columns; on large screens the fractions already exceed them
-# and the window keeps its compact proportions.  Both are always capped to the
-# available screen area so the window never exceeds the display.
-_MIN_WINDOW_WIDTH_PT = 860
-_MIN_WINDOW_HEIGHT_PT = 780
-
-# Reference available-screen height (logical points) that maps to a 1.0x UI scale.
-# Taller screens scale the UI up to the cap below; shorter screens scale it down,
-# so the layout stays proportionate from a 13in laptop to a 4K display.
-_UI_SCALE_REFERENCE_HEIGHT_PT = 1260.0
-
-# Upper bound on the UI scale factor.  Caps growth on tall/4K displays; the lower
-# bound (0.5x) is enforced inside ui_scale.init().
-_MAX_UI_SCALE_FACTOR = 1.5
-
-# Index of the height element in an (x, y, width, height) screen rect.
-_AVAILABLE_HEIGHT = 3
-
-
-def _acquire_single_instance_lock():
-    """Acquire a single-instance lock for this process.
-
-    Returns an opaque handle that the caller must keep alive for the lifetime
-    of the application; the lock is released automatically when the process
-    exits or the handle is dropped.  Returns None if another instance already
-    holds the lock.
-
-    Windows uses a named kernel mutex.  POSIX platforms (macOS, Linux) use an
-    exclusive advisory lock on a file in the application directory, since
-    ctypes.windll exists only on Windows.
-    """
-    if sys.platform == "win32":
-        handle = ctypes.windll.kernel32.CreateMutexW(None, True, _MUTEX_NAME)
-        if ctypes.windll.kernel32.GetLastError() == _WIN_ERROR_ALREADY_EXISTS:
-            ctypes.windll.kernel32.CloseHandle(handle)
-            return None
-        return handle
-
-    import fcntl
-
-    Config.app_dir().mkdir(parents=True, exist_ok=True)
-    # Deliberately not a context manager: the handle must stay open for the
-    # process lifetime, since closing it releases the flock.
-    lock_file = open(  # noqa: SIM115 (lock held until exit)
-        Config.app_dir() / _LOCK_FILENAME, "w"
-    )
-    try:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
-        lock_file.close()
-        return None
-    return lock_file
 
 
 def _run_login_flow(
@@ -239,7 +159,7 @@ def main() -> int:
 
     app = QApplication([])
 
-    _instance_lock = _acquire_single_instance_lock()
+    _instance_lock = single_instance.acquire(app_dir=Config.app_dir())
     if _instance_lock is None:
         QMessageBox.warning(None, "ClearBudget", "ClearBudget is already running.")
         return 1
@@ -251,10 +171,12 @@ def main() -> int:
     # display happens to be primary.
     launch_screen.init()
     _avail = launch_screen.available()
-    _avail_h = _avail[_AVAILABLE_HEIGHT]
-    ui_scale.init(min(_avail_h / _UI_SCALE_REFERENCE_HEIGHT_PT, _MAX_UI_SCALE_FACTOR))
+    _avail_h = _avail[geom.AVAILABLE_HEIGHT]
+    ui_scale.init(
+        min(_avail_h / geom.UI_SCALE_REFERENCE_HEIGHT_PT, geom.MAX_UI_SCALE_FACTOR)
+    )
 
-    icon_path = _find_runtime_icon()
+    icon_path = find_runtime_window_icon()
     if icon_path:
         icon = QIcon(str(icon_path))
         if not icon.isNull():
@@ -280,10 +202,10 @@ def main() -> int:
         window.setGeometry(
             *default_window_rect(
                 available=_avail,
-                width_fraction=_WINDOW_WIDTH_FRACTION,
-                height_fraction=_WINDOW_HEIGHT_FRACTION,
-                min_width=_MIN_WINDOW_WIDTH_PT,
-                min_height=_MIN_WINDOW_HEIGHT_PT,
+                width_fraction=geom.WINDOW_WIDTH_FRACTION,
+                height_fraction=geom.WINDOW_HEIGHT_FRACTION,
+                min_width=geom.MIN_WINDOW_WIDTH_PT,
+                min_height=geom.MIN_WINDOW_HEIGHT_PT,
             )
         )
         window.show()
@@ -293,6 +215,44 @@ def main() -> int:
         window.full_restore_requested.connect(
             lambda path: _restore_everything(path, window)
         )
+        window.database_load_requested.connect(
+            lambda path: _load_database(path, user, window)
+        )
+
+    def _load_database(source: str, user: "User", old_window: "MainWindow") -> None:
+        """Put a chosen database in place as this session's active budget.
+
+        The ordering is the whole point and it belongs here because only the
+        composition root owns the connection. CLOSE first, then replace, then
+        reopen. Doing it the other way round (replacing the file while the
+        connection was still open) is what destroyed two real budgets: the
+        swap succeeds silently on Windows, the live connection keeps writing
+        against the database it thinks is there and what is left afterwards
+        is the right length and entirely zero bytes.
+
+        A failure to replace leaves the existing database untouched, so the
+        session simply carries on with the budget it already had.
+        """
+        from clear_budget.shared.db_copy import (
+            DatabaseCopyError,
+            replace_closed_database,
+        )
+
+        old_window.hide()
+        target = old_window.db_path
+        if _active_database:
+            _active_database[0].close()
+            _active_database.clear()
+        try:
+            replace_closed_database(Path(source), Path(target))
+        except DatabaseCopyError as exc:
+            QMessageBox.critical(
+                None,
+                "Load Failed",
+                f"The database could not be loaded, so nothing was "
+                f"changed:\n\n{exc}",
+            )
+        _reload_database(user, old_window)
 
     def _reload_database(user: "User", old_window: "MainWindow") -> None:
         """Reload the database in-place after an import or settings change."""
@@ -346,7 +306,25 @@ def main() -> int:
             _active_database[0].close()
             _active_database.clear()
 
-        database = _open_user_database(user.username)
+        try:
+            database = _open_user_database(user.username)
+        except sqlite3.DatabaseError as exc:
+            # Without this the sign-in simply produced NOTHING: the error
+            # escaped the timer slot, a windowed build has nowhere to print
+            # it and no window was ever shown. An unreadable budget is the
+            # one failure the user must be told about, since it is the one
+            # a backup exists to answer.
+            QMessageBox.critical(
+                None,
+                "Budget Could Not Be Opened",
+                "This account's budget database could not be opened:\n\n"
+                f"{exc}\n\n"
+                "The file may be damaged. Restore it from a backup or use "
+                "File > Import / Export > Restore Everything after signing "
+                "in as an administrator.",
+            )
+            _session_loop()
+            return
         _active_database.append(database)
         _load_currency(database)
 

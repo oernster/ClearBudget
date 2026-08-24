@@ -164,7 +164,11 @@ class TestTheMigrationRunsFirstAtStartup:
     def test_main_migrates_before_the_lock_and_behind_the_override(self):
         source = (_PROJECT_ROOT / "main.py").read_text(encoding="utf-8")
         migrate_at = source.find("migrate_legacy_data(")
-        lock_at = source.find("_instance_lock = _acquire_single_instance_lock()")
+        # Matched on the assignment rather than on the callee's name, so
+        # moving the lock into its own module (as it has been, to
+        # clear_budget.shared.single_instance) cannot silently retire the
+        # ordering guard along with the old literal.
+        lock_at = source.find("_instance_lock =")
         assert migrate_at != -1, "main.py never calls migrate_legacy_data"
         assert lock_at != -1, "main.py lost the single-instance lock"
         assert migrate_at < lock_at, (

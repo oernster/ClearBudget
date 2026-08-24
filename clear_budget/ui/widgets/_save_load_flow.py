@@ -1,11 +1,16 @@
 """Save / Save As / Load flows for the database, plus the tray buttons.
 
-Save copies the live database to the remembered save file (prompting to
+Save snapshots the live database to the remembered save file (prompting to
 overwrite when it already exists); the first ever Save behaves as Save As,
 prompting for a filename and defaulting to the user's Downloads folder. The
 chosen location is persisted between runs (see clear_budget.ui.save_location).
-Load replaces the live database from a chosen file, with validation and an
-overwrite confirmation when the current database holds data.
+The snapshot goes through SQLite's backup API rather than a file copy,
+because the database is open and a byte copy of one mid-transaction is a
+copy of a state that never existed.
+
+Load only CHOOSES and validates. It hands the path back and the composition
+root does the replacing, because the live database has to be closed first
+and only `main.py` owns its lifetime. See clear_budget.shared.db_copy.
 
 Extracted from MainWindow so the window module stays under the LOC limit and
 each flow is one readable recipe.
@@ -13,11 +18,11 @@ each flow is one readable recipe.
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 from PySide6.QtWidgets import QFileDialog, QFrame, QMessageBox, QPushButton
 
+from clear_budget.shared.db_copy import DatabaseCopyError, backup_open_database
 from clear_budget.shared.db_validation import validate_db
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.save_location import load_save_location, store_save_location
@@ -124,15 +129,21 @@ def _report_saved(parent, dest: Path) -> None:
     box.exec()
 
 
-def _copy_and_report(parent, db_path: Path, dest: Path) -> None:
+def _copy_and_report(parent, conn, dest: Path) -> None:
+    """Snapshot the LIVE database to `dest` through SQLite's backup API.
+
+    Never a filesystem copy: the database is open and may be mid-transaction,
+    so copying its bytes can produce a file the right length that no
+    consistent state ever matched.
+    """
     try:
-        shutil.copy2(db_path, dest)
+        backup_open_database(conn, dest)
         _report_saved(parent, dest)
-    except OSError as exc:
+    except DatabaseCopyError as exc:
         QMessageBox.critical(parent, "Save Failed", str(exc))
 
 
-def run_save_flow(parent, db_path: Path) -> None:
+def run_save_flow(parent, conn) -> None:
     """Save the database to the remembered location, confirming overwrite.
 
     With no remembered location yet this IS Save As: the user is prompted for
@@ -140,7 +151,7 @@ def run_save_flow(parent, db_path: Path) -> None:
     """
     target = load_save_location()
     if target is None:
-        run_save_as_flow(parent, db_path)
+        run_save_as_flow(parent, conn)
         return
     if target.exists():
         reply = QMessageBox.question(
@@ -152,10 +163,10 @@ def run_save_flow(parent, db_path: Path) -> None:
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
-    _copy_and_report(parent, db_path, target)
+    _copy_and_report(parent, conn, target)
 
 
-def run_save_as_flow(parent, db_path: Path) -> None:
+def run_save_as_flow(parent, conn) -> None:
     """Prompt for a save file, remember it, then save the database to it."""
     remembered = load_save_location()
     start = remembered if remembered else default_downloads_dir() / _DEFAULT_SAVE_NAME
@@ -168,7 +179,7 @@ def run_save_as_flow(parent, db_path: Path) -> None:
     if dest_path.suffix.lower() != ".db":
         dest_path = dest_path.with_suffix(".db")
     store_save_location(dest_path)
-    _copy_and_report(parent, db_path, dest_path)
+    _copy_and_report(parent, conn, dest_path)
 
 
 def _has_existing_data(db_path: Path, conn) -> bool:
@@ -185,10 +196,18 @@ def _has_existing_data(db_path: Path, conn) -> bool:
         return True
 
 
-def run_load_flow(parent, db_path: Path, conn) -> bool:
-    """Replace the live database from a chosen file.
+def run_load_flow(parent, db_path: Path, conn) -> Path | None:
+    """Choose and validate a database to load; return it, else None.
 
-    Returns True when the database was replaced (the caller reloads the UI).
+    This deliberately does NOT put the file in place. The live database is
+    open; replacing an open database underneath its own connection is what
+    destroyed two real budgets: the connection carries on writing
+    against a file that has been swapped out and the result is the right
+    length and entirely zero bytes.
+
+    So the decision is made here and the ACT is left to the composition
+    root, which owns the connection and can close it first.
+
     Starts in the remembered save file's folder when one is set, else the
     user's Downloads folder.
     """
@@ -198,7 +217,7 @@ def run_load_flow(parent, db_path: Path, conn) -> bool:
         parent, "Load Database", str(start_dir), _DB_FILTER
     )
     if not src:
-        return False
+        return None
     src_path = Path(src)
     if src_path.resolve() == db_path.resolve():
         QMessageBox.warning(
@@ -206,7 +225,7 @@ def run_load_flow(parent, db_path: Path, conn) -> bool:
             "Load",
             "Selected file is the active database - nothing to load.",
         )
-        return False
+        return None
 
     if _has_existing_data(db_path, conn):
         reply = QMessageBox.question(
@@ -221,7 +240,7 @@ def run_load_flow(parent, db_path: Path, conn) -> bool:
             QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
-            return False
+            return None
 
     validation_error = validate_db(src_path)
     if validation_error:
@@ -230,11 +249,6 @@ def run_load_flow(parent, db_path: Path, conn) -> bool:
             "Invalid Database",
             f"Cannot load - invalid ClearBudget database.\n\n{validation_error}",
         )
-        return False
+        return None
 
-    try:
-        shutil.copy2(src_path, db_path)
-        return True
-    except OSError as exc:
-        QMessageBox.critical(parent, "Load Failed", str(exc))
-        return False
+    return src_path

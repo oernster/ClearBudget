@@ -46,6 +46,7 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
     # it: the open databases must close before the files can be replaced and
     # the session returns to the sign-in screen afterwards.
     full_restore_requested = Signal(str)
+    database_load_requested = Signal(str)
 
     def __init__(
         self,
@@ -306,21 +307,34 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         """Save the database to the remembered location (first time: Save As)."""
         from clear_budget.ui.widgets._save_load_flow import run_save_flow
 
-        run_save_flow(self, self.db_path)
+        run_save_flow(self, self._live_connection())
 
     def _on_save_as_database(self) -> None:
         """Prompt for a save file, remember it, then save the database."""
         from clear_budget.ui.widgets._save_load_flow import run_save_as_flow
 
-        run_save_as_flow(self, self.db_path)
+        run_save_as_flow(self, self._live_connection())
+
+    def _live_connection(self):
+        """The session's open SQLite connection, for a consistent snapshot."""
+        return self.month_view_model.budget_service.bill_repo.conn
 
     def _on_load_database(self) -> None:
-        """Replace the active database from a user-chosen save file."""
+        """Choose a database to load and hand the ACT to the composition root.
+
+        The window does not put the file in place itself. This database is
+        open; replacing an open database underneath its own connection
+        destroyed two real budgets: the file was swapped while the
+        connection carried on writing against what it thought was there;
+        what survived was the right length and entirely zero bytes.
+        Only `main.py` can close the connection first, so only `main.py`
+        may do the replacing.
+        """
         from clear_budget.ui.widgets._save_load_flow import run_load_flow
 
-        conn = self.month_view_model.budget_service.bill_repo.conn
-        if run_load_flow(self, self.db_path, conn):
-            self.database_replaced.emit()
+        source = run_load_flow(self, self.db_path, self._live_connection())
+        if source is not None:
+            self.database_load_requested.emit(str(source))
 
     def _on_export_viewer_package(self) -> None:
         """Open the dialog to export a read-only viewer package."""

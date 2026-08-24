@@ -30,6 +30,9 @@ _ICO_NAMES = ("ClearBudget.ico", "clearbudget.ico")
 # volume the filesystem hides the difference. On Linux or on a case-sensitive
 # APFS volume, it does not. Searching both is one tuple against a class of bug
 # that only ever shows up on someone else's machine.
+_RUNTIME_ICON_NAME = "clearbudget_256.png"
+
+
 def _both_cases(stem: str) -> tuple[str, str]:
     """Return ("ClearBudget_x.png", "clearbudget_x.png") for one size stem."""
     return (f"ClearBudget_{stem}.png", f"clearbudget_{stem}.png")
@@ -246,3 +249,20 @@ def find_logo_png_path(*, project_root: Path | None = None) -> Path | None:
         if path.suffix.lower() == ".png":
             return path
     return None
+
+
+def find_runtime_window_icon() -> Path | None:
+    """The PNG the running application sets as its window and taskbar icon.
+
+    Beside the executable first (installed or frozen), then beside the
+    repository's main.py (running from source). It lives here with every
+    other asset lookup rather than in the composition root, so no module
+    resolves an asset by counting directory levels from its own location.
+    """
+    import sys
+
+    beside_exe = Path(sys.executable).resolve().parent / _RUNTIME_ICON_NAME
+    if beside_exe.exists():
+        return beside_exe
+    beside_main = Path(__file__).resolve().parents[2] / _RUNTIME_ICON_NAME
+    return beside_main if beside_main.exists() else None
