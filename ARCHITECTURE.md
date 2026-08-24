@@ -27,7 +27,7 @@ Everything below this section explains how the code satisfies them.
 | An exported PACKAGE is self-contained as a folder: every link is a bare sibling filename and nothing is fetched | `tests/application/reporting/test_package_report.py::TestThePackageIsSelfContained` |
 | User-entered text cannot inject markup into an exported report | `tests/application/reporting/test_reports.py::test_user_text_cannot_inject_markup_into_a_report` |
 | Highlight text takes the ACCENT, never the ring colour: the ring says where focus is, the accent says what is selected. Stated in roles, so it survived both colours being retired | `tests/ui_logic/test_highlight_text_colour.py` |
-| Every colour value in the tree lives in `clear_budget/shared/palette.py` and nowhere else. `ui.theme_tokens`, `installer.ui.themes` and `application.reporting` hold what a colour is FOR and reference it by name; a hex literal anywhere else fails the build. Prose is exempt, so a docstring may still quote a hex it is recording a decision about | `tests/structural/test_colour_source.py` |
+| Every colour value in the tree lives in `clear_budget/shared/palette.py` and nowhere else. `ui.theme_tokens` and `application.reporting` hold what a colour is FOR and reference it by name; the setup program asks `ui.theme_tokens` for the same ROLES rather than choosing its own, so the two surfaces cannot drift apart; a hex literal anywhere else fails the build. Prose is exempt, so a docstring may still quote a hex it is recording a decision about | `tests/structural/test_colour_source.py` |
 | Money is integer pence everywhere. No financial value is ever a float, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object; signed balances are plain `int` pence |
 | Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
 | A budget belonging to another account cannot be opened without that account's password. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
@@ -2007,6 +2007,20 @@ source and the unpacked bundle root when frozen. Every asset lookup uses that
 one anchor rather than counting directory levels from its own module, which is
 what previously resolved one level above the repository in `app.py` while the
 frozen build's `_MEIPASS` branch masked it.
+
+It also LOOKS like the application, which is not decoration: the setup program
+is the first thing a user sees and it should not read as a different product.
+`installer/ui/themes.py` substitutes `ui.theme_tokens.DARK` and `.LIGHT`
+straight into its stylesheet and asks them for ROLES, so the window is
+`window_bg`, an action button is `primary_bg` carrying `primary_text`,
+Uninstall is `danger_btn_bg` and the heading takes `info`, the colour the
+sign-in screen already paints "ClearBudget" with. It used to name its own
+colours: from the same palette module, chosen separately, which still made two
+palettes (a navy window against the app's near-black, a steel-blue button
+against the app's indigo, a grey-blue heading against the app's cyan). Its
+geometry stays its own, every size and radius unchanged, because a setup
+program is a short sequence of big decisions read at arm's length. Contrast was
+re-measured after the swap and is recorded in that module's docstring.
 
 Four behaviours are worth naming because they are what a user notices:
 
