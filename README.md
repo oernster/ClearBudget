@@ -266,7 +266,7 @@ stops on each tab in turn.
 | File | New Budget... | Create a named, empty budget alongside the ones you have and open it; nothing existing is touched |
 | File | Switch Budget... | List, switch between, rename and delete your budgets (also the switch button in the nav tray) |
 | File | Load... | Replace active database from a saved file (validated before write) |
-| File | Save | Copy the database to the remembered save file; the first save prompts for a filename, defaulting to Downloads |
+| File | Save | Copy the database to the remembered save file; the first save prompts for a filename, defaulting to the app's own data folder |
 | File | Save As... | Choose a new save file; the location is remembered between runs |
 | File | Import / Export > Export Read-Only Viewer Package... (admin only) | Bundle a snapshot of the budget into a zip for a viewer account |
 | File | Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
@@ -551,8 +551,11 @@ entered before these existed continues to do.
 
 - **Save** (File > Save or the diskette button in every tab's nav tray): copies
   the active database to the remembered save file, asking before overwriting it.
-  The first ever save prompts for a filename, defaulting to the Downloads
-  folder; the chosen location is remembered between runs
+  The first ever save prompts for a filename, defaulting to the app's own
+  data folder (`%LOCALAPPDATA%\ClearBudget` on Windows, `~/Library/Application
+  Support/ClearBudget` on macOS, `~/.local/share/clearbudget` on Linux), which
+  is where the live databases are; the chosen location is remembered between
+  runs and takes precedence over that default from then on
 - **Save As** (File > Save As...): choose a new save file (`.db` extension
   enforced); becomes the remembered location for future saves
 - **Load** (File > Load... or the folder button beside the diskette): file

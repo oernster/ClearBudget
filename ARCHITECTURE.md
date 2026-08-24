@@ -1067,8 +1067,8 @@ renderings of the same figures to hold in step. Every month any page shows
 - `_save_load_flow.py` - the Save / Save As / Load flows behind the File menu
   and the tray buttons, plus the builders for the tray's icon buttons (load,
   save, cog, bank, info) and their separator. Save copies the database to the
-  remembered location (first save prompts, defaulting to Downloads, then asks
-  before overwriting); Load validates via `db_validation` and confirms before
+  remembered location (first save prompts, defaulting to the app's own data
+  directory via `ui_paths.default_data_dir`, then asks before overwriting); Load validates via `db_validation` and confirms before
   replacing data. The remembered location persists in `ui_settings.json`
   through `clear_budget/ui/save_location.py`, which shares the file with the
   theme without disturbing it (`tests/ui_logic/test_save_location.py`)

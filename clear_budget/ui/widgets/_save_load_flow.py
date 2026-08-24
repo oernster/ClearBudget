@@ -26,7 +26,7 @@ from clear_budget.shared.db_copy import DatabaseCopyError, backup_open_database
 from clear_budget.shared.db_validation import validate_db
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.save_location import load_save_location, store_save_location
-from clear_budget.ui.ui_paths import default_downloads_dir
+from clear_budget.ui.ui_paths import default_data_dir
 
 # One source for the icon-button geometry, shared with the theme toggle.
 from clear_budget.ui.utils.nav_glyph_size import nav_icon_button_size
@@ -178,8 +178,8 @@ def _copy_and_report(parent, conn, dest: Path) -> None:
 def run_save_flow(parent, conn) -> None:
     """Save the database to the remembered location, confirming overwrite.
 
-    With no remembered location yet this IS Save As: the user is prompted for
-    a filename, defaulting to their Downloads folder.
+    With no remembered location yet this IS Save As: the user is prompted
+    for a filename, defaulting to the app's own data directory.
     """
     target = load_save_location()
     if target is None:
@@ -199,9 +199,14 @@ def run_save_flow(parent, conn) -> None:
 
 
 def run_save_as_flow(parent, conn) -> None:
-    """Prompt for a save file, remember it, then save the database to it."""
+    """Prompt for a save file, remember it, then save the database to it.
+
+    Defaults to the app's own data directory, where the live databases are.
+    A saved budget is a copy of one of those and is loaded back into the same
+    application, so it has no reason to be filed with the downloads.
+    """
     remembered = load_save_location()
-    start = remembered if remembered else default_downloads_dir() / _DEFAULT_SAVE_NAME
+    start = remembered if remembered else default_data_dir() / _DEFAULT_SAVE_NAME
     dest, _ = QFileDialog.getSaveFileName(
         parent, "Save Database As", str(start), _DB_FILTER
     )
@@ -241,10 +246,10 @@ def run_load_flow(parent, db_path: Path, conn) -> Path | None:
     root, which owns the connection and can close it first.
 
     Starts in the remembered save file's folder when one is set, else the
-    user's Downloads folder.
+    app's own data directory, which is where Save As offered to put it.
     """
     remembered = load_save_location()
-    start_dir = remembered.parent if remembered else default_downloads_dir()
+    start_dir = remembered.parent if remembered else default_data_dir()
     src, _ = QFileDialog.getOpenFileName(
         parent, "Load Database", str(start_dir), _DB_FILTER
     )

@@ -4,7 +4,10 @@ The path the user last saved the database to is persisted in the same
 app-level `ui_settings.json` the theme uses, so Save can go straight back to
 the same file on the next run. Absent, empty or unreadable settings simply
 mean "no location yet" and Save falls back to prompting, defaulting to the
-user's Downloads folder.
+app's own data directory.
+
+A remembered location WINS over that default, deliberately: the default only
+ever decides where the first save is offered.
 """
 
 from __future__ import annotations
