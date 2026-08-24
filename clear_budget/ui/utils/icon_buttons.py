@@ -19,6 +19,18 @@ be added after the crop, which is what `bottom_pad_px` is for.
 
 from __future__ import annotations
 
+# Built pixmaps, keyed by (spec, height, bottom padding). The sources are
+# full-size masters (over a megapixel each), so decoding and scaling one is
+# worth about a tenth of a second and EVERY TAB BUILDS THE SAME TRAY: without
+# this, ten pictures were decoded five times over and the main window took
+# eight seconds to appear, six of them here. Measured, not estimated.
+#
+# Qt objects, so this cannot be a functools cache built at import time: it
+# needs a QApplication alive. `tab_icons` caches the same way for the same
+# reason; that one was written first, which is why the tab strip was never
+# the slow part.
+_PIXMAP_CACHE: dict[tuple[str, int, int], object] = {}
+
 
 def image_icon_pixmap(spec: str, height_px: int, *, bottom_pad_px: int = 0):
     """`spec` cropped to its artwork and painted `height_px` tall; None if absent.
@@ -32,6 +44,14 @@ def image_icon_pixmap(spec: str, height_px: int, *, bottom_pad_px: int = 0):
     control the same size as its neighbours while lifting a flat-based
     picture off the bottom of its button.
     """
+    key = (spec, int(height_px), int(bottom_pad_px))
+    if key not in _PIXMAP_CACHE:
+        _PIXMAP_CACHE[key] = _build_pixmap(spec, height_px, bottom_pad_px)
+    return _PIXMAP_CACHE[key]
+
+
+def _build_pixmap(spec: str, height_px: int, bottom_pad_px: int):
+    """The uncached work: resolve, crop, scale and pad. None when absent."""
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 
