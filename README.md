@@ -220,7 +220,7 @@ what is deliberately left and what only looks like debt.
   offline and both default to your Downloads folder
 - Full keyboard navigation: Tab or Right steps forward, Shift+Tab or Left
   steps back (wrapping); Up/Down walk table rows; Enter equals Space; focus
-  and hover show a green ring, disabled controls a red one; nothing is focused
+  and hover show a neutral ring, disabled controls a red one; nothing is focused
   on launch until the first keypress
 - The tabs are walked one at a time in the order shown and stepping onto a tab
   never switches to it: Enter or Space does that. The tab you are already
@@ -232,7 +232,7 @@ what is deliberately left and what only looks like debt.
   (the sign-in screen included) and the choice is remembered between sessions
 - Scrollable tabs with scroll position indicators; the same two-row navigation
   tray on every tab, the month or year centred in its upper row with the date
-  colour-coded by financial health (green/amber/red)
+  colour-coded by financial health (safe, caution, danger)
 - Opens on the monitor you started it from, centred, rather than on whichever
   display the system calls primary; dialogs open over the window that raised
   them, focused on their first usable control

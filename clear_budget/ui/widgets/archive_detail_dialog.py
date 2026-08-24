@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.domain.value_objects.year_month import YearMonth
-from clear_budget.ui import ui_scale
+from clear_budget.ui import theme, ui_scale
 from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 
@@ -51,7 +51,13 @@ class ArchiveDetailDialog(QDialog):
                 f"Balance: {self.summary.balance}"
             )
             summary_label = QLabel(summary_text)
-            summary_label.setStyleSheet(ui_scale.style("font-size: 17px; color: #888;"))
+            # Was a hardcoded grey that ignored the theme, so it measured
+            # 3.5:1 on the light theme's white. It follows the theme now.
+            summary_label.setStyleSheet(
+                ui_scale.style(
+                    f"font-size: 17px; color: {theme.colours()['text_muted']};"
+                )
+            )
             layout.addWidget(summary_label)
 
         # Bills table

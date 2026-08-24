@@ -10,6 +10,7 @@ time would keep its original colour.
 
 from __future__ import annotations
 
+from clear_budget.shared import palette
 from clear_budget.ui import ui_scale
 from clear_budget.ui.theme_tokens import (
     STATE_AT_RISK,
@@ -20,7 +21,7 @@ from clear_budget.ui.theme_tokens import (
 
 # The caution amber is a light fill in both themes, so its banner takes dark
 # text where the other states take the usual white.
-_BANNER_FG_ON_CAUTION = "#1a1a1a"
+_BANNER_FG_ON_CAUTION = palette.GREY_05
 # Unscaled font sizes of the semantic label roles.
 _SMALL_LABEL_FONT_PX = 12
 _BODY_LABEL_FONT_PX = 16
@@ -99,7 +100,7 @@ QLabel#LabelValue {{
 QLabel#LabelGood {{
     font-size: {value}px;
     font-weight: bold;
-    color: {t["ring"]};
+    color: {s[STATE_SAFE]};
     padding: 5px;
 }}
 

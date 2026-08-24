@@ -1,14 +1,18 @@
-"""Qt-free tests for one app-wide rule: highlight text is teal, never green.
+"""Qt-free tests for one app-wide rule: highlight text takes the ACCENT, never
+the ring colour.
 
-Green belongs to the RING, the border that says where the pointer or the
-keyboard is. The words inside that ring take the accent. Painting the text in
-the ring's own green made a hovered tab read as a second, slightly different
-selection sitting next to the real one, two greens a few degrees apart on the
-same strip.
+The ring is the border that says where the pointer or the keyboard is. The
+words inside it take the accent instead. Painting the text in the ring's own
+colour made a hovered tab read as a second, slightly different selection
+sitting beside the real one, two near-identical shades on the same strip.
+
+Stated in roles rather than in hues on purpose. The rule was written when the
+ring was green and the accent teal; both colours have since been retired and
+the rule did not move, because it was never about which colours they were.
 
 The rule was never about the tab bar, which is exactly why it outlived it. The
 strip that provoked it is gone, the tabs being icon buttons in the navigation
-tray now, yet the rule still binds every surface where a green ring goes round
+tray now, yet the rule still binds every surface where a ring goes round
 TEXT: the menu bar and the menu items, which is what is asserted below. The
 tab buttons carry no text, so there is nothing there for this rule to govern;
 their ring and their current-tab mark are held by `_theme_controls` instead.
@@ -36,7 +40,7 @@ _HIGHLIGHTS = {
     "QMenu::item:selected": menu_qss,
 }
 
-# The highlights that put a green ring round the text: border and text differ.
+# The highlights that put a ring round the text: border and text differ.
 _RINGED = (
     "QMenuBar::item:selected",
     "QMenu::item:selected",
@@ -72,8 +76,8 @@ def test_no_highlight_paints_its_text_in_the_ring_colour(theme_name, selector) -
 
 @pytest.mark.parametrize("theme_name", _THEMES)
 @pytest.mark.parametrize("selector", _RINGED)
-def test_the_ring_around_that_text_stays_green(theme_name, selector) -> None:
-    """Teal text, green border: the two must not collapse into one colour."""
+def test_the_ring_around_that_text_is_the_ring_colour(theme_name, selector) -> None:
+    """Accent text, ring border: the two must not collapse into one colour."""
     body = _rule_body(theme_name, selector)
     border = _declared(body, "border-color") or _declared(body, "border")
     assert tokens_for(theme_name)["ring"] in border

@@ -6,6 +6,7 @@ from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.application.dto.solvency_report import SolvencyReport
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.shared import palette
 
 
 class SolvencyViewModel(QObject):
@@ -58,7 +59,7 @@ class SolvencyViewModel(QObject):
     def get_status_color(self) -> str:
         """Return color code based on solvency status."""
         if not self.solvency_report:
-            return "#9ca3af"
+            return palette.GREY_65
         if self.solvency_report.is_solvent:
-            return "#b8a1d9"
-        return "#f87171"
+            return palette.VIOLET_74
+        return palette.RED_71

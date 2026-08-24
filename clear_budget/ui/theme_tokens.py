@@ -3,110 +3,121 @@
 Every colour the stylesheet builders (theme_qss / _theme_controls) and the
 theme-aware inline styles use is named here once per theme. The keys are
 semantic (what the colour is FOR), so the light theme is a second dict, not a
-second stylesheet. Ring colours follow the app-wide three-state model: no
-ring at rest, the green ring token on hover/focus while enabled, the danger
-token permanently while disabled.
+second stylesheet. The VALUES all come from `shared.palette`, which is the one
+place a colour is allowed to be written down; a structural test fails the build
+on a hex literal anywhere else.
+
+Ring colours follow the app-wide three-state model: no ring at rest, the ring
+token on hover or focus while enabled, the danger token permanently while
+disabled. The ring is a near neutral rather than a hue, because it is CHROME:
+it says the system is responding, while hue is left to mean something. That is
+also why `accent` is a separate token even though the two were once one colour.
 """
 
 from __future__ import annotations
+from clear_budget.shared import palette
 
 THEME_DARK = "dark"
 THEME_LIGHT = "light"
 
 DARK: dict[str, str] = {
-    "window_bg": "#0a0a0d",
-    "panel_bg": "#242938",
-    "panel_alt_bg": "#2d3344",
-    "inset_bg": "#06070c",
-    "calendar_nav_bg": "#1a1f2e",
-    "border": "#3a4156",
-    "separator": "#1e3a5f",
-    "selection_bg": "#1e3a5f",
-    "text": "#e5e7eb",
-    "text_muted": "#9ca3af",
-    "text_disabled": "#6b7280",
-    "checkbox_hover": "#d1d5db",
-    "accent": "#2dd4bf",
-    "info": "#00d4ff",
-    "ring": "#34d399",
-    "danger": "#f87171",
-    "warn": "#fbbf24",
-    "primary_bg": "#3b5bdb",
-    "primary_hover": "#4a68d6",
-    "primary_pressed": "#2f4bb8",
-    "primary_text": "#ffffff",
-    "danger_btn_bg": "#7a1f25",
-    "danger_btn_hover": "#6a1b21",
-    "disabled_fill": "#3a4156",
-    "scroll_handle": "#9aa3c2",
-    "scroll_handle_hover": "#c4cae0",
-    "calendar_sel_text": "#0b0f17",
-    "input_bg": "#0d1b2a",
-    "input_text": "#e2e8f0",
-    "link": "#60a5fa",
-    "link_hover": "#93c5fd",
-    "text_subtle": "#94a3b8",
-    "warn_strong": "#f59e0b",
-    "danger_strong": "#dc2626",
-    "hover_fill": "#1a1a2e",
-    "pill_up_bg": "#1e3a8a",
-    "pill_down_bg": "#78350f",
-    "card_stat_bg": "#1f2937",
-    "cell_tight_bg": "#7f1d1d",
-    "cell_watch_bg": "#f59e0b",
-    "cell_ample_bg": "#14532d",
-    "cell_tight_fg": "#ffffff",
-    "cell_watch_fg": "#1a1a1a",
-    "cell_ample_fg": "#ffffff",
-    "bar_text": "#ffffff",
+    "window_bg": palette.GREY_05,
+    "panel_bg": palette.MUTED_BLUE_18,
+    "panel_alt_bg": palette.MUTED_BLUE_22,
+    "inset_bg": palette.GREY_05,
+    "calendar_nav_bg": palette.MUTED_BLUE_18,
+    "border": palette.MUTED_BLUE_28,
+    "separator": palette.BLUE_25,
+    "selection_bg": palette.BLUE_25,
+    "text": palette.GREY_91,
+    "text_muted": palette.GREY_65,
+    "text_disabled": palette.GREY_46,
+    "checkbox_hover": palette.MUTED_BLUE_84,
+    "accent": palette.VIOLET_85,
+    "info": palette.CYAN_50,
+    "ring": palette.MUTED_BLUE_84,
+    "danger": palette.RED_71,
+    "warn": palette.AMBER_56,
+    "primary_bg": palette.INDIGO_55,
+    "primary_hover": palette.BLUE_56,
+    "primary_pressed": palette.BLUE_45,
+    # The one white that does NOT collapse into `text`. A button label sits on
+    # a saturated blue; the softer white measures 4.00:1 against the hover fill
+    # where pure white measures 4.95:1. The collapse was worth making everywhere
+    # else. Here it would cost the label its AA contrast.
+    "primary_text": palette.GREY_100,
+    "danger_btn_bg": palette.RED_31,
+    "danger_btn_hover": palette.RED_24,
+    "disabled_fill": palette.MUTED_BLUE_28,
+    "scroll_handle": palette.GREY_65,
+    "scroll_handle_hover": palette.MUTED_BLUE_84,
+    "calendar_sel_text": palette.GREY_05,
+    "input_bg": palette.MUTED_BLUE_18,
+    "input_text": palette.GREY_91,
+    "link": palette.BLUE_68,
+    "link_hover": palette.BLUE_78,
+    "text_subtle": palette.GREY_65,
+    "warn_strong": palette.AMBER_50,
+    "danger_strong": palette.RED_51,
+    "hover_fill": palette.MUTED_BLUE_22,
+    "pill_up_bg": palette.BLUE_25,
+    "pill_down_bg": palette.ORANGE_26,
+    "card_stat_bg": palette.MUTED_BLUE_18,
+    "cell_tight_bg": palette.RED_31,
+    "cell_watch_bg": palette.AMBER_50,
+    "cell_ample_bg": palette.MUTED_VIOLET_25,
+    "cell_tight_fg": palette.GREY_91,
+    "cell_watch_fg": palette.GREY_05,
+    "cell_ample_fg": palette.GREY_91,
+    "bar_text": palette.GREY_91,
 }
 
 LIGHT: dict[str, str] = {
-    "window_bg": "#f3f4f6",
-    "panel_bg": "#ffffff",
-    "panel_alt_bg": "#e5e7eb",
-    "inset_bg": "#e5e7eb",
-    "calendar_nav_bg": "#e2e8f0",
-    "border": "#cbd5e1",
-    "separator": "#cbd5e1",
-    "selection_bg": "#bfdbfe",
-    "text": "#111827",
-    "text_muted": "#6b7280",
-    "text_disabled": "#9ca3af",
-    "checkbox_hover": "#475569",
-    "accent": "#0d9488",
-    "info": "#0369a1",
-    "ring": "#059669",
-    "danger": "#dc2626",
-    "warn": "#b45309",
-    "primary_bg": "#3b5bdb",
-    "primary_hover": "#4a68d6",
-    "primary_pressed": "#2f4bb8",
-    "primary_text": "#ffffff",
-    "danger_btn_bg": "#dc2626",
-    "danger_btn_hover": "#b91c1c",
-    "disabled_fill": "#d1d5db",
-    "scroll_handle": "#94a3b8",
-    "scroll_handle_hover": "#64748b",
-    "calendar_sel_text": "#ffffff",
-    "input_bg": "#ffffff",
-    "input_text": "#111827",
-    "link": "#2563eb",
-    "link_hover": "#1d4ed8",
-    "text_subtle": "#4b5563",
-    "warn_strong": "#b45309",
-    "danger_strong": "#b91c1c",
-    "hover_fill": "#e5e7eb",
-    "pill_up_bg": "#1d4ed8",
-    "pill_down_bg": "#b45309",
-    "card_stat_bg": "#eef2f7",
-    "cell_tight_bg": "#fee2e2",
-    "cell_watch_bg": "#fef3c7",
-    "cell_ample_bg": "#dcfce7",
-    "cell_tight_fg": "#7f1d1d",
-    "cell_watch_fg": "#78350f",
-    "cell_ample_fg": "#14532d",
-    "bar_text": "#111827",
+    "window_bg": palette.MUTED_BLUE_96,
+    "panel_bg": palette.GREY_100,
+    "panel_alt_bg": palette.GREY_91,
+    "inset_bg": palette.GREY_91,
+    "calendar_nav_bg": palette.GREY_91,
+    "border": palette.MUTED_BLUE_84,
+    "separator": palette.MUTED_BLUE_84,
+    "selection_bg": palette.BLUE_87,
+    "text": palette.MUTED_BLUE_11,
+    "text_muted": palette.GREY_46,
+    "text_disabled": palette.GREY_65,
+    "checkbox_hover": palette.MUTED_BLUE_35,
+    "accent": palette.PURPLE_47,
+    "info": palette.SKY_32,
+    "ring": palette.MUTED_BLUE_27_H215,
+    "danger": palette.RED_51,
+    "warn": palette.ORANGE_37,
+    "primary_bg": palette.INDIGO_55,
+    "primary_hover": palette.BLUE_56,
+    "primary_pressed": palette.BLUE_45,
+    "primary_text": palette.GREY_100,
+    "danger_btn_bg": palette.RED_51,
+    "danger_btn_hover": palette.RED_35,
+    "disabled_fill": palette.GREY_84,
+    "scroll_handle": palette.GREY_46,
+    "scroll_handle_hover": palette.MUTED_BLUE_35,
+    "calendar_sel_text": palette.GREY_100,
+    "input_bg": palette.GREY_100,
+    "input_text": palette.MUTED_BLUE_11,
+    "link": palette.BLUE_53,
+    "link_hover": palette.BLUE_48,
+    "text_subtle": palette.GREY_46,
+    "warn_strong": palette.ORANGE_37,
+    "danger_strong": palette.RED_42,
+    "hover_fill": palette.GREY_91,
+    "pill_up_bg": palette.BLUE_48,
+    "pill_down_bg": palette.ORANGE_37,
+    "card_stat_bg": palette.GREY_100,
+    "cell_tight_bg": palette.RED_94,
+    "cell_watch_bg": palette.AMBER_89,
+    "cell_ample_bg": palette.VIOLET_95,
+    "cell_tight_fg": palette.RED_31,
+    "cell_watch_fg": palette.ORANGE_26,
+    "cell_ample_fg": palette.MUTED_VIOLET_45,
+    "bar_text": palette.MUTED_BLUE_11,
 }
 
 # Chart series colours are DATA encodings, not chrome, so they are a separate
@@ -115,8 +126,8 @@ LIGHT: dict[str, str] = {
 # across a theme switch.
 # The following curve is deliberately outside the series palette in both
 # themes, so it never reads as one more plotted series.
-CURVE_DARK = "#e879f9"
-CURVE_LIGHT = "#a21caf"
+CURVE_DARK = palette.FUCHSIA_73
+CURVE_LIGHT = palette.FUCHSIA_40
 
 # ROLE colours, for a chart plotting a SINGLE series. With one series there is
 # nothing to tell apart, so the mark is free to say what it IS rather than
@@ -137,16 +148,16 @@ CURVE_LIGHT = "#a21caf"
 # were not.
 #
 # The bar colour was a bright mint green and is now a muted lavender. The green
-# read as glare at a lightness of 52%; it was also the same literal as the
-# focus ring, so the two roles could not move apart. The ring keeps the green;
-# this does not.
+# read as glare at a lightness of 52%; it was also the same literal as the focus
+# ring, so neither role could move without dragging the other along. Splitting
+# them is what let the ring go neutral and the bar go lavender in one pass.
 #
 # These do NOT apply to a multi-series chart (one series per credit card),
 # where telling one card from another is the whole job and the palette does it.
-CHART_LINE_DARK = "#0ea5e9"
-CHART_LINE_LIGHT = "#075985"
-CHART_BAR_DARK = "#b8a1d9"
-CHART_BAR_LIGHT = "#6b4c9a"
+CHART_LINE_DARK = palette.CYAN_48
+CHART_LINE_LIGHT = palette.SKY_27
+CHART_BAR_DARK = palette.VIOLET_74
+CHART_BAR_LIGHT = palette.MUTED_VIOLET_45
 
 # A day below zero but still inside an ARRANGED overdraft is amber, not red.
 # The facility exists to absorb exactly that day, so calling it red says a
@@ -157,8 +168,8 @@ CHART_BAR_LIGHT = "#6b4c9a"
 # describe the same position in two different colours. With no facility
 # arranged the floor is zero, so this colour never appears and a below-zero
 # bar is red exactly as before.
-CHART_BAR_WITHIN_DARK = "#f59e0b"
-CHART_BAR_WITHIN_LIGHT = "#b45309"
+CHART_BAR_WITHIN_DARK = palette.AMBER_50
+CHART_BAR_WITHIN_LIGHT = palette.ORANGE_37
 
 # The single-series curve follows the same days the line would, so it takes
 # the line's blue. The multi-series curve keeps its own hue: with up to eight
@@ -168,30 +179,31 @@ SOLO_CURVE_DARK = CHART_LINE_DARK
 SOLO_CURVE_LIGHT = CHART_LINE_LIGHT
 
 # The first slot is a near neutral rather than a hue of its own. Every other
-# slot is a saturated colour and the lavender the single-series bars now take
-# sits only ten degrees from the violet in slot four, so putting it here would
-# give two cards the same face. A near neutral is told apart by SATURATION
-# instead, which none of the other seven compete for.
+# slot carries a hue; a near neutral is told apart by SATURATION, which none of
+# the other seven compete for. Slot four is the app's one lavender, the
+# same colour the safe state and the single-series bars take: a solo chart and
+# a multi-series chart never appear together, so they cannot be confused.
+# Slot six was a teal and is an indigo, since the teal was retired app-wide.
 SERIES_DARK = (
-    "#cbd5e1",
-    "#60a5fa",
-    "#fbbf24",
-    "#a78bfa",
-    "#f472b6",
-    "#2dd4bf",
-    "#f87171",
-    "#fb923c",
+    palette.MUTED_BLUE_84,
+    palette.BLUE_68,
+    palette.AMBER_56,
+    palette.VIOLET_74,
+    palette.PINK_70,
+    palette.INDIGO_74,
+    palette.RED_71,
+    palette.ORANGE_61,
 )
 
 SERIES_LIGHT = (
-    "#64748b",
-    "#2563eb",
-    "#d97706",
-    "#7c3aed",
-    "#db2777",
-    "#0d9488",
-    "#dc2626",
-    "#ea580c",
+    palette.MUTED_BLUE_47,
+    palette.BLUE_53,
+    palette.ORANGE_44,
+    palette.MUTED_VIOLET_45,
+    palette.PINK_51,
+    palette.INDIGO_59,
+    palette.RED_51,
+    palette.ORANGE_48,
 )
 
 # Solvency states. Like the series palette these are data colours, used both as
@@ -208,17 +220,17 @@ STATE_CAUTION = "caution"
 STATE_SAFE = "safe"
 
 STATES_DARK = {
-    STATE_RED: "#f87171",
-    STATE_AT_RISK: "#f59e0b",
-    STATE_CAUTION: "#fbbf24",
-    STATE_SAFE: "#b8a1d9",
+    STATE_RED: palette.RED_71,
+    STATE_AT_RISK: palette.AMBER_50,
+    STATE_CAUTION: palette.AMBER_56,
+    STATE_SAFE: palette.VIOLET_74,
 }
 
 STATES_LIGHT = {
-    STATE_RED: "#dc2626",
-    STATE_AT_RISK: "#c2410c",
-    STATE_CAUTION: "#b45309",
-    STATE_SAFE: "#6b4c9a",
+    STATE_RED: palette.RED_51,
+    STATE_AT_RISK: palette.ORANGE_40,
+    STATE_CAUTION: palette.ORANGE_37,
+    STATE_SAFE: palette.MUTED_VIOLET_45,
 }
 
 _TOKENS_BY_THEME = {THEME_DARK: DARK, THEME_LIGHT: LIGHT}

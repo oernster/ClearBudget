@@ -25,6 +25,9 @@ from dataclasses import dataclass
 # The sun and the moon come FROM the application, never a second copy of
 # them. See installer.ui._theme_toggle for why the installer borrows its
 # toggle face rather than declaring one.
+from string import Template
+
+from clear_budget.shared import palette
 from clear_budget.ui.theme import toggle_glyph, toggle_tooltip
 from clear_budget.ui.theme_tokens import THEME_DARK, THEME_LIGHT
 
@@ -41,70 +44,70 @@ LIGHT = Theme(
     name="light",
     toggle_glyph=toggle_glyph(THEME_LIGHT),
     toggle_tooltip=toggle_tooltip(THEME_LIGHT),
-    qss="""
-        QWidget { background: #f4f4f4; color: #1f2937; font-family: 'Segoe UI'; }
+    qss=Template("""
+        QWidget { background: $GREY_96; color: $MUTED_BLUE_17; font-family: 'Segoe UI'; }
         QLabel#HeaderTitle { font-size: 38px; font-weight: 700; }
-        QLabel#HeaderVersion { font-size: 14px; color: #6b7280; }
-        QLabel#SubTitle { font-size: 22px; font-weight: 700; color: #374151; }
-        QLabel#StatusLine { font-size: 13px; color: #6b7280; }
+        QLabel#HeaderVersion { font-size: 14px; color: $GREY_46; }
+        QLabel#SubTitle { font-size: 22px; font-weight: 700; color: $MUTED_BLUE_27_H217; }
+        QLabel#StatusLine { font-size: 13px; color: $GREY_46; }
 
         QCheckBox { spacing: 10px; font-size: 13px; }
         QCheckBox::indicator { width: 16px; height: 16px; }
 
         QPushButton#ThemeToggle {
-            background: #5b7799; color: white; border: none;
+            background: $MUTED_BLUE_48; color: white; border: none;
             padding: 0px; border-radius: 18px; font-weight: 600;
         }
-        QPushButton#ThemeToggle:hover { background: #4f6885; }
+        QPushButton#ThemeToggle:hover { background: $MUTED_BLUE_42; }
 
         QPushButton#LicenceButton {
-            background: #5b7799; color: white; border: none;
+            background: $MUTED_BLUE_48; color: white; border: none;
             padding: 10px 18px; border-radius: 18px; font-weight: 600;
         }
-        QPushButton#LicenceButton:hover { background: #4f6885; }
+        QPushButton#LicenceButton:hover { background: $MUTED_BLUE_42; }
 
         QPushButton#PrimaryAction {
-            background: #5b7799; color: white; border: none;
+            background: $MUTED_BLUE_48; color: white; border: none;
             padding: 14px 26px; border-radius: 26px; font-size: 14px;
             font-weight: 700; min-width: 150px;
         }
-        QPushButton#PrimaryAction:hover { background: #4f6885; }
+        QPushButton#PrimaryAction:hover { background: $MUTED_BLUE_42; }
 
         QPushButton#DangerAction {
-            background: #7a1f25; color: white; border: none;
+            background: $RED_30; color: white; border: none;
             padding: 12px 26px; border-radius: 22px; font-size: 13px;
             font-weight: 700; min-width: 190px;
         }
-        QPushButton#DangerAction:hover { background: #6a1b21; }
+        QPushButton#DangerAction:hover { background: $RED_26; }
 
         QLineEdit {
             background: white;
-            border: 1px solid #d1d5db;
+            border: 1px solid $GREY_84;
             border-radius: 10px;
             padding: 8px;
         }
         QPushButton#BrowseButton {
-            background: #e5e7eb;
+            background: $GREY_91;
             border: none;
             border-radius: 10px;
             padding: 8px 12px;
         }
-        QPushButton#BrowseButton:hover { background: #dbe0e8; }
+        QPushButton#BrowseButton:hover { background: $MUTED_BLUE_88; }
 
         QProgressBar#ProgressBar {
             background: white;
-            border: 1px solid #d1d5db;
+            border: 1px solid $GREY_84;
             border-radius: 10px;
             height: 16px;
             text-align: center;
         }
         QProgressBar#ProgressBar::chunk {
-            background: #6b89ab;
+            background: $MUTED_BLUE_55;
             border-radius: 8px;
             width: 10px;
             margin: 1px;
         }
-    """,
+    """).substitute(vars(palette)),
 )
 
 
@@ -112,69 +115,69 @@ DARK = Theme(
     name="dark",
     toggle_glyph=toggle_glyph(THEME_DARK),
     toggle_tooltip=toggle_tooltip(THEME_DARK),
-    qss="""
-        QWidget { background: #161827; color: #e5e7eb; font-family: 'Segoe UI'; }
-        QLabel#HeaderTitle { font-size: 38px; font-weight: 700; color: #a3a8c9; }
-        QLabel#HeaderVersion { font-size: 14px; color: #9ca3af; }
-        QLabel#SubTitle { font-size: 22px; font-weight: 700; color: #a3a8c9; }
-        QLabel#StatusLine { font-size: 13px; color: #cbd5e1; }
+    qss=Template("""
+        QWidget { background: $MUTED_INDIGO_12; color: $GREY_91; font-family: 'Segoe UI'; }
+        QLabel#HeaderTitle { font-size: 38px; font-weight: 700; color: $MUTED_INDIGO_71; }
+        QLabel#HeaderVersion { font-size: 14px; color: $GREY_65; }
+        QLabel#SubTitle { font-size: 22px; font-weight: 700; color: $MUTED_INDIGO_71; }
+        QLabel#StatusLine { font-size: 13px; color: $MUTED_BLUE_84; }
 
         QCheckBox { spacing: 10px; font-size: 13px; }
         QCheckBox::indicator { width: 16px; height: 16px; }
 
         QPushButton#ThemeToggle {
-            background: #5b7799; color: white; border: none;
+            background: $MUTED_BLUE_48; color: white; border: none;
             padding: 0px; border-radius: 18px; font-weight: 600;
         }
-        QPushButton#ThemeToggle:hover { background: #4f6885; }
+        QPushButton#ThemeToggle:hover { background: $MUTED_BLUE_42; }
 
         QPushButton#LicenceButton {
-            background: #5b7799; color: white; border: none;
+            background: $MUTED_BLUE_48; color: white; border: none;
             padding: 10px 18px; border-radius: 18px; font-weight: 600;
         }
-        QPushButton#LicenceButton:hover { background: #4f6885; }
+        QPushButton#LicenceButton:hover { background: $MUTED_BLUE_42; }
 
         QPushButton#PrimaryAction {
-            background: #5b7799; color: white; border: none;
+            background: $MUTED_BLUE_48; color: white; border: none;
             padding: 14px 26px; border-radius: 26px; font-size: 14px;
             font-weight: 700; min-width: 150px;
         }
-        QPushButton#PrimaryAction:hover { background: #4f6885; }
+        QPushButton#PrimaryAction:hover { background: $MUTED_BLUE_42; }
 
         QPushButton#DangerAction {
-            background: #7a1f25; color: white; border: none;
+            background: $RED_30; color: white; border: none;
             padding: 12px 26px; border-radius: 22px; font-size: 13px;
             font-weight: 700; min-width: 190px;
         }
-        QPushButton#DangerAction:hover { background: #6a1b21; }
+        QPushButton#DangerAction:hover { background: $RED_26; }
 
         QLineEdit {
-            background: #0f1220;
-            border: 1px solid #2b2f44;
+            background: $MUTED_INDIGO_09;
+            border: 1px solid $MUTED_INDIGO_22;
             border-radius: 10px;
             padding: 8px;
         }
         QPushButton#BrowseButton {
-            background: #24283b;
+            background: $MUTED_INDIGO_19;
             border: none;
             border-radius: 10px;
             padding: 8px 12px;
-            color: #e5e7eb;
+            color: $GREY_91;
         }
-        QPushButton#BrowseButton:hover { background: #2b3050; }
+        QPushButton#BrowseButton:hover { background: $MUTED_INDIGO_24; }
 
         QProgressBar#ProgressBar {
-            background: #0f1220;
-            border: 1px solid #2b2f44;
+            background: $MUTED_INDIGO_09;
+            border: 1px solid $MUTED_INDIGO_22;
             border-radius: 10px;
             height: 16px;
             text-align: center;
         }
         QProgressBar#ProgressBar::chunk {
-            background: #6b89ab;
+            background: $MUTED_BLUE_55;
             border-radius: 8px;
             width: 10px;
             margin: 1px;
         }
-    """,
+    """).substitute(vars(palette)),
 )

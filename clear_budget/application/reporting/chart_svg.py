@@ -24,15 +24,23 @@ from __future__ import annotations
 from math import ceil
 
 from clear_budget.application.reporting.curve import bezier_segments, daily_totals
+from clear_budget.shared import palette
 
 # The app's dark palette, mirrored here because the application layer may not
 # import ui.theme_tokens. Values match DARK / SERIES_DARK / CURVE_DARK.
-PANEL = "#242938"
-MUTED = "#9ca3af"
-GRID = "#3a4156"
-ZERO_LINE = "#f87171"
-CURVE = "#e879f9"
-SERIES = ("#60a5fa", "#cbd5e1", "#fbbf24", "#c084fc", "#22d3ee", "#fb923c")
+PANEL = palette.MUTED_BLUE_18
+MUTED = palette.GREY_65
+GRID = palette.MUTED_BLUE_28
+ZERO_LINE = palette.RED_71
+CURVE = palette.FUCHSIA_73
+SERIES = (
+    palette.MUTED_BLUE_84,
+    palette.BLUE_68,
+    palette.AMBER_56,
+    palette.VIOLET_74,
+    palette.PINK_70,
+    palette.INDIGO_74,
+)
 
 # Role colours for a chart plotting a SINGLE series, mirroring
 # CHART_LINE_DARK / CHART_BAR_DARK / SOLO_CURVE_DARK in ui.theme_tokens. With
@@ -41,14 +49,14 @@ SERIES = ("#60a5fa", "#cbd5e1", "#fbbf24", "#c084fc", "#22d3ee", "#fb923c")
 # line stays neutral because it spans positive and negative days alike; a bar
 # is one day, so the safe colour states a fact about a day that really is in
 # credit. A below-zero bar still fills in ZERO_LINE's red.
-SOLO_LINE = "#0ea5e9"
-SOLO_BAR = "#b8a1d9"
+SOLO_LINE = palette.CYAN_48
+SOLO_BAR = palette.VIOLET_74
 SOLO_CURVE = SOLO_LINE
 # A day below zero but inside an ARRANGED overdraft, mirroring
 # CHART_BAR_WITHIN_DARK. The facility is there to absorb that day, so red
 # would say a payment bounced when none did; red stays for a day past the
 # agreed floor. With no facility the floor is zero and this never appears.
-SOLO_BAR_WITHIN = "#f59e0b"
+SOLO_BAR_WITHIN = palette.AMBER_50
 
 WIDTH = 880
 HEIGHT = 380

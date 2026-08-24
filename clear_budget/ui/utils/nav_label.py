@@ -5,10 +5,12 @@ names are re-exported by nav_header (and from there by format_helpers), so
 the sixty-odd call sites did not move.
 """
 
+from clear_budget.shared import palette
+
 # Neutral colour for a nav month/year label before any solvency-driven colour
 # is applied. The Solvency tab overrides this with a health colour and
 # broadcasts it so every tab's nav label stays consistent.
-NAV_LABEL_DEFAULT_COLOR = "#9ca3af"
+NAV_LABEL_DEFAULT_COLOR = palette.GREY_65
 
 # Breathing room around the month/year text, applied as a real QLabel margin,
 # NOT stylesheet padding. Stylesheet padding on a QLabel is painted but not

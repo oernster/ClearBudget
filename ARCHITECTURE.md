@@ -25,7 +25,8 @@ Everything below this section explains how the code satisfies them.
 | With ONE deliberate exception: the month in progress opens from the recorded bank balance, not the previous month's projected close. The recorded balance is the only figure in the report that is a fact; the gap is the drift the report exists to expose | `tests/application/test_projection_series.py::test_the_current_month_is_anchored_on_the_recorded_balance` and `::test_months_outside_the_current_one_still_chain_when_today_is_inside` |
 | An exported HTML file references nothing outside itself, so it survives being emailed and opens offline | `tests/application/reporting/test_reports.py::test_a_report_references_nothing_outside_itself` |
 | User-entered text cannot inject markup into an exported report | `tests/application/reporting/test_reports.py::test_user_text_cannot_inject_markup_into_a_report` |
-| Highlight text is teal, never green: green is the ring saying where focus is, not what is selected | `tests/ui_logic/test_highlight_text_colour.py` |
+| Highlight text takes the ACCENT, never the ring colour: the ring says where focus is, the accent says what is selected. Stated in roles, so it survived both colours being retired | `tests/ui_logic/test_highlight_text_colour.py` |
+| Every colour value in the tree lives in `clear_budget/shared/palette.py` and nowhere else. `ui.theme_tokens`, `installer.ui.themes` and `application.reporting` hold what a colour is FOR and reference it by name; a hex literal anywhere else fails the build. Prose is exempt, so a docstring may still quote a hex it is recording a decision about | `tests/structural/test_colour_source.py` |
 | Money is integer pence everywhere. No financial value is ever a float, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object; signed balances are plain `int` pence |
 | Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
@@ -1199,7 +1200,7 @@ renderings of the same figures to hold in step. Every month any page shows
   (`switch_images.py`, the spin-arrow image pattern: generated per theme
   colour into the app data directory, because a checkbox indicator has no
   knob subcontrol for QSS to draw). Its ring stays the widget's own border
-  (hover/focus green, disabled red), because a widget-state-then-subcontrol
+  (hover/focus the ring colour, disabled red), because a widget-state-then-subcontrol
   selector is parsed and silently ignored A ring that disagrees with the
   drawing does not present as a wrong order, it presents as a SKIPPED control,
   because the user tabs past where a button visibly is and lands somewhere
@@ -1229,7 +1230,7 @@ renderings of the same figures to hold in step. Every month any page shows
   to be added. Left and Right deliberately still STEP THE RING here rather than
   scrolling horizontally, unlike the general scrollable-region rule: nothing in
   this app scrolls sideways and Left/Right stepping everywhere is what stops
-  focus being trapped. The stop paints the same green ring on focus and none at
+  focus being trapped. The stop paints the same ring on focus and none at
   rest (measured: 0 pixels at rest, ~2980 focused, both themes), with no hover
   rule, since the pointer sits over the page most of the time the app is open
 - EVERY TAB IS A STOP on the ring, which now costs nothing to say: the
@@ -1264,7 +1265,7 @@ renderings of the same figures to hold in step. Every month any page shows
   acted in, a dialog was opened to do one specific thing
 - A TAB SWITCH returns to that same sink. Switching hides the control that was
   clicked, so Qt hands its focus to whatever the newly shown page offers next
-  in its chain; that control then wore the green ring beside the current tab's
+  in its chain; that control then wore the ring beside the current tab's
   accent border and the tray read as two tabs being current at once. Qt has
   already moved the focus by the time `currentChanged` arrives (measured, not
   assumed), so the handler sets the sink last and nothing overwrites it. A new
@@ -1273,8 +1274,8 @@ renderings of the same figures to hold in step. Every month any page shows
   is connected AND that the handler it names touches the sink, because a
   connection to a handler that had stopped focusing anything would otherwise
   read as wired
-- Ring colours are three-state, enforced in the QSS: no ring at rest, a green
-  ring while an enabled control is hovered or focused, a permanent red ring
+- Ring colours are three-state, enforced in the QSS: no ring at rest, the ring
+  colour while an enabled control is hovered or focused, a permanent red ring
   while disabled (hover/focus rules are gated on `:enabled`)
 - `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
   for the Credit Cards tab
@@ -1324,9 +1325,9 @@ renderings of the same figures to hold in step. Every month any page shows
   through a dynamic property plus a repolish (`mark_current_tab`), never an
   inline stylesheet: an inline colour survives a theme switch and leaves the
   mark painted in the outgoing theme. It was a full accent rectangle once;
-  at 2px the accent teal is indistinguishable from the ring green, so on
+  at 2px the accent was indistinguishable from the ring, so on
   launch the current tab read as though it were hover-focused. Rectangles are
-  the ring vocabulary (green hover/focus, red disabled); the mark keeps to a
+  the ring vocabulary (the ring colour on hover or focus, red disabled); the mark keeps to a
   fill and an underline so the two can never be confused
 
 **Sign-in and remembered accounts**:
@@ -1514,8 +1515,8 @@ renderings of the same figures to hold in step. Every month any page shows
   not `setFont`: the app stylesheet sets `font-size` on `QWidget` and any
   stylesheet rule beats `setFont`, so the size was silently ignored. A widget's
   own sheet beats the application's and setting only `font-size` leaves the
-  object-name ring rules intact (verified: 0 ring pixels at rest, 385 green on
-  focus, 380 red when disabled). The rule MUST carry a selector
+  object-name ring rules intact (verified: 0 ring pixels at rest, 385 ring-coloured
+  on focus, 380 red when disabled). The rule MUST carry a selector
   (`QPushButton#ThemeToggleButton { ... }`): a bare `font-size` cascades to the
   widget's whole subtree and its TOOLTIP counts, which is what briefly rendered
   the hover text at the emoji's size
@@ -1542,10 +1543,10 @@ renderings of the same figures to hold in step. Every month any page shows
   selected tab, a menu-bar title and a menu item. Green is the RING, the border
   saying where the pointer or the keyboard is; the words inside it take the
   accent, the same colour that marks the selected tab. Text in the ring's own
-  green made a hovered tab read as a second, slightly different selection, two
-  greens a few degrees apart on one strip. `tests/ui_logic/test_highlight_text_colour.py`
+  colour made a hovered tab read as a second, slightly different selection, two
+  near-identical shades on one strip. `tests/ui_logic/test_highlight_text_colour.py`
   holds every one of those surfaces to it. The keyboard cursor's tab is the one
-  exception and keeps muted text under its green ring, because the cursor marks
+  exception and keeps muted text under its ring, because the cursor marks
   where the keyboard is rather than what is live; Qt gives no way to say
   otherwise anyway (measured: with a stylesheet active, `setTabTextColor` is
   ignored entirely)
@@ -1566,7 +1567,7 @@ renderings of the same figures to hold in step. Every month any page shows
   `#3a4156`, table selection deep blue `#1e3a5f`; light: grey `#f3f4f6`
   background, white panels, slate borders, blue selection
 - Buttons royal blue `#3b5bdb` (hover `#4a68d6`, pressed `#2f4bb8`) in both
-- Ring colours per theme follow the three-state model (green hover/focus on
+- Ring colours per theme follow the three-state model (the ring colour on hover or focus when
   enabled, permanent red on disabled, none at rest); `outline: none` on the
   base rule keeps the ring as the only focus indicator
 - Object-name rules for the nav tray, nav graph button, theme toggle and the
@@ -1625,14 +1626,21 @@ renderings of the same figures to hold in step. Every month any page shows
   different colours from the same rule
 - The safe colour is a muted lavender, not a green. The green it replaced was
   bright enough to glare at a lightness of 52%; it was also the same literal as
-  the focus ring, so neither role could move without the other. The ring keeps
-  the green. The multi-series palette's first slot went to a near neutral
-  (`#cbd5e1` dark / `#64748b` light) at the same time, because the lavender
-  sits ten degrees from the violet already in slot four and two cards must
+  the focus ring, so neither role could move without the other. Splitting them
+  is what allowed the ring to go neutral and the bar to go lavender in one pass
+- Green and teal are retired app-wide. The ring and the accent were the last
+  two holdouts and they parted company at the same time: the ring is CHROME, so
+  it went to a near neutral that says the system is responding without claiming
+  a meaning, while the accent is IDENTITY (section titles, the current-tab
+  underline, the progress bar) so it kept a hue. `primary_text` is the one white
+  that did not collapse into `text`, because a button label on a saturated blue
+  measures 4.00:1 in the softer white against 4.95:1 in pure white
+- The multi-series palette's first slot is a near neutral, because the lavender
+  sits ten degrees from the violet already in the palette and two cards must
   never wear one face; a near neutral is told apart by saturation, which none
   of the other seven compete for
 - A bar carries THREE states, not two, read against the agreed overdraft floor
-  rather than against zero: green at or above zero, amber below zero but no
+  rather than against zero: the safe colour at or above zero, amber below zero but no
   further than the arranged facility, red past it. That is the banner's own
   reading applied to one day, so the graph and the banner above it never
   describe the same position in two different colours. The floor reaches the
