@@ -160,6 +160,7 @@ class CreditCardView(
         proj_group.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum
         )
+        self.projection_group = proj_group
         layout.addWidget(proj_group, 0)
         # With few cards the content is shorter than the tab: let the slack fall
         # to the bottom so the card list and projection stay compact at the top,

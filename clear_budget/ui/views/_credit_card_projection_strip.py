@@ -26,6 +26,10 @@ _PROJECTION_MONTHS = 6
 _HEADROOM_TIGHT_PENCE = 10_000
 _HEADROOM_WATCH_PENCE = 25_000
 
+# Qt's own no-maximum sentinel, used to release the zero height set while
+# the strip was hidden. setFixedHeight below pins the real one.
+_UNBOUNDED_HEIGHT = 16777215
+
 
 class CreditCardProjectionStripMixin:
     """_build_projection_strip for CreditCardView."""
@@ -37,9 +41,18 @@ class CreditCardProjectionStripMixin:
             start_month=today_ym, n_months=_PROJECTION_MONTHS
         )
         if not month_states_list or not month_states_list[0]:
+            # Nothing to project, so the whole box goes rather than being left
+            # standing empty. Emptying the table alone left its heading and a
+            # tall blank rectangle holding the bottom half of the tab, because
+            # the strip's height is LOCKED to its rows once built and clearing
+            # the rows does not release it.
             self.projection_table.setRowCount(0)
             self.projection_table.setColumnCount(0)
+            self.projection_table.setMaximumHeight(0)
+            self.projection_group.setVisible(False)
             return
+        self.projection_table.setMaximumHeight(_UNBOUNDED_HEIGHT)
+        self.projection_group.setVisible(True)
 
         cards_in_strip = [ms.card for ms in month_states_list[0]]
         self.projection_table.setColumnCount(len(cards_in_strip))
