@@ -28,6 +28,7 @@ from clear_budget.ui.widgets._tray_buttons import (
     build_users_button,
 )
 from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
+from clear_budget.ui.utils.table_focus import keyboard_only_focus
 from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 
@@ -80,6 +81,7 @@ class ArchiveView(QWidget):
 
         self.archive_table = QTableWidget()
         apply_comfortable_rows(self.archive_table)
+        keyboard_only_focus(self.archive_table)
         self.archive_table.setColumnCount(5)
         self.archive_table.setHorizontalHeaderLabels(
             ["Month", "Income", "Bills", "Balance", "Status"]

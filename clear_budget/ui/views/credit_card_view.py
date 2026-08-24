@@ -44,6 +44,7 @@ from clear_budget.ui.widgets._tray_buttons import (
     build_users_button,
 )
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
+from clear_budget.ui.utils.table_focus import keyboard_only_focus
 from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 
@@ -137,6 +138,7 @@ class CreditCardView(
         proj_layout = QVBoxLayout()
         self.projection_table = QTableWidget()
         apply_comfortable_rows(self.projection_table)
+        keyboard_only_focus(self.projection_table)
         self.projection_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.projection_table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
         _ph = self.projection_table.horizontalHeader()

@@ -32,6 +32,7 @@ Everything below this section explains how the code satisfies them.
 | Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
 | A budget belonging to another account cannot be opened without that account's password. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
 | One Return press runs a dialog's submit ONCE. A `QLineEdit` emits `returnPressed` and then ignores the key so it reaches the dialog's default button, so connecting both gives one press two routes. No slot may answer both `returnPressed` and `clicked` in the same module | `tests/structural/test_return_key_invariants.py` |
+| Focus follows the KEYBOARD, never the pointer, wherever a click has nothing to act on: a button refuses mouse-reason focus outright and every table is `TabFocus` rather than Qt's default `StrongFocus`, so no pane is ever ringed by a click. Selection is untouched, since selection is not focus | `tests/structural/test_table_focus_invariants.py` (both halves), plus `KeyboardNavigator._focus_arriving` for buttons |
 | A destructive confirmation is never raised over a file that will be refused. The Load flow asks the accounts store, the schema and the owner challenge FIRST; the overwrite question is the last gate before the path is handed back | `tests/structural/test_load_refusal_order.py` |
 | A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
@@ -1322,6 +1323,19 @@ renderings of the same figures to hold in step. Every month any page shows
   is connected AND that the handler it names touches the sink, because a
   connection to a handler that had stopped focusing anything would otherwise
   read as wired
+- A TABLE TAKES THE RING FROM THE KEYBOARD ONLY. Every table is
+  `TabFocus` through `ui/utils/table_focus.keyboard_only_focus`, never Qt's
+  default `StrongFocus`, which grants CLICK focus as well: clicking one wrapped
+  the whole pane in the ring; clicking the dead space below the last row
+  did it too, where a click selects nothing and does nothing. That is the page
+  body's rule (`ScrollableTab._scroll`) applied to the panes inside it. What a
+  click DOES is unchanged, because selection is not focus: a row click still
+  selects and still arms Delete on both policies (measured); once the ring
+  arrives from Tab the table still keeps Up and Down for its rows. The helper
+  is the only place that names the policy and every table passes through it,
+  because doing nothing here is the wrong state and a table added later
+  inherits it silently. Held by
+  `tests/structural/test_table_focus_invariants.py`, both halves
 - A CLICK LEAVES NO RING. The ring means one thing, the keyboard is here, so
   focus a mouse brought to a BUTTON is refused: `KeyboardNavigator` handles
   `FocusIn` then clears the focus when the reason is `MouseFocusReason` and the
@@ -2097,6 +2111,9 @@ an option that read as "remove my data" removed nothing.
   danger band, so a file is never shaved to just under the cap only to break
   it again on the next edit
 - `test_auth_structure.py` - Auth layer structure validation
+- `test_table_focus_invariants.py` - every table built in the UI passes
+  through `keyboard_only_focus`, none setting its own focus policy, so a
+  click can never put the ring round a pane
 - `test_load_refusal_order.py` - every refusal in `run_load_flow` precedes
   the overwrite confirmation, so the threat is never made over a load that
   cannot happen

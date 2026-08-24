@@ -222,8 +222,10 @@ what is deliberately left and what only looks like debt.
   steps back (wrapping); Up/Down walk table rows; Enter equals Space; focus
   and hover show a neutral ring, disabled controls a red one; nothing is focused
   on launch until the first keypress. The ring says one thing, the keyboard is
-  here, so clicking a button never leaves one behind; a text field, a spin box
-  and a table still take a click, because that is how you say where to type
+  here, so nothing you click with the mouse is left wearing one: not a button,
+  not a table, not the panel around it. Clicking still does what it always did,
+  including selecting the row you clicked; a text field, a spin box and a
+  dropdown still take a click, because that is how you say where to type
 - The tabs are walked one at a time in the order shown and stepping onto a tab
   never switches to it: Enter or Space does that. The tab you are already
   reading is skipped

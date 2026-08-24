@@ -34,6 +34,7 @@ from clear_budget.shared.budget_registry import (
 )
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.widgets.first_stop_dialog import FirstStopDialog
+from clear_budget.ui.utils.table_focus import keyboard_only_focus
 from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 _ACTIVE_MARK = "Active"
@@ -93,6 +94,7 @@ class BudgetsDialog(FirstStopDialog):
 
         self.table = QTableWidget()
         apply_comfortable_rows(self.table)
+        keyboard_only_focus(self.table)
         self.table.setColumnCount(2)
         self.table.setHorizontalHeaderLabels(["Budget", ""])
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
