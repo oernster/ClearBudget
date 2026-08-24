@@ -24,7 +24,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from clear_budget.shared.db_copy import DatabaseCopyError, backup_open_database
-from clear_budget.shared.db_validation import validate_db
+from clear_budget.shared.db_validation import is_accounts_database, validate_db
 from clear_budget.ui import ui_scale
 from clear_budget.ui.save_location import load_save_location, store_save_location
 from clear_budget.ui.ui_paths import default_data_dir
@@ -221,20 +221,22 @@ def run_load_flow(
         )
         return None
 
-    if _has_existing_data(db_path, conn):
-        reply = QMessageBox.question(
+    # EVERY refusal happens before the overwrite question. That question
+    # threatens to destroy the budget in front of the user, so asking it about
+    # a file that is then rejected is a threat made over nothing: picking the
+    # accounts store used to warn that all bills, income and cards were about
+    # to be replaced, then afterwards admit it was never loadable.
+    if is_accounts_database(src_path):
+        QMessageBox.critical(
             parent,
-            "Overwrite Existing Data?",
-            "The active database already contains data.\n\n"
-            "Loading will permanently replace all bills, income sources, "
-            "credit cards, "
-            "overrides and settings with the contents of the selected file.\n\n"
-            "This cannot be undone. Continue?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+            "That Is the Accounts File",
+            "The file you chose is the ClearBudget accounts file, which holds "
+            "who may sign in. It is not a budget and it cannot be loaded as "
+            "one.\n\n"
+            "Budgets are named after the account they belong to, such as "
+            "budget_<account>.db. Nothing has been changed.",
         )
-        if reply != QMessageBox.StandardButton.Yes:
-            return None
+        return None
 
     validation_error = validate_db(src_path)
     if validation_error:
@@ -252,5 +254,20 @@ def run_load_flow(
 
     if not owner_permits_load(parent, src_path, current_username, user_store):
         return None
+
+    if _has_existing_data(db_path, conn):
+        reply = QMessageBox.question(
+            parent,
+            "Overwrite Existing Data?",
+            "The active database already contains data.\n\n"
+            "Loading will permanently replace all bills, income sources, "
+            "credit cards, "
+            "overrides and settings with the contents of the selected file.\n\n"
+            "This cannot be undone. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return None
 
     return src_path

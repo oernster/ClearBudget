@@ -1,6 +1,19 @@
-"""Database schema validation for import - extracted from MainWindow (LOC limit)."""
+"""Database schema validation for import - extracted from MainWindow (LOC limit).
+
+Two questions, deliberately separate. `validate_db` asks whether a file is a
+budget this application can open. `is_accounts_database` asks whether it is the
+ACCOUNTS store, which is a different file with a different job and lives in the
+same directory the Load dialog opens on. Both answer "no" to a budget load;
+they are told apart because only one of them has something useful to say about
+what the user actually picked.
+"""
 
 from pathlib import Path
+
+# The accounts store holds who may sign in. It is not a budget and it is never
+# loadable as one; it sits beside every budget in the data directory, so it is
+# one careless click away in the Load dialog.
+_ACCOUNTS_TABLE = "users"
 
 REQUIRED_SCHEMA: dict[str, set[str]] = {
     "bills": {
@@ -34,6 +47,34 @@ REQUIRED_SCHEMA: dict[str, set[str]] = {
     "bill_month_paid": {"bill_id", "year", "month"},
     "income_month_received": {"income_id", "year", "month"},
 }
+
+
+def is_accounts_database(path: Path) -> bool:
+    """Whether `path` is the accounts store rather than a budget.
+
+    Answered from the file's SHAPE, never from its name: a copy, a backup or a
+    renamed accounts store is the same file with the same contents and must be
+    refused the same way. It holds the `users` table and none of the budget
+    tables; a budget holds the budget tables and no `users` table, so the two
+    can never both be true.
+
+    False for anything that is not a readable SQLite file at all. That is not
+    this function's question; `validate_db` says it better.
+    """
+    import sqlite3
+
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    except sqlite3.DatabaseError:
+        return False
+    try:
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = {row[0] for row in cursor.fetchall()}
+    except sqlite3.DatabaseError:
+        return False
+    finally:
+        conn.close()
+    return _ACCOUNTS_TABLE in tables and not (tables & set(REQUIRED_SCHEMA))
 
 
 def validate_db(path: Path) -> str | None:

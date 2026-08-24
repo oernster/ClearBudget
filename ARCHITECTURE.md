@@ -32,6 +32,7 @@ Everything below this section explains how the code satisfies them.
 | Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
 | A budget belonging to another account cannot be opened without that account's password. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
 | One Return press runs a dialog's submit ONCE. A `QLineEdit` emits `returnPressed` and then ignores the key so it reaches the dialog's default button, so connecting both gives one press two routes. No slot may answer both `returnPressed` and `clicked` in the same module | `tests/structural/test_return_key_invariants.py` |
+| A destructive confirmation is never raised over a file that will be refused. The Load flow asks the accounts store, the schema and the owner challenge FIRST; the overwrite question is the last gate before the path is handed back | `tests/structural/test_load_refusal_order.py` |
 | A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
 
@@ -768,6 +769,15 @@ holding each budget's slug and display name plus which one is active.
 - `REQUIRED_SCHEMA` + `validate_db(path)` - confirms a loaded file is a genuine
   ClearBudget database (all required tables and columns present) before any
   Load Database write touches the active database.
+- `is_accounts_database(path)` - a separate question with a separate answer:
+  whether the chosen file is the ACCOUNTS store, which holds who may sign in,
+  is not a budget and sits in the same directory the Load dialog opens on. It
+  used to be answered by `validate_db` listing twelve missing tables, which is
+  true and tells the user nothing about what they picked. Answered from the
+  file's SHAPE (the `users` table present, every budget table absent), never
+  from its name, so a copy or a rename is refused identically. False for
+  anything that is not a readable SQLite file, because that is `validate_db`'s
+  question and it says it better
 
 **`resources`** (`clear_budget/shared/resources.py`):
 - Runtime asset discovery for packaged builds: locates the app icon, the Qt
@@ -1081,8 +1091,14 @@ renderings of the same figures to hold in step. Every month any page shows
   and the tray buttons, plus the builders for the tray's icon buttons (load,
   save, cog, bank, info) and their separator. Save copies the database to the
   remembered location (first save prompts, defaulting to the app's own data
-  directory via `ui_paths.default_data_dir`, then asks before overwriting); Load validates via `db_validation` and confirms before
-  replacing data. The remembered location persists in `ui_settings.json`
+  directory via `ui_paths.default_data_dir`, then asks before overwriting).
+  Load REFUSES FIRST AND CONFIRMS LAST: the accounts store, then the schema,
+  then the owner challenge; only then the overwrite question. That order is
+  the point. The question says every bill, income source, card, override and
+  setting is about to be permanently replaced, so asking it about a file that
+  is then rejected is a threat made over nothing: choosing `users.db` used to
+  raise it, take a Yes, then afterwards report that the file was never a
+  budget. Held by `tests/structural/test_load_refusal_order.py`. The remembered location persists in `ui_settings.json`
   through `clear_budget/ui/save_location.py`, which shares the file with the
   theme without disturbing it (`tests/ui_logic/test_save_location.py`)
 - `_main_window_menus.py` (`MainWindowMenuMixin`) - status-bar and File/Users/Help
@@ -2081,6 +2097,9 @@ an option that read as "remove my data" removed nothing.
   danger band, so a file is never shaved to just under the cap only to break
   it again on the next edit
 - `test_auth_structure.py` - Auth layer structure validation
+- `test_load_refusal_order.py` - every refusal in `run_load_flow` precedes
+  the overwrite confirmation, so the threat is never made over a load that
+  cannot happen
 - `test_return_key_invariants.py` - no slot answers both `returnPressed` and
   `clicked` in one module, so a Return press cannot submit twice
 - `test_handover_invariants.py` - the composition root begins a handover only

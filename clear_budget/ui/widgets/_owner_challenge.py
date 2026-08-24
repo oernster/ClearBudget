@@ -8,9 +8,9 @@ The password required is the OWNER'S, never the loader's. Asking the loader for
 their own password would be theatre: they know it, they would type it, then the
 other account's budget would open anyway.
 
-Lives in its own module rather than in `_save_load_flow`, which sits four lines
+Lives in its own module rather than in `_save_load_flow`, which was four lines
 under the 381 to 399 danger band that `tests/structural/test_loc_limits.py`
-enforces.
+enforces when this was split out.
 """
 
 from __future__ import annotations
