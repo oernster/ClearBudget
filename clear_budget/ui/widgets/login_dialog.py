@@ -24,9 +24,6 @@ from clear_budget.ui.widgets._login_styles import (
     input_style,
     link_style,
 )
-from clear_budget.ui.widgets._viewer_package_import_flow import (
-    run_import_viewer_package_flow,
-)
 from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 
 # How many remembered accounts it takes for the username field to become a
@@ -152,12 +149,6 @@ class LoginDialog(QDialog):
         self.login_btn.clicked.connect(self._on_login)
         grid.addWidget(self.login_btn, 0, 1)
 
-        self.import_viewer_btn = QPushButton("Import Viewer Package…")
-        self.import_viewer_btn.setFlat(True)
-        self.import_viewer_btn.setStyleSheet(link_style())
-        self.import_viewer_btn.clicked.connect(self._on_import_viewer_package)
-        grid.addWidget(self.import_viewer_btn, 1, 0, Qt.AlignmentFlag.AlignLeft)
-
         self.create_account_btn = QPushButton("Create Account")
         self.create_account_btn.clicked.connect(self._on_create_account)
         grid.addWidget(self.create_account_btn, 1, 1)
@@ -271,21 +262,6 @@ class LoginDialog(QDialog):
             self.remembered_login.remember_username(username)
             self.remembered_login.forget_password(username)
         self.remembered_login.note_signed_in(username)
-
-    def _on_import_viewer_package(self) -> None:
-        user = run_import_viewer_package_flow(self, self.user_store)
-        if user is None:
-            return
-
-        self.username_edit.setText(user.username)
-        self.password_edit.clear()
-        self.password_edit.setFocus()
-        QMessageBox.information(
-            self,
-            "Import Successful",
-            f"Viewer account '{user.username}' is ready.\n\n"
-            "Enter the password you were given and sign in.",
-        )
 
     def _on_create_account(self) -> None:
         from clear_budget.ui.widgets.create_user_dialog import CreateUserDialog

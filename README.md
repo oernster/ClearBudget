@@ -21,8 +21,7 @@ secure authentication.
   month's money went: the tightest day, the mid-month dip, the first month the
   balance goes under
 - Households sharing one machine: each account gets its own isolated budget
-  database behind a bcrypt sign-in; a snapshot can be handed to someone
-  else as a read-only viewer package
+  database behind a bcrypt sign-in
 - People who want their finances to stay on their own machine, offline, with no
   account to create and nothing phoning home. The one network request the app
   ever makes is a daily check of this project's GitHub releases for a newer
@@ -89,8 +88,6 @@ what is deliberately left and what only looks like debt.
   Service), never in a plain file; unticking the box forgets them immediately
 - Create an account from the sign-in screen at any time, not just on first
   launch (only the very first account ever created is an admin)
-- Read-only viewer accounts: export a snapshot of a budget as a "viewer
-  package" for someone else to import and browse without editing
 - Back Up Everything / Restore Everything (admin only): one zip holding every
   account and every budget, restorable in full after a lost or reinstalled
   machine; a restore is validated before a single live file is replaced
@@ -268,8 +265,6 @@ stops on each tab in turn.
 | File | Load... | Replace active database from a saved file (validated before write) |
 | File | Save | Copy the database to the remembered save file; the first save prompts for a filename, defaulting to the app's own data folder |
 | File | Save As... | Choose a new save file; the location is remembered between runs |
-| File | Import / Export > Export Read-Only Viewer Package... (admin only) | Bundle a snapshot of the budget into a zip for a viewer account |
-| File | Import / Export > Import Read-Only Viewer Package... (admin only) | Import a viewer package, creating or refreshing a read-only account |
 | File | Import / Export > Back Up Everything... (admin only) | Save every account and every budget as one zip file |
 | File | Import / Export > Restore Everything... (admin only) | Replace all accounts and budgets from a full backup (validated before anything is touched; signs everyone out) |
 | File | Exit | Close application |
@@ -292,8 +287,7 @@ the blue information button opening How It Works.
 The account you are signed in as is shown at the left of the month row on every
 tab, in the same size as the month itself, rather than in the title bar. A name
 too long for the space is shortened with an ellipsis and shown in full when
-hovered. Read-only viewer accounts have most of these actions disabled and are
-marked "(Read-only)" beside the name.
+hovered.
 
 ---
 
@@ -325,7 +319,6 @@ thinking about it costs nothing. Every credential-store failure degrades to
 "nothing remembered": sign-in still works on a machine whose keychain is locked,
 absent or refused.
 - **Forgot password?** - reset using the recovery code
-- **Import Viewer Package...** - import a read-only viewer account from a package file
 - **Create Account...** - create a new (non-admin) account at any time, without
   needing an admin
 
@@ -344,9 +337,6 @@ account. Deleting a user account always permanently deletes that user's budget
 data too (two confirmations required) - there is no way to keep an orphaned
 data file after the account's credentials are destroyed. Non-admin users see
 Switch User and Log Out only.
-
-A **read-only viewer account** can sign in to browse a snapshot of someone else's
-budget but cannot edit anything.
 
 ---
 

@@ -23,7 +23,7 @@ class MonthViewEditMixin:
 
         mods = QApplication.keyboardModifiers()
         bill = self._get_bill_from_row(row)
-        if self.read_only or mods & (
+        if mods & (
             Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
         ):
             item = self.bills_table.item(row, col)
@@ -182,7 +182,7 @@ class MonthViewEditMixin:
         if col in (5, 6):
             self._on_income_skip_received_clicked(row, col, inc, mods)
             return
-        if self.read_only or mods & (
+        if mods & (
             Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
         ):
             return
@@ -208,7 +208,7 @@ class MonthViewEditMixin:
             )
 
     def _on_income_skip_received_clicked(self, row: int, col: int, inc, mods) -> None:
-        if self.read_only or mods & (
+        if mods & (
             Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
         ):
             item = self.income_table.item(row, col)

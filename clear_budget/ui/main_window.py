@@ -67,7 +67,6 @@ class MainWindow(
         self.current_user = current_user
         self.user_store = user_store
         self.db_path = db_path
-        self.read_only = current_user.is_read_only
         # The account is NOT in the title any more. It was a few pixels of
         # system chrome naming whose budget was on screen, which is the one
         # thing a shared machine most needs to be sure of; it is now shown at

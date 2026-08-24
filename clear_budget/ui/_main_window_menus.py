@@ -29,17 +29,14 @@ class MainWindowMenuMixin:
 
         new_budget_action = file_menu.addAction("&New Budget…")
         new_budget_action.triggered.connect(self._on_new_budget)
-        new_budget_action.setEnabled(not self.read_only)
 
         budgets_action = file_menu.addAction("S&witch Budget…")
         budgets_action.triggered.connect(self._on_manage_budgets)
-        budgets_action.setEnabled(not self.read_only)
 
         file_menu.addSeparator()
 
         load_action = file_menu.addAction("&Load…")
         load_action.triggered.connect(self._on_load_database)
-        load_action.setEnabled(not self.read_only)
 
         save_action = file_menu.addAction("&Save")
         save_action.triggered.connect(self._on_save_database)
@@ -51,18 +48,6 @@ class MainWindowMenuMixin:
             file_menu.addSeparator()
 
             import_export_menu = file_menu.addMenu("Import / &Export")
-
-            export_viewer_action = import_export_menu.addAction(
-                "Export &Read-Only Viewer Package…"
-            )
-            export_viewer_action.triggered.connect(self._on_export_viewer_package)
-
-            import_viewer_action = import_export_menu.addAction(
-                "&Import Read-Only Viewer Package…"
-            )
-            import_viewer_action.triggered.connect(self._on_import_viewer_package)
-
-            import_export_menu.addSeparator()
 
             backup_all_action = import_export_menu.addAction("&Back Up Everything…")
             backup_all_action.triggered.connect(self._on_backup_everything)
@@ -80,11 +65,9 @@ class MainWindowMenuMixin:
 
         prefs_action = settings_menu.addAction("&Preferences…")
         prefs_action.triggered.connect(self._on_preferences)
-        prefs_action.setEnabled(not self.read_only)
 
         bank_action = settings_menu.addAction("&Bank Account")
         bank_action.triggered.connect(self._on_bank_account_settings)
-        bank_action.setEnabled(not self.read_only)
 
         # Users menu: managing accounts is for admins only; leaving a session
         # is for everyone. Both ways out are offered because they differ in

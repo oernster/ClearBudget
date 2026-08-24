@@ -233,7 +233,6 @@ class CreditCardViewLoaderMixin:
         active_cb.setObjectName("CardActiveToggle")
         active_cb.setToolTip("Active")
         active_cb.setChecked(card.active == 1)
-        active_cb.setEnabled(not self.read_only)
         active_cb.toggled.connect(
             lambda checked, cid=card.id: self._on_card_active_toggled(cid, checked)
         )
@@ -258,14 +257,12 @@ class CreditCardViewLoaderMixin:
         header.addWidget(status_label)
 
         edit_btn = QPushButton("Edit")
-        edit_btn.setEnabled(not self.read_only)
         edit_btn.clicked.connect(
             lambda _checked=False, cid=card.id: self.on_edit_card(cid)
         )
         header.addWidget(edit_btn)
 
         delete_btn = QPushButton("Delete")
-        delete_btn.setEnabled(not self.read_only)
         delete_btn.setObjectName("DangerButton")
         delete_btn.clicked.connect(
             lambda _checked=False, cid=card.id, name=card.name: self.on_delete_card(

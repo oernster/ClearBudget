@@ -44,12 +44,6 @@ class UserStore:
                 created_at            TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             """)
-        try:
-            self._conn.execute(
-                "ALTER TABLE users ADD COLUMN is_read_only INTEGER NOT NULL DEFAULT 0"
-            )
-        except sqlite3.OperationalError:
-            pass
         self._conn.commit()
 
     # ------------------------------------------------------------------
@@ -63,21 +57,20 @@ class UserStore:
 
     def get_all_users(self) -> list[User]:
         rows = self._conn.execute(
-            "SELECT id, username, is_admin, is_read_only FROM users ORDER BY id"
+            "SELECT id, username, is_admin FROM users ORDER BY id"
         ).fetchall()
         return [
             User(
                 id=r["id"],
                 username=r["username"],
                 is_admin=bool(r["is_admin"]),
-                is_read_only=bool(r["is_read_only"]),
             )
             for r in rows
         ]
 
     def find_user(self, username: str) -> User | None:
         row = self._conn.execute(
-            "SELECT id, username, is_admin, is_read_only FROM users"
+            "SELECT id, username, is_admin FROM users"
             " WHERE username = ? COLLATE NOCASE",
             (username,),
         ).fetchone()
@@ -87,7 +80,6 @@ class UserStore:
             id=row["id"],
             username=row["username"],
             is_admin=bool(row["is_admin"]),
-            is_read_only=bool(row["is_read_only"]),
         )
 
     # ------------------------------------------------------------------
@@ -97,7 +89,7 @@ class UserStore:
     def verify_password(self, username: str, password: str) -> User | None:
         """Return User if credentials are valid, else None."""
         row = self._conn.execute(
-            "SELECT id, username, password_hash, is_admin, is_read_only FROM users"
+            "SELECT id, username, password_hash, is_admin FROM users"
             " WHERE username = ? COLLATE NOCASE",
             (username,),
         ).fetchone()
@@ -108,7 +100,6 @@ class UserStore:
                 id=row["id"],
                 username=row["username"],
                 is_admin=bool(row["is_admin"]),
-                is_read_only=bool(row["is_read_only"]),
             )
         return None
 
@@ -158,40 +149,6 @@ class UserStore:
         self._conn.commit()
         user = User(id=cursor.lastrowid, username=username, is_admin=is_admin)
         return user, recovery_code
-
-    def import_viewer_account(
-        self, username: str, password_hash: str, recovery_code_hash: str
-    ) -> User:
-        """Create or refresh a non-admin, read-only account from a viewer package.
-
-        If the username already exists, its credentials and read-only flag
-        are overwritten (refreshing a previously imported viewer package).
-        """
-        existing = self.find_user(username)
-        if existing is None:
-            cursor = self._conn.execute(
-                "INSERT INTO users"
-                " (username, password_hash, recovery_code_hash,"
-                "  is_admin, is_read_only)"
-                " VALUES (?, ?, ?, 0, 1)",
-                (username, password_hash, recovery_code_hash),
-            )
-            self._conn.commit()
-            return User(
-                id=cursor.lastrowid,
-                username=username,
-                is_admin=False,
-                is_read_only=True,
-            )
-        self._conn.execute(
-            "UPDATE users SET password_hash = ?, recovery_code_hash = ?,"
-            " is_admin = 0, is_read_only = 1 WHERE id = ?",
-            (password_hash, recovery_code_hash, existing.id),
-        )
-        self._conn.commit()
-        return User(
-            id=existing.id, username=username, is_admin=False, is_read_only=True
-        )
 
     def change_password(self, username: str, new_password: str) -> None:
         """Replace password hash for username."""

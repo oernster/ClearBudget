@@ -56,7 +56,6 @@ class CreditCardView(
         self,
         budget_service: BudgetService,
         current_month: YearMonth | None = None,
-        read_only: bool = False,
         base_month: YearMonth | None = None,
     ) -> None:
         """Initialize credit card view widget.
@@ -70,7 +69,6 @@ class CreditCardView(
         self.budget_service = budget_service
         self.current_month = current_month or YearMonth.today()
         self.base_month = base_month or self.current_month
-        self.read_only = read_only
         self.init_ui()
         self.load_cards()
 
@@ -81,12 +79,10 @@ class CreditCardView(
         self.prev_btn = QPushButton("← Previous")
         self.next_btn = QPushButton("Next →")
         _glyph_h = nav_glyph_height(self.prev_btn)
-        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
-        self.budgets_btn = build_budgets_button(self.read_only, _glyph_h)
+        self.load_btn, self.save_btn = build_save_load_buttons(_glyph_h)
+        self.budgets_btn = build_budgets_button(_glyph_h)
         self.users_btn = build_users_button(_glyph_h)
-        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
-            self.read_only, _glyph_h
-        )
+        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
         # The four primary tabs live in this tray, so every view builds its
         # own set; MainWindow wires them and keeps the current-tab mark in
@@ -168,9 +164,6 @@ class CreditCardView(
         self.setLayout(layout)
 
         self.add_btn.clicked.connect(self.on_add_card)
-
-        if self.read_only:
-            self.add_btn.setEnabled(False)
 
     def set_month(self, year_month: YearMonth) -> None:
         """Update the displayed month. The reload follows on the summary.
@@ -346,8 +339,6 @@ class CreditCardView(
         self.load_cards()
 
     def _on_card_active_toggled(self, card_id: int, checked: bool) -> None:
-        if self.read_only:
-            return
         self.budget_service.payment_method_repo.set_card_active(
             card_id=card_id, active=checked
         )

@@ -3,7 +3,7 @@
 Extracted from main_window.py as a mixin to keep that module under the 400-LOC
 limit (enforced by tests/structural/test_loc_limits.py), alongside the menu and
 navigation mixins. One concern: WHO this session belongs to, plus how
-accounts are managed, shared and handed over.
+accounts on this machine are managed.
 
 The two ways out of a session are deliberately different and the difference is
 the reason both exist. Switching SUSPENDS: the window is hidden and its
@@ -13,8 +13,6 @@ database, so there is nothing to come back to and cancelling the sign-in
 screen closes the application. Neither loses anything, since the budget lives
 on disk either way.
 """
-
-from PySide6.QtWidgets import QMessageBox
 
 
 class MainWindowAccountMixin:
@@ -52,28 +50,3 @@ class MainWindowAccountMixin:
 
         dlg = UserManagementDialog(self.user_store, self.current_user, parent=self)
         dlg.exec()
-
-    def _on_export_viewer_package(self) -> None:
-        """Open the dialog to export a read-only viewer package."""
-        from clear_budget.ui.widgets.export_viewer_package_dialog import (
-            ExportViewerPackageDialog,
-        )
-
-        dlg = ExportViewerPackageDialog(self.db_path, parent=self)
-        dlg.exec()
-
-    def _on_import_viewer_package(self) -> None:
-        """Turn an exported viewer package into a read-only account here."""
-        from clear_budget.ui.widgets._viewer_package_import_flow import (
-            run_import_viewer_package_flow,
-        )
-
-        user = run_import_viewer_package_flow(self, self.user_store)
-        if user is None:
-            return
-        QMessageBox.information(
-            self,
-            "Import Successful",
-            f"Viewer account '{user.username}' is ready.\n\n"
-            "They can sign in with the password from the export.",
-        )

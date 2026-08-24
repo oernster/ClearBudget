@@ -40,12 +40,10 @@ class MonthViewBuilderMixin:
         self.prev_btn = QPushButton("← Previous")
         next_btn = self.next_btn = QPushButton("Next →")
         _glyph_h = nav_glyph_height(self.prev_btn)
-        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
-        self.budgets_btn = build_budgets_button(self.read_only, _glyph_h)
+        self.load_btn, self.save_btn = build_save_load_buttons(_glyph_h)
+        self.budgets_btn = build_budgets_button(_glyph_h)
         self.users_btn = build_users_button(_glyph_h)
-        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
-            self.read_only, _glyph_h
-        )
+        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
         # The four primary tabs live in this tray, so every view builds its
         # own set; MainWindow wires them and keeps the current-tab mark in
@@ -209,15 +207,3 @@ class MonthViewBuilderMixin:
         self.delete_bill_btn.clicked.connect(self.on_delete_bill)
         self.add_income_btn.clicked.connect(self.on_add_income)
         self.delete_income_btn.clicked.connect(self.on_delete_income)
-
-    def _apply_read_only_state(self) -> None:
-        if not self.read_only:
-            return
-        for btn in (
-            self.edit_balance_btn,
-            self.add_bill_btn,
-            self.delete_bill_btn,
-            self.add_income_btn,
-            self.delete_income_btn,
-        ):
-            btn.setEnabled(False)

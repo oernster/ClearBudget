@@ -69,30 +69,20 @@ def _tray_icon_button(glyph: str, tooltip: str, glyph_height: int) -> QPushButto
     return btn
 
 
-def build_save_load_buttons(
-    read_only: bool, glyph_height: int
-) -> tuple[QPushButton, QPushButton]:
-    """Return (load_btn, save_btn) for a nav tray, in visual order.
-
-    Load is disabled for read-only viewers, exactly as the Load menu item is.
-    """
+def build_save_load_buttons(glyph_height: int) -> tuple[QPushButton, QPushButton]:
+    """Return (load_btn, save_btn) for a nav tray, in visual order."""
     load_btn = _tray_icon_button("📂", "Load database…", glyph_height)
     save_btn = _tray_icon_button("💾", "Save database", glyph_height)
-    load_btn.setEnabled(not read_only)
     return load_btn, save_btn
 
 
-def build_budgets_button(read_only: bool, glyph_height: int) -> QPushButton:
+def build_budgets_button(glyph_height: int) -> QPushButton:
     """Return the switch-budget button for a nav tray.
 
     Sits with load and save, left of the separator, because it acts on the
-    application rather than deciding which page is being looked at. Disabled
-    for read-only viewers: a viewer's database arrives from an imported
-    package and that account owns exactly the one budget.
+    application rather than deciding which page is being looked at.
     """
-    btn = build_tray_image_button(_BUDGETS_ICON, "Switch budget…", glyph_height)
-    btn.setEnabled(not read_only)
-    return btn
+    return build_tray_image_button(_BUDGETS_ICON, "Switch budget…", glyph_height)
 
 
 def build_users_button(glyph_height: int) -> QPushButton:
@@ -103,17 +93,12 @@ def build_users_button(glyph_height: int) -> QPushButton:
     cancelled switch leaves the session exactly as it was, while a mis-clicked
     Log Out would end it. Log Out therefore stays on the Users menu, where
     choosing it is deliberate.
-
-    Always enabled, read-only viewers included: signing in as somebody else
-    writes nothing to the budget, so there is nothing for read-only to
-    withhold; a viewer with no way out of their own session would be
-    stranded in it.
     """
     return build_tray_image_button(_USERS_ICON, "Switch user…", glyph_height)
 
 
 def build_settings_bank_buttons(
-    read_only: bool, glyph_height: int
+    glyph_height: int,
 ) -> tuple[QFrame, QPushButton, QPushButton]:
     """Return (separator, settings_btn, bank_btn) for a nav tray.
 
@@ -124,8 +109,7 @@ def build_settings_bank_buttons(
     are looking at. It used
     to sit between load/save and the settings pair, back when the tabs were
     a strip of their own and there was nothing else in the tray to divide
-    them from. Both buttons are disabled for read-only
-    viewers, exactly as their menu items are.
+    them from.
     """
     separator = QFrame()
     separator.setObjectName(label_roles.SEPARATOR)
@@ -139,14 +123,12 @@ def build_settings_bank_buttons(
     bank_btn = build_tray_image_button(
         _BANK_ICON, "Bank account", glyph_height, bottom_pad_px=_BANK_ICON_PAD_PX
     )
-    for btn in (settings_btn, bank_btn):
-        btn.setEnabled(not read_only)
     return separator, settings_btn, bank_btn
 
 
 def build_info_button(glyph_height: int) -> QPushButton:
     """Return the How It Works button shown right of the theme toggle.
 
-    Always enabled: the help text is read-only, so viewers get it too.
+    Always enabled: the help text changes nothing.
     """
     return _tray_icon_button("ℹ️", "How it works", glyph_height)

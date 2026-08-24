@@ -139,8 +139,6 @@ to spend.</p>
 <p>A bill or income can be skipped, overridden, ended, made a one-off or
 given a new amount from a month onward. Deleting offers two scopes: stop it
 here (earlier months keep it) or remove it everywhere.</p>
-<p>An admin can export a read-only viewer package for someone else to import
-from their sign-in screen. A viewer sees everything and changes nothing.</p>
 <p>The sign-in screen remembers accounts: choose one from the dropdown, with
 a tick each for keeping the username and keeping the password.</p>
 <p>The Users menu holds Manage Users (admins only), Switch User and Log Out.

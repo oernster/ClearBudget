@@ -57,10 +57,9 @@ class MonthView(
 ):
     """Displays bills and income for current month in tabular form."""
 
-    def __init__(self, view_model: MonthViewModel, read_only: bool = False) -> None:
+    def __init__(self, view_model: MonthViewModel) -> None:
         super().__init__()
         self.view_model = view_model
-        self.read_only = read_only
         self.add_bill_btn = self.delete_bill_btn = None
         self.add_income_btn = self.delete_income_btn = None
         self.month_label = self.prev_btn = None
@@ -79,7 +78,6 @@ class MonthView(
         self._build_income_section(layout)
         self.setLayout(layout)
         self._connect_button_signals(prev_btn, next_btn)
-        self._apply_read_only_state()
 
     def connect_signals(self) -> None:
         self.view_model.month_summary_updated.connect(self.update_bills_table)
@@ -249,8 +247,6 @@ class MonthView(
         )
 
     def _on_bill_row_header_click(self, row: int) -> None:
-        if self.read_only:
-            return
         if bill := self._get_bill_from_row(row):
             self._edit_bill_dialog(bill)
 
@@ -282,8 +278,6 @@ class MonthView(
             self._offer_apply_new_income(persisted)
 
     def _on_income_row_header_click(self, row: int) -> None:
-        if self.read_only:
-            return
         if inc := self._get_income_from_row(row):
             self._edit_income_dialog(inc)
 

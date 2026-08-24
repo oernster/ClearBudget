@@ -84,7 +84,6 @@ class SolvencyPanel(
     def __init__(
         self,
         view_model: SolvencyViewModel,
-        read_only: bool = False,
         base_month=None,
     ) -> None:
         """Initialize solvency panel widget.
@@ -95,7 +94,6 @@ class SolvencyPanel(
         """
         super().__init__()
         self.view_model = view_model
-        self.read_only = read_only
         self.base_month = base_month or view_model.current_month
         self.init_ui()
         self.connect_signals()
@@ -107,12 +105,10 @@ class SolvencyPanel(
         self.prev_btn = QPushButton("← Previous")
         self.next_btn = QPushButton("Next →")
         _glyph_h = nav_glyph_height(self.prev_btn)
-        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
-        self.budgets_btn = build_budgets_button(self.read_only, _glyph_h)
+        self.load_btn, self.save_btn = build_save_load_buttons(_glyph_h)
+        self.budgets_btn = build_budgets_button(_glyph_h)
         self.users_btn = build_users_button(_glyph_h)
-        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
-            self.read_only, _glyph_h
-        )
+        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
         # The four primary tabs live in this tray, so every view builds its
         # own set; MainWindow wires them and keeps the current-tab mark in

@@ -34,11 +34,10 @@ from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 class ArchiveView(QWidget):
     """Displays historical month summaries and solvency trends."""
 
-    def __init__(self, budget_service: BudgetService, read_only: bool = False) -> None:
+    def __init__(self, budget_service: BudgetService) -> None:
         """Initialize archive view widget."""
         super().__init__()
         self.budget_service = budget_service
-        self.read_only = read_only
         self.current_year: int = 0
         self.available_years: list[int] = []
         self.months_by_row: dict = {}
@@ -52,12 +51,10 @@ class ArchiveView(QWidget):
         self.prev_year_btn = QPushButton("← Previous")
         self.next_year_btn = QPushButton("Next →")
         _glyph_h = nav_glyph_height(self.prev_year_btn)
-        self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
-        self.budgets_btn = build_budgets_button(self.read_only, _glyph_h)
+        self.load_btn, self.save_btn = build_save_load_buttons(_glyph_h)
+        self.budgets_btn = build_budgets_button(_glyph_h)
         self.users_btn = build_users_button(_glyph_h)
-        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
-            self.read_only, _glyph_h
-        )
+        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
         # The four primary tabs live in this tray, so every view builds its
         # own set; MainWindow wires them and keeps the current-tab mark in

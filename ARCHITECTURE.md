@@ -510,15 +510,13 @@ Separate from budget infrastructure. Manages user identity and credentials.
   password and recovery code with bcrypt. Only the first-ever user is created with
   `is_admin=True`; all subsequent accounts (login screen "Create Account..." or
   admin "Add User") are non-admin
-- `import_viewer_account(...)` - creates or refreshes a read-only (`is_read_only=True`)
-  account from an imported viewer package
 - `change_password(username, new_password)`
 - `delete_user(user_id)`
 - `get_all_users()` → `list[User]`
 - `close()`
 
 **`User`** model (`clear_budget/auth/models.py`):
-- `id`, `username`, `is_admin`, `is_read_only` (default `False`)
+- `id`, `username`, `is_admin`
 
 **`RememberedLogin`** (`clear_budget/auth/remembered_login.py`):
 - Backs the sign-in screen's Remember me checkbox. The password lives in the
@@ -641,7 +639,7 @@ holding each budget's slug and display name plus which one is active.
 - `main._open_user_database` is the ONE place that decides which file a session
   opens; it asks the registry. Switching budget is therefore a registry
   write plus the existing `database_replaced` signal, which already tore down
-  and rebuilt a session for viewer-package import; no new session plumbing
+  and rebuilt a session on an import; no new session plumbing
 - `File > New Budget` creates. It used to be a double-confirmed WIPE, because a
   user could own exactly one budget and the only way to hand them an empty one
   was to empty the one they had. That is the whole reason the destructive
@@ -654,9 +652,6 @@ holding each budget's slug and display name plus which one is active.
   (`delete_all_budgets`). Deleting only the legacy path, which was all there
   was to delete before, would strand the named ones in the data directory with
   no account able to reach them
-- Read-only viewer accounts stay single-budget. A viewer's database arrives
-  from an imported package and the account cannot write, so the button and both
-  menu items are disabled exactly as Load and Save already are
 
 ### Shared Layer
 
@@ -752,7 +747,7 @@ holding each budget's slug and display name plus which one is active.
 **`ui_paths.default_downloads_dir()`** (`clear_budget/ui/ui_paths.py`):
 - Cross-platform Downloads folder via `QStandardPaths.DownloadLocation`, falling
   back to `Path.home()`. Used as the default directory for all file dialogs
-  (Save As/Load Database, Export/Import Viewer Package).
+  (Save As/Load Database, Back Up / Restore Everything).
 
 **`db_validation`** (`clear_budget/shared/db_validation.py`):
 - `REQUIRED_SCHEMA` + `validate_db(path)` - confirms a loaded file is a genuine
@@ -986,9 +981,8 @@ renderings of the same figures to hold in step. Every month any page shows
   password field (prefills both fields and ticks itself when `RememberedLogin`
   recalls credentials; unticking forgets them immediately; a successful sign-in
   stores or forgets according to the box); grid layout with "Forgot password?"
-  (opens `ResetPasswordDialog`) and Sign In on one row, "Import Viewer Package..."
-  (opens the viewer-package import flow) and "Create Account..." (opens
-  `CreateUserDialog`, non-admin) on the row below
+  (opens `ResetPasswordDialog`) and Sign In on one row, "Create Account..."
+  (opens `CreateUserDialog`, non-admin) on the row below
 - `ResetPasswordDialog` - username + recovery code + new password; distinct error for unknown username vs wrong code
 - `CreateUserDialog` - new user form (first-run wizard, login screen or admin
   "Add User"); `is_first_user=True` is the only path that creates an admin account;
@@ -1003,11 +997,6 @@ renderings of the same figures to hold in step. Every month any page shows
   APR) plus the Safe to Spend Today buffer and the sustainable window (a spin
   box, 1 to 12 months, defaulting to 4); opened via Settings > Bank Account or
   the tray's bank button
-- `ExportViewerPackageDialog` - admin: bundle a snapshot of the budget DB into a zip
-  for a read-only viewer account
-- `_viewer_package_import_flow.py` - shared import flow used by both the login
-  screen and File > Import Read-Only Viewer Package; raises `UsernameClashError`
-  (with `existing_is_viewer`) if the package's username collides with a real account
 - `BillDialog` - add/edit bill; "This month only" on Add creates a one-off
   scoped to exactly the viewed month (start == end), on Edit it stores a
   per-month override; optional end-month control (greyed while one-off is
@@ -1259,7 +1248,7 @@ renderings of the same figures to hold in step. Every month any page shows
   a submenu item (File > Import / Export) enters it with its first item
   active and Left inside a submenu exits back to the parent item; on plain
   items the arrows still step the ring between menu titles
-- Every stop is actionable: a table is ONE stop, never one per read-only
+- Every stop is actionable: a table is ONE stop, never one per
   cell (`setTabKeyNavigation(False)` on all dialog tables, e.g. Manage
   Users, Archive Details); Up/Down walk its rows (arming Delete Selected in
   Manage Users) and Tab or Left/Right leave it in a single press
@@ -1396,8 +1385,8 @@ renderings of the same figures to hold in step. Every month any page shows
   `sign_out_requested`, `database_replaced`
   - File menu: New Budget and Switch Budget, then Load / Save / Save As (Save
     goes to the remembered save file, kept in `ui_settings.json`), then the
-    "Import / Export" submenu (Read-Only Viewer Package export/import, then
-    Back Up Everything / Restore Everything, all admin only), Exit; a full
+    "Import / Export" submenu (Back Up Everything / Restore Everything,
+    both admin only), Exit; a full
     restore travels the `full_restore_requested` signal to `main.py`, which
     tears the session down before touching a file
   - Settings menu (adjacent to File): Preferences, Bank Account
@@ -1478,8 +1467,6 @@ renderings of the same figures to hold in step. Every month any page shows
   - Help menu: About, Check for Updates (runs the real update check via
     `UpdateCheckController` and reports the outcome, Up to date and unreachable
     included), How It Works, View Licence
-  - Read-only accounts: window title shows "(Read-only)"; destructive/edit actions
-    disabled across all views
 - `main.py` - composition root; manages full session lifecycle:
   - `_session_loop()` → login → open DB → load currency → build window → show
   - `_reload_database()` → triggered by `database_replaced`; closes old DB, reopens, loads currency, rebuilds window
@@ -1704,7 +1691,6 @@ main()
               └── else       → LoginDialog (prefilled from RememberedLogin
                                when Remember me was ticked last time)
                     └── Create Account...     → CreateUserDialog(is_first_user=False)
-                    └── Import Viewer Package → viewer-package import flow
               └── X button   → app.quit() → process exits
         └── _open_user_database(username)       # budget_<username>.db
         └── _load_currency(database)            # set_currency() from settings

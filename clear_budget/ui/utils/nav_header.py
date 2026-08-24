@@ -247,16 +247,6 @@ def _build_nav_user_pair():
     return label, mirror
 
 
-def nav_user_text(username: str, *, read_only: bool) -> str:
-    """The account name a tray shows, with its mode when that is limited.
-
-    Pure, kept separate from the widget work, so what the tray SAYS can be
-    tested without a running Qt application. A read-only viewer is told so
-    here because the title bar no longer carries either half of it.
-    """
-    return f"{username} (Read-only)" if read_only else username
-
-
 def set_nav_user(header, text: str) -> None:
     """Show `text` as the signed-in account on a tab's month tray.
 

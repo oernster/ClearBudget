@@ -159,41 +159,6 @@ class TestFindUser:
         assert store.find_user("ALICE") is not None
 
 
-class TestIsReadOnly:
-    """Test the is_read_only flag on User."""
-
-    def test_normal_user_not_read_only(self, store: UserStore) -> None:
-        user, _ = store.create_user("alice", "pass1234")
-        assert user.is_read_only is False
-
-    def test_reopening_store_does_not_fail_migration(self, tmp_path) -> None:
-        """ALTER TABLE ADD COLUMN is a no-op once the column already exists."""
-        path = tmp_path / "users.db"
-        first = UserStore(path)
-        first.create_user("alice", "pass1234")
-        first.close()
-
-        second = UserStore(path)
-        try:
-            assert second.find_user("alice").is_read_only is False
-        finally:
-            second.close()
-
-    def test_find_user_returns_read_only_flag(self, store: UserStore) -> None:
-        store.create_user("alice", "pass1234")
-        assert store.find_user("alice").is_read_only is False
-
-    def test_verify_password_returns_read_only_flag(self, store: UserStore) -> None:
-        store.create_user("alice", "pass1234")
-        user = store.verify_password("alice", "pass1234")
-        assert user.is_read_only is False
-
-    def test_get_all_users_returns_read_only_flag(self, store: UserStore) -> None:
-        store.create_user("alice", "pass1234")
-        users = store.get_all_users()
-        assert users[0].is_read_only is False
-
-
 class TestHashPasswordAndRecoveryCode:
     """Test UserStore static helpers."""
 
@@ -216,41 +181,38 @@ class TestHashPasswordAndRecoveryCode:
         assert code1 != code2
 
 
-class TestImportViewerAccount:
-    """Test UserStore.import_viewer_account."""
+class TestAnAlreadyInstalledAccountsFile:
+    """A users.db written before the viewer feature was removed still opens.
 
-    def test_creates_new_read_only_account(self, store: UserStore) -> None:
-        pw_hash = UserStore.hash_password("viewerpass")
-        _, recovery_hash = UserStore.generate_recovery_code()
-        user = store.import_viewer_account("dad", pw_hash, recovery_hash)
-        assert user.username == "dad"
-        assert user.is_admin is False
-        assert user.is_read_only is True
+    Live installs carry an `is_read_only` column this code no longer names.
+    SQLite keeps it; the column is NOT NULL with a default, so an insert that
+    does not mention it still succeeds. Asserted rather than assumed, because
+    the alternative is every existing install failing to create an account.
+    """
 
-    def test_new_account_can_log_in(self, store: UserStore) -> None:
-        pw_hash = UserStore.hash_password("viewerpass")
-        _, recovery_hash = UserStore.generate_recovery_code()
-        store.import_viewer_account("dad", pw_hash, recovery_hash)
-        user = store.verify_password("dad", "viewerpass")
-        assert user is not None
-        assert user.is_read_only is True
+    def test_a_store_with_the_old_column_still_creates_and_reads_users(
+        self, tmp_path
+    ) -> None:
+        path = tmp_path / "users.db"
+        legacy = sqlite3.connect(path)
+        legacy.execute("""
+            CREATE TABLE users (
+                id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+                username              TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+                password_hash         TEXT    NOT NULL,
+                recovery_code_hash    TEXT    NOT NULL,
+                is_admin              INTEGER NOT NULL DEFAULT 0,
+                created_at            TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                is_read_only          INTEGER NOT NULL DEFAULT 0
+            );
+        """)
+        legacy.commit()
+        legacy.close()
 
-    def test_refreshes_existing_account(self, store: UserStore) -> None:
-        pw_hash1 = UserStore.hash_password("oldpass")
-        _, recovery_hash1 = UserStore.generate_recovery_code()
-        first = store.import_viewer_account("dad", pw_hash1, recovery_hash1)
-
-        pw_hash2 = UserStore.hash_password("newpass")
-        _, recovery_hash2 = UserStore.generate_recovery_code()
-        second = store.import_viewer_account("dad", pw_hash2, recovery_hash2)
-
-        assert second.id == first.id
-        assert store.verify_password("dad", "oldpass") is None
-        assert store.verify_password("dad", "newpass") is not None
-
-    def test_does_not_create_duplicate_account(self, store: UserStore) -> None:
-        pw_hash = UserStore.hash_password("viewerpass")
-        _, recovery_hash = UserStore.generate_recovery_code()
-        store.import_viewer_account("dad", pw_hash, recovery_hash)
-        store.import_viewer_account("dad", pw_hash, recovery_hash)
-        assert len(store.get_all_users()) == 1
+        store = UserStore(path)
+        try:
+            store.create_user("alice", "pass1234")
+            assert store.verify_password("alice", "pass1234") is not None
+            assert [u.username for u in store.get_all_users()] == ["alice"]
+        finally:
+            store.close()

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
-from clear_budget.ui.utils.nav_header import nav_user_text, set_nav_user
+from clear_budget.ui.utils.nav_header import set_nav_user
 from clear_budget.ui.utils.tab_icons import mark_current_tab
 from clear_budget.ui.views.archive_view import ArchiveView
 from clear_budget.ui.views.credit_card_view import CreditCardView
@@ -44,12 +44,11 @@ class MainWindowTabsMixin:
         # them; nothing styles or navigates the bar, because nobody sees it.
         self.tabs.tabBar().hide()
 
-        month_view = MonthView(self.month_view_model, read_only=self.read_only)
+        month_view = MonthView(self.month_view_model)
         self.tabs.addTab(self._scrollable(month_view), "Monthly Budget")
 
         solvency_panel = SolvencyPanel(
             self.solvency_view_model,
-            read_only=self.read_only,
             base_month=self.month_view_model.base_month,
         )
         self.tabs.addTab(self._scrollable(solvency_panel), "Solvency")
@@ -57,7 +56,6 @@ class MainWindowTabsMixin:
         credit_card_view = CreditCardView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
-            read_only=self.read_only,
             base_month=self.month_view_model.base_month,
         )
         self.tabs.addTab(self._scrollable(credit_card_view), "Credit Cards")
@@ -69,13 +67,10 @@ class MainWindowTabsMixin:
         graph_view = GraphView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
-            read_only=self.read_only,
         )
         self.tabs.addTab(self._scrollable(graph_view), "Graph")
 
-        archive_view = ArchiveView(
-            self.month_view_model.budget_service, read_only=self.read_only
-        )
+        archive_view = ArchiveView(self.month_view_model.budget_service)
         self.tabs.addTab(self._scrollable(archive_view), "Archive")
 
         # Every tray carries the same icon shortcuts; all of them drive the
@@ -96,7 +91,7 @@ class MainWindowTabsMixin:
             _tray_view.info_btn.clicked.connect(self._on_how_it_works)
             set_nav_user(
                 _tray_view.nav_header,
-                nav_user_text(self.current_user.username, read_only=self.read_only),
+                self.current_user.username,
             )
 
         layout.addWidget(self.tabs)
