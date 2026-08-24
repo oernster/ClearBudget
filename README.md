@@ -91,7 +91,11 @@ what is deliberately left and what only looks like debt.
 - Back Up Everything / Restore Everything (admin only): one zip holding every
   account and every budget, restorable in full after a lost or reinstalled
   machine; a restore is validated before a single live file is replaced
-- Per-user isolated budget databases
+- Per-user isolated budget databases. A new account name must be distinct in
+  more than punctuation or spacing: budget files are named after a
+  simplified form of the account name, so two names differing only that way
+  would land on one file and share everything in it. Creating such an
+  account is refused, with the existing name it clashes with
 - Month-by-month budget tracking with income and bill templates
 - Per-bill monthly skip (exclude a bill from one month without deleting it)
 - Per-bill end month: give a subscription or credit payment a final month, after

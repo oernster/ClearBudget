@@ -4,7 +4,7 @@ import sqlite3
 
 import pytest
 
-from clear_budget.auth.user_store import UserStore
+from clear_budget.auth.user_store import UsernameCollisionError, UserStore
 
 
 @pytest.fixture()
@@ -216,3 +216,56 @@ class TestAnAlreadyInstalledAccountsFile:
             assert [u.username for u in store.get_all_users()] == ["alice"]
         finally:
             store.close()
+
+
+class TestUsernamesThatWouldShareOneBudgetFile:
+    """The pair the UNIQUE constraint cannot see.
+
+    Every account's budget lives at `budget_<safe username>.db`, where the
+    safe form maps anything outside `[A-Za-z0-9_-]` to an underscore. The
+    mapping is lossy, so two names that differ as typed can resolve to one
+    file: measured, "john doe" and "john_doe" both opened
+    `budget_john_doe.db`, which is shared bills, shared income, shared balance
+    and either account able to delete the other's figures.
+    """
+
+    def test_a_name_that_would_share_another_accounts_file_is_refused(
+        self, store: UserStore
+    ) -> None:
+        store.create_user("john doe", "pass1234")
+        with pytest.raises(UsernameCollisionError) as caught:
+            store.create_user("john_doe", "pass5678")
+        assert "john doe" in str(caught.value)
+        assert [u.username for u in store.get_all_users()] == ["john doe"]
+
+    def test_every_character_that_collapses_to_the_same_file_collides(
+        self, store: UserStore
+    ) -> None:
+        """Measured, not assumed: a hyphen SURVIVES the sanitiser."""
+        store.create_user("mary jane", "pass1234")
+        assert store.colliding_account("mary.jane") == "mary jane"
+        assert store.colliding_account("mary_jane") == "mary jane"
+        assert store.colliding_account("mary@jane") == "mary jane"
+        assert store.colliding_account("mary-jane") is None
+
+    def test_a_distinct_name_is_free_to_be_created(self, store: UserStore) -> None:
+        store.create_user("john doe", "pass1234")
+        assert store.colliding_account("jane doe") is None
+        user, _ = store.create_user("jane doe", "pass5678")
+        assert user.username == "jane doe"
+
+    def test_an_account_does_not_collide_with_itself(self, store: UserStore) -> None:
+        store.create_user("john doe", "pass1234")
+        assert store.colliding_account("john doe") is None
+
+    def test_a_case_difference_is_left_to_the_unique_constraint(
+        self, store: UserStore
+    ) -> None:
+        """The same account by this store's rule, refused in its own words."""
+        store.create_user("Alice", "pass1234")
+        assert store.colliding_account("alice") is None
+        with pytest.raises(sqlite3.IntegrityError):
+            store.create_user("alice", "pass5678")
+
+    def test_the_first_account_can_always_be_created(self, store: UserStore) -> None:
+        assert store.colliding_account("john doe") is None

@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 
 from clear_budget.auth.models import User
 from clear_budget.auth.remembered_login import RememberedLogin
-from clear_budget.auth.user_store import UserStore
+from clear_budget.auth.user_store import UsernameCollisionError, UserStore
 from clear_budget.ui import label_roles
 from clear_budget.ui import ui_scale
 from clear_budget.ui.widgets._handover_progress import HandoverProgressMixin
@@ -132,6 +132,10 @@ class CreateUserDialog(HandoverProgressMixin, QDialog):
 
         self.error_label = QLabel("")
         self.error_label.setObjectName(label_roles.ERROR)
+        # Wrapped, because not every refusal fits one line: the
+        # colliding-username message has to explain a rule; unwrapped, it
+        # was CLIPPED mid-sentence (measured, at "The two wou").
+        self.error_label.setWordWrap(True)
         self.error_label.setVisible(False)
         layout.addWidget(self.error_label)
 
@@ -174,9 +178,16 @@ class CreateUserDialog(HandoverProgressMixin, QDialog):
             self._show_error(f"Username '{username}' is already taken.")
             return
 
-        user, recovery_code = self.user_store.create_user(
-            username, password, is_admin=self.is_first_user
-        )
+        try:
+            user, recovery_code = self.user_store.create_user(
+                username, password, is_admin=self.is_first_user
+            )
+        except UsernameCollisionError as exc:
+            # Asked of the store rather than re-derived here: the rule is
+            # about the files the store's path builder writes, so the store
+            # is the only place that can answer it truthfully.
+            self._show_error(str(exc))
+            return
         self.created_user = user
         self.recovery_code = recovery_code
         if self.remembered_login is not None and self.remember_user_check.isChecked():

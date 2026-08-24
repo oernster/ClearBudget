@@ -3,6 +3,20 @@
 Passwords are hashed with bcrypt (Blowfish-based).  A one-time recovery code
 is generated at account creation, shown to the user exactly once and stored
 as a bcrypt hash.  It can be used to reset a forgotten password.
+
+A username must also be distinct in its FILESYSTEM form, not just as typed.
+Every account's budget lives at `budget_<safe username>.db` and its budget
+list at `budgets_<safe username>.json`, where the safe form maps anything
+outside `[A-Za-z0-9_-]` to an underscore. That mapping is lossy, so
+"john doe" and "john_doe" are two accounts resolving to ONE file: measured,
+both opened `budget_john_doe.db`, which means shared bills, shared income,
+shared balance and either account able to delete the other's data. The
+database's own UNIQUE constraint cannot see this, because as typed the two
+names are different.
+
+So the collision is refused where the account is created, which is the only
+place it can enter. Renaming an account is not offered, so there is no second
+door.
 """
 
 import secrets
@@ -12,12 +26,17 @@ from pathlib import Path
 import bcrypt
 
 from clear_budget.auth.models import User
+from clear_budget.shared.db_ownership import safe_username
 
 # bcrypt work factor - 12 is a solid default (≈0.3 s on modern hardware).
 _BCRYPT_ROUNDS = 12
 
 # Recovery code: 20 url-safe characters
 _RECOVERY_CODE_BYTES = 15  # 15 bytes → 20 base64url chars
+
+
+class UsernameCollisionError(ValueError):
+    """A username that would share another account's files."""
 
 
 class UserStore:
@@ -130,13 +149,44 @@ class UserStore:
         recovery_hash = UserStore.hash_password(recovery_code)
         return recovery_code, recovery_hash
 
+    def colliding_account(self, username: str) -> str | None:
+        """An existing account whose FILES `username` would share; else None.
+
+        Compared in the safe form the path builder uses, so it catches the
+        pair the `UNIQUE` constraint cannot: two names that differ as typed
+        and land on one budget file.
+        """
+        wanted = safe_username(username)
+        for user in self.get_all_users():
+            # A name differing only in CASE is the same account by this
+            # store's own rule (`UNIQUE COLLATE NOCASE`), so it is left to
+            # that constraint, which refuses it in the words the user needs:
+            # already taken, rather than too close to something else.
+            if user.username.casefold() == username.casefold():
+                continue
+            if safe_username(user.username) == wanted:
+                return user.username
+        return None
+
     def create_user(
         self, username: str, password: str, is_admin: bool = False
     ) -> tuple["User", str]:
         """Create a new user.  Returns (User, plaintext_recovery_code).
 
         The recovery code is shown to the user exactly once and stored hashed.
+
+        Raises `UsernameCollisionError` when the name would share an existing
+        account's budget file (see the module docstring). Refused here rather
+        than in the dialog, so no caller can create such a pair.
         """
+        clash = self.colliding_account(username)
+        if clash is not None:
+            raise UsernameCollisionError(
+                f"'{username}' is too close to the existing account "
+                f"'{clash}'. The two would share one budget file, so each "
+                "would see and be able to delete the other's figures. Choose "
+                "a name that differs by more than punctuation or spacing."
+            )
         password_hash = self.hash_password(password)
         recovery_code, recovery_hash = self.generate_recovery_code()
 
