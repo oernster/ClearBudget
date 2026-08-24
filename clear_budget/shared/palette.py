@@ -58,6 +58,12 @@ AMBER_56 = "#fbbf24"  # h43 s96% l56%
 AMBER_89 = "#fef3c7"  # h48 s96% l89%
 
 
+# Emerald. The focus and hover ring, in both themes. A BORDER colour only:
+# used as a fill it reads as glare, which is why the checked-state fill is a
+# separate token.
+EMERALD_30 = "#059669"  # h161 s94% l30%
+EMERALD_52 = "#34d399"  # h158 s64% l52%
+
 # Cyan. Info, plus the chart line that carries no verdict.
 CYAN_48 = "#0ea5e9"  # h199 s89% l48%
 CYAN_50 = "#00d4ff"  # h190 s100% l50%

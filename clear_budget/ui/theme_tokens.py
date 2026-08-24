@@ -9,9 +9,10 @@ on a hex literal anywhere else.
 
 Ring colours follow the app-wide three-state model: no ring at rest, the ring
 token on hover or focus while enabled, the danger token permanently while
-disabled. The ring is a near neutral rather than a hue, because it is CHROME:
-it says the system is responding, while hue is left to mean something. That is
-also why `accent` is a separate token even though the two were once one colour.
+disabled. The ring is a BORDER colour and nothing else. Every fill it used to
+double as has its own token now (`checked_fill`), because a border saying
+"focus is here" and a solid block saying "this is on" are different statements
+and one value could not make both without the fill reading as glare.
 """
 
 from __future__ import annotations
@@ -35,7 +36,13 @@ DARK: dict[str, str] = {
     "checkbox_hover": palette.MUTED_BLUE_84,
     "accent": palette.VIOLET_85,
     "info": palette.CYAN_50,
-    "ring": palette.MUTED_BLUE_84,
+    "ring": palette.EMERALD_52,
+    # The CHECKED state of a checkbox, a table indicator or a switch track.
+    # Split from `ring` because the two say different things: the ring is a
+    # BORDER meaning focus or hover, while this is a solid FILL meaning on.
+    # Sharing one value put a saturated block of the ring colour into every
+    # ticked box, which is glare rather than signal.
+    "checked_fill": palette.INDIGO_55,
     "danger": palette.RED_71,
     "warn": palette.AMBER_56,
     "primary_bg": palette.INDIGO_55,
@@ -87,7 +94,8 @@ LIGHT: dict[str, str] = {
     "checkbox_hover": palette.MUTED_BLUE_35,
     "accent": palette.PURPLE_47,
     "info": palette.SKY_32,
-    "ring": palette.MUTED_BLUE_27_H215,
+    "ring": palette.EMERALD_30,
+    "checked_fill": palette.INDIGO_55,
     "danger": palette.RED_51,
     "warn": palette.ORANGE_37,
     "primary_bg": palette.INDIGO_55,

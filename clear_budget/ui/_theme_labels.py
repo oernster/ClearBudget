@@ -314,8 +314,8 @@ QTableWidget::indicator {{
 }}
 
 QTableWidget::indicator:checked {{
-    background: {t["ring"]};
-    border-color: {t["ring"]};
+    background: {t["checked_fill"]};
+    border-color: {t["checked_fill"]};
 }}
 
 QTableWidget::indicator:unchecked:hover {{

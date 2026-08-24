@@ -72,7 +72,14 @@ class ScrollableTab(QWidget):
         # QAbstractScrollArea on the vertical arrows by itself; the ring only
         # has to be able to land here, which needs an explicit focus policy
         # (a QScrollArea does not take tab focus by default).
-        self._scroll.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        #
+        # TabFocus, never StrongFocus. StrongFocus also grants CLICK focus, so
+        # clicking anywhere on the page background put the ring round the whole
+        # panel even on a page that does not overflow and is therefore not a
+        # ring stop at all (measured: `nav_scroll_stop()` returned None while
+        # the panel wore the ring). Focus may only arrive here from the ring,
+        # which already skips a page that fits.
+        self._scroll.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 

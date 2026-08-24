@@ -1227,7 +1227,12 @@ renderings of the same figures to hold in step. Every month any page shows
   read with the mouse: there was nowhere to put the keyboard that the arrows
   would scroll. Qt scrolls a focused `QAbstractScrollArea` on Up, Down, Page
   and Home/End by itself, so only the focus policy and the ring membership had
-  to be added. Left and Right deliberately still STEP THE RING here rather than
+  to be added. That policy is `TabFocus`, never `StrongFocus`: `StrongFocus`
+  also grants CLICK focus, so clicking anywhere on a page background put the
+  ring round the whole panel even on a page that does not overflow and is
+  therefore not a stop at all (measured: `nav_scroll_stop()` returned None
+  while the panel wore the ring). Focus may only arrive here from the ring,
+  which already skips a page that fits. Left and Right deliberately still STEP THE RING here rather than
   scrolling horizontally, unlike the general scrollable-region rule: nothing in
   this app scrolls sideways and Left/Right stepping everywhere is what stops
   focus being trapped. The stop paints the same ring on focus and none at
@@ -1277,6 +1282,12 @@ renderings of the same figures to hold in step. Every month any page shows
 - Ring colours are three-state, enforced in the QSS: no ring at rest, the ring
   colour while an enabled control is hovered or focused, a permanent red ring
   while disabled (hover/focus rules are gated on `:enabled`)
+- `ring` is a BORDER colour and nothing else. Every solid fill it used to
+  double as has its own `checked_fill` token: the checked state of a checkbox,
+  the same on a table indicator, the on position of a switch track. One value could
+  not make both statements, because a border saying "focus is here" is a cue
+  while the same colour as a filled block saying "this is on" is glare. That
+  collision is what made a ticked box the loudest thing on the login screen
 - `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
   for the Credit Cards tab
 

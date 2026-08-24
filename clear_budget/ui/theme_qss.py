@@ -15,6 +15,7 @@ from clear_budget.ui._theme_controls import control_qss, widget_extras_qss
 from clear_budget.ui._theme_inputs import combo_qss, input_qss
 from clear_budget.ui._theme_menus import menu_qss
 from clear_budget.ui._theme_tabs import TAB_BAR_LEFT_INSET_PX, tab_qss
+from clear_budget.ui.theme_tokens import STATE_SAFE
 
 SCROLLBAR_WIDTH_PX = 8
 
@@ -78,7 +79,7 @@ def _card_toggle_qss(t: dict[str, str]) -> str:
     from clear_budget.ui.switch_images import switch_size, switch_url
 
     width, height = switch_size()
-    on_url = switch_url(track=t["ring"], knob=t["primary_text"], on=True)
+    on_url = switch_url(track=t["checked_fill"], knob=t["primary_text"], on=True)
     off_url = switch_url(track=t["border"], knob=t["primary_text"], on=False)
     on_off_urls_disabled = (
         switch_url(track=t["border"], knob=t["text_disabled"], on=True),
@@ -251,7 +252,7 @@ QLabel {{
 }}
 
 QLabel#SolvencyGood {{
-    color: {t["ring"]};
+    color: {s[STATE_SAFE]};
     font-weight: bold;
 }}
 
@@ -325,8 +326,8 @@ QCheckBox::indicator {{
 }}
 
 QCheckBox::indicator:checked {{
-    background: {t["ring"]};
-    border-color: {t["ring"]};
+    background: {t["checked_fill"]};
+    border-color: {t["checked_fill"]};
 }}
 
 QCheckBox::indicator:unchecked:hover {{
