@@ -22,9 +22,18 @@ from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 _PROJECTION_MONTHS = 6
 
 # Remaining headroom (pence) banding a projection cell: tight, worth watching,
-# or ample. The colours themselves come from the theme's cell_* tokens.
+# or ample.
 _HEADROOM_TIGHT_PENCE = 10_000
 _HEADROOM_WATCH_PENCE = 25_000
+
+# The theme token each band paints with, written out in full rather than built
+# from the band name. An f-string key is invisible to a search for the token,
+# which is how all six were once read as dead and deleted; the app then died on
+# a KeyError the moment a card was projected. Spelling them out is what lets
+# tests/ui_logic/test_theme_token_keys.py find them.
+_BAND_TIGHT = ("cell_tight_bg", "cell_tight_fg")
+_BAND_WATCH = ("cell_watch_bg", "cell_watch_fg")
+_BAND_AMPLE = ("cell_ample_bg", "cell_ample_fg")
 
 # Qt's own no-maximum sentinel, used to release the zero height set while
 # the strip was hidden. setFixedHeight below pins the real one.
@@ -91,11 +100,11 @@ class CreditCardProjectionStripMixin:
                 cell = QTableWidgetItem(str(state.closing_balance))
                 cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 if available <= _HEADROOM_TIGHT_PENCE:
-                    band = "tight"
+                    bg_key, fg_key = _BAND_TIGHT
                 elif available <= _HEADROOM_WATCH_PENCE:
-                    band = "watch"
+                    bg_key, fg_key = _BAND_WATCH
                 else:
-                    band = "ample"
-                cell.setBackground(QColor(colours[f"cell_{band}_bg"]))
-                cell.setForeground(QColor(colours[f"cell_{band}_fg"]))
+                    bg_key, fg_key = _BAND_AMPLE
+                cell.setBackground(QColor(colours[bg_key]))
+                cell.setForeground(QColor(colours[fg_key]))
                 self.projection_table.setItem(row_idx, col_idx, cell)

@@ -70,6 +70,13 @@ DARK: dict[str, str] = {
     "pill_up_bg": palette.BLUE_25,
     "pill_down_bg": palette.ORANGE_26,
     "card_stat_bg": palette.MUTED_BLUE_18,
+    "cell_tight_bg": palette.RED_31,
+    "cell_watch_bg": palette.AMBER_50,
+    "cell_ample_bg": palette.GREEN_20,
+    "cell_tight_fg": palette.GREY_91,
+    "cell_watch_fg": palette.GREY_05,
+    "cell_ample_fg": palette.GREY_100,
+    "bar_text": palette.GREY_91,
 }
 
 LIGHT: dict[str, str] = {
@@ -112,6 +119,13 @@ LIGHT: dict[str, str] = {
     "pill_up_bg": palette.BLUE_48,
     "pill_down_bg": palette.ORANGE_37,
     "card_stat_bg": palette.GREY_100,
+    "cell_tight_bg": palette.RED_94,
+    "cell_watch_bg": palette.AMBER_89,
+    "cell_ample_bg": palette.GREEN_93,
+    "cell_tight_fg": palette.RED_31,
+    "cell_watch_fg": palette.ORANGE_26,
+    "cell_ample_fg": palette.GREEN_20,
+    "bar_text": palette.MUTED_BLUE_11,
 }
 
 # Chart series colours are DATA encodings, not chrome, so they are a separate

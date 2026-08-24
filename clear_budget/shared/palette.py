@@ -44,6 +44,7 @@ RED_35 = "#991b1b"  # h0 s70% l35%
 RED_42 = "#b91c1c"  # h0 s74% l42%
 RED_51 = "#dc2626"  # h0 s72% l51%
 RED_71 = "#f87171"  # h0 s91% l71%
+RED_94 = "#fee2e2"  # h0 s93% l94%
 
 # Orange. Where the light theme takes warnings that amber cannot carry on white.
 ORANGE_26 = "#78350f"  # h22 s78% l26%
@@ -56,6 +57,7 @@ ORANGE_61 = "#fb923c"  # h27 s96% l61%
 # Amber. Caution, plus the within-facility state a bar takes below zero.
 AMBER_50 = "#f59e0b"  # h38 s92% l50%
 AMBER_56 = "#fbbf24"  # h43 s96% l56%
+AMBER_89 = "#fef3c7"  # h48 s96% l89%
 
 
 # Emerald. The focus and hover ring in both themes; also the safe state. Never a
@@ -63,6 +65,12 @@ AMBER_56 = "#fbbf24"  # h43 s96% l56%
 # is why the checked-state fill and the chart bar are separate tokens.
 EMERALD_30 = "#059669"  # h161 s94% l30%
 EMERALD_52 = "#34d399"  # h158 s64% l52%
+
+# Green. The two ends a headroom-ample projection cell is filled with, one per
+# theme. Darker and paler than emerald precisely because they ARE fills: the
+# cell carries a balance on top, so the colour has to get out of its way.
+GREEN_20 = "#14532d"  # h144 s61% l20%
+GREEN_93 = "#dcfce7"  # h141 s84% l93%
 
 # Cyan. Info, plus the chart line that carries no verdict.
 CYAN_48 = "#0ea5e9"  # h199 s89% l48%
