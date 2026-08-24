@@ -57,7 +57,7 @@ def _options(target: Path, *, desktop: bool = False, start_menu: bool = False):
 @pytest.fixture()
 def target(tmp_path: Path) -> Path:
     """Return the directory an install writes into."""
-    return tmp_path / "programs" / "Clear Budget"
+    return tmp_path / "programs" / "ClearBudget"
 
 
 class TestGuardNotRunning:
@@ -220,7 +220,7 @@ class TestUpgradeOrReinstall:
         install_new(
             scratch_identity, _options(target), controller=FakeProcessController()
         )
-        moved = tmp_path / "programs" / "Clear Budget Elsewhere"
+        moved = tmp_path / "programs" / "ClearBudget Elsewhere"
 
         upgrade_or_reinstall(
             scratch_identity,

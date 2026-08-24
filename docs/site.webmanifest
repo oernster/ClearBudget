@@ -1,6 +1,6 @@
 {
-  "name": "Clear Budget",
-  "short_name": "Clear Budget",
+  "name": "ClearBudget",
+  "short_name": "ClearBudget",
   "description": "A private, local-first desktop budget planner that projects forward solvency and warns about mid-month overdrafts before they happen.",
   "lang": "en-GB",
   "start_url": "/ClearBudget/",

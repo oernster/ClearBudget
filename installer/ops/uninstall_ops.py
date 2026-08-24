@@ -55,8 +55,8 @@ from installer.state.registry import (
 )
 
 WINDOWS_ONLY_MESSAGE = "Uninstall is Windows-only"
-NOT_INSTALLED_MESSAGE = "Clear Budget is not detected as installed for this user"
-APP_RUNNING_MESSAGE = "Clear Budget is currently running"
+NOT_INSTALLED_MESSAGE = "ClearBudget is not detected as installed for this user"
+APP_RUNNING_MESSAGE = "ClearBudget is currently running"
 
 _WINDOWS_OS_NAME = "nt"
 

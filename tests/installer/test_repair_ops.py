@@ -88,7 +88,7 @@ def installed(
     scratch_identity: InstallerIdentity, tmp_path: Path, manifest: Path
 ) -> Path:
     """Install once, so a repair has something to repair."""
-    target = tmp_path / "programs" / "Clear Budget"
+    target = tmp_path / "programs" / "ClearBudget"
     install_new(
         scratch_identity,
         InstallOptions(

@@ -54,7 +54,7 @@ from installer.ops.staging import check_cancel, staging_dir_for, swap_in_bundle
 
 logger = logging.getLogger("installer.install")
 
-APP_RUNNING_MESSAGE = "Clear Budget is currently running"
+APP_RUNNING_MESSAGE = "ClearBudget is currently running"
 
 _INSTALL_PURPOSE = "install"
 _UPGRADE_PURPOSE = "upgrade"

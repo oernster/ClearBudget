@@ -24,7 +24,7 @@ from installer.ui.main_window import InstallerMainWindow
 
 def main(argv: list[str] | None = None) -> int:
     if os.name != "nt":
-        print("Clear Budget installer is Windows-only")
+        print("ClearBudget installer is Windows-only")
         return 2
 
     log_path = setup_installer_logging()

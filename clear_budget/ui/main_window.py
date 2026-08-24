@@ -64,7 +64,7 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         self.user_store = user_store
         self.db_path = db_path
         self.read_only = current_user.is_read_only
-        title = f"Clear Budget - {current_user.username}"
+        title = f"ClearBudget - {current_user.username}"
         if self.read_only:
             title += " (Read-only)"
         self.setWindowTitle(title)

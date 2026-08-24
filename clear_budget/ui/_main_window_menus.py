@@ -97,7 +97,7 @@ class MainWindowMenuMixin:
 
         # Help menu
         help_menu = self.menuBar().addMenu("&Help")
-        about_action = help_menu.addAction("&About Clear Budget")
+        about_action = help_menu.addAction("&About ClearBudget")
         check_updates_action = help_menu.addAction("Check for &Updates")
         how_it_works_action = help_menu.addAction("How It Works")
         licence_action = help_menu.addAction("View Licence (LGPL-3.0)")

@@ -13,11 +13,11 @@ class InstallerOperationError(RuntimeError):
 
 
 class AppRunningError(InstallerOperationError):
-    """Raised when Clear Budget is running and the operation needs it closed."""
+    """Raised when ClearBudget is running and the operation needs it closed."""
 
 
 class AppStillRunningError(AppRunningError):
-    """Raised when Clear Budget was asked to close but is still running.
+    """Raised when ClearBudget was asked to close but is still running.
 
     Distinct from AppRunningError because the offer to close has already been
     taken up: repeating that offer would be pointless, so the UI says what to

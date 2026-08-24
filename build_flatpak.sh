@@ -149,7 +149,7 @@ chmod +x packaging/clearbudget-launcher.sh
 
 cat > "packaging/${APP_ID}.desktop" <<DESKTOP
 [Desktop Entry]
-Name=Clear Budget
+Name=ClearBudget
 Comment=Personal monthly budget planner with credit card tracking
 Exec=clearbudget
 Icon=${APP_ID}
@@ -162,12 +162,12 @@ cat > "packaging/${APP_ID}.metainfo.xml" <<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>${APP_ID}</id>
-  <name>Clear Budget</name>
+  <name>ClearBudget</name>
   <summary>Personal monthly budget planner with credit card tracking</summary>
   <metadata_license>MIT</metadata_license>
   <project_license>LGPL-3.0-only</project_license>
   <description>
-    <p>Clear Budget is a local-first desktop budget planner.  It tracks monthly
+    <p>ClearBudget is a local-first desktop budget planner.  It tracks monthly
     bills, income sources and credit card balances per user, with all data held
     in a private SQLite database on your own machine.</p>
   </description>

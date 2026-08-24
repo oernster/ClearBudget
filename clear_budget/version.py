@@ -6,11 +6,18 @@ packaging metadata stay consistent.
 
 from pathlib import Path
 
-APP_NAME: str = "Clear Budget"
+APP_NAME: str = "ClearBudget"
 
 # Previous APP_NAME, used to migrate per-user installer data (preferences,
 # cache) created by older installs that used the old display name.
-LEGACY_APP_NAME: str = "ClearBudget"
+#
+# The spaced spelling was tried and reverted. It bought nothing and cost a
+# great deal: it renamed the install directory out from under every shortcut
+# and Start pin already aiming at the old one, so a relaunch met the shell's
+# "can't open this item" dialog instead of the app. The
+# name is ONE word from here on. This constant points back at the spaced
+# spelling only so an install that took it carries its settings forward.
+LEGACY_APP_NAME: str = "Clear Budget"
 APP_AUTHOR: str = "Oliver Ernster"
 APP_COPYRIGHT: str = "© 2026 Oliver Ernster"
 

@@ -80,11 +80,11 @@ def validate_full_backup(package_path: Path) -> list[str]:
     except (OSError, zipfile.BadZipFile) as exc:
         raise FullBackupError("Not a readable backup file.") from exc
     if USERS_DB_NAME not in names:
-        raise FullBackupError("Not a Clear Budget full backup: no accounts database.")
+        raise FullBackupError("Not a ClearBudget full backup: no accounts database.")
     strays = [n for n in names if not _is_permitted_member(n)]
     if strays:
         raise FullBackupError(
-            "Not a Clear Budget full backup: unexpected entry "
+            "Not a ClearBudget full backup: unexpected entry "
             f"'{strays[0]}' in the archive."
         )
     return names

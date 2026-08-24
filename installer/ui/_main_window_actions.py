@@ -92,11 +92,19 @@ def show_installer_licence(window: InstallerMainWindow) -> None:
 def default_install_dir() -> Path:
     """The per-user Programs directory, the Windows convention for user apps.
 
-    It was `%LOCALAPPDATA%\\Clear Budget` once, one level too high: program
-    files sat beside the app's DATA directory and the setup log, three
-    near-identical names at the top of AppData\\Local. Program files belong
-    under Programs; an existing install keeps its registered location until
-    it is uninstalled, since the maintenance flow reads the registry entry.
+    Program files belong under Programs rather than at the top of
+    AppData\\Local; here the reason is not tidiness.
+    `%LOCALAPPDATA%\\ClearBudget` is the
+    app's DATA directory. An install root directly under Local AppData once
+    sat beside it under a near-identical name; a setup run then deleted live
+    user data believing it was tidying an old install. Keeping the install
+    root one level down under Programs means the two can never be confused
+    again, whatever the app is called.
+
+    An existing install keeps its registered location until it is
+    uninstalled, since the maintenance flow reads the registry entry. So a
+    machine installed under an older spelling stays where it is and only a
+    clean install lands here.
     """
     local = os.getenv("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
     return Path(local) / "Programs" / APP_NAME

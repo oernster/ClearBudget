@@ -1,4 +1,4 @@
-"""Offering to close a running Clear Budget before its files are replaced.
+"""Offering to close a running ClearBudget before its files are replaced.
 
 Telling the user to go and close it themselves leaves them to find the window,
 close it and come back to click Retry. Offering to do it is one click, so that

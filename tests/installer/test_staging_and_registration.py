@@ -53,7 +53,7 @@ class TestStagingDir:
     def test_it_sits_beside_the_target_so_the_swap_is_a_rename(
         self, tmp_path: Path
     ) -> None:
-        target = tmp_path / "install" / "Clear Budget"
+        target = tmp_path / "install" / "ClearBudget"
 
         staging = staging_dir_for(target, _PURPOSE)
 

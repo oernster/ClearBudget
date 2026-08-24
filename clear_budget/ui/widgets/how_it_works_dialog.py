@@ -70,7 +70,7 @@ def _body_html() -> str:
     px = ui_scale.px(_INLINE_ICON_PX)
     app_icon = _img(find_logo_png_path(), px)
     return f"""\
-<h2>How Clear Budget Works</h2>
+<h2>How ClearBudget Works</h2>
 
 <h3>The four tabs</h3>
 {_tab_row(MONTHLY_BUDGET_ICON, "Monthly Budget",

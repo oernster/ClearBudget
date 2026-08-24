@@ -1,10 +1,10 @@
-<img width="64" height="64" alt="Clear Budget" src="https://github.com/user-attachments/assets/4e8c5620-7890-4527-9eb6-14adad1ebea8" /> [Clear Budget](https://ernster.dev/ClearBudget/)
+<img width="64" height="64" alt="ClearBudget" src="https://github.com/user-attachments/assets/4e8c5620-7890-4527-9eb6-14adad1ebea8" /> [ClearBudget](https://ernster.dev/ClearBudget/)
 
-# Clear Budget
+# ClearBudget
 
 **Personal Budgeting and Solvency Forecasting**
 
-> **Most budgeting apps are retrospective ledgers that tell you where the money went. Clear Budget is forward-looking: it projects solvency for the months ahead and warns about mid-month overdrafts before they happen.**
+> **Most budgeting apps are retrospective ledgers that tell you where the money went. ClearBudget is forward-looking: it projects solvency for the months ahead and warns about mid-month overdrafts before they happen.**
 
 A personal budgeting and solvency forecasting application for managing income, bills
 and credit cards, with forward solvency analysis. Supports multiple user accounts with
@@ -33,7 +33,7 @@ secure authentication.
 
 - Bookkeeping, invoicing, tax or double-entry accounting. There is no ledger,
   no reconciliation against a statement feed and no chart of accounts
-- Bank connections. Clear Budget never contacts a bank, an aggregator or any
+- Bank connections. ClearBudget never contacts a bank, an aggregator or any
   server other than the GitHub update check described below; balances are
   entered and then maintained by the app itself
 - Investments, assets, loans amortisation or net worth. It models a current
@@ -67,10 +67,10 @@ secure authentication.
 ## Architecture
 
 <p align="center">
-  <img src="docs/architecture.svg" alt="Clear Budget clean architecture: UI, Application, Domain, Infrastructure, with dependencies pointing inward to a pure Domain" width="860">
+  <img src="docs/architecture.svg" alt="ClearBudget clean architecture: UI, Application, Domain, Infrastructure, with dependencies pointing inward to a pure Domain" width="860">
 </p>
 
-Clear Budget uses a clean, four-layer architecture with every dependency
+ClearBudget uses a clean, four-layer architecture with every dependency
 pointing inward to a pure Domain that has no I/O and no framework. Layer
 boundaries are enforced automatically by AST structural tests at every test
 run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
@@ -321,7 +321,7 @@ budget but cannot edit anything.
 
 ## Data Storage and Security
 
-Clear Budget is a local-first desktop application. All data lives on your own
+ClearBudget is a local-first desktop application. All data lives on your own
 machine in the platform's conventional application-data location:
 
 | Platform | Data directory |
@@ -383,7 +383,7 @@ That is the threat it is designed to stop and the only one.
 The database files themselves are **not encrypted at rest**. A technically
 capable person with read access to your user folder can open
 `budget_<username>.db` directly with any SQLite tool and read its contents
-without going through Clear Budget at all. The bcrypt login does not prevent
+without going through ClearBudget at all. The bcrypt login does not prevent
 this and is not intended to. For the common case - keeping a housemate, family
 member or colleague from idly browsing your finances inside the app - this is
 the right level of protection. If your threat model includes a determined local
@@ -394,9 +394,9 @@ attacker, protect the files at rest with your operating system's own encryption
 
 ## Update Checks
 
-The update check is the only network request Clear Budget ever makes. Shortly
+The update check is the only network request ClearBudget ever makes. Shortly
 after launch, then once a day while running, the app asks GitHub's public
-releases API whether a newer version of Clear Budget has been published. The
+releases API whether a newer version of ClearBudget has been published. The
 request carries nothing about you, your machine or your budget; it is a plain
 read of `api.github.com/repos/oernster/ClearBudget/releases/latest`.
 
@@ -518,7 +518,7 @@ entered before these existed continues to do.
 - **Save As** (File > Save As...): choose a new save file (`.db` extension
   enforced); becomes the remembered location for future saves
 - **Load** (File > Load... or the folder button beside the diskette): file
-  validated as SQLite and verified to contain all required Clear Budget tables
+  validated as SQLite and verified to contain all required ClearBudget tables
   and columns before any write; confirmation required if active database has
   data; window reloads automatically after load - no restart needed
 
@@ -600,7 +600,7 @@ standing (one to twelve, four by default).
 
 ## Help Menu
 
-- **About Clear Budget** - version, author and the open source credits, split
+- **About ClearBudget** - version, author and the open source credits, split
   into what is bundled with the application and what is only used to build it
 - **Check for Updates** - queries this project's GitHub releases and reports
   whether a newer version exists, offering the download for your platform
@@ -621,11 +621,11 @@ stale.
 
 | Platform | Download | Install | Run |
 |----------|----------|---------|-----|
-| Windows 10/11, 64-bit | `ClearBudgetSetup.exe` | Run it. The install is per-user, so no administrator rights are needed. Run the same file again later to upgrade, repair or uninstall | Start menu or desktop shortcut; or tick "Launch Clear Budget when setup finishes" |
-| macOS (Apple Silicon) | `clearbudget.dmg` | Open the disk image and drag Clear Budget into Applications | Launchpad or Applications |
+| Windows 10/11, 64-bit | `ClearBudgetSetup.exe` | Run it. The install is per-user, so no administrator rights are needed. Run the same file again later to upgrade, repair or uninstall | Start menu or desktop shortcut; or tick "Launch ClearBudget when setup finishes" |
+| macOS (Apple Silicon) | `clearbudget.dmg` | Open the disk image and drag ClearBudget into Applications | Launchpad or Applications |
 | Linux (any distribution with Flatpak) | `clearbudget.flatpak` | `flatpak install --user clearbudget.flatpak` | `flatpak run com.oliverernster.clearbudget` |
 
-On Windows, if Clear Budget is running when you install, upgrade, repair or
+On Windows, if ClearBudget is running when you install, upgrade, repair or
 uninstall, setup offers to close it and says plainly that the running session
 ends, then waits for the file lock to release before carrying on. If the
 application will not close, setup stops and says so rather than failing part
@@ -637,7 +637,7 @@ account and every user's budget on the machine and deleting it cannot be
 undone, so it is left for you to do by hand
 (`tests/structural/test_data_dir_isolation.py` fails if any installer module so
 much as names the directory). And there is **no** launch-on-sign-in entry,
-because Clear Budget has no such feature and a setup switch for one would be a
+because ClearBudget has no such feature and a setup switch for one would be a
 product decision rather than a packaging one.
 
 ## Running from source

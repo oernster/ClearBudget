@@ -1,4 +1,4 @@
-# Clear Budget Architecture
+# ClearBudget Architecture
 
 A clean architecture implementation with 4 isolated layers: Domain, Application, Infrastructure and UI.
 An additional Auth layer sits alongside the main layers for user identity and credential management.
@@ -1682,7 +1682,7 @@ to rebuild the window with updated labels.
 
 ## Cross-Platform Support and Packaging
 
-Clear Budget is a single PySide6 codebase that ships as a native package on
+ClearBudget is a single PySide6 codebase that ships as a native package on
 Windows, macOS and Linux. The application layers carry no OS-specific logic;
 platform differences are isolated to a few well-defined seams:
 
@@ -1759,7 +1759,7 @@ frozen build's `_MEIPASS` branch masked it.
 Four behaviours are worth naming because they are what a user notices:
 
 - **A running application is offered a close, not a lecture.** Detecting it used
-  to produce "Please close Clear Budget and click Retry". The setup program now
+  to produce "Please close ClearBudget and click Retry". The setup program now
   offers to close it, states that the running session ends, force-terminates
   every matching process and then polls until the file lock releases, with a
   bounded deadline and a typed `AppStillRunningError` if the process will not
@@ -1780,7 +1780,7 @@ Four behaviours are worth naming because they are what a user notices:
 
 Two things the setup program deliberately does not do. There is no
 "remove my user data" option (see below); there is no launch-on-sign-in
-entry: Clear Budget has no such feature, so an installer switch for it would be
+entry: ClearBudget has no such feature, so an installer switch for it would be
 a product decision rather than a packaging one.
 
 **The installer never touches user data.** Install, repair, reinstall and

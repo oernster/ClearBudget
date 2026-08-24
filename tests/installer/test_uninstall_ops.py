@@ -55,7 +55,7 @@ _QUOTED_DIR_NAME = "Oliver's Programs"
 @pytest.fixture()
 def installed(scratch_identity: InstallerIdentity, tmp_path: Path) -> Path:
     """Install once, so an uninstall has something to remove."""
-    target = tmp_path / "programs" / "Clear Budget"
+    target = tmp_path / "programs" / "ClearBudget"
     install_new(
         scratch_identity,
         InstallOptions(
@@ -203,11 +203,11 @@ class TestUninstall:
         self, scratch_identity: InstallerIdentity, tmp_path: Path
     ) -> None:
         """The recorded flags say which shortcuts were ours to remove."""
-        target = tmp_path / "programs" / "Clear Budget"
+        target = tmp_path / "programs" / "ClearBudget"
         target.mkdir(parents=True)
         write_uninstall_entry(
             scratch_identity.uninstall_key,
-            display_name="Clear Budget",
+            display_name="ClearBudget",
             display_version="4.0.0",
             install_location=target,
             uninstall_string="setup --uninstall",
@@ -231,7 +231,7 @@ class TestUninstall:
         self, scratch_identity: InstallerIdentity, tmp_path: Path
     ) -> None:
         """Nothing recorded, so remove both: a leftover launcher is worse."""
-        target = tmp_path / "programs" / "Clear Budget"
+        target = tmp_path / "programs" / "ClearBudget"
         target.mkdir(parents=True)
         _write_location_only(scratch_identity.uninstall_key, target)
         paths = get_shortcut_paths(scratch_identity)
@@ -264,7 +264,7 @@ class TestUninstall:
         target = tmp_path / "programs" / "gone"
         write_uninstall_entry(
             scratch_identity.uninstall_key,
-            display_name="Clear Budget",
+            display_name="ClearBudget",
             display_version="4.0.0",
             install_location=target,
             uninstall_string="setup --uninstall",

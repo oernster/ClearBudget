@@ -1,4 +1,4 @@
-"""The HKCU registration: what makes Clear Budget an installed program.
+"""The HKCU registration: what makes ClearBudget an installed program.
 
 Every write goes to the scratch key the identity fixture yields and that key is
 removed in teardown, so the user's own Apps and features entry is never read or
@@ -27,7 +27,7 @@ _UNINSTALL_STRING = '"setup.exe" --uninstall'
 def _write(key: str, location: Path, **extra: object) -> None:
     write_uninstall_entry(
         key,
-        display_name="Clear Budget",
+        display_name="ClearBudget",
         display_version=_VERSION,
         install_location=location,
         uninstall_string=_UNINSTALL_STRING,
@@ -49,7 +49,7 @@ class TestWriteAndRead:
         entry = read_uninstall_entry(key)
 
         assert entry is not None
-        assert entry.display_name == "Clear Budget"
+        assert entry.display_name == "ClearBudget"
         assert entry.display_version == _VERSION
         assert entry.install_location == tmp_path
         assert entry.uninstall_string == _UNINSTALL_STRING
@@ -104,7 +104,7 @@ class TestWriteAndRead:
     def test_an_entry_missing_its_required_values_reads_as_not_installed(
         self, key: str
     ) -> None:
-        _write_values(key, {"DisplayName": "Clear Budget"})
+        _write_values(key, {"DisplayName": "ClearBudget"})
 
         assert read_uninstall_entry(key) is None
 
@@ -114,7 +114,7 @@ class TestWriteAndRead:
         _write_values(
             key,
             {
-                "DisplayName": "Clear Budget",
+                "DisplayName": "ClearBudget",
                 "InstallLocation": "relative/path",
                 "UninstallString": _UNINSTALL_STRING,
             },
@@ -135,7 +135,7 @@ class TestTryReadInstallLocation:
         assert try_read_install_location(key) is None
 
     def test_a_key_without_the_value_has_no_location(self, key: str) -> None:
-        _write_values(key, {"DisplayName": "Clear Budget"})
+        _write_values(key, {"DisplayName": "ClearBudget"})
 
         assert try_read_install_location(key) is None
 
@@ -207,7 +207,7 @@ def _round_trip_flag(key: str, raw: str) -> bool | None:
     _write_values(
         key,
         {
-            "DisplayName": "Clear Budget",
+            "DisplayName": "ClearBudget",
             "InstallLocation": str(Path.home()),
             "UninstallString": _UNINSTALL_STRING,
             "ShortcutDesktop": raw,

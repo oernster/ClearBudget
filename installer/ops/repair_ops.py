@@ -57,8 +57,8 @@ from installer.state.registry import read_uninstall_entry, write_uninstall_entry
 _HASH_CHUNK_BYTES = 1024 * 1024
 
 WINDOWS_ONLY_MESSAGE = "Repair is Windows-only"
-NOT_INSTALLED_MESSAGE = "Clear Budget is not installed"
-APP_RUNNING_MESSAGE = "Clear Budget is currently running"
+NOT_INSTALLED_MESSAGE = "ClearBudget is not installed"
+APP_RUNNING_MESSAGE = "ClearBudget is currently running"
 
 _WINDOWS_OS_NAME = "nt"
 

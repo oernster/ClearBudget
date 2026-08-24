@@ -1,7 +1,7 @@
-# Clear Budget - Development and Build Guide
+# ClearBudget - Development and Build Guide
 
 How to set up a development environment and produce a distributable package of
-Clear Budget on each supported platform.
+ClearBudget on each supported platform.
 
 - For the feature list and day-to-day usage, see [README.md](README.md).
 - For the layer boundaries and design rules, see [ARCHITECTURE.md](ARCHITECTURE.md).
@@ -12,7 +12,7 @@ Clear Budget on each supported platform.
 
 ### 1. Install a suitable Python
 
-Clear Budget targets **Python 3.11 or newer**.
+ClearBudget targets **Python 3.11 or newer**.
 
 - **Windows** - install from [python.org](https://www.python.org/downloads/) and
   tick "Add python.exe to PATH" or run `winget install Python.Python.3.12`.

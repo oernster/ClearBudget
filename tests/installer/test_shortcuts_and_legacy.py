@@ -91,7 +91,7 @@ class TestIconLocation:
 
 class TestCreateShortcut:
     def test_it_writes_a_real_shortcut_file(self, exe: Path, tmp_path: Path) -> None:
-        link = tmp_path / "links" / "Clear Budget.lnk"
+        link = tmp_path / "links" / "ClearBudget.lnk"
 
         create_shortcut(exe, link, working_dir=exe.parent)
 

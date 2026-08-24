@@ -15,7 +15,7 @@ unconditional, because the alternative is remembering:
   * the real payload is over fifty megabytes, so the payload anchor is
     redirected and a small bundle stands in for it.
 
-Between them, running this suite never reads or writes an actual Clear Budget
+Between them, running this suite never reads or writes an actual ClearBudget
 installation. British spelling is used in comments.
 """
 

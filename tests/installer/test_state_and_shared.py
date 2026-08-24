@@ -92,7 +92,7 @@ class TestStatusLine:
     def test_it_says_when_nothing_is_installed(self) -> None:
         state = InstallerState(installer_version=_CURRENT, installed=None)
 
-        assert "not installed" in state.status_line("Clear Budget")
+        assert "not installed" in state.status_line("ClearBudget")
 
     def test_it_names_the_version_and_location_when_something_is(
         self, tmp_path: Path
@@ -102,7 +102,7 @@ class TestStatusLine:
             installed=InstalledInfo(version=_OLDER, location=tmp_path),
         )
 
-        line = state.status_line("Clear Budget")
+        line = state.status_line("ClearBudget")
 
         assert _OLDER in line
         assert str(tmp_path) in line

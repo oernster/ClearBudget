@@ -1,10 +1,13 @@
-"""Migration and cleanup for installs created under the previous app name.
+"""Migration for installs created under the previous app name.
 
-The app was renamed from "ClearBudget" to "Clear Budget". That rename changed
-both the default install directory and the per-user data and cache directory
-names, so a fresh install of the renamed app can leave the pre-rename install
-(and its settings) behind. The helpers here migrate the old per-user data
-forward and remove the orphaned old install directory.
+The app was briefly called "Clear Budget" and is called "ClearBudget" again.
+Each rename changed the default install directory and the per-user data and
+cache directory names, so an install made under the spaced spelling keeps its
+settings in directories the current name never looks at. The helper here
+moves that per-user data forward.
+
+It does NOT remove the old install directory; see the note at the foot of
+this module for why that codepath is never coming back.
 
 British spelling is used in comments.
 """

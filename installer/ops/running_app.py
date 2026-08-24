@@ -38,7 +38,7 @@ CLOSE_POLL_ATTEMPTS = 50
 CLOSE_POLL_INTERVAL_S = 0.1
 
 CLOSE_FAILED_MESSAGE = (
-    "Clear Budget could not be closed. Please close it by hand, then try again."
+    "ClearBudget could not be closed. Please close it by hand, then try again."
 )
 
 _EXE_ATTR = "exe"

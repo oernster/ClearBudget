@@ -19,7 +19,7 @@ def confirm_and_run_uninstall(window: InstallerMainWindow) -> None:
     # ~/.clearbudget and are left where they are, so a reinstall carries on from
     # where the user left off. Saying so is the point of the dialog.
     box.setText(
-        "This will uninstall Clear Budget for the current user.\n\n"
+        "This will uninstall ClearBudget for the current user.\n\n"
         "Your budgets, accounts and settings are kept, so reinstalling picks up "
         "where you left off. To remove them, delete the .clearbudget folder in "
         "your user folder by hand."

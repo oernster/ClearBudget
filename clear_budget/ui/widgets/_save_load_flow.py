@@ -28,7 +28,7 @@ from clear_budget.ui.utils.format_helpers import NAV_ICON_BTN_CHROME_PX
 
 # Default backup filename offered the first time the user saves.
 _DEFAULT_SAVE_NAME = "clearbudget_backup.db"
-_DB_FILTER = "Clear Budget Database (*.db)"
+_DB_FILTER = "ClearBudget Database (*.db)"
 
 
 def _tray_icon_button(glyph: str, tooltip: str, glyph_height: int) -> QPushButton:
@@ -228,7 +228,7 @@ def run_load_flow(parent, db_path: Path, conn) -> bool:
         QMessageBox.critical(
             parent,
             "Invalid Database",
-            f"Cannot load - invalid Clear Budget database.\n\n{validation_error}",
+            f"Cannot load - invalid ClearBudget database.\n\n{validation_error}",
         )
         return False
 

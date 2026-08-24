@@ -212,9 +212,15 @@ class TestTheInstallerLeavesUserDataAlone:
         directory moved to exactly that path, one setup run deleted live
         user data. This is the expression that did it; it must never come
         back in any spelling.
+
+        APP_NAME is in the alternation because the app is called
+        "ClearBudget" again: the constant now HOLDS the data directory's
+        name, so joining the AppData root to it rebuilds the exact path that
+        was destroyed, without the literal ever appearing in the source.
         """
         pattern = re.compile(
-            r"local_appdata_root\(\)\s*/\s*(?:LEGACY_APP_NAME|[\"']ClearBudget[\"'])"
+            r"local_appdata_root\(\)\s*/\s*"
+            r"(?:LEGACY_APP_NAME|APP_NAME|[\"']ClearBudget[\"'])"
         )
         installer_root = _PROJECT_ROOT / "installer"
         offenders = [

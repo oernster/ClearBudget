@@ -155,14 +155,14 @@ _SHIPPED_HTML = "\n".join(_SHIPPED)
 _TOOLING_HTML = "\n".join(_TOOLING)
 
 _ABOUT_TEXT = f"""\
-<h2>Clear Budget</h2>
+<h2>ClearBudget</h2>
 <p><b>Personal Budgeting and Solvency Forecasting</b></p>
 <p><b>Version:</b> {_APP_VERSION}</p>
 <p><b>Author:</b> Oliver Ernster</p>
 <p>Distributed under the GNU Lesser General Public Licence v3.0 (LGPL-3.0).</p>
 <hr>
 <h3>Open Source Credits</h3>
-<p>Clear Budget is built on the shoulders of the following open source projects
+<p>ClearBudget is built on the shoulders of the following open source projects
 and their communities:</p>
 <p><b>Bundled with the application</b>, so their licences travel with it:</p>
 <ul>
@@ -180,7 +180,7 @@ _LGPL3_NOTICE_HEAD = (
     "GNU LESSER GENERAL PUBLIC LICENCE\n"
     "Version 3, 29 June 2007\n"
     "\n"
-    "Clear Budget - Personal Budget Planner\n"
+    "ClearBudget - Personal Budget Planner\n"
     "Copyright (C) 2025 Oliver Ernster\n"
     "\n"
     # The two paragraphs below are the FSF's own notice, reproduced as the
@@ -245,7 +245,7 @@ class AboutDialog(FirstStopDialog):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("About Clear Budget")
+        self.setWindowTitle("About ClearBudget")
         self.setMinimumWidth(ui_scale.px(540))
         layout = QVBoxLayout()
         layout.setSpacing(ui_scale.px(8))
