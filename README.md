@@ -632,9 +632,6 @@ entered before these existed continues to do.
   reads calmly, while going
   overdrawn with no facility (or beyond it) is rendered as a stark clarion
 
-The Monthly Budget tab also links here via "See the Solvency tab for full balance
-projections."
-
 ---
 
 ## Bank Account

@@ -73,13 +73,11 @@ class MonthViewBuilderMixin:
             trailing=(self.info_btn,),
         )
 
-        self.solvency_hint_label = QLabel(
-            "See the Solvency tab for full balance projections."
-        )
-        self.solvency_hint_label.setObjectName(label_roles.HINT)
-        self.solvency_hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.addWidget(self.solvency_hint_label)
-
+        # No line pointing at "the Solvency tab" any more. The tabs are
+        # pictures in the tray, so a sentence naming one by a word that is
+        # nowhere on screen sends the reader looking for something that does
+        # not exist. The shield icon carries its own tooltip; nothing is left
+        # for this to say.
         self.overdraft_warning_label = QLabel("")
         self.overdraft_warning_label.setObjectName(label_roles.WARN_NOTE)
         self.overdraft_warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
