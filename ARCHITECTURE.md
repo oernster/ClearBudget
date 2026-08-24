@@ -713,7 +713,7 @@ holding each budget's slug and display name plus which one is active.
   icon button plus the four tabs in the lower one. The tray machinery itself (this builder, the app-icon
   graph button, the theme toggle and the glyph sizing) lives in
   `ui/utils/nav_header.py`, with the month/year label machinery in
-  `ui/utils/nav_label.py`, the sun/moon toggle's glyph sizing and button in
+  `ui/utils/nav_label.py`, the sun/moon toggle's two faces and button in
   `ui/utils/nav_toggle.py` and the one glyph height they all read in
   `ui/utils/nav_glyph_size.py`; every one of them is re-exported through
   `format_helpers`, keeping each module clear of the LOC band with no call
@@ -1532,23 +1532,21 @@ renderings of the same figures to hold in step. Every month any page shows
   (`QPushButton#ThemeToggleButton { ... }`): a bare `font-size` cascades to the
   widget's whole subtree and its TOOLTIP counts, which is what briefly rendered
   the hover text at the emoji's size
-- An emoji does not fill its em box and no two fill it alike, so the font size
-  is MEASURED per glyph by `glyph_metrics.glyph_font_px_for_height`: the glyph
-  is painted to a scratch canvas at the target height and the font is scaled by
-  however far its opaque pixels missed. On Windows at a 42px font the sun paints
-  43px tall and the moon 38px, so the single 1.08 fraction that preceded this
-  ran the sun about 10% proud of the icon while the moon sat right. The
-  measurement is what puts the two glyphs on the same height as each other. The
-  height they are put on is `format_helpers.TOGGLE_GLYPH_SCALE` of the nav
-  icon's and deliberately not equal to it: matching bounding heights was tried
-  and reads wrong, because the sun and the moon are solid saturated shapes that
-  fill their outline while the icon is a pictogram with light space in it, so
-  at equal heights the emoji looks the heavier. Optical weight is what the eye
-  compares, not the bounding box. The
+- The toggle's two faces are bundled PICTURES (`lightmode.png`, `darkmode.png`),
+  which removed a class of problem rather than moving it. As emoji they did not
+  fill their em box and no two filled it alike, so the font size had to be
+  MEASURED per glyph: on Windows at a 42px font the sun painted 43px tall and
+  the moon 38px; a single fraction ran one of them proud of the icon
+  whatever it was set to. They also needed shrinking to 0.8 of the nav icon for
+  optical weight, since a solid saturated glyph reads heavier than a pictogram
+  at equal size. Both corrections described the emoji rather than the button,
+  so both left with them: `nav_toggle.TOGGLE_ICON_SCALE` is 1.0 and the toggle
+  is the same 63px tall as every other icon in the tray. The
   target height rides on the button as a `navGlyphTargetPx` property so
-  `theme._refresh_toggle_buttons` re-sizes the INCOMING glyph after each switch
-  through `format_helpers.apply_toggle_glyph`; a plain `setText` left the new
-  glyph wearing the size the outgoing one needed. Measure this on the real
+  `theme._refresh_toggle_buttons` fits the INCOMING picture to it after each
+  switch through `format_helpers.apply_toggle_icon`; the button's own size is
+  fixed at build time to the wider of the two faces, so swapping face cannot
+  make the row reflow under the pointer. Measure this on the real
   platform: under `QT_QPA_PLATFORM=offscreen` Qt substitutes its own font
   database, where both glyphs measure 38px and the discrepancy is invisible
 - HIGHLIGHT TEXT IS TEAL, NEVER GREEN, everywhere: the hovered tab, the

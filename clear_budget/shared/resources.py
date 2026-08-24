@@ -81,6 +81,9 @@ _TAB_ICON_NAMES = frozenset(
         "information.png",
         # The Archive tab, which was the last emoji on the strip.
         "archive.png",
+        # The theme toggle's two faces, showing the mode a press switches to.
+        "lightmode.png",
+        "darkmode.png",
     )
 )
 

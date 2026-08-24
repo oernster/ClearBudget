@@ -15,10 +15,10 @@ from clear_budget.ui.utils.nav_glyph_size import (  # noqa: F401 (re-exported)
     nav_glyph_height,
 )
 from clear_budget.ui.utils.nav_toggle import (  # noqa: F401 (re-exported names)
-    TOGGLE_GLYPH_SCALE,
+    TOGGLE_ICON_SCALE,
     TOGGLE_TARGET_PROPERTY,
     _build_theme_toggle_button,
-    apply_toggle_glyph,
+    apply_toggle_icon,
 )
 
 from clear_budget.ui.utils.nav_label import (  # noqa: F401 (re-exported names)

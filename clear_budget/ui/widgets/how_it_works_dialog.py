@@ -80,6 +80,8 @@ def _body_html() -> str:
     save_icon = _img(find_tab_icon_path("savedb.png"), px)
     settings_icon = _img(find_tab_icon_path("preferences.png"), px)
     info_icon = _img(find_tab_icon_path("information.png"), px)
+    light_icon = _img(find_tab_icon_path("lightmode.png"), px)
+    dark_icon = _img(find_tab_icon_path("darkmode.png"), px)
     return f"""\
 <h2>How ClearBudget Works</h2>
 
@@ -109,7 +111,7 @@ def _body_html() -> str:
 &nbsp;&middot;&nbsp; {budgets_icon}switch budget &nbsp;&middot;&nbsp;
 {users_icon}switch user &nbsp;&middot;&nbsp; {settings_icon}currency
 &nbsp;&middot;&nbsp; {bank_icon}overdraft plus the Safe to Spend buffer
-and window &nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or dark
+and window &nbsp;&middot;&nbsp; {light_icon}/{dark_icon}light or dark
 &nbsp;&middot;&nbsp; {info_icon}this screen</p>
 <p>Load and save open in the app's own data folder, where the live budgets
 already are. Your signed-in name sits at the left of the row above, beside

@@ -26,7 +26,8 @@ _THEME_KEY = "theme"
 _APP_THEME_PROPERTY = "clearbudget_theme"
 
 # The glyph shows the mode a press switches TO, not the current one.
-_TOGGLE_GLYPHS = {THEME_DARK: "☀️", THEME_LIGHT: "\U0001f319"}
+# The picture a toggle shows is the mode a press switches TO.
+_TOGGLE_ICONS = {THEME_DARK: "lightmode.png", THEME_LIGHT: "darkmode.png"}
 _TOGGLE_TOOLTIPS = {
     THEME_DARK: "Switch to light mode",
     THEME_LIGHT: "Switch to dark mode",
@@ -95,18 +96,18 @@ def state_colours() -> dict[str, str]:
     return state_colours_for(current_theme(QApplication.instance()))
 
 
-def toggle_glyph(theme_name: str) -> str:
-    """Return the sun/moon glyph a toggle button shows under `theme_name`."""
-    return _TOGGLE_GLYPHS[theme_name]
+def toggle_icon(theme_name: str) -> str:
+    """Return the sun/moon picture a toggle button shows under `theme_name`."""
+    return _TOGGLE_ICONS[theme_name]
 
 
-def toggle_glyphs() -> tuple[str, ...]:
-    """Every glyph a toggle button can show, for sizing one that swaps.
+def toggle_icons() -> tuple[str, ...]:
+    """Every picture a toggle button can show, for sizing one that swaps.
 
-    The button's glyph changes under it, so a size taken from whichever face
+    The button's face changes under it, so a size taken from whichever one
     happened to be showing would jump at the next theme switch.
     """
-    return tuple(_TOGGLE_GLYPHS.values())
+    return tuple(_TOGGLE_ICONS.values())
 
 
 def toggle_tooltip(theme_name: str) -> str:
@@ -132,17 +133,16 @@ def toggle_theme(app) -> None:
 def _refresh_toggle_buttons(app, name: str) -> None:
     """Point every tray's toggle button at the mode a press switches to.
 
-    Through `apply_toggle_glyph` rather than `setText`, because the sun and the
-    moon paint different fractions of their em box: the incoming glyph has to
-    be re-sized against the nav icon, not just swapped in at the size the
-    outgoing one needed.
+    Through `apply_toggle_icon` rather than `setIcon`, because the two
+    pictures differ in shape: the incoming one is fitted to the height the
+    button was built at, not swapped in at whatever size the outgoing one
+    happened to need.
     """
-    from clear_budget.ui.utils.format_helpers import apply_toggle_glyph
+    from clear_budget.ui.utils.format_helpers import apply_toggle_icon
 
     for widget in app.allWidgets():
         if widget.objectName() == "ThemeToggleButton":
-            apply_toggle_glyph(widget, toggle_glyph(name))
-            widget.setToolTip(toggle_tooltip(name))
+            apply_toggle_icon(widget, toggle_icon(name), toggle_tooltip(name))
 
 
 def _restyle_dynamic_views(app) -> None:

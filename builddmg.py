@@ -91,6 +91,8 @@ BUNDLED_ICONS = [
     "preferences.png",
     "information.png",
     "archive.png",
+    "lightmode.png",
+    "darkmode.png",
 ]
 
 DEVELOPER_ID = os.environ.get(

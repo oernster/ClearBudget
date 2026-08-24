@@ -1,19 +1,15 @@
-"""The tab strip's icons: four bundled images and one emoji, matched in size.
+"""The tab strip's icons: five bundled images, matched in size.
 
 The primary tabs carry pictures rather than words. The words are not
 gone, they moved into the tooltips, so the strip still names itself to anyone
 who pauses on a tab; what went is a row of text labels wide enough to push
 the strip most of the way across the window.
 
-Four are bundled PNGs and one is an emoji, which is the whole difficulty
-here. They are different KINDS of image and Qt sizes them by
-different rules: a PNG has real pixels to scale, while a glyph is laid out by
-a font's em box, which no emoji actually fills (see `glyph_metrics`). Sized
-naively the two families never agree, so everything below reduces both to the
-same question, "how tall does this thing actually PAINT", answering it by
-measuring painted pixels in both cases.
-
-Two deliberate asymmetries survive that:
+Four were PNGs and the archive was an emoji, which was the whole difficulty
+here: they are different KINDS of image and Qt sizes them by different rules,
+so the two families never agreed without measuring what each actually painted.
+The archive is a picture now and that difficulty went with it. What remains is
+one deliberate asymmetry:
 
 * an image is fitted by its HEIGHT and then scaled up slightly, rather than
   fitted to a square box by its longer side. By the longer side the calendar
@@ -24,14 +20,6 @@ Two deliberate asymmetries survive that:
   construction. It does let the landscape card artwork run wider than its
   neighbours, which is accepted deliberately: a shared bottom edge is what the
   eye actually checks along a row.
-* an emoji is measured by HEIGHT rather than fitted to the box, because the
-  archive glyph is a tall narrow shape: fitted by its longer side it would
-  paint 26 tall and about 17 wide, so it would already be the lightest thing
-  on the strip. `nav_header.TOGGLE_GLYPH_SCALE` takes the opposite decision
-  for the theme toggle and the difference is the glyph, not the rule: a sun
-  is a solid saturated disc that fills its outline and looks heavy at equal
-  size, where a filing cabinet is line work with space in it and looks light.
-  Optical weight is what the eye compares, so the constant follows the glyph.
 
 Everything is cached per (spec, height): the source PNGs are the full-size
 masters, so the crop and the downscale are worth doing once rather than on
@@ -49,16 +37,8 @@ TAB_ICON_PX = 26
 # tray a third smaller than the tabs sitting beside them. Scaling here again
 # would restore that gap in the other direction.
 TAB_IMAGE_SCALE = 1.0
-# The archive glyph paints this multiple of the box's height, matched to
-# TAB_IMAGE_SCALE rather than left at the tray's own 1.0. Held equal on
-# purpose: the three pictures grew past the tray's emoji; an archive glyph
-# left behind at the smaller size stopped reading as their peer and started
-# reading as the runt of the four. It is a tab first and an emoji second.
-TAB_EMOJI_SCALE = TAB_IMAGE_SCALE
-
-# The tabs, in strip order. An entry is either a bundled image filename
-# or an emoji glyph; `_is_image` tells them apart by the suffix, so adding a
-# tab means adding one line here and nothing else.
+# The tabs, in strip order. Each entry is a bundled image filename, so adding
+# a tab means adding one line here and nothing else.
 MONTHLY_BUDGET_ICON = "monthlybudget.png"
 SOLVENCY_ICON = "solvency.png"
 CREDIT_CARDS_ICON = "creditcards.png"
@@ -66,6 +46,8 @@ CREDIT_CARDS_ICON = "creditcards.png"
 # before it became a tab, so becoming a tab changed where it sits and what it
 # does, never what it looks like.
 GRAPH_ICON = "ClearBudget_256.png"
+# The last of the five to stop being an emoji. A filing cabinet glyph was line
+# work with space in it and read light beside four dense pictograms.
 ARCHIVE_ICON = "archive.png"
 
 # The strip, in order, as (icon spec, the name that becomes the tooltip).
@@ -84,11 +66,6 @@ TAB_CURRENT_PROPERTY = "currentTab"
 # Cache of built pixmaps, keyed by (spec, height). Qt objects, so this cannot
 # be a functools cache built at import time: it needs a QApplication alive.
 _PIXMAP_CACHE: dict[tuple[str, int], object] = {}
-
-
-def _is_image(spec: str) -> bool:
-    """Whether `spec` names a bundled image rather than being an emoji."""
-    return spec.endswith(".png")
 
 
 def _image_pixmap(spec: str, box_px: int):
@@ -120,39 +97,6 @@ def _image_pixmap(spec: str, box_px: int):
     return pixmap.scaledToHeight(target, Qt.TransformationMode.SmoothTransformation)
 
 
-def _emoji_pixmap(glyph: str, box_px: int):
-    """Return `glyph` painted `TAB_EMOJI_SCALE` of `box_px` tall, cropped tight.
-
-    The font size comes from a measurement of this glyph rather than from the
-    target, since an emoji paints a fraction of its em box that varies by
-    glyph; the canvas is then cropped to the opaque pixels so the icon carries
-    no padding of its own and Qt centres what was actually drawn.
-    """
-    from PySide6.QtCore import QRect, Qt
-    from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPixmap
-
-    from clear_budget.ui.utils.glyph_metrics import (
-        glyph_font_px_for_height,
-        opaque_bounding_rect,
-    )
-
-    target = max(1, round(box_px * TAB_EMOJI_SCALE))
-    font_px = glyph_font_px_for_height(glyph, target)
-    side = font_px * 3
-    canvas = QImage(side, side, QImage.Format.Format_ARGB32)
-    canvas.fill(QColor(0, 0, 0, 0))
-    font = QFont()
-    font.setPixelSize(font_px)
-    painter = QPainter(canvas)
-    painter.setFont(font)
-    painter.drawText(QRect(0, 0, side, side), Qt.AlignmentFlag.AlignCenter.value, glyph)
-    painter.end()
-    content = opaque_bounding_rect(canvas)
-    if content.width() <= 0 or content.height() <= 0:
-        return None
-    return QPixmap.fromImage(canvas.copy(content))
-
-
 def tab_icon_pixmap(spec: str, box_px: int):
     """Return the pixmap for one tab; None when its source is unavailable.
 
@@ -163,9 +107,7 @@ def tab_icon_pixmap(spec: str, box_px: int):
     key = (spec, box_px)
     if key in _PIXMAP_CACHE:
         return _PIXMAP_CACHE[key]
-    pixmap = (
-        _image_pixmap(spec, box_px) if _is_image(spec) else _emoji_pixmap(spec, box_px)
-    )
+    pixmap = _image_pixmap(spec, box_px)
     _PIXMAP_CACHE[key] = pixmap
     return pixmap
 
