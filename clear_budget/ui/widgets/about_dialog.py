@@ -290,6 +290,11 @@ class LicenceDialog(FirstStopDialog):
         browser.setOpenExternalLinks(True)
         browser.setLineWrapMode(QTextBrowser.LineWrapMode.WidgetWidth)
         layout.addWidget(browser)
+        # The same reading cycle its sibling above has carried all along. A
+        # licence is the longest thing in the Help menu and the least likely
+        # to be scrolled by hand, so of the two surfaces this is the one that
+        # needed it most; it was simply the one that never got it.
+        self._notice_scroller = AutoScroller(browser)
 
         btn_row = QHBoxLayout()
         close_btn = QPushButton("Close")
