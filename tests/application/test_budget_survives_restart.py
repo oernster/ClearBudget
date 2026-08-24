@@ -15,9 +15,9 @@ Three distinct routes destroyed or lost a budget:
   * an unreadable budget failed silently at sign-in, so the app showed
     nothing at all and the loss was invisible until far too late.
 
-The session lifecycle is driven through `main`'s own composition-root
-helpers, so these exercise the real path the application takes rather than a
-re-implementation of it.
+The session lifecycle is driven through the application's own
+session-database helper, so these exercise the real path a sign-in takes
+rather than a re-implementation of it.
 """
 
 from __future__ import annotations
@@ -29,7 +29,9 @@ from pathlib import Path
 
 import pytest
 
-import main as composition_root
+from clear_budget.infrastructure.sqlite.session_database import (
+    open_user_database,
+)
 from clear_budget.shared.config import Config
 from clear_budget.shared.db_copy import backup_open_database, replace_closed_database
 
@@ -76,13 +78,13 @@ def home(tmp_path, monkeypatch):
 
 class TestAnOpenedBudgetSurvivesTheNextLaunch:
     def test_every_row_is_still_there_after_close_and_reopen(self, home):
-        database = composition_root._open_user_database(_USER)
+        database = open_user_database(_USER)
         _populate(database, bills=7)
         path = database.db_path
         before = _counts(path)
         database.close()
 
-        reopened = composition_root._open_user_database(_USER)
+        reopened = open_user_database(_USER)
         try:
             assert _counts(reopened.db_path) == before
             assert before["bills"] == 7
@@ -91,20 +93,20 @@ class TestAnOpenedBudgetSurvivesTheNextLaunch:
 
     def test_reopening_never_rewrites_the_file(self, home):
         """Opening adopts an existing budget; it must not recreate one."""
-        database = composition_root._open_user_database(_USER)
+        database = open_user_database(_USER)
         _populate(database, bills=3)
         path = database.db_path
         database.close()
         untouched = path.read_bytes()
 
-        reopened = composition_root._open_user_database(_USER)
+        reopened = open_user_database(_USER)
         reopened.close()
 
         assert path.read_bytes() == untouched
 
     def test_a_budget_dropped_in_by_hand_is_adopted_whole(self, home):
         """Copying a database in while the app is closed is a supported route."""
-        seed = composition_root._open_user_database(_USER)
+        seed = open_user_database(_USER)
         _populate(seed, bills=11)
         seed.close()
         carried = home / "carried_elsewhere.db"
@@ -113,7 +115,7 @@ class TestAnOpenedBudgetSurvivesTheNextLaunch:
 
         # As the user does it: app closed, file put in place, app opened.
         Config.for_user(_USER).db_path.write_bytes(carried.read_bytes())
-        opened = composition_root._open_user_database(_USER)
+        opened = open_user_database(_USER)
         try:
             assert _counts(opened.db_path)["bills"] == 11
         finally:
@@ -125,13 +127,13 @@ class TestLoadingABudgetDoesNotDestroyIt:
 
     def test_the_load_ordering_keeps_every_row_after_a_restart(self, home):
         saved = home / "saved_budget.db"
-        source = composition_root._open_user_database(_USER)
+        source = open_user_database(_USER)
         _populate(source, bills=9)
         backup_open_database(source.conn, saved)
         source.close()
 
         # A different session, holding a different budget.
-        live = composition_root._open_user_database(_USER)
+        live = open_user_database(_USER)
         _populate(live, bills=2)
         target = live.db_path
 
@@ -139,14 +141,14 @@ class TestLoadingABudgetDoesNotDestroyIt:
         live.close()
         replace_closed_database(saved, target)
 
-        reopened = composition_root._open_user_database(_USER)
+        reopened = open_user_database(_USER)
         try:
             assert _counts(reopened.db_path)["bills"] == 9
         finally:
             reopened.close()
 
         # And it is still there at the launch after that one.
-        again = composition_root._open_user_database(_USER)
+        again = open_user_database(_USER)
         try:
             assert _counts(again.db_path)["bills"] == 9
         finally:
@@ -154,7 +156,7 @@ class TestLoadingABudgetDoesNotDestroyIt:
 
     def test_the_loaded_file_is_a_real_database_and_not_zeros(self, home):
         saved = home / "saved_budget.db"
-        source = composition_root._open_user_database(_USER)
+        source = open_user_database(_USER)
         _populate(source, bills=4)
         backup_open_database(source.conn, saved)
         target = source.db_path
@@ -169,7 +171,7 @@ class TestLoadingABudgetDoesNotDestroyIt:
 
 class TestSavingAnOpenBudgetProducesAReadableBackup:
     def test_a_backup_taken_mid_transaction_can_still_be_opened(self, home):
-        database = composition_root._open_user_database(_USER)
+        database = open_user_database(_USER)
         _populate(database, bills=5)
         # Uncommitted work in flight, exactly as a real session would have.
         database.conn.execute(
@@ -192,13 +194,13 @@ class TestSavingAnOpenBudgetProducesAReadableBackup:
 class TestAnUnreadableBudgetIsReportedRatherThanSilent:
     def test_opening_a_damaged_budget_raises_so_the_ui_can_say_so(self, home):
         """It used to escape a Qt slot and show the user nothing whatsoever."""
-        database = composition_root._open_user_database(_USER)
+        database = open_user_database(_USER)
         path = database.db_path
         database.close()
         path.write_bytes(b"\x00" * 143360)  # the exact damage seen in the wild
 
         with pytest.raises(sqlite3.DatabaseError):
-            composition_root._open_user_database(_USER)
+            open_user_database(_USER)
 
 
 _DEADLOCK_PROBE = """
