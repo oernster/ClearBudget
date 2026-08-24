@@ -50,11 +50,13 @@ GRAPH_ICON = "ClearBudget_256.png"
 # work with space in it and read light beside four dense pictograms.
 ARCHIVE_ICON = "archive.png"
 
+# Tab names, so a view that needs to name one does not spell it again.
+CREDIT_CARDS_TAB = "Credit Cards"
 # The strip, in order, as (icon spec, the name that becomes the tooltip).
 TAB_SPECS = (
     (MONTHLY_BUDGET_ICON, "Monthly Budget"),
     (SOLVENCY_ICON, "Solvency"),
-    (CREDIT_CARDS_ICON, "Credit Cards"),
+    (CREDIT_CARDS_ICON, CREDIT_CARDS_TAB),
     (GRAPH_ICON, "Graph"),
     (ARCHIVE_ICON, "Archive"),
 )
@@ -170,6 +172,34 @@ def build_tab_buttons(box_px: int) -> list:
             )
         buttons.append(button)
     return buttons
+
+
+def tab_button(buttons, label: str):
+    """The button for the tab called `label`; None when there is none.
+
+    By NAME rather than by position, so a view that needs to put a stop
+    beside a particular tab says which tab it means.
+    """
+    for position, (_spec, name) in enumerate(TAB_SPECS):
+        if name == label and position < len(buttons):
+            return buttons[position]
+    return None
+
+
+def stops_before(run: list, marker, extras: list) -> list:
+    """`run` with `extras` inserted before `marker`; appended without it.
+
+    Pure list work, deliberately: it is what lets a view insert its own
+    controls into the tab run WITHOUT slicing the run by hand. Slicing is
+    what dropped the Graph tab out of the Solvency ring entirely, since
+    `[:2] + [2:3] + [-1:]` covers four of five positions and nothing says so.
+    Everything in `run` is in the result, which is the property that matters
+    and the one the hand-sliced version could not state.
+    """
+    if marker in run:
+        at = run.index(marker)
+        return run[:at] + extras + run[at:]
+    return run + extras
 
 
 def mark_current_tab(buttons, index: int) -> None:

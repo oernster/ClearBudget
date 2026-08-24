@@ -10,6 +10,16 @@ So the dialog stays. It swaps its form for a progress bar, reports each stage
 of the build as it happens and closes only when there is a window to hand over
 to. The user never sees nothing.
 
+The dialog is never closed and reopened to do it. `QDialog.exec` returns by
+way of `done()`, which HIDES the dialog, so an accepted sign-in used to put
+the screen away and `begin_handover` brought it straight back: a Hide, a Show
+and a repaint between them, seen as a flash at the moment the user is
+watching. Refusing that hide from Python does not work, since Qt calls it
+internally in C++ and PySide does not route it to an override (measured). So
+the accepted path never reaches `done()` at all: `exec_holding_open` runs the
+dialog's own event loop and `finish_accepted` quits it in place. Cancel,
+Escape and the close button still use `reject()` and hide the ordinary way.
+
 The bar is DETERMINATE and driven by real stages, not a busy animation. That
 is not decoration: the build runs on the GUI thread, so an indeterminate bar
 would be frozen for exactly as long as it was meant to reassure. Each report
@@ -94,7 +104,6 @@ class HandoverProgressMixin:
         if loop is None:
             self.accept()
             return
-        self._handover_pending = True
         self.setResult(QDialog.DialogCode.Accepted)
         loop.quit()
 
@@ -161,7 +170,6 @@ class HandoverProgressMixin:
         """
         if getattr(self, "_handover", None) is None:
             return
-        self._handover_pending = False
         guard = getattr(self, "_handover_guard", None)
         if guard is not None:
             QApplication.instance().removeEventFilter(guard)

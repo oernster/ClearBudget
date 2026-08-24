@@ -34,7 +34,7 @@ Everything below this section explains how the code satisfies them.
 | A budget belonging to another account cannot be opened without that account's password; it cannot be SAVED OVER at all: loading one is recoverable and is offered behind their password, while a save replaces their figures and leaves nothing to recover from. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
 | One Return press runs a dialog's submit ONCE. A `QLineEdit` emits `returnPressed` and then ignores the key so it reaches the dialog's default button, so connecting both gives one press two routes. No slot may answer both `returnPressed` and `clicked` in the same module | `tests/structural/test_return_key_invariants.py` |
 | Focus follows the KEYBOARD, never the pointer, wherever a click has nothing to act on: a button refuses mouse-reason focus outright and every table is `TabFocus` rather than Qt's default `StrongFocus`, so no pane is ever ringed by a click. Selection is untouched, since selection is not focus | `tests/structural/test_table_focus_invariants.py` (both halves), plus `KeyboardNavigator._focus_arriving` for buttons |
-| A destructive confirmation is never raised over a file that will be refused. The Load flow asks the accounts store, the schema and the owner challenge FIRST; the overwrite question is the last gate before the path is handed back | `tests/structural/test_load_refusal_order.py` |
+| A destructive confirmation is never raised over a file that will be refused, in either direction. Load asks the accounts store, the schema and the owner challenge FIRST; Save asks whose file it is FIRST; in both the overwrite question is the last gate before anything is written | `tests/structural/test_refusal_order.py` |
 | A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
 
@@ -1100,7 +1100,7 @@ renderings of the same figures to hold in step. Every month any page shows
   setting is about to be permanently replaced, so asking it about a file that
   is then rejected is a threat made over nothing: choosing `users.db` used to
   raise it, take a Yes, then afterwards report that the file was never a
-  budget. Held by `tests/structural/test_load_refusal_order.py`. The remembered
+  budget. Held by `tests/structural/test_refusal_order.py`. The remembered
   location persists in `ui_settings.json` through
   `clear_budget/ui/save_location.py`, which shares the file with the theme
   without disturbing it (`tests/ui_logic/test_save_location.py`)
@@ -1118,7 +1118,7 @@ renderings of the same figures to hold in step. Every month any page shows
   it next signs in (opening a budget stamps it). A file nobody owns, which is
   what an ordinary backup destination is, passes straight through, including
   the account's own earlier backups. Ordering held by
-  `tests/structural/test_load_refusal_order.py`
+  `tests/structural/test_refusal_order.py`
 - THE REMEMBERED SAVE FILE IS PER ACCOUNT, keyed by username under
   `save_files`. It was one `save_file` value for the machine, so it held
   whatever the LAST account to save had chosen and the next account to press
@@ -1284,6 +1284,16 @@ renderings of the same figures to hold in step. Every month any page shows
   focus ring: menu-bar titles, then the active tab's stops (each
   view's `nav_targets()`), recomputed live so disabled or hidden stops are
   skipped (a disabled Previous at the base month simply drops out)
+- A VIEW TAKES THE TAB RUN WHOLE. `tab_btns[:-1]` is the run as drawn and
+  `tab_btns[-1:]` is Archive in the right-hand group; no other slice is
+  allowed in a `nav_targets` body. Solvency needed its pilots INSIDE the run,
+  so it cut the run up and reassembled it (`[:2]`, `[2:3]`, `[-1:]`): five
+  tabs, four positions covered, with no arithmetic anywhere saying the fifth
+  had gone. The Graph tab was absent from that tab's ring entirely, which
+  presents as the ring jumping a button plainly on screen. `stops_before`
+  inserts into the whole run instead, so everything handed in comes back out.
+  Held by `tests/structural/test_tab_run_slices.py` and
+  `tests/ui_logic/test_ring_order.py`
 - Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
   ends; tables keep Up/Down for their rows, text inputs keep their arrows for
   the caret
@@ -2180,12 +2190,16 @@ an option that read as "remove my data" removed nothing.
   danger band, so a file is never shaved to just under the cap only to break
   it again on the next edit
 - `test_auth_structure.py` - Auth layer structure validation
+- `test_tab_run_slices.py` - a `nav_targets` body may slice `tab_btns`
+  only as the whole run or as Archive, so a tab cannot be left out of a
+  ring by arithmetic nobody can see
 - `test_table_focus_invariants.py` - every table built in the UI passes
   through `keyboard_only_focus`, none setting its own focus policy, so a
   click can never put the ring round a pane
-- `test_load_refusal_order.py` - every refusal in `run_load_flow` precedes
-  the overwrite confirmation, so the threat is never made over a load that
-  cannot happen
+- `test_refusal_order.py` - in BOTH the Load and the Save flows every
+  refusal precedes the overwrite confirmation, so the threat is never made
+  over a write that cannot happen; Save refuses another account's budget
+  before it writes or remembers anything
 - `test_return_key_invariants.py` - no slot answers both `returnPressed` and
   `clicked` in one module, so a Return press cannot submit twice
 - `test_handover_invariants.py` - the composition root begins a handover only

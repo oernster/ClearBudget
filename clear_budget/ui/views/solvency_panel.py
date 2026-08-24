@@ -15,8 +15,11 @@ from clear_budget.ui.utils.format_helpers import (
 )
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.utils.tab_icons import (
+    CREDIT_CARDS_TAB,
     build_tab_buttons,
     ring_tab_stops,
+    stops_before,
+    tab_button,
 )
 from clear_budget.ui.widgets._tray_buttons import (
     build_budgets_button,
@@ -200,8 +203,16 @@ class SolvencyPanel(
         # first two stops. A task-flow override of the strict reading order,
         # chosen deliberately; the hidden pilot is skipped by the ring's own
         # visibility filter.
-        before_tabs = ring_tab_stops(self.tab_btns[:2])
-        cards_tab = ring_tab_stops(self.tab_btns[2:3])
+        # The WHOLE tab run, with the pilots inserted into it, never the run
+        # cut into pieces: hand slices (`[:2]`, `[2:3]`, `[-1:]`) covered four
+        # of the five positions and dropped the Graph tab out of this tab's
+        # ring completely, which presents as the ring jumping a button that is
+        # plainly on screen.
+        tab_run = stops_before(
+            ring_tab_stops(self.tab_btns[:-1]),
+            tab_button(self.tab_btns, CREDIT_CARDS_TAB),
+            list(self.pilot_btns.values()),
+        )
         archive_stop = ring_tab_stops(self.tab_btns[-1:])
         return [
             self.prev_btn,
@@ -212,9 +223,7 @@ class SolvencyPanel(
             self.users_btn,
             self.settings_btn,
             self.bank_btn,
-            *before_tabs,
-            *self.pilot_btns.values(),
-            *cards_tab,
+            *tab_run,
             *archive_stop,
             self.theme_btn,
             self.info_btn,

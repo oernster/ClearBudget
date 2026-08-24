@@ -101,20 +101,52 @@ def _self_attrs_returned_by(tree: ast.Module, method: str) -> set[str]:
     return names
 
 
+def _string_constants(tree: ast.Module) -> dict[str, str]:
+    """Module-level `NAME = "text"` assignments, so a label may be named."""
+    found = {}
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
+            continue
+        if not isinstance(node.value.value, str):
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                found[target.id] = node.value.value
+    return found
+
+
 def _tab_spec_labels() -> list[str]:
-    """The tab names declared in `TAB_SPECS`, in strip order."""
-    for node in ast.walk(_tree(_TAB_ICONS)):
+    """The tab names declared in `TAB_SPECS`, in strip order.
+
+    A label may be a literal or a module constant naming one, since a view
+    that has to name a tab should not spell it a second time. An entry that
+    is NEITHER is returned as a marker rather than skipped: skipping made a
+    label the reader could not parse look like a tab that had disappeared
+    from the strip, which is the failure this guard exists to report
+    truthfully.
+    """
+    tree = _tree(_TAB_ICONS)
+    constants = _string_constants(tree)
+    for node in ast.walk(tree):
         if not isinstance(node, ast.Assign):
             continue
         if not any(
             isinstance(t, ast.Name) and t.id == "TAB_SPECS" for t in node.targets
         ):
             continue
-        return [
-            entry.elts[1].value
-            for entry in node.value.elts
-            if isinstance(entry, ast.Tuple) and isinstance(entry.elts[1], ast.Constant)
-        ]
+        labels = []
+        for entry in node.value.elts:
+            if not isinstance(entry, ast.Tuple):
+                labels.append("<unreadable entry>")
+                continue
+            label = entry.elts[1]
+            if isinstance(label, ast.Constant):
+                labels.append(label.value)
+            elif isinstance(label, ast.Name) and label.id in constants:
+                labels.append(constants[label.id])
+            else:
+                labels.append(f"<unreadable label: {ast.unparse(label)}>")
+        return labels
     return []
 
 
