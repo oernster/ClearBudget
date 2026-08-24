@@ -24,6 +24,11 @@ from clear_budget.ui.utils.nav_glyph_size import nav_icon_button_size
 _BANK_ICON = "bank-icon.png"
 _BANK_ICON_PAD_PX = 2
 
+# The Switch user and Switch budget buttons, supplied pictures rather than
+# the emoji they replaced.
+_USERS_ICON = "switchuser.png"
+_BUDGETS_ICON = "switchbudget.png"
+
 
 def _tray_icon_button(glyph: str, tooltip: str, glyph_height: int) -> QPushButton:
     """One emoji icon button for the nav tray's far-left group.
@@ -85,7 +90,7 @@ def build_budgets_button(read_only: bool, glyph_height: int) -> QPushButton:
     for read-only viewers: a viewer's database arrives from an imported
     package and that account owns exactly the one budget.
     """
-    btn = _tray_icon_button("🔄", "Switch budget…", glyph_height)
+    btn = build_tray_image_button(_BUDGETS_ICON, "Switch budget…", glyph_height)
     btn.setEnabled(not read_only)
     return btn
 
@@ -104,7 +109,7 @@ def build_users_button(glyph_height: int) -> QPushButton:
     withhold; a viewer with no way out of their own session would be
     stranded in it.
     """
-    return _tray_icon_button("👥", "Switch user…", glyph_height)
+    return build_tray_image_button(_USERS_ICON, "Switch user…", glyph_height)
 
 
 def build_settings_bank_buttons(

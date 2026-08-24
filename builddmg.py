@@ -83,6 +83,9 @@ BUNDLED_ICONS = [
     "bank-icon2.png",
     "creditcards2.png",
     "exporttohtml.png",
+    "switchuser.png",
+    "switchbudget.png",
+    "exportprojection.png",
 ]
 
 DEVELOPER_ID = os.environ.get(
@@ -326,10 +329,18 @@ def build_app_bundle(entitlements_path: Path, icns_path: Path | None = None) -> 
     icon_args = ["--icon", str(icns_path)] if icns_path else []
 
     add_data = [f"{root / 'VERSION'}:.", f"{root / 'LICENSE'}:."]
-    for name in BUNDLED_ICONS:
-        asset = root / name
-        if asset.exists():
-            add_data.append(f"{asset}:.")
+    # A missing asset FAILS the build rather than being skipped. Skipping it
+    # produced a bundle that launched perfectly with a control wearing no
+    # picture, discoverable only by running the packaged app and looking; the
+    # build itself reported success. An asset named here and not on disk is a
+    # mistake in one place or the other; either way it is not shippable.
+    missing = [name for name in BUNDLED_ICONS if not (root / name).exists()]
+    if missing:
+        raise SystemExit(
+            "cannot build: these bundled assets are named but not on disk:\n  "
+            + "\n  ".join(missing)
+        )
+    add_data.extend(f"{root / name}:." for name in BUNDLED_ICONS)
 
     cmd = [
         sys.executable,

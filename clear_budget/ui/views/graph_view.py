@@ -89,10 +89,7 @@ _BAR_GLYPH = "📊"
 _EXPORT_LABEL = "Export HTML…"
 _EXPORT_ICON = "exporttohtml.png"
 _PROJECTION_LABEL = "Export projection HTML…"
-# A tear-off calendar for the projection: the two exports write the same kind
-# of file and differ by SCOPE, this month against the months ahead, so the
-# picture carries the months rather than repeating the export.
-_PROJECTION_GLYPH = "📆"
+_PROJECTION_ICON = "exportprojection.png"
 
 _SOURCE_BANK = "bank"
 _SOURCE_CARDS = "cards"
@@ -180,8 +177,8 @@ class GraphView(QWidget, GraphExportsMixin):
 
         self.projection_btn = build_tray_icon_button(_PROJECTION_LABEL)
         self.projection_btn.clicked.connect(self._export_projection)
-        apply_glyph_face(
-            self.projection_btn, _PROJECTION_GLYPH, _PROJECTION_LABEL, _glyph_h
+        apply_image_face(
+            self.projection_btn, _PROJECTION_ICON, _PROJECTION_LABEL, _glyph_h
         )
         button_row.addWidget(self.projection_btn)
 

@@ -69,6 +69,11 @@ _TAB_ICON_NAMES = frozenset(
         "creditcards2.png",
         # The Graph page's Export HTML button.
         "exporttohtml.png",
+        # The Graph page's Export projection button.
+        "exportprojection.png",
+        # The tray's Switch user and Switch budget buttons.
+        "switchuser.png",
+        "switchbudget.png",
     )
 )
 
