@@ -153,33 +153,43 @@ class TestOnlyConfigDerivesTheDataDirectory:
         )
 
 
+# The startup sequence moved out of main.py when main.py reached the size cap;
+# the guard follows the code rather than being retired with it.
+_STARTUP_MODULE = "clear_budget/ui/startup.py"
+
+
 class TestTheMigrationRunsFirstAtStartup:
-    """`main()` must migrate before the lock and never under the override.
+    """Startup must migrate before the lock and never under the override.
 
     The single-instance lock file lives in the data directory on macOS and
     Linux, so locking first would lock the directory about to move; and a
     redirected run (the suite, a probe) must never touch real data.
     """
 
-    def test_main_migrates_before_the_lock_and_behind_the_override(self):
-        source = (_PROJECT_ROOT / "main.py").read_text(encoding="utf-8")
+    def test_startup_migrates_before_the_lock_and_behind_the_override(self):
+        source = (_PROJECT_ROOT / _STARTUP_MODULE).read_text(encoding="utf-8")
         migrate_at = source.find("migrate_legacy_data(")
         # Matched on the assignment rather than on the callee's name, so
         # moving the lock into its own module (as it has been, to
         # clear_budget.shared.single_instance) cannot silently retire the
         # ordering guard along with the old literal.
-        lock_at = source.find("_instance_lock =")
-        assert migrate_at != -1, "main.py never calls migrate_legacy_data"
-        assert lock_at != -1, "main.py lost the single-instance lock"
+        lock_at = source.find("lock = ")
+        assert migrate_at != -1, "startup never calls migrate_legacy_data"
+        assert lock_at != -1, "startup lost the single-instance lock"
         assert migrate_at < lock_at, (
-            "main.py migrates AFTER acquiring the single-instance lock, "
+            "startup acquires the single-instance lock BEFORE migrating, "
             "which locks the directory about to move"
         )
         guard_at = source.find("APP_DIR_ENV_VAR")
         assert guard_at != -1 and guard_at < migrate_at, (
-            "main.py migrates without checking the override, so a "
+            "startup migrates without checking the override, so a "
             "redirected run would move real user data"
         )
+
+    def test_main_still_starts_through_that_sequence(self):
+        """The ordering above is worthless if main stops calling it."""
+        source = (_PROJECT_ROOT / "main.py").read_text(encoding="utf-8")
+        assert "startup.begin()" in source
 
 
 class TestTheInstallerLeavesUserDataAlone:

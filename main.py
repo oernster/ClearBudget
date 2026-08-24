@@ -45,14 +45,10 @@ from clear_budget.infrastructure.sqlite.session_database import (
 from clear_budget.infrastructure.update.github_release_source import (
     GitHubReleaseSource,
 )
-import os
-
-from clear_budget.shared.config import APP_DIR_ENV_VAR, Config
-from clear_budget.shared.data_migration import migrate_legacy_data
 from clear_budget.shared import diagnostics
-from clear_budget.shared.resources import find_runtime_window_icon
-from clear_budget.shared import single_instance
+from clear_budget.shared.config import Config
 from clear_budget.ui import _window_geometry as geom
+from clear_budget.ui import startup
 from clear_budget.ui.login_flow import run_login_flow
 from clear_budget.ui._window_geometry import default_window_rect
 from clear_budget.version import __version__
@@ -101,47 +97,17 @@ def _build_main_window(
 
 def main() -> int:
     """Initialize application and start event loop."""
-    # The one-time data-directory move runs FIRST: before the single-instance
-    # lock (which lives in the data directory on macOS and Linux) and before
-    # anything reads a setting. A redirected run (CLEARBUDGET_HOME set: the
-    # suite, a probe) never migrates real data. If the move cannot complete,
-    # resolution keeps preferring the still-present legacy directory, so the
-    # app runs on the data it always had and retries at the next launch.
-    if not os.environ.get(APP_DIR_ENV_VAR, "").strip():
-        migrate_legacy_data(
-            legacy=Config.legacy_app_dir(), target=Config.platform_app_dir()
-        )
+    started = startup.begin()
+    if started is None:
+        return 0
+    # `started` is held for the whole function on purpose: it carries the
+    # single-instance lock, which releases the moment nothing references it.
+    app = started.app
+    _avail = started.available
+    icon_path = started.icon_path
 
-    app = QApplication([])
-
-    diagnostics.install(Config.app_dir() / "logs")
-    diagnostics.log(
-        "session starting, version %s, data dir %s", __version__, Config.app_dir()
-    )
-
-    _instance_lock = single_instance.acquire(app_dir=Config.app_dir())
-    if _instance_lock is None:
-        diagnostics.log("refused to start: another instance holds the lock")
-        QMessageBox.warning(None, "ClearBudget", "ClearBudget is already running.")
-        return 1
-
-    from clear_budget.ui import launch_screen, ui_scale
-
-    # Resolve the monitor the app was started from before anything is shown,
-    # so every window this session opens lands there rather than on whichever
-    # display happens to be primary.
-    launch_screen.init()
-    _avail = launch_screen.available()
-    _avail_h = _avail[geom.AVAILABLE_HEIGHT]
-    ui_scale.init(
-        min(_avail_h / geom.UI_SCALE_REFERENCE_HEIGHT_PT, geom.MAX_UI_SCALE_FACTOR)
-    )
-
-    icon_path = find_runtime_window_icon()
-    if icon_path:
-        icon = QIcon(str(icon_path))
-        if not icon.isNull():
-            app.setWindowIcon(icon)
+    from clear_budget.ui import launch_screen
+    from clear_budget.ui.raise_watcher import RaiseWatcher
 
     apply_theme(app, load_saved_theme())
 
@@ -155,6 +121,19 @@ def main() -> int:
     # Switch User survivable: the old window is only HIDDEN by a switch, so
     # it can be shown again rather than the application being quit.
     _active_window: list["MainWindow"] = []
+
+    def _window_to_raise():
+        """The window a second launch should be shown, else None.
+
+        The main window while there is one; otherwise whatever is on screen,
+        which during sign-in is the sign-in dialog. Raising that is right: it
+        is the window the user is being asked to deal with.
+        """
+        if _active_window:
+            return _active_window[0]
+        return QApplication.activeWindow()
+
+    RaiseWatcher(app_dir=Config.app_dir(), window_provider=_window_to_raise, parent=app)
 
     def _drop_window() -> None:
         """Forget and destroy the tracked window, leaving no live window.
