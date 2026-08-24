@@ -270,8 +270,8 @@ stops on each tab in turn.
 | File | New Budget... | Create a named, empty budget alongside the ones you have and open it; nothing existing is touched |
 | File | Switch Budget... | List, switch between, rename and delete your budgets (also the switch button in the nav tray) |
 | File | Load... | Replace active database from a saved file (validated before write) |
-| File | Save | Copy the database to the remembered save file; the first save prompts for a filename, defaulting to the app's own data folder |
-| File | Save As... | Choose a new save file; the location is remembered between runs |
+| File | Save | Copy the database to the save file this account last used; the first save prompts for a filename, defaulting to the app's own data folder under a name carrying the account's own |
+| File | Save As... | Choose a new save file; the location is remembered between runs, for that account alone |
 | File | Import / Export > Back Up Everything... (admin only) | Save every account and every budget as one zip file |
 | File | Import / Export > Restore Everything... (admin only) | Replace all accounts and budgets from a full backup (validated before anything is touched; signs everyone out) |
 | File | Exit | Close application |
@@ -556,14 +556,20 @@ entered before these existed continues to do.
 ## Database Save / Load
 
 - **Save** (File > Save or the diskette button in every tab's nav tray): copies
-  the active database to the remembered save file, asking before overwriting it.
-  The first ever save prompts for a filename, defaulting to the app's own
-  data folder (`%LOCALAPPDATA%\ClearBudget` on Windows, `~/Library/Application
-  Support/ClearBudget` on macOS, `~/.local/share/clearbudget` on Linux), which
-  is where the live databases are; the chosen location is remembered between
-  runs and takes precedence over that default from then on
+  the active database to the save file THIS ACCOUNT last used, asking before
+  overwriting it. The first ever save for an account prompts for a filename,
+  defaulting to the app's own data folder (`%LOCALAPPDATA%\ClearBudget` on
+  Windows, `~/Library/Application Support/ClearBudget` on macOS,
+  `~/.local/share/clearbudget` on Linux), which is where the live databases
+  are, under a name carrying the account's own
+  (`clearbudget_backup_<account>.db`); the chosen location is remembered
+  between runs and takes precedence over that default from then on
+- Remembered per account, never once for the machine. Every account shares one
+  settings file, so a single remembered location meant the next account to
+  press Save was offered whatever the last one chose, which is another
+  person's file
 - **Save As** (File > Save As...): choose a new save file (`.db` extension
-  enforced); becomes the remembered location for future saves
+  enforced); becomes the remembered location for future saves by that account
 - **Load** (File > Load... or the folder button beside the diskette): file
   validated as SQLite and verified to contain all required ClearBudget tables
   and columns before any write; confirmation required if active database has

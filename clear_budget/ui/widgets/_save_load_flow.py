@@ -24,14 +24,24 @@ from pathlib import Path
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from clear_budget.shared.db_copy import DatabaseCopyError, backup_open_database
+from clear_budget.shared.db_ownership import safe_username
 from clear_budget.shared.db_validation import is_accounts_database, validate_db
 from clear_budget.ui import ui_scale
 from clear_budget.ui.save_location import load_save_location, store_save_location
 from clear_budget.ui.ui_paths import default_data_dir
 
-# Default backup filename offered the first time the user saves.
-_DEFAULT_SAVE_NAME = "clearbudget_backup.db"
+# Default backup filename offered the first time an account saves. Named
+# after the account, because every account saves into the same directory and
+# one shared name would have each of them offering to overwrite the last
+# one's backup. Built with the same sanitiser the live databases use, so a
+# username that is awkward on a filesystem lands the same way in both.
+_DEFAULT_SAVE_STEM = "clearbudget_backup"
 _DB_FILTER = "ClearBudget Database (*.db)"
+
+
+def _default_save_name(username: str) -> str:
+    """The backup filename offered to `username` on a first save."""
+    return f"{_DEFAULT_SAVE_STEM}_{safe_username(username)}.db"
 
 
 def _report_saved(parent, dest: Path) -> None:
@@ -123,15 +133,15 @@ def _copy_and_report(parent, conn, dest: Path) -> None:
         QMessageBox.critical(parent, "Save Failed", str(exc))
 
 
-def run_save_flow(parent, conn) -> None:
+def run_save_flow(parent, conn, username: str) -> None:
     """Save the database to the remembered location, confirming overwrite.
 
     With no remembered location yet this IS Save As: the user is prompted
     for a filename, defaulting to the app's own data directory.
     """
-    target = load_save_location()
+    target = load_save_location(username)
     if target is None:
-        run_save_as_flow(parent, conn)
+        run_save_as_flow(parent, conn, username)
         return
     # Nothing is being overwritten when the target IS the open database, so
     # asking would be a question about a file that is not at risk.
@@ -148,15 +158,15 @@ def run_save_flow(parent, conn) -> None:
     _copy_and_report(parent, conn, target)
 
 
-def run_save_as_flow(parent, conn) -> None:
+def run_save_as_flow(parent, conn, username: str) -> None:
     """Prompt for a save file, remember it, then save the database to it.
 
     Defaults to the app's own data directory, where the live databases are.
     A saved budget is a copy of one of those and is loaded back into the same
     application, so it has no reason to be filed with the downloads.
     """
-    remembered = load_save_location()
-    start = remembered if remembered else default_data_dir() / _DEFAULT_SAVE_NAME
+    remembered = load_save_location(username)
+    start = remembered or default_data_dir() / _default_save_name(username)
     dest, _ = QFileDialog.getSaveFileName(
         parent, "Save Database As", str(start), _DB_FILTER
     )
@@ -170,7 +180,7 @@ def run_save_as_flow(parent, conn) -> None:
     # then keeps prompting, which is the truthful state: there is no separate
     # backup file yet.
     if not is_live_database(conn, dest_path):
-        store_save_location(dest_path)
+        store_save_location(username, dest_path)
     _copy_and_report(parent, conn, dest_path)
 
 
@@ -205,7 +215,7 @@ def run_load_flow(
     Starts in the remembered save file's folder when one is set, else the
     app's own data directory, which is where Save As offered to put it.
     """
-    remembered = load_save_location()
+    remembered = load_save_location(current_username)
     start_dir = remembered.parent if remembered else default_data_dir()
     src, _ = QFileDialog.getOpenFileName(
         parent, "Load Database", str(start_dir), _DB_FILTER

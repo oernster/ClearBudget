@@ -1099,9 +1099,25 @@ renderings of the same figures to hold in step. Every month any page shows
   setting is about to be permanently replaced, so asking it about a file that
   is then rejected is a threat made over nothing: choosing `users.db` used to
   raise it, take a Yes, then afterwards report that the file was never a
-  budget. Held by `tests/structural/test_load_refusal_order.py`. The remembered location persists in `ui_settings.json`
-  through `clear_budget/ui/save_location.py`, which shares the file with the
-  theme without disturbing it (`tests/ui_logic/test_save_location.py`)
+  budget. Held by `tests/structural/test_load_refusal_order.py`. The remembered
+  location persists in `ui_settings.json` through
+  `clear_budget/ui/save_location.py`, which shares the file with the theme
+  without disturbing it (`tests/ui_logic/test_save_location.py`)
+- THE REMEMBERED SAVE FILE IS PER ACCOUNT, keyed by username under
+  `save_files`. It was one `save_file` value for the machine, so it held
+  whatever the LAST account to save had chosen and the next account to press
+  Save was offered that file: signed in as one user, the overwrite
+  confirmation named another user's budget; since a live budget sits at
+  `budget_<user>.db` in the same directory the settings pointed at, the file on
+  offer was in the ordinary case another account's working budget rather than
+  anyone's backup. The first save of an account now defaults to
+  `clearbudget_backup_<safe username>.db`, built with the same sanitiser the
+  live databases use. The pre-account key is IGNORED rather than migrated: it
+  records a path without recording whose it was, so adopting it would be a
+  guess landing on exactly the cross-account overwrite this shape exists to
+  stop. The cost is one prompt, once per account. The username is a required
+  argument of every save entry point rather than something they look up, so a
+  call site cannot forget to ask whose save this is
 - `_main_window_menus.py` (`MainWindowMenuMixin`) - status-bar and File/Users/Help
   menu construction, extracted from `MainWindow` to stay under the LOC limit
 - `_month_view_builders.py` (`MonthViewBuilderMixin`) - builds the `MonthView`
