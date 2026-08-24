@@ -14,9 +14,11 @@ the report mirrored thirty-one values by hand and drifted.
 Names describe what a colour IS, never what it is used for, so a name does not
 go stale when a role is repainted. Each is its hue family, prefixed MUTED_ below
 40% saturation and suffixed with its lightness; under 14% saturation no hue
-survives, so it is a GREY. The trailing comment on each line is that colour's
+survives, so it is a GREY. Where a family and a rounded lightness collide, the
+name takes the hue as a further suffix (`_H215`) so the measurement still
+settles it; nothing collides today. The trailing comment on each line is that colour's
 measured HSL, which is the language these decisions actually get argued in: the
-safe state left green because the green sat at 52% lightness, not over its hue.
+chart bar left green over a lightness of 52%, never over its hue.
 
 No Qt and no I/O, so the reporting layer can import it without reaching up into
 the UI. That import is the whole point.
@@ -42,7 +44,6 @@ RED_35 = "#991b1b"  # h0 s70% l35%
 RED_42 = "#b91c1c"  # h0 s74% l42%
 RED_51 = "#dc2626"  # h0 s72% l51%
 RED_71 = "#f87171"  # h0 s91% l71%
-RED_94 = "#fee2e2"  # h0 s93% l94%
 
 # Orange. Where the light theme takes warnings that amber cannot carry on white.
 ORANGE_26 = "#78350f"  # h22 s78% l26%
@@ -55,12 +56,11 @@ ORANGE_61 = "#fb923c"  # h27 s96% l61%
 # Amber. Caution, plus the within-facility state a bar takes below zero.
 AMBER_50 = "#f59e0b"  # h38 s92% l50%
 AMBER_56 = "#fbbf24"  # h43 s96% l56%
-AMBER_89 = "#fef3c7"  # h48 s96% l89%
 
 
-# Emerald. The focus and hover ring, in both themes. A BORDER colour only:
-# used as a fill it reads as glare, which is why the checked-state fill is a
-# separate token.
+# Emerald. The focus and hover ring in both themes; also the safe state. Never a
+# large fill: at this lightness it reads as glare across a whole surface, which
+# is why the checked-state fill and the chart bar are separate tokens.
 EMERALD_30 = "#059669"  # h161 s94% l30%
 EMERALD_52 = "#34d399"  # h158 s64% l52%
 
@@ -79,10 +79,7 @@ MUTED_BLUE_17 = "#1f2937"  # h215 s28% l17%
 MUTED_BLUE_18 = "#242938"  # h225 s22% l18%
 MUTED_BLUE_22 = "#2d3344"  # h224 s20% l22%
 BLUE_25 = "#1e3a5f"  # h214 s52% l25%
-# Two colours share a family and a rounded lightness, so the hue settles them.
-# The name still comes only from the measurement.
-MUTED_BLUE_27_H215 = "#334155"  # h215 s19% l27%
-MUTED_BLUE_27_H217 = "#374151"  # h217 s19% l27%
+MUTED_BLUE_27 = "#374151"  # h217 s19% l27%
 MUTED_BLUE_28 = "#3a4156"  # h225 s19% l28%
 MUTED_BLUE_35 = "#475569"  # h215 s19% l35%
 MUTED_BLUE_42 = "#4f6885"  # h212 s25% l42%
@@ -111,12 +108,10 @@ INDIGO_59 = "#4f46e5"  # h243 s75% l59%
 MUTED_INDIGO_71 = "#a3a8c9"  # h232 s26% l71%
 INDIGO_74 = "#818cf8"  # h234 s89% l74%
 
-# Violet. The safe state and the accent, since safe stopped being green.
-MUTED_VIOLET_25 = "#3b2f52"  # h261 s27% l25%
+# Violet. The accent, plus the chart's bank-balance bars.
 MUTED_VIOLET_45 = "#6b4c9a"  # h264 s34% l45%
 VIOLET_74 = "#b8a1d9"  # h265 s42% l74%
 VIOLET_85 = "#d8b4fe"  # h269 s97% l85%
-VIOLET_95 = "#ede9fe"  # h251 s91% l95%
 
 # Purple. The light theme's accent.
 PURPLE_47 = "#7e22ce"  # h272 s72% l47%

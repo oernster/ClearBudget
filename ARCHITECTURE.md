@@ -1639,25 +1639,27 @@ renderings of the same figures to hold in step. Every month any page shows
   the dark canvas and saturated mid-tones on the light one, same hue order
   either way
 - A chart plotting exactly ONE series takes ROLE colours instead of the series
-  palette: the line light blue (`chart_line_colour_for`), the bars the SAFE
-  colour at or above zero (`chart_bar_colour_for`, `#b8a1d9` dark / `#6b4c9a`
+  palette: the line light blue (`chart_line_colour_for`), the bars a muted
+  lavender at or above zero (`chart_bar_colour_for`, `#b8a1d9` dark / `#6b4c9a`
   light) and the curve over those bars light blue (`solo_curve_colour_for`).
   Amber (`chart_bar_within_facility_colour_for`) is the WITHIN-FACILITY state
   below, never the resting bar fill. The LINE carries no verdict, because
-  one stroke spans the whole month and a safe colour there read as a positive
-  balance over days that were not. A BAR is one day, so the safe colour is
-  honest on it: a bar fills with it only where that day's value is at or above
-  zero and keeps the danger red below it, which is why the two marks take
+  one stroke spans the whole month and a verdict colour there read as a positive
+  balance over days that were not. A BAR is one day, so a verdict is honest on
+  it: a bar fills with the resting colour only where that day's value is at or
+  above zero and keeps the danger red below it, which is why the two marks take
   different colours from the same rule
-- The safe colour is a muted lavender, not a green. The green it replaced was
-  bright enough to glare at a lightness of 52%; it was also the same literal as
-  the focus ring, so neither role could move without the other. Splitting them
-  is what allowed the ring to go neutral and the bar to go lavender in one pass
-- Green and teal are retired app-wide. The ring and the accent were the last
-  two holdouts and they parted company at the same time: the ring is CHROME, so
-  it went to a near neutral that says the system is responding without claiming
-  a meaning, while the accent is IDENTITY (section titles, the current-tab
-  underline, the progress bar) so it kept a hue. `primary_text` is the one white
+- The BAR colour and the SAFE state colour are separate tokens and no longer
+  agree. Both were once one green literal that the focus ring also used, so
+  nothing could move alone. Splitting the three settled each on its own terms:
+  the safe state is green again because a verdict wants the reading green
+  carries, while the bar stays lavender because at 52% lightness the green
+  glared once it filled a bar the height of the canvas. `CHART_BAR_DARK` and
+  `STATES_DARK[STATE_SAFE]` are therefore expected to differ; making them match
+  again would undo two separate decisions
+- The accent is IDENTITY (section titles, the current-tab underline, the
+  progress bar) so it keeps a hue of its own, violet in dark and purple in
+  light, distinct from both the ring and the safe state. `primary_text` is the one white
   that did not collapse into `text`, because a button label on a saturated blue
   measures 4.00:1 in the softer white against 4.95:1 in pure white
 - The multi-series palette's first slot is a near neutral, because the lavender
@@ -1665,7 +1667,7 @@ renderings of the same figures to hold in step. Every month any page shows
   never wear one face; a near neutral is told apart by saturation, which none
   of the other seven compete for
 - A bar carries THREE states, not two, read against the agreed overdraft floor
-  rather than against zero: the safe colour at or above zero, amber below zero but no
+  rather than against zero: the resting lavender at or above zero, amber below zero but no
   further than the arranged facility, red past it. That is the banner's own
   reading applied to one day, so the graph and the banner above it never
   describe the same position in two different colours. The floor reaches the

@@ -48,7 +48,7 @@ LIGHT = Theme(
         QWidget { background: $GREY_96; color: $MUTED_BLUE_17; font-family: 'Segoe UI'; }
         QLabel#HeaderTitle { font-size: 38px; font-weight: 700; }
         QLabel#HeaderVersion { font-size: 14px; color: $GREY_46; }
-        QLabel#SubTitle { font-size: 22px; font-weight: 700; color: $MUTED_BLUE_27_H217; }
+        QLabel#SubTitle { font-size: 22px; font-weight: 700; color: $MUTED_BLUE_27; }
         QLabel#StatusLine { font-size: 13px; color: $GREY_46; }
 
         QCheckBox { spacing: 10px; font-size: 13px; }

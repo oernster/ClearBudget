@@ -47,7 +47,7 @@ tbody tr:last-child td { border-bottom: none; }
 .figures dt { color: $GREY_65; font-size: 13px; }
 .figures dd { margin: 0; font-size: 20px; font-weight: 600; }
 .state { font-weight: 600; }
-.state-safe { color: $VIOLET_74; }
+.state-safe { color: $EMERALD_52; }
 .state-caution { color: $AMBER_56; }
 .state-red { color: $RED_71; }
 footer { color: $GREY_65; font-size: 13px; text-align: center; margin-top: 30px; }

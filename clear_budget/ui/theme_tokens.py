@@ -70,13 +70,6 @@ DARK: dict[str, str] = {
     "pill_up_bg": palette.BLUE_25,
     "pill_down_bg": palette.ORANGE_26,
     "card_stat_bg": palette.MUTED_BLUE_18,
-    "cell_tight_bg": palette.RED_31,
-    "cell_watch_bg": palette.AMBER_50,
-    "cell_ample_bg": palette.MUTED_VIOLET_25,
-    "cell_tight_fg": palette.GREY_91,
-    "cell_watch_fg": palette.GREY_05,
-    "cell_ample_fg": palette.GREY_91,
-    "bar_text": palette.GREY_91,
 }
 
 LIGHT: dict[str, str] = {
@@ -119,13 +112,6 @@ LIGHT: dict[str, str] = {
     "pill_up_bg": palette.BLUE_48,
     "pill_down_bg": palette.ORANGE_37,
     "card_stat_bg": palette.GREY_100,
-    "cell_tight_bg": palette.RED_94,
-    "cell_watch_bg": palette.AMBER_89,
-    "cell_ample_bg": palette.VIOLET_95,
-    "cell_tight_fg": palette.RED_31,
-    "cell_watch_fg": palette.ORANGE_26,
-    "cell_ample_fg": palette.MUTED_VIOLET_45,
-    "bar_text": palette.MUTED_BLUE_11,
 }
 
 # Chart series colours are DATA encodings, not chrome, so they are a separate
@@ -156,9 +142,10 @@ CURVE_LIGHT = palette.FUCHSIA_40
 # were not.
 #
 # The bar colour was a bright mint green and is now a muted lavender. The green
-# read as glare at a lightness of 52%; it was also the same literal as the focus
-# ring, so neither role could move without dragging the other along. Splitting
-# them is what let the ring go neutral and the bar go lavender in one pass.
+# read as glare at a lightness of 52% once it filled a bar the height of the
+# canvas; it was also the same literal as the focus ring, so neither role could
+# move without dragging the other along. Splitting the three is what lets the
+# bar stay lavender while the ring and the safe state are both green again.
 #
 # These do NOT apply to a multi-series chart (one series per credit card),
 # where telling one card from another is the whole job and the palette does it.
@@ -218,10 +205,12 @@ SERIES_LIGHT = (
 # a banner fill and as text on the window background, so each theme needs its
 # own set to stay legible in the text role.
 #
-# Red and caution keep the warning colours convention gives them. SAFE does not
-# answer with green: it is a muted lavender, which says "not one of the two
-# warnings" without claiming a verdict of its own. Its light-theme twin is the
-# same hue taken dark enough to stay readable on white.
+# Red and caution keep the warning colours convention gives them and SAFE
+# answers with green, which is the reading a solvency verdict wants: the three
+# states then run the length of one familiar scale. Its light-theme twin is the
+# same hue taken dark enough to stay readable on white. This is a TEXT colour
+# and a banner fill; it is not the chart bar, which parted company with it (see
+# CHART_BAR_DARK).
 STATE_RED = "red"
 STATE_AT_RISK = "at_risk"
 STATE_CAUTION = "caution"
@@ -231,14 +220,14 @@ STATES_DARK = {
     STATE_RED: palette.RED_71,
     STATE_AT_RISK: palette.AMBER_50,
     STATE_CAUTION: palette.AMBER_56,
-    STATE_SAFE: palette.VIOLET_74,
+    STATE_SAFE: palette.EMERALD_52,
 }
 
 STATES_LIGHT = {
     STATE_RED: palette.RED_51,
     STATE_AT_RISK: palette.ORANGE_40,
     STATE_CAUTION: palette.ORANGE_37,
-    STATE_SAFE: palette.MUTED_VIOLET_45,
+    STATE_SAFE: palette.EMERALD_30,
 }
 
 _TOKENS_BY_THEME = {THEME_DARK: DARK, THEME_LIGHT: LIGHT}

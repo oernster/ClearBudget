@@ -61,5 +61,5 @@ class SolvencyViewModel(QObject):
         if not self.solvency_report:
             return palette.GREY_65
         if self.solvency_report.is_solvent:
-            return palette.VIOLET_74
+            return palette.EMERALD_52
         return palette.RED_71
