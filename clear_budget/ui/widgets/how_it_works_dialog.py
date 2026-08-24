@@ -13,10 +13,11 @@ every rejected design alongside the shipped one. A help screen nobody
 finishes explains nothing, so anything a control says for itself is left to
 the control.
 
-The tab icons are the BUNDLED IMAGES, pulled through the same resource lookup
-the tab row itself uses, rather than described in words or approximated with
-a similar-looking emoji. An icon guide showing something other than the icon
-is worse than no guide.
+Each tab entry carries the REAL icon that tab draws: the bundled images
+pulled through the same resource lookup the tab row itself uses, plus the two
+emoji written as the same characters. Never a description in words; never a
+similar-looking emoji standing in for a picture. An icon guide showing
+something other than the icon is worse than no guide.
 """
 
 from PySide6.QtWidgets import (
@@ -31,6 +32,7 @@ from clear_budget.ui import ui_scale
 from clear_budget.ui.utils.tab_icons import (
     ARCHIVE_ICON,
     CREDIT_CARDS_ICON,
+    GRAPH_ICON,
     MONTHLY_BUDGET_ICON,
     SOLVENCY_ICON,
 )
@@ -65,14 +67,11 @@ def _tab_row(spec: str, name: str, text: str, px: int) -> str:
 
 def _body_html() -> str:
     """Build the help text, resolving the real icons at open time."""
-    from clear_budget.shared.resources import find_logo_png_path
-
     px = ui_scale.px(_INLINE_ICON_PX)
-    app_icon = _img(find_logo_png_path(), px)
     return f"""\
 <h2>How ClearBudget Works</h2>
 
-<h3>The four tabs</h3>
+<h3>The five tabs</h3>
 {_tab_row(MONTHLY_BUDGET_ICON, "Monthly Budget",
           "this month's bills and income, plus what the balance does.", px)}
 {_tab_row(SOLVENCY_ICON, "Solvency",
@@ -81,6 +80,11 @@ def _body_html() -> str:
           "Spend.", px)}
 {_tab_row(CREDIT_CARDS_ICON, "Credit Cards",
           "one panel per card, with a six-month projection.", px)}
+{_tab_row(GRAPH_ICON, "Graph",
+          "the month drawn day by day, as bars or as a line. It plots the "
+          "bank balance, with a switch for card balances instead; the "
+          "heading above the chart always names which. The tray's arrows "
+          "step its month like any other page.", px)}
 {_tab_row(ARCHIVE_ICON, "Archive",
           "months that have finished. They are filed automatically; there is "
           "no archive button. Its icon sits apart, at the right of the tray "
@@ -93,14 +97,11 @@ def _body_html() -> str:
 &nbsp;&middot;&nbsp; &#128260; switch budget &nbsp;&middot;&nbsp;
 &#128101; switch user &nbsp;&middot;&nbsp; &#9881;&#65039; currency
 &nbsp;&middot;&nbsp; &#127974; overdraft plus the Safe to Spend buffer and
-window &nbsp;&middot;&nbsp; {app_icon}this tab's numbers as a graph
-&nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or dark
+window &nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or dark
 &nbsp;&middot;&nbsp; &#8505;&#65039; this screen</p>
 <p>Load and save open in the app's own data folder, where the live budgets
-already are. The graph is on every tab and plots that tab's own numbers for
-the month it is showing; Archive has no month of its own, so its graph opens
-on the month you are in. Your signed-in name sits at the left of the row
-above, with the month.</p>
+already are. Your signed-in name sits at the left of the row above, beside
+the month; the arrows there step every tab together.</p>
 
 <hr>
 <h3>Three rules behind the numbers</h3>

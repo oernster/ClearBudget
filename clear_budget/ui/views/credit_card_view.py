@@ -23,7 +23,6 @@ from clear_budget.ui.theme_tokens import STATE_CAUTION, STATE_RED, STATE_SAFE
 from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     build_centered_nav_header,
-    build_graph_icon_button,
     nav_glyph_height,
 )
 from clear_budget.ui.views._credit_card_projection_strip import (
@@ -93,7 +92,6 @@ class CreditCardView(
         # own set; MainWindow wires them and keeps the current-tab mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
-        self.graph_btn = build_graph_icon_button(_glyph_h, self.on_show_graph)
         (
             self.nav_header,
             self.month_label,
@@ -111,7 +109,7 @@ class CreditCardView(
                 self.bank_btn,
                 _sep,
             ),
-            tabs=(*self.tab_btns[:-1], self.graph_btn),
+            tabs=self.tab_btns[:-1],
             pre_theme=(self.tab_btns[-1],),
             trailing=(self.info_btn,),
         )
@@ -212,28 +210,6 @@ class CreditCardView(
         """Recolour the nav month label to match the Solvency tab."""
         apply_nav_label_color(self.month_label, color)
 
-    def on_show_graph(self) -> None:
-        """Open the month graph: one balance series per active card."""
-        from clear_budget.ui.utils.format_helpers import MONTH_NAMES
-        from clear_budget.ui.widgets.month_graph_dialog import MonthGraphDialog
-
-        def series_for(ym):
-            """The per-card series for `ym`, derived fresh on each step."""
-            return (
-                f"{MONTH_NAMES[ym.month]} {ym.year}: card balances by day",
-                self.budget_service.get_card_graph_series(year_month=ym),
-            )
-
-        # No budget_service here on purpose, so no projection button: the
-        # multi-month projection is a BANK balance one and would be incoherent
-        # offered from a graph of card balances.
-        MonthGraphDialog(
-            self,
-            series_for=series_for,
-            start_month=self.current_month,
-            base_month=self.base_month,
-        ).exec()
-
     def restyle(self) -> None:
         """Rebuild the card panels and projection cells after a theme switch."""
         self.load_cards()
@@ -276,7 +252,6 @@ class CreditCardView(
             *others,
             *card_stops,
             self.add_btn,
-            self.graph_btn,
             *archive_stop,
             self.theme_btn,
             self.info_btn,

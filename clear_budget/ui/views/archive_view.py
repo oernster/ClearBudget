@@ -14,7 +14,6 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
     build_centered_nav_header,
-    build_graph_icon_button,
     nav_glyph_height,
 )
 from clear_budget.ui.utils.tab_icons import (
@@ -64,7 +63,6 @@ class ArchiveView(QWidget):
         # own set; MainWindow wires them and keeps the current-tab mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
-        self.graph_btn = build_graph_icon_button(_glyph_h, self.on_show_graph)
         self.nav_header, self.year_label, self.theme_btn = build_centered_nav_header(
             "",
             prev_btn=self.prev_year_btn,
@@ -78,7 +76,7 @@ class ArchiveView(QWidget):
                 self.bank_btn,
                 _sep,
             ),
-            tabs=(*self.tab_btns[:-1], self.graph_btn),
+            tabs=self.tab_btns[:-1],
             pre_theme=(self.tab_btns[-1],),
             trailing=(self.info_btn,),
         )
@@ -146,48 +144,6 @@ class ArchiveView(QWidget):
         self.next_year_btn.setEnabled(0 <= idx < len(self.available_years) - 1)
         self.load_history(year_months)
 
-    def on_show_graph(self) -> None:
-        """Open the month graph for the CURRENT month's bank balance.
-
-        The graph button is an action, not a readout of the tab underneath
-        it: wherever it is clicked it plots the month you are living in. That
-        is what lets Archive carry it at all. Archive is organised by YEAR
-        while the graph is by MONTH, so there is no viewed month here to
-        borrow; asking the tab would have meant either inventing a month from
-        whichever year row happened to be selected or leaving the button off
-        this tab alone, which is what made the tray visibly change shape
-        between tabs.
-
-        So it opens exactly what the Budget tab's button opens when that tab
-        is sitting on today: the same bank series, bounded the same way. One
-        clock read for both months, so the start and the lower bound cannot
-        straddle midnight and leave Previous enabled by a second.
-        """
-        from datetime import date as _date
-
-        from clear_budget.ui.utils.format_helpers import MONTH_NAMES
-        from clear_budget.ui.widgets.month_graph_dialog import MonthGraphDialog
-
-        now = _date.today()  # noqa: DTZ011 (local date)
-        this_month = YearMonth(now.year, now.month)
-        svc = self.budget_service
-
-        def series_for(ym):
-            """The bank series for `ym`, derived fresh so navigation is live."""
-            summary = svc.get_month_summary(year_month=ym)
-            series = svc.get_bank_graph_series(year_month=ym, summary=summary)
-            return f"{MONTH_NAMES[ym.month]} {ym.year}: bank balance by day", [series]
-
-        MonthGraphDialog(
-            self,
-            series_for=series_for,
-            start_month=this_month,
-            base_month=this_month,
-            budget_service=svc,
-            anchor_month=this_month,
-            overdraft_limit_pence=svc.get_overdraft_limit().pence,
-        ).exec()
-
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab.
 
@@ -217,7 +173,6 @@ class ArchiveView(QWidget):
             self.settings_btn,
             self.bank_btn,
             *others,
-            self.graph_btn,
             *archive_stop,
             self.theme_btn,
             self.info_btn,

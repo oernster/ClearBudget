@@ -16,7 +16,6 @@ from clear_budget.ui import label_roles
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     build_centered_nav_header,
-    build_graph_icon_button,
     fmt,
     nav_glyph_height,
 )
@@ -52,7 +51,6 @@ class MonthViewBuilderMixin:
         # own set; MainWindow wires them and keeps the current-tab mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
-        self.graph_btn = build_graph_icon_button(_glyph_h, self.on_show_graph)
         _ym = self.view_model.current_month
         (
             self.nav_header,
@@ -71,7 +69,7 @@ class MonthViewBuilderMixin:
                 self.bank_btn,
                 _sep,
             ),
-            tabs=(*self.tab_btns[:-1], self.graph_btn),
+            tabs=self.tab_btns[:-1],
             pre_theme=(self.tab_btns[-1],),
             trailing=(self.info_btn,),
         )

@@ -142,30 +142,6 @@ class MonthView(
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
 
-    def on_show_graph(self) -> None:
-        """Open the month graph for the viewed month's bank balance."""
-        from clear_budget.ui.widgets.month_graph_dialog import MonthGraphDialog
-
-        if self.view_model.month_summary is None:
-            return
-        svc = self.view_model.budget_service
-
-        def series_for(ym):
-            """The bank series for `ym`, derived fresh so navigation is live."""
-            summary = svc.get_month_summary(year_month=ym)
-            series = svc.get_bank_graph_series(year_month=ym, summary=summary)
-            return f"{MONTH_NAMES[ym.month]} {ym.year}: bank balance by day", [series]
-
-        MonthGraphDialog(
-            self,
-            series_for=series_for,
-            start_month=self.view_model.current_month,
-            base_month=self.view_model.base_month,
-            budget_service=svc,
-            anchor_month=self.view_model.current_month,
-            overdraft_limit_pence=svc.get_overdraft_limit().pence,
-        ).exec()
-
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops for this tab.
 
@@ -195,7 +171,6 @@ class MonthView(
             self.settings_btn,
             self.bank_btn,
             *others,
-            self.graph_btn,
             *archive_stop,
             self.theme_btn,
             self.info_btn,

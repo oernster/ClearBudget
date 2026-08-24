@@ -1,12 +1,12 @@
-"""The tab strip's icons: three bundled images and one emoji, matched in size.
+"""The tab strip's icons: three bundled images and two emoji, matched in size.
 
-The four primary tabs carry pictures rather than words. The words are not
+The primary tabs carry pictures rather than words. The words are not
 gone, they moved into the tooltips, so the strip still names itself to anyone
-who pauses on a tab; what went is a row of four text labels wide enough to
-push the strip most of the way across the window.
+who pauses on a tab; what went is a row of text labels wide enough to push
+the strip most of the way across the window.
 
-Three of the four are bundled PNGs and the fourth is an emoji, which is the
-whole difficulty here. They are different KINDS of image and Qt sizes them by
+Three are bundled PNGs and two are emoji, which is the whole difficulty
+here. They are different KINDS of image and Qt sizes them by
 different rules: a PNG has real pixels to scale, while a glyph is laid out by
 a font's em box, which no emoji actually fills (see `glyph_metrics`). Sized
 naively the two families never agree, so everything below reduces both to the
@@ -24,7 +24,7 @@ Two deliberate asymmetries survive that:
   construction. It does let the landscape card artwork run wider than its
   neighbours, which is accepted deliberately: a shared bottom edge is what the
   eye actually checks along a row.
-* the emoji is measured by HEIGHT rather than fitted to the box, because the
+* an emoji is measured by HEIGHT rather than fitted to the box, because the
   archive glyph is a tall narrow shape: fitted by its longer side it would
   paint 26 tall and about 17 wide, so it would already be the lightest thing
   on the strip. `nav_header.TOGGLE_GLYPH_SCALE` takes the opposite decision
@@ -56,12 +56,18 @@ TAB_IMAGE_SCALE = 1.35
 # reading as the runt of the four. It is a tab first and an emoji second.
 TAB_EMOJI_SCALE = TAB_IMAGE_SCALE
 
-# The four tabs, in strip order. An entry is either a bundled image filename
+# The tabs, in strip order. An entry is either a bundled image filename
 # or an emoji glyph; `_is_image` tells them apart by the suffix, so adding a
 # tab means adding one line here and nothing else.
 MONTHLY_BUDGET_ICON = "monthlybudget.png"
 SOLVENCY_ICON = "solvency.png"
 CREDIT_CARDS_ICON = "creditcards.png"
+# A bar chart; an emoji rather than a bundled picture for the same reason
+# Archive is one: a tab is added by adding a line here, while the images are a
+# whitelisted set this application ships and there is no chart among them.
+# The graph used to be a plain icon button wearing the APP LOGO, which said
+# what the program is rather than what the tab shows.
+GRAPH_ICON = "\U0001f4ca"
 ARCHIVE_ICON = "\U0001f5c4️"
 
 # The strip, in order, as (icon spec, the name that becomes the tooltip).
@@ -69,6 +75,7 @@ TAB_SPECS = (
     (MONTHLY_BUDGET_ICON, "Monthly Budget"),
     (SOLVENCY_ICON, "Solvency"),
     (CREDIT_CARDS_ICON, "Credit Cards"),
+    (GRAPH_ICON, "Graph"),
     (ARCHIVE_ICON, "Archive"),
 )
 # QSS hooks: the object name carrying the three-state ring rules, plus the
@@ -181,7 +188,7 @@ def tab_icon_box_px() -> int:
 
 
 def build_tab_buttons(box_px: int) -> list:
-    """Return the four primary tabs as icon buttons, in strip order.
+    """Return the primary tabs as icon buttons, in strip order.
 
     Buttons rather than a `QTabBar` because the tabs live in the navigation
     tray now, beside the database and settings shortcuts, rather than in a

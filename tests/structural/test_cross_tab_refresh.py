@@ -23,7 +23,9 @@ import ast
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
-_MAIN_WINDOW = _ROOT / "clear_budget" / "ui" / "main_window.py"
+# The pages and their signal wiring live here, split out of main_window
+# when that module reached the LOC danger band.
+_MAIN_WINDOW = _ROOT / "clear_budget" / "ui" / "_main_window_tabs.py"
 _CARD_VIEW = _ROOT / "clear_budget" / "ui" / "views" / "credit_card_view.py"
 
 _SIGNAL = "month_summary_updated"

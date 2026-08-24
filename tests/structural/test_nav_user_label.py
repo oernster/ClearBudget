@@ -20,7 +20,9 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
 _HEADER = _ROOT / "clear_budget" / "ui" / "utils" / "nav_header.py"
-_WINDOW = _ROOT / "clear_budget" / "ui" / "main_window.py"
+# The trays are filled in where the pages are built, which is here
+# since main_window was split at the LOC danger band.
+_WINDOW = _ROOT / "clear_budget" / "ui" / "_main_window_tabs.py"
 
 
 def _source(path: Path) -> str:

@@ -44,80 +44,6 @@ _ICON_PIXMAP_CACHE = None
 _ICON_LOAD_ATTEMPTED = False
 
 
-def _load_cropped_icon_pixmap():
-    """Return the app icon pixmap cropped to its opaque bounding box or None."""
-    global _ICON_PIXMAP_CACHE, _ICON_LOAD_ATTEMPTED
-    if _ICON_LOAD_ATTEMPTED:
-        return _ICON_PIXMAP_CACHE
-    _ICON_LOAD_ATTEMPTED = True
-
-    from PySide6.QtGui import QImage, QPixmap
-
-    from clear_budget.ui.utils.glyph_metrics import opaque_bounding_rect
-
-    if _APP_ICON_PATH is None:
-        return None
-    image = QImage(str(_APP_ICON_PATH))
-    if image.isNull():
-        return None
-    cropped = image.copy(opaque_bounding_rect(image))
-    _ICON_PIXMAP_CACHE = QPixmap.fromImage(cropped)
-    return _ICON_PIXMAP_CACHE
-
-
-def _build_icon_graph_button(icon_pixmap, icon_height, on_click):
-    """Return the nav icon as a tabbable QPushButton wired to `on_click`.
-
-    Object-name styled, so it carries its own three-state ring rules: no ring
-    at rest, green ring on hover or keyboard focus while enabled, red ring
-    while disabled (the app-wide QSS rules do not reach object-name buttons).
-    """
-    from PySide6.QtCore import QSize, Qt
-    from PySide6.QtGui import QIcon
-    from PySide6.QtWidgets import QPushButton
-
-    btn = QPushButton()
-    btn.setObjectName("NavGraphButton")
-    scaled = icon_pixmap.scaledToHeight(
-        icon_height, Qt.TransformationMode.SmoothTransformation
-    )
-    btn.setIcon(QIcon(scaled))
-    btn.setIconSize(QSize(scaled.width(), scaled.height()))
-    btn.setToolTip("Show this month as a graph")
-    btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    btn.clicked.connect(on_click)
-    return btn
-
-
-def build_graph_icon_button(glyph_height: int, on_click):
-    """The app icon as a tabbable button that opens the month graph.
-
-    It used to sit in the upper tray beside the month, which put a control
-    that ACTS on the application in the row that only says which month is
-    being read. It belongs with the tabs it is sized against, so it is built
-    here for the lower tray and returns None when the icon cannot be resolved,
-    exactly as the decorative version did.
-
-    It takes the TAB run's image scale, not the tray's bare glyph height,
-    because it is drawn INSIDE that run, immediately after the Cards tab. The
-    three tab pictures are scaled up by `TAB_IMAGE_SCALE` to hold their own
-    optically beside the tray's emoji; this one was left at 1.0 from its days
-    in the upper tray, so it painted 46 tall against their 62 and its base sat
-    8px above theirs. A row of icons that do not share a bottom edge reads as
-    badly set rather than as deliberately varied, which is the very effect
-    `tab_icons` introduced that constant to cure. Imported inside the function
-    to keep the two modules' import order free of each other.
-    """
-    from clear_budget.ui.utils.tab_icons import TAB_IMAGE_SCALE
-
-    pixmap = _load_cropped_icon_pixmap()
-    if pixmap is None:
-        return None
-    return _build_icon_graph_button(
-        pixmap, round(glyph_height * TAB_IMAGE_SCALE), on_click
-    )
-
-
 def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
     """Return (QWidget, QLabel) - the month cluster for the upper tray.
 
@@ -125,11 +51,12 @@ def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
     month label so the navigation buttons flank the title.
 
     The app icon is NOT here any more. It opened the month graph, which acts
-    on the application, while this row only says which month is being read;
-    it now sits in the lower tray with the tabs it is sized against (see
-    `build_graph_icon_button`). Nothing decorative replaced it: a second copy
-    of the window icon said nothing the title bar had not; a dead icon in
-    a row of live buttons reads as a broken one.
+    on the application, while this row only says which month is being read.
+    It moved to the lower tray with the tabs it was sized against, then
+    stopped being an icon button at all: the graph is a TAB now, so what
+    stands there is the Graph tab itself. Nothing decorative replaced it in
+    this row: a second copy of the window icon said nothing the title bar had
+    not; a dead icon in a row of live buttons reads as a broken one.
     """
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QHBoxLayout, QWidget
@@ -266,8 +193,8 @@ def build_centered_nav_header(
     def _place(widgets) -> None:
         """Add each widget in order, skipping any that could not be built.
 
-        `build_graph_icon_button` returns None when the app icon cannot be
-        resolved, so that a missing asset costs the tray one control rather
+        A builder that cannot resolve its artwork returns None rather than
+        a blank, so that a missing asset costs the tray one control rather
         than the whole window. Without this skip the None reached
         `addWidget` and took the application down at startup instead.
         """

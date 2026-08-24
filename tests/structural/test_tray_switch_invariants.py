@@ -3,14 +3,23 @@
 Two invariants, both broken at once when the graph icon moved down into the
 lower tray.
 
-The first is the GRAPH ICON. It is built per view, because every view builds
-its own tray, so a view that simply never calls the builder loses the control
-silently: the tray still draws, the app still runs and the capability is just
-gone from that tab. Solvency lost it exactly that way; Archive never had it,
-which cost the tray a control on that tab alone and changed the row's shape
-on the way in. Every view that draws a tray must build the button AND list it
-as a keyboard stop, since a control the ring skips is one the keyboard cannot
-reach.
+The first is the TAB RUN. Every view builds its own tray, so a view that
+simply never calls a builder loses that control silently: the tray still
+draws, the app still runs and the capability is just gone from that tab.
+Solvency lost the graph exactly that way and Archive never had it, which
+changed the row's shape on the way in. Every view that draws a tray must
+build the shared controls AND list them as keyboard stops, since a control
+the ring skips is one the keyboard cannot reach.
+
+The graph itself is no longer one of those controls. It was an icon button
+that opened a modal dialog, which is what made it the odd one out; it is a
+PAGE now, so what guards it is the tab wiring below rather than a per-view
+button. What replaced those assertions is stronger than what they said: the
+tab buttons are mapped onto the pages BY POSITION, each button index handed
+straight to `setCurrentIndex`, so the strip and the pages agreeing is not a
+tidiness question. A page inserted in the wrong slot silently points every
+tab button in the application at the wrong page, while nothing about the tray
+looks any different.
 
 The second is the NEUTRAL START on a switch. Switching tabs hides the control
 that was clicked; Qt then hands its focus to whatever comes next in the newly
@@ -30,39 +39,29 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[2]
 _UI = _ROOT / "clear_budget" / "ui"
 _NAV_MIXIN = _UI / "_main_window_nav.py"
+_MAIN_WINDOW = _UI / "_main_window_tabs.py"
+_TAB_ICONS = _UI / "utils" / "tab_icons.py"
 
-# Every view that draws a nav tray. All four draw the SAME shortcuts, so a
+# Every view that draws a nav tray. All of them draw the SAME shortcuts, so a
 # view that skips one loses that shortcut on that tab alone and nowhere else,
 # which reads as the button having moved rather than as a defect.
 _TRAY_VIEWS = (
     _UI / "views" / "_month_view_builders.py",
     _UI / "views" / "solvency_panel.py",
     _UI / "views" / "credit_card_view.py",
+    _UI / "views" / "graph_view.py",
     _UI / "views" / "archive_view.py",
 )
-
-# The graph button is drawn on every one of them, Archive included. Archive
-# was left out originally on the reading that it plots nothing, so it had
-# nothing to graph. That reading treated the button as a readout of the tab
-# it sits on. It is not: it is an ACTION, so wherever it is clicked it plots
-# the current month. Under that reading Archive being organised by year stops
-# mattering, because the button never asks the tab what it is showing.
-# Leaving it off cost the tray a control on one tab alone, so the row visibly
-# changed shape on the way in.
-#
-# One tuple rather than a second copy of the same four paths: two lists that
-# have to stay equal are two lists that eventually do not.
-_PLOTTING_VIEWS = _TRAY_VIEWS
 
 # Where each view's ring order is declared, when that is not the same file.
 _RING_DECLARATIONS = {
     "_month_view_builders.py": _UI / "views" / "month_view.py",
 }
 
-_BUILDER = "build_graph_icon_button"
-_ATTR = "graph_btn"
 _USERS_BUILDER = "build_users_button"
 _USERS_ATTR = "users_btn"
+_TABS_BUILDER = "build_tab_buttons"
+_TABS_ATTR = "tab_btns"
 _SINK = "_focus_sink"
 
 
@@ -102,38 +101,74 @@ def _self_attrs_returned_by(tree: ast.Module, method: str) -> set[str]:
     return names
 
 
-def test_every_plotting_view_builds_the_graph_icon() -> None:
-    """A view that plots must build its own graph button, not inherit one."""
-    for path in _PLOTTING_VIEWS:
-        assert _assigns_from_call(_tree(path), _ATTR, _BUILDER), (
-            f"{path.name} never assigns self.{_ATTR} from {_BUILDER}(), so its "
-            "tray silently loses the month graph"
+def _tab_spec_labels() -> list[str]:
+    """The tab names declared in `TAB_SPECS`, in strip order."""
+    for node in ast.walk(_tree(_TAB_ICONS)):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(
+            isinstance(t, ast.Name) and t.id == "TAB_SPECS" for t in node.targets
+        ):
+            continue
+        return [
+            entry.elts[1].value
+            for entry in node.value.elts
+            if isinstance(entry, ast.Tuple) and isinstance(entry.elts[1], ast.Constant)
+        ]
+    return []
+
+
+def _added_page_labels() -> list[str]:
+    """The page names passed to `tabs.addTab`, in the order they are added."""
+    labels = []
+    for node in ast.walk(_tree(_MAIN_WINDOW)):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (isinstance(func, ast.Attribute) and func.attr == "addTab"):
+            continue
+        if len(node.args) < 2 or not isinstance(node.args[1], ast.Constant):
+            continue
+        labels.append(node.args[1].value)
+    return labels
+
+
+def test_the_tab_strip_and_the_pages_are_the_same_list() -> None:
+    """A tab button's index IS the page index, so the two lists must match.
+
+    `_wire_tab_buttons` connects button `i` to `setCurrentIndex(i)`. A page
+    added in a different order from `TAB_SPECS` therefore sends every tray in
+    the application to the wrong page, with nothing on screen looking wrong.
+    """
+    specs = _tab_spec_labels()
+    pages = _added_page_labels()
+    assert specs, "TAB_SPECS could not be read, so this guard is checking nothing"
+    assert specs == pages, (
+        "the tab strip and the pages have drifted apart:\n"
+        f"  TAB_SPECS: {specs}\n"
+        f"  addTab   : {pages}\n"
+        "every tab button is wired to its page BY POSITION, so a mismatch "
+        "points the tray at the wrong page rather than showing an error"
+    )
+
+
+def test_every_tray_view_builds_the_tab_buttons() -> None:
+    """A tray without the tab run is a page with no way out of itself."""
+    for path in _TRAY_VIEWS:
+        assert _assigns_from_call(_tree(path), _TABS_ATTR, _TABS_BUILDER), (
+            f"{path.name} never assigns self.{_TABS_ATTR} from "
+            f"{_TABS_BUILDER}(), so that tab cannot reach the others"
         )
 
 
-def test_every_plotting_view_rings_the_graph_icon() -> None:
-    """The graph button must be a keyboard stop wherever it is drawn."""
-    for path in _PLOTTING_VIEWS:
+def test_every_tray_view_rings_the_tab_buttons() -> None:
+    """The keyboard must reach the tabs from every page, not just the mouse."""
+    for path in _TRAY_VIEWS:
         ring_path = _RING_DECLARATIONS.get(path.name, path)
         stops = _self_attrs_returned_by(_tree(ring_path), "nav_targets")
-        assert _ATTR in stops, (
-            f"{ring_path.name}'s nav_targets() omits self.{_ATTR}, so the "
-            "keyboard cannot reach a button the tray draws"
-        )
-
-
-def test_every_plotting_view_defines_the_graph_handler() -> None:
-    """The button is wired to a handler that view actually owns."""
-    for path in _PLOTTING_VIEWS:
-        handler_path = _RING_DECLARATIONS.get(path.name, path)
-        methods = {
-            node.name
-            for node in ast.walk(_tree(handler_path))
-            if isinstance(node, ast.FunctionDef)
-        }
-        assert "on_show_graph" in methods, (
-            f"{handler_path.name} builds a graph button with no on_show_graph "
-            "to answer it"
+        assert _TABS_ATTR in stops, (
+            f"{ring_path.name}'s nav_targets() omits self.{_TABS_ATTR}, so the "
+            "keyboard cannot reach the tabs that page draws"
         )
 
 

@@ -17,7 +17,6 @@ from clear_budget.ui.utils.nav_header import (
     apply_nav_label_color,
     apply_toggle_glyph,
     build_centered_nav_header,
-    build_graph_icon_button,
     build_nav_month_widget,
     nav_glyph_height,
 )
@@ -31,7 +30,6 @@ __all__ = [
     "apply_nav_label_color",
     "apply_toggle_glyph",
     "build_centered_nav_header",
-    "build_graph_icon_button",
     "build_nav_month_widget",
     "fmt",
     "format_category",
