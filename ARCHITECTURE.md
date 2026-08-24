@@ -1330,7 +1330,8 @@ renderings of the same figures to hold in step. Every month any page shows
   fill and an underline so the two can never be confused
 
 **Main Application**:
-- `MainWindow` - all tabs in `ScrollableTab`; signals: `logout_requested`, `database_replaced`
+- `MainWindow` - all tabs in `ScrollableTab`; signals: `switch_user_requested`,
+  `sign_out_requested`, `database_replaced`
   - File menu: New Budget and Switch Budget, then Load / Save / Save As (Save
     goes to the remembered save file, kept in `ui_settings.json`), then the
     "Import / Export" submenu (Read-Only Viewer Package export/import, then
@@ -1338,8 +1339,18 @@ renderings of the same figures to hold in step. Every month any page shows
     restore travels the `full_restore_requested` signal to `main.py`, which
     tears the session down before touching a file
   - Settings menu (adjacent to File): Preferences, Bank Account
-  - Users menu: Switch User for every account; admins also get Manage Users
-    (list, Add User, Delete Selected)
+  - Users menu: Switch User and Log Out for every account; admins also get
+    Manage Users (list, Add User, Delete Selected). The two ways out are
+    separate signals on purpose and differ only in what a cancelled sign-in
+    does. `switch_user_requested` SUSPENDS: `main.py` hides the window, keeps
+    its database open and keeps tracking it, so a cancel shows it again.
+    `sign_out_requested` ENDS: `main.py` destroys the window and closes the
+    database, so a cancel finds no live session and quits. Pinned by
+    `tests/structural/test_session_exit_invariants.py`, because crossing the
+    two signals raises nothing and shows only as a cancelled switch quietly
+    closing the application
+  - Account and session handlers live in the `MainWindowAccountMixin`
+    (`ui/_main_window_account.py`), alongside the menu and navigation mixins
   - The nav tray is TWO stacked trays, built together by
     `nav_header.build_centered_nav_header`, because they answer different
     questions. The UPPER tray carries only what is about the month being

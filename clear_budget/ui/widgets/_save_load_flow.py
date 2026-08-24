@@ -86,6 +86,23 @@ def build_budgets_button(read_only: bool, glyph_height: int) -> QPushButton:
     return btn
 
 
+def build_users_button(glyph_height: int) -> QPushButton:
+    """Return the switch-user button for a nav tray, drawn beside switch-budget.
+
+    It carries SWITCH USER rather than Log Out; the reason is
+    reversibility. A tray button is one click with no confirmation; a
+    cancelled switch leaves the session exactly as it was, while a mis-clicked
+    Log Out would end it. Log Out therefore stays on the Users menu, where
+    choosing it is deliberate.
+
+    Always enabled, read-only viewers included: signing in as somebody else
+    writes nothing to the budget, so there is nothing for read-only to
+    withhold; a viewer with no way out of their own session would be
+    stranded in it.
+    """
+    return _tray_icon_button("👥", "Switch user…", glyph_height)
+
+
 def build_settings_bank_buttons(
     read_only: bool, glyph_height: int
 ) -> tuple[QFrame, QPushButton, QPushButton]:

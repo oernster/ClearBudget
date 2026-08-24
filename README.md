@@ -275,14 +275,16 @@ stops on each tab in turn.
 | File | Exit | Close application |
 | Settings | Preferences... | Choose display currency |
 | Settings | Bank Account | Configure an overdraft facility (limit and APR) plus the Safe to Spend Today buffer and window |
-| Users | Switch User | Return to login screen |
+| Users | Switch User... | Suspend this session and return to the sign-in screen; cancelling comes back to it |
+| Users | Log Out | End this session and return to the sign-in screen; cancelling there closes the application |
 | Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
 
-Load, Save, Switch Budget, Preferences and Bank Account are also one click away
-in every tab's navigation tray, which is two rows. The upper row carries only
-the month or year: Previous, the date and Next, centred. The lower row carries
-everything that acts on the application: the folder and diskette, the
-switch-budget arrows, the cog (Preferences), the bank, then a separator, then
+Load, Save, Switch Budget, Switch User, Preferences and Bank Account are also
+one click away in every tab's navigation tray, which is two rows. The upper row
+carries only the month or year: Previous, the date and Next, centred. The lower
+row carries everything that acts on the application: the folder and diskette,
+the switch-budget arrows, the two figures (Switch User), the cog (Preferences),
+the bank, then a separator, then
 Monthly Budget, Solvency and Credit Cards followed by the app icon that opens
 the graph. Archive sits at the far right beside the sun/moon theme toggle and
 the blue information button opening How It Works.
@@ -307,12 +309,21 @@ Subsequent launches show a login screen with username/password fields plus:
 - **Create Account...** - create a new (non-admin) account at any time, without
   needing an admin
 
-The **Users** menu offers Switch User to every account; for admins it also
-carries **Manage Users...** for adding and removing accounts (added
-accounts are also non-admin). Admins cannot delete their own account. Deleting a user
-account always permanently deletes that user's budget data too (two confirmations
-required) - there is no way to keep an orphaned data file after the account's
-credentials are destroyed. Non-admin users see only Switch User in the Users menu.
+The **Users** menu offers every account two ways out of a session, which differ
+only in what cancelling the sign-in screen then does. **Switch User...**
+suspends the session: the window is hidden and its budget stays open, so
+cancelling returns to exactly where you were. **Log Out** ends the session, so
+cancelling closes the application instead. Neither loses anything, since the
+budget is saved on disk either way. Switch User is also the two-figures button
+in every tab's navigation tray; Log Out is deliberately menu-only, because a
+one-click Log Out would end a session on a misclick.
+
+For admins the menu also carries **Manage Users...** for adding and removing
+accounts (added accounts are also non-admin). Admins cannot delete their own
+account. Deleting a user account always permanently deletes that user's budget
+data too (two confirmations required) - there is no way to keep an orphaned
+data file after the account's credentials are destroyed. Non-admin users see
+Switch User and Log Out only.
 
 A **read-only viewer account** can sign in to browse a snapshot of someone else's
 budget but cannot edit anything.

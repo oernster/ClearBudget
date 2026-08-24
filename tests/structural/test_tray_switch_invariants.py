@@ -40,8 +40,20 @@ _RING_DECLARATIONS = {
     "_month_view_builders.py": _UI / "views" / "month_view.py",
 }
 
+# Every view that draws a nav tray. All four draw the SAME shortcuts, so a
+# view that skips one loses that shortcut on that tab alone and nowhere else,
+# which reads as the button having moved rather than as a defect.
+_TRAY_VIEWS = (
+    _UI / "views" / "_month_view_builders.py",
+    _UI / "views" / "solvency_panel.py",
+    _UI / "views" / "credit_card_view.py",
+    _UI / "views" / "archive_view.py",
+)
+
 _BUILDER = "build_graph_icon_button"
 _ATTR = "graph_btn"
+_USERS_BUILDER = "build_users_button"
+_USERS_ATTR = "users_btn"
 _SINK = "_focus_sink"
 
 
@@ -142,3 +154,23 @@ def test_a_tab_switch_returns_focus_to_the_neutral_sink() -> None:
         "the tabs.currentChanged handler never touches "
         f"self.{_SINK}, so the new page does not start neutral"
     )
+
+
+def test_every_tray_view_builds_the_users_icon() -> None:
+    """Switching account is offered on every tab or it is offered on none."""
+    for path in _TRAY_VIEWS:
+        assert _assigns_from_call(_tree(path), _USERS_ATTR, _USERS_BUILDER), (
+            f"{path.name} never assigns self.{_USERS_ATTR} from "
+            f"{_USERS_BUILDER}(), so that tab alone cannot switch user"
+        )
+
+
+def test_every_tray_view_rings_the_users_icon() -> None:
+    """The keyboard must reach it, since a skipped stop reads as no control."""
+    for path in _TRAY_VIEWS:
+        ring_path = _RING_DECLARATIONS.get(path.name, path)
+        stops = _self_attrs_returned_by(_tree(ring_path), "nav_targets")
+        assert _USERS_ATTR in stops, (
+            f"{ring_path.name}'s nav_targets() omits self.{_USERS_ATTR}, so "
+            "the keyboard cannot reach a button the tray draws"
+        )

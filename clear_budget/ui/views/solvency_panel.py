@@ -24,6 +24,7 @@ from clear_budget.ui.widgets._save_load_flow import (
     build_budgets_button,
     build_save_load_buttons,
     build_settings_bank_buttons,
+    build_users_button,
 )
 from clear_budget.ui.views._solvency_panel_assumed import SolvencyPanelAssumedMixin
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
@@ -109,6 +110,7 @@ class SolvencyPanel(
         _glyph_h = nav_glyph_height(self.prev_btn)
         self.load_btn, self.save_btn = build_save_load_buttons(self.read_only, _glyph_h)
         self.budgets_btn = build_budgets_button(self.read_only, _glyph_h)
+        self.users_btn = build_users_button(_glyph_h)
         _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(
             self.read_only, _glyph_h
         )
@@ -126,6 +128,7 @@ class SolvencyPanel(
                 self.load_btn,
                 self.save_btn,
                 self.budgets_btn,
+                self.users_btn,
                 self.settings_btn,
                 self.bank_btn,
                 _sep,
@@ -242,6 +245,7 @@ class SolvencyPanel(
             self.load_btn,
             self.save_btn,
             self.budgets_btn,
+            self.users_btn,
             self.settings_btn,
             self.bank_btn,
             *before_tabs,

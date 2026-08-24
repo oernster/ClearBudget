@@ -86,14 +86,22 @@ class MainWindowMenuMixin:
         bank_action.triggered.connect(self._on_bank_account_settings)
         bank_action.setEnabled(not self.read_only)
 
-        # Users menu: Switch User for everyone, management for admins only.
+        # Users menu: managing accounts is for admins only; leaving a session
+        # is for everyone. Both ways out are offered because they differ in
+        # what a cancelled sign-in then does. Switch User keeps this session
+        # alive behind the sign-in screen, so cancelling returns to it; Log
+        # Out ends the session, so cancelling closes the application. Only
+        # Switch User takes an ellipsis: it needs to be told WHO before it has
+        # done anything, while Log Out is complete the moment it is chosen.
         users_menu = self.menuBar().addMenu("&Users")
         if self.current_user.is_admin:
             manage_action = users_menu.addAction("&Manage Users…")
             manage_action.triggered.connect(self._on_manage_users)
             users_menu.addSeparator()
-        logout_action = users_menu.addAction("&Switch User")
-        logout_action.triggered.connect(self._on_logout)
+        switch_action = users_menu.addAction("&Switch User…")
+        switch_action.triggered.connect(self._on_switch_user)
+        sign_out_action = users_menu.addAction("Log &Out")
+        sign_out_action.triggered.connect(self._on_sign_out)
 
         # Help menu
         help_menu = self.menuBar().addMenu("&Help")

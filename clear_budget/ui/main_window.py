@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import (
     QMainWindow,
-    QMessageBox,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -15,6 +14,7 @@ from PySide6.QtWidgets import (
 from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import ui_scale
+from clear_budget.ui._main_window_account import MainWindowAccountMixin
 from clear_budget.ui._main_window_menus import MainWindowMenuMixin
 from clear_budget.ui._main_window_nav import MainWindowNavMixin
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
@@ -35,11 +35,20 @@ if TYPE_CHECKING:
 _MIDNIGHT_FOLD_BUFFER_MS = 2000
 
 
-class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
+class MainWindow(
+    MainWindowAccountMixin, MainWindowMenuMixin, MainWindowNavMixin, QMainWindow
+):
     """Application main window with tabbed views."""
 
-    # Emitted when the user switches account.
-    logout_requested = Signal()
+    # Emitted to SUSPEND this session and offer the sign-in screen. The
+    # window is only hidden and its database stays open, so a cancelled
+    # sign-in comes back to it.
+    switch_user_requested = Signal()
+    # Emitted to END this session. The window is destroyed and the database
+    # closed, so there is nothing to come back to and a cancelled sign-in
+    # closes the application. Nothing is lost either way: the budget is on
+    # disk; both routes lead to the same sign-in screen.
+    sign_out_requested = Signal()
     # Emitted after a database import - signals main to reload without restart.
     database_replaced = Signal()
     # Emitted with a validated full-backup zip path. Only main.py can act on
@@ -142,6 +151,7 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
             _tray_view.save_btn.clicked.connect(self._on_save_database)
             _tray_view.load_btn.clicked.connect(self._on_load_database)
             _tray_view.budgets_btn.clicked.connect(self._on_manage_budgets)
+            _tray_view.users_btn.clicked.connect(self._on_users)
             _tray_view.settings_btn.clicked.connect(self._on_preferences)
             _tray_view.bank_btn.clicked.connect(self._on_bank_account_settings)
             _tray_view.info_btn.clicked.connect(self._on_how_it_works)
@@ -258,32 +268,6 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         run_bank_account_settings_flow(self, self.month_view_model.budget_service)
         self.month_view_model.refresh_month_summary()
 
-    def _on_logout(self) -> None:
-        """Return to login to switch user."""
-        self.logout_requested.emit()
-        self.hide()
-
-    def _on_manage_users(self) -> None:
-        from clear_budget.ui.widgets.user_management_dialog import UserManagementDialog
-
-        dlg = UserManagementDialog(self.user_store, self.current_user, parent=self)
-        dlg.exec()
-
-    def _on_import_viewer_package(self) -> None:
-        from clear_budget.ui.widgets._viewer_package_import_flow import (
-            run_import_viewer_package_flow,
-        )
-
-        user = run_import_viewer_package_flow(self, self.user_store)
-        if user is None:
-            return
-        QMessageBox.information(
-            self,
-            "Import Successful",
-            f"Viewer account '{user.username}' is ready.\n\n"
-            "They can sign in with the password from the export.",
-        )
-
     def _on_how_it_works(self) -> None:
         from clear_budget.ui.widgets.how_it_works_dialog import HowItWorksDialog
 
@@ -335,15 +319,6 @@ class MainWindow(MainWindowMenuMixin, MainWindowNavMixin, QMainWindow):
         source = run_load_flow(self, self.db_path, self._live_connection())
         if source is not None:
             self.database_load_requested.emit(str(source))
-
-    def _on_export_viewer_package(self) -> None:
-        """Open the dialog to export a read-only viewer package."""
-        from clear_budget.ui.widgets.export_viewer_package_dialog import (
-            ExportViewerPackageDialog,
-        )
-
-        dlg = ExportViewerPackageDialog(self.db_path, parent=self)
-        dlg.exec()
 
     def _on_backup_everything(self) -> None:
         """Write every account and every budget into one backup zip."""
