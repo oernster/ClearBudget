@@ -6,7 +6,7 @@ here WITHOUT a QApplication (the widget-level UI tests were removed as fragile).
 The rule the title bar must obey:
   * a FUTURE month is coloured by its own within-month health, the same
     _build_month_cashflow_summary engine that colours the Forward Projection
-    rows: green if it stays comfortable, amber if it dips low or runs at a loss
+    rows: safe if it stays comfortable, amber if it dips low or runs at a loss
     but stays in the black, red only if that month's own balance drops below
     zero. Because it only ever looks at that month, a looming overdraft in a
     LATER month can never turn the title red;
@@ -20,16 +20,25 @@ from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
-from clear_budget.ui.theme_tokens import STATE_CAUTION, STATE_RED, STATE_SAFE
+from clear_budget.ui.theme_tokens import (
+    STATE_AT_RISK,
+    STATE_CAUTION,
+    STATE_RED,
+    STATE_SAFE,
+    STATES_DARK,
+)
 from clear_budget.ui.views._solvency_panel_display import SolvencyPanelDisplayMixin
 from clear_budget.ui.views._solvency_panel_narratives import (
     SolvencyPanelNarrativeMixin,
 )
 
-RED = "#f87171"
-AMBER = "#fbbf24"
-AT_RISK = "#f59e0b"  # the "into the overdraft but within facility" amber
-GREEN = "#34d399"
+# Resolved from the palette rather than restated as hexes. What these tests are
+# about is WHICH STATE a month resolves to; a hex repeated here only meant that
+# recolouring the app broke tests that had no opinion about colour.
+RED = STATES_DARK[STATE_RED]
+AMBER = STATES_DARK[STATE_CAUTION]
+AT_RISK = STATES_DARK[STATE_AT_RISK]  # into the overdraft but within facility
+SAFE = STATES_DARK[STATE_SAFE]
 _BANK = 1
 
 
@@ -102,8 +111,8 @@ def test_dips_low_but_stays_positive_is_amber() -> None:
     assert clarion is False
 
 
-def test_comfortable_month_is_green() -> None:
-    """Stays comfortably positive all month -> green."""
+def test_comfortable_month_is_safe() -> None:
+    """Stays comfortably positive all month, so the safe state."""
     mix = SolvencyPanelNarrativeMixin()
     summary = _summary([_bank_bill(5000, 1)], [_income(5000, 20)])
 
@@ -111,7 +120,7 @@ def test_comfortable_month_is_green() -> None:
         200000, summary, 0, overdraft_limit_pence=0
     )
 
-    assert color == GREEN
+    assert color == SAFE
     assert clarion is False
 
 
@@ -149,9 +158,9 @@ def _report(balance_pence: int, month: YearMonth) -> SimpleNamespace:
     return SimpleNamespace(balance_pence=balance_pence, year_month=month)
 
 
-def test_current_month_uses_live_balance_and_is_green_when_safe() -> None:
+def test_current_month_uses_live_balance_and_is_safe_when_safe() -> None:
     """The July bug: the current month is judged on its live balance, so a
-    healthy close is green (never a re-simulated red)."""
+    healthy close is safe (never a re-simulated red)."""
     harness = _TitleColour()
     report = _report(179385, YearMonth(2026, 7))
 
@@ -159,7 +168,7 @@ def test_current_month_uses_live_balance_and_is_green_when_safe() -> None:
         report, is_current_month=True, overdraft_limit_pence=0
     )
 
-    assert color == GREEN
+    assert color == SAFE
 
 
 def test_future_month_that_dips_low_but_stays_positive_is_amber() -> None:
@@ -258,7 +267,7 @@ def test_the_state_key_and_the_colour_agree_about_a_healthy_month() -> None:
     state = mix._month_cashflow_state(100000, summary, -90000)
 
     assert state == STATE_SAFE
-    assert colour == GREEN
+    assert colour == SAFE
 
 
 def test_the_state_key_and_the_colour_agree_about_an_overdrawn_month() -> None:

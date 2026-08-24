@@ -41,7 +41,7 @@ tbody tr:last-child td { border-bottom: none; }
 .figures dt { color: #9ca3af; font-size: 13px; }
 .figures dd { margin: 0; font-size: 20px; font-weight: 600; }
 .state { font-weight: 600; }
-.state-safe { color: #34d399; }
+.state-safe { color: #b8a1d9; }
 .state-caution { color: #fbbf24; }
 .state-red { color: #f87171; }
 footer { color: #9ca3af; font-size: 13px; text-align: center; margin-top: 30px; }

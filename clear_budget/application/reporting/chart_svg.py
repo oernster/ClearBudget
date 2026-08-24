@@ -32,17 +32,17 @@ MUTED = "#9ca3af"
 GRID = "#3a4156"
 ZERO_LINE = "#f87171"
 CURVE = "#e879f9"
-SERIES = ("#60a5fa", "#34d399", "#fbbf24", "#c084fc", "#22d3ee", "#fb923c")
+SERIES = ("#60a5fa", "#cbd5e1", "#fbbf24", "#c084fc", "#22d3ee", "#fb923c")
 
 # Role colours for a chart plotting a SINGLE series, mirroring
 # CHART_LINE_DARK / CHART_BAR_DARK / SOLO_CURVE_DARK in ui.theme_tokens. With
 # one series nothing needs telling apart, so the mark says what it IS: a deep
-# blue line for the running balance, green bars for the individual days. The
+# blue line for the running balance, lavender bars for the individual days. The
 # line stays neutral because it spans positive and negative days alike; a bar
-# is one day, so green states a fact about a day that really is in credit. A
-# below-zero bar still fills in ZERO_LINE's red.
+# is one day, so the safe colour states a fact about a day that really is in
+# credit. A below-zero bar still fills in ZERO_LINE's red.
 SOLO_LINE = "#0ea5e9"
-SOLO_BAR = "#34d399"
+SOLO_BAR = "#b8a1d9"
 SOLO_CURVE = SOLO_LINE
 # A day below zero but inside an ARRANGED overdraft, mirroring
 # CHART_BAR_WITHIN_DARK. The facility is there to absorb that day, so red

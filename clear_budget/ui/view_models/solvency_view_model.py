@@ -60,5 +60,5 @@ class SolvencyViewModel(QObject):
         if not self.solvency_report:
             return "#9ca3af"
         if self.solvency_report.is_solvent:
-            return "#34d399"
+            return "#b8a1d9"
         return "#f87171"

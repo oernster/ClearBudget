@@ -128,19 +128,25 @@ CURVE_LIGHT = "#a21caf"
 # and is now a deeper one, which holds the eye against the bars it crosses in
 # bar mode rather than washing out over them.
 #
-# The BARS are green ONLY where the value is positive; a below-zero bar keeps
-# the danger red it has always had. That is why green is honest here where it
-# was not on the line: a green bar is drawn only on a day the account really
-# is in credit, so the colour states a fact about that day rather than a
-# verdict on the month. Green as the LINE's colour was the opposite, since one
-# stroke spanning a month said "in credit" over days that were not.
+# The BARS take the SAFE colour ONLY where the value is positive; a below-zero
+# bar keeps the danger red it has always had. That is why the colour is honest
+# here where it was not on the line: a safe-coloured bar is drawn only on a day
+# the account really is in credit, so it states a fact about that day rather
+# than a verdict on the month. The same colour as the LINE would have been the
+# opposite, since one stroke spanning a month said "in credit" over days that
+# were not.
+#
+# The bar colour was a bright mint green and is now a muted lavender. The green
+# read as glare at a lightness of 52%; it was also the same literal as the
+# focus ring, so the two roles could not move apart. The ring keeps the green;
+# this does not.
 #
 # These do NOT apply to a multi-series chart (one series per credit card),
 # where telling one card from another is the whole job and the palette does it.
 CHART_LINE_DARK = "#0ea5e9"
 CHART_LINE_LIGHT = "#075985"
-CHART_BAR_DARK = "#34d399"
-CHART_BAR_LIGHT = "#059669"
+CHART_BAR_DARK = "#b8a1d9"
+CHART_BAR_LIGHT = "#6b4c9a"
 
 # A day below zero but still inside an ARRANGED overdraft is amber, not red.
 # The facility exists to absorb exactly that day, so calling it red says a
@@ -161,8 +167,13 @@ CHART_BAR_WITHIN_LIGHT = "#b45309"
 SOLO_CURVE_DARK = CHART_LINE_DARK
 SOLO_CURVE_LIGHT = CHART_LINE_LIGHT
 
+# The first slot is a near neutral rather than a hue of its own. Every other
+# slot is a saturated colour and the lavender the single-series bars now take
+# sits only ten degrees from the violet in slot four, so putting it here would
+# give two cards the same face. A near neutral is told apart by SATURATION
+# instead, which none of the other seven compete for.
 SERIES_DARK = (
-    "#34d399",
+    "#cbd5e1",
     "#60a5fa",
     "#fbbf24",
     "#a78bfa",
@@ -173,7 +184,7 @@ SERIES_DARK = (
 )
 
 SERIES_LIGHT = (
-    "#059669",
+    "#64748b",
     "#2563eb",
     "#d97706",
     "#7c3aed",
@@ -183,9 +194,14 @@ SERIES_LIGHT = (
     "#ea580c",
 )
 
-# Solvency traffic-light states. Like the series palette these are data
-# colours, used both as a banner fill and as text on the window background, so
-# each theme needs its own set to stay legible in the text role.
+# Solvency states. Like the series palette these are data colours, used both as
+# a banner fill and as text on the window background, so each theme needs its
+# own set to stay legible in the text role.
+#
+# Red and caution keep the warning colours convention gives them. SAFE does not
+# answer with green: it is a muted lavender, which says "not one of the two
+# warnings" without claiming a verdict of its own. Its light-theme twin is the
+# same hue taken dark enough to stay readable on white.
 STATE_RED = "red"
 STATE_AT_RISK = "at_risk"
 STATE_CAUTION = "caution"
@@ -195,14 +211,14 @@ STATES_DARK = {
     STATE_RED: "#f87171",
     STATE_AT_RISK: "#f59e0b",
     STATE_CAUTION: "#fbbf24",
-    STATE_SAFE: "#34d399",
+    STATE_SAFE: "#b8a1d9",
 }
 
 STATES_LIGHT = {
     STATE_RED: "#dc2626",
     STATE_AT_RISK: "#c2410c",
     STATE_CAUTION: "#b45309",
-    STATE_SAFE: "#059669",
+    STATE_SAFE: "#6b4c9a",
 }
 
 _TOKENS_BY_THEME = {THEME_DARK: DARK, THEME_LIGHT: LIGHT}

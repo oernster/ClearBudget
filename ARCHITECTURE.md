@@ -1613,18 +1613,24 @@ renderings of the same figures to hold in step. Every month any page shows
   the dark canvas and saturated mid-tones on the light one, same hue order
   either way
 - A chart plotting exactly ONE series takes ROLE colours instead of the series
-  palette: the line light blue (`chart_line_colour_for`), the bars GREEN at or
-  above zero (`chart_bar_colour_for`, `#34d399` dark / `#059669` light) and
-  the curve over those bars light blue (`solo_curve_colour_for`). Amber
-  (`chart_bar_within_facility_colour_for`) is the WITHIN-FACILITY state
-  below, never the resting bar fill. The LINE is blue and carries no verdict, because
-  one stroke spans the whole month and green there read as a positive balance
-  over days that were not. A BAR is one day, so green is honest on it: a bar
-  fills green only where that day's value is at or above zero and keeps the
-  danger red below it, which is why the two marks take different colours from
-  the same rule. The bar green is the palette's own first entry and the app's
-  safe-state green; the collision is harmless because a solo chart and a
-  multi-series chart never appear together.
+  palette: the line light blue (`chart_line_colour_for`), the bars the SAFE
+  colour at or above zero (`chart_bar_colour_for`, `#b8a1d9` dark / `#6b4c9a`
+  light) and the curve over those bars light blue (`solo_curve_colour_for`).
+  Amber (`chart_bar_within_facility_colour_for`) is the WITHIN-FACILITY state
+  below, never the resting bar fill. The LINE carries no verdict, because
+  one stroke spans the whole month and a safe colour there read as a positive
+  balance over days that were not. A BAR is one day, so the safe colour is
+  honest on it: a bar fills with it only where that day's value is at or above
+  zero and keeps the danger red below it, which is why the two marks take
+  different colours from the same rule
+- The safe colour is a muted lavender, not a green. The green it replaced was
+  bright enough to glare at a lightness of 52%; it was also the same literal as
+  the focus ring, so neither role could move without the other. The ring keeps
+  the green. The multi-series palette's first slot went to a near neutral
+  (`#cbd5e1` dark / `#64748b` light) at the same time, because the lavender
+  sits ten degrees from the violet already in slot four and two cards must
+  never wear one face; a near neutral is told apart by saturation, which none
+  of the other seven compete for
 - A bar carries THREE states, not two, read against the agreed overdraft floor
   rather than against zero: green at or above zero, amber below zero but no
   further than the arranged facility, red past it. That is the banner's own
