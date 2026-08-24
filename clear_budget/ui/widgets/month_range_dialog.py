@@ -36,11 +36,6 @@ _MONTH_NAMES = (
     "November",
     "December",
 )
-# What the dialog says when nobody tells it otherwise: the projection export,
-# which is the one it was written for. Both are arguments so a second export
-# can reuse the picker without describing itself as the first one.
-_DEFAULT_TITLE = "Export projection"
-_DEFAULT_PROMPT = "Project the bank balance across a range of months."
 _DIALOG_MIN_WIDTH = 380
 # How far either side of the anchor month a range may be picked. Wide enough
 # for a mortgage-length view, bounded so the picker stays usable.
@@ -58,15 +53,20 @@ def _shift(year_month: YearMonth, months: int) -> YearMonth:
 
 
 class MonthRangeDialog(FirstStopDialog):
-    """Asks for the first and last month of a projection."""
+    """Asks for the first and last month of an export.
+
+    The title and the prompt are arguments with no defaults: the dialog says
+    nothing about what it is picking a range FOR, so it cannot go stale when
+    the export that opens it changes or is replaced. It has been both.
+    """
 
     def __init__(
         self,
         parent=None,
         *,
         anchor: YearMonth,
-        title: str = _DEFAULT_TITLE,
-        prompt: str = _DEFAULT_PROMPT,
+        title: str,
+        prompt: str,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(title)

@@ -236,10 +236,10 @@ what is deliberately left and what only looks like debt.
 - Opens on the monitor you started it from, centred, rather than on whichever
   display the system calls primary; dialogs open over the window that raised
   them, focused on their first usable control
-- Built-in "How It Works" help screen: one page that names the tab and tray
-  icons, each led by the icon it is describing, then states the three rules
-  behind the numbers (how an undated bill accrues, how the balance maintains
-  itself, what Safe to Spend Today promises)
+- Built-in "How It Works" help screen: one page that names every icon the app
+  draws, each entry led by the picture it is describing, then states the three
+  rules behind the numbers (how an undated bill accrues, how the balance
+  maintains itself, what Safe to Spend Today promises)
 - SQLite storage: per-user budget database + shared users database
 
 ---
@@ -641,10 +641,10 @@ standing (one to twelve, four by default).
   into what is bundled with the application and what is only used to build it
 - **Check for Updates** - queries this project's GitHub releases and reports
   whether a newer version exists, offering the download for your platform
-- **How It Works** - names the tab and tray icons, each entry led by the icon
-  itself, then the three rules the numbers rest on: pro-rating, the
-  self-maintaining balance and what Safe to Spend Today promises. One page,
-  no scrolling, kept in sync with the calculation logic
+- **How It Works** - names the tabs, the Graph page's switches and exports and
+  the tray, each entry led by the icon itself, then the three rules the
+  numbers rest on: pro-rating, the self-maintaining balance and what Safe to
+  Spend Today promises. One page, kept in sync with the calculation logic
 - **View Licence (LGPL-3.0)**
 
 ---

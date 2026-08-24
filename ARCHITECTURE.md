@@ -1030,18 +1030,25 @@ renderings of the same figures to hold in step. Every month any page shows
 - `BalanceDialog` - edit current bank balance; opens with the figure focused
   and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
-- `HowItWorksDialog` - two jobs in one page. It NAMES the furniture, each
-  entry led by the real icon the tray or the tab row draws, which the tabs
-  now need because their text labels became pictures. Then it states the three
-  rules the numbers rest on and that no screen can say for itself: how an
-  undated bill accrues, how the balance maintains itself, what Safe to Spend
-  Today promises. The tab icons are the BUNDLED IMAGES, inlined through the
-  same `find_tab_icon_path` the tab row uses rather than described in words or
-  approximated with a similar-looking emoji; an icon guide showing something
-  other than the icon is worse than none. Length is the recurring failure
-  here. A button-by-button inventory was tried and read as a wall of text;
-  the essay that replaced it explained every rejected design alongside the
-  shipped one. Anything a control says for itself is left to the control
+- `HowItWorksDialog` - two jobs in one page. It NAMES the furniture in four
+  runs (the five tabs, the Graph page's own controls, the tray, then the
+  keyboard), each entry led by the real icon that control draws, which the
+  tabs need because their text labels became pictures. Then it states the
+  three rules the numbers rest on and that no screen can say for itself: how
+  an undated bill accrues, how the balance maintains itself, what Safe to
+  Spend Today promises. Every icon is a BUNDLED IMAGE inlined through the
+  same `find_tab_icon_path` the tray uses, never described in words, never
+  approximated with a similar-looking emoji and never a decorative glyph
+  corresponding to no control; an icon guide showing something other than the
+  icon is worse than none. `_INLINE_ICON_PX` is 30, half again the 20 it
+  first shipped at: the artwork is detailed and at 20px two icons a reader
+  was trying to tell apart closed up into the same smudge, which defeats the
+  screen's one job. They are centred on the line rather than sitting on its
+  baseline, since at this size a baseline-aligned picture hangs below the
+  words it leads. Length is the recurring failure here. A button-by-button
+  inventory was tried and read as a wall of text; the essay that replaced it
+  explained every rejected design alongside the shipped one. Anything a
+  control says for itself is left to the control
 - `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text. The credits are
   two lists, not one: what is BUNDLED with the application (whose licences
   travel with the binary, which is what LGPL-3.0 compliance turns on) and what

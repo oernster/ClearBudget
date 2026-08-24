@@ -91,11 +91,7 @@ _LINE_GLYPH = "📈"
 _BAR_GLYPH = "📊"
 _EXPORT_LABEL = "Export HTML…"
 _EXPORT_ICON = "exporttohtml.png"
-_PROJECTION_LABEL = "Export projection HTML…"
-_PROJECTION_ICON = "exportprojection.png"
 _PACKAGE_LABEL = "Export a folder of months…"
-# Not yet drawn. A missing picture leaves the button working and named,
-# which is the rule every asset lookup here follows.
 _PACKAGE_ICON = "exportpackage.png"
 
 _SOURCE_BANK = "bank"
@@ -178,13 +174,6 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         apply_image_face(self.export_btn, _EXPORT_ICON, _EXPORT_LABEL, _glyph_h)
         button_row.addWidget(self.export_btn)
 
-        self.projection_btn = build_tray_icon_button(_PROJECTION_LABEL)
-        self.projection_btn.clicked.connect(self._export_projection)
-        apply_image_face(
-            self.projection_btn, _PROJECTION_ICON, _PROJECTION_LABEL, _glyph_h
-        )
-        button_row.addWidget(self.projection_btn)
-
         self.package_btn = build_tray_icon_button(_PACKAGE_LABEL)
         self.package_btn.clicked.connect(self._export_package)
         apply_image_face(self.package_btn, _PACKAGE_ICON, _PACKAGE_LABEL, _glyph_h)
@@ -255,10 +244,7 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         self.chart.set_data(self._series, self._mode)
         # A bank-balance projection offered beside a graph of cards would name
         # something other than what is on screen, so it goes with the switch.
-        # The package is the same projection in a folder, so it goes with it.
-        showing_bank = self._showing_bank()
-        self.projection_btn.setVisible(showing_bank)
-        self.package_btn.setVisible(showing_bank)
+        self.package_btn.setVisible(self._showing_bank())
 
     def _apply_source_face(self) -> None:
         """Show the picture of what a press will PLOT, words in the tooltip."""
@@ -319,9 +305,8 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         others = ring_tab_stops(self.tab_btns[:-1])
         archive_stop = ring_tab_stops(self.tab_btns[-1:])
         page_stops = [self.source_btn, self.pilot_btn, self.export_btn]
-        for hidden_with_the_bank in (self.projection_btn, self.package_btn):
-            if hidden_with_the_bank.isVisible():
-                page_stops.append(hidden_with_the_bank)
+        if self.package_btn.isVisible():
+            page_stops.append(self.package_btn)
         return [
             self.prev_btn,
             self.next_btn,

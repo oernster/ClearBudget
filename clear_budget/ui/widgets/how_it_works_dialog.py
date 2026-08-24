@@ -13,11 +13,16 @@ every rejected design alongside the shipped one. A help screen nobody
 finishes explains nothing, so anything a control says for itself is left to
 the control.
 
-Each tab entry carries the REAL icon that tab draws: the bundled images
-pulled through the same resource lookup the tab row itself uses, plus the two
-emoji written as the same characters. Never a description in words; never a
-similar-looking emoji standing in for a picture. An icon guide showing
-something other than the icon is worse than no guide.
+Every entry carries the REAL icon the app draws, pulled through the same
+resource lookup the tray and the tab row use. Never a description in words;
+never a similar-looking emoji standing in for a picture; never a decorative
+glyph that corresponds to no control. An icon guide showing something other
+than the icon is worse than no guide. The whole screen is pictures now, so
+there is nothing left for a stand-in to stand in for.
+
+The icons are drawn at half again the size they first shipped at. At 20px
+they sat inside the line politely and could not be told apart from each
+other, which is the one job this screen has.
 """
 
 from PySide6.QtWidgets import (
@@ -38,9 +43,12 @@ from clear_budget.ui.utils.tab_icons import (
 )
 from clear_budget.ui.widgets.auto_scroller import AutoScroller
 
-# Height of an inline icon in the body text, unscaled. Sized to the text
-# rather than to the tray, since here they are read in a sentence.
-_INLINE_ICON_PX = 20
+# Height of an inline icon in the body text, unscaled. Half again the 20px it
+# started at: the artwork is detailed (a folder with an arrow, a cabinet with
+# a tick) and at 20px those details closed up, so two icons a user was trying
+# to tell apart read as the same smudge. Bigger than the text it sits in on
+# purpose; this screen is read to IDENTIFY a picture, not to skim a sentence.
+_INLINE_ICON_PX = 30
 
 
 def _img(path, px: int) -> str:
@@ -48,21 +56,24 @@ def _img(path, px: int) -> str:
 
     Empty rather than a placeholder: the line still reads without its
     picture; a missing asset must never stop the help screen opening.
+
+    Centred on the line rather than sitting on its baseline. At this size a
+    baseline-aligned picture hangs below the words it leads, which reads as
+    the row having slipped rather than as an icon in a sentence.
     """
     if path is None:
         return ""
     return (
         f'<img src="file:///{str(path).replace(chr(92), "/")}" '
-        f'width="{px}" height="{px}"> '
+        f'width="{px}" height="{px}" style="vertical-align: middle"> '
     )
 
 
 def _tab_row(spec: str, name: str, text: str, px: int) -> str:
-    """One tab's line, led by its real icon (an image or the archive glyph)."""
+    """One tab's line, led by the picture that tab actually draws."""
     from clear_budget.shared.resources import find_tab_icon_path
 
-    lead = _img(find_tab_icon_path(spec), px) if spec.endswith(".png") else f"{spec} "
-    return f"<p>{lead}<b>{name}</b>: {text}</p>"
+    return f"<p>{_img(find_tab_icon_path(spec), px)}<b>{name}</b>: {text}</p>"
 
 
 def _body_html() -> str:
@@ -82,6 +93,12 @@ def _body_html() -> str:
     info_icon = _img(find_tab_icon_path("information.png"), px)
     light_icon = _img(find_tab_icon_path("lightmode.png"), px)
     dark_icon = _img(find_tab_icon_path("darkmode.png"), px)
+    # The Graph page's own controls, which are pictures too and which no
+    # other line here names.
+    plot_bank_icon = _img(find_tab_icon_path("bank-icon2.png"), px)
+    plot_cards_icon = _img(find_tab_icon_path("creditcards2.png"), px)
+    export_icon = _img(find_tab_icon_path("exporttohtml.png"), px)
+    package_icon = _img(find_tab_icon_path("exportpackage.png"), px)
     return f"""\
 <h2>How ClearBudget Works</h2>
 
@@ -95,15 +112,24 @@ def _body_html() -> str:
 {_tab_row(CREDIT_CARDS_ICON, "Credit Cards",
           "one panel per card, with a six-month projection.", px)}
 {_tab_row(GRAPH_ICON, "Graph",
-          "the month drawn day by day, as bars or as a line. It plots the "
-          "bank balance, with a switch for card balances instead; the "
-          "heading above the chart always names which. The tray's arrows "
+          "the month drawn day by day, as bars or as a line. The heading "
+          "above the chart always names what is plotted. The tray's arrows "
           "step its month like any other page.", px)}
 {_tab_row(ARCHIVE_ICON, "Archive",
           "months that have finished. They are filed automatically; there is "
           "no archive button. Its icon sits apart, at the right of the tray "
           "beside the light or dark toggle.", px)}
 <p>Hover any tab to see its name.</p>
+
+<hr>
+<h3>On the Graph page</h3>
+<p>{plot_bank_icon}/{plot_cards_icon}plot the bank balance or the cards
+&nbsp;&middot;&nbsp; {export_icon}this month as one web page
+&nbsp;&middot;&nbsp; {package_icon}a range of months as a folder of pages,
+opened from its index</p>
+<p>The two switches show what a press will PLOT, never what is on screen
+now. Both exports are self-contained: no images to lose and nothing to
+fetch, so they open on a machine that has never seen this app.</p>
 
 <hr>
 <h3>The tray</h3>
@@ -125,7 +151,7 @@ ahead of you counts as still due, so &pound;200 of food on the 11th of a
 30-day month leaves &pound;126. A bill WITH a due day counts in full until
 that day, then drops to zero.</p>
 
-<p><b>&#128221; The balance keeps itself up to date.</b> Set it once. After
+<p><b>The balance keeps itself up to date.</b> Set it once. After
 that, dated bills are deducted and dated income added at midnight on the day,
 each ticking itself Paid or Received; days missed while the app was shut are
 caught up at the next launch. Typing a balance yourself overrides everything

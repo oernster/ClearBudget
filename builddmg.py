@@ -85,12 +85,12 @@ BUNDLED_ICONS = [
     "exporttohtml.png",
     "switchuser.png",
     "switchbudget.png",
-    "exportprojection.png",
     "opendb.png",
     "savedb.png",
     "preferences.png",
     "information.png",
     "archive.png",
+    "exportpackage.png",
     "lightmode.png",
     "darkmode.png",
 ]
