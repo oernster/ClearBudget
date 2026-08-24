@@ -29,11 +29,17 @@ def open_user_database(username: str) -> Database:
     """
     from clear_budget.shared.budget_registry import active_db_path
 
+    from clear_budget.shared.db_ownership import stamp_owner
+
     config = Config.for_user(username)
     config.ensure_directories()
     database = Database(active_db_path(username))
     database.connect()
     database.create_schema()
+    # Record who this budget belongs to, so the stamp travels with the file and
+    # copying it elsewhere does not launder its ownership. Written once and
+    # never overwritten, so opening a file can never be a way to claim it.
+    stamp_owner(database.conn, username)
     return database
 
 

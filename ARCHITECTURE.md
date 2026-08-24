@@ -29,6 +29,7 @@ Everything below this section explains how the code satisfies them.
 | Every colour value in the tree lives in `clear_budget/shared/palette.py` and nowhere else. `ui.theme_tokens`, `installer.ui.themes` and `application.reporting` hold what a colour is FOR and reference it by name; a hex literal anywhere else fails the build. Prose is exempt, so a docstring may still quote a hex it is recording a decision about | `tests/structural/test_colour_source.py` |
 | Money is integer pence everywhere. No financial value is ever a float, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object; signed balances are plain `int` pence |
 | Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
+| A budget belonging to another account cannot be opened without that account's password. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
 
 ## Overview
@@ -1332,14 +1333,15 @@ renderings of the same figures to hold in step. Every month any page shows
   The current tab is dropped from the ring declaration (`ring_tab_stops`)
   rather than disabled, because a disabled control paints the permanent red
   ring and would read as broken rather than as current
-- The current tab is marked with a panel fill plus an accent UNDERLINE,
-  through a dynamic property plus a repolish (`mark_current_tab`), never an
-  inline stylesheet: an inline colour survives a theme switch and leaves the
-  mark painted in the outgoing theme. It was a full accent rectangle once;
-  at 2px the accent was indistinguishable from the ring, so on
-  launch the current tab read as though it were hover-focused. Rectangles are
-  the ring vocabulary (the ring colour on hover or focus, red disabled); the mark keeps to a
-  fill and an underline so the two can never be confused
+- The current tab is marked with a panel FILL and nothing else, through a
+  dynamic property plus a repolish (`mark_current_tab`), never an inline
+  stylesheet: an inline colour survives a theme switch and leaves the mark
+  painted in the outgoing theme. It was a full accent rectangle once; at 2px
+  the accent was indistinguishable from the ring, so on launch the current tab
+  read as though it were hover-focused. It then carried a fill plus an accent
+  underline, which was one mark too many. Rectangles stay the ring's own
+  vocabulary (the ring colour on hover or focus, red when disabled) and the
+  current tab's border is fully transparent, so the two can never be confused
 
 **Sign-in and remembered accounts**:
 - `auth/remembered_login.RememberedLogin` - remembers sign-in details PER ACCOUNT,

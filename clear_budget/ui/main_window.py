@@ -187,7 +187,13 @@ class MainWindow(
         """
         from clear_budget.ui.widgets._save_load_flow import run_load_flow
 
-        source = run_load_flow(self, self.db_path, self._live_connection())
+        source = run_load_flow(
+            self,
+            self.db_path,
+            self._live_connection(),
+            self.current_user.username,
+            self.user_store,
+        )
         if source is not None:
             self.database_load_requested.emit(str(source))
 

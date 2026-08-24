@@ -19,7 +19,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
 _UI = _ROOT / "clear_budget" / "ui"
-_TRAY = _UI / "widgets" / "_save_load_flow.py"
+_TRAY = _UI / "widgets" / "_tray_buttons.py"
 _HELP = _UI / "widgets" / "how_it_works_dialog.py"
 
 # The factory every tray button is built through; its first argument is the

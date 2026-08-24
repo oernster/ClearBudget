@@ -52,7 +52,7 @@ from clear_budget.ui.utils.icon_buttons import (
 from clear_budget.ui.utils.tab_icons import build_tab_buttons, ring_tab_stops
 from clear_budget.ui.views._graph_exports import GraphExportsMixin
 from clear_budget.ui.widgets._line_bar_chart import MODE_BAR, MODE_LINE, LineBarChart
-from clear_budget.ui.widgets._save_load_flow import (
+from clear_budget.ui.widgets._tray_buttons import (
     build_budgets_button,
     build_info_button,
     build_save_load_buttons,

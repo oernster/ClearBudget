@@ -20,9 +20,9 @@ from clear_budget.ui.utils.format_helpers import (
     nav_glyph_height,
 )
 from clear_budget.ui.utils.tab_icons import build_tab_buttons
-from clear_budget.ui.widgets._save_load_flow import (
-    build_info_button,
+from clear_budget.ui.widgets._tray_buttons import (
     build_budgets_button,
+    build_info_button,
     build_save_load_buttons,
     build_settings_bank_buttons,
     build_users_button,

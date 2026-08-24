@@ -206,14 +206,14 @@ QPushButton#NavTabButton {{
     padding: 2px;
 }}
 
-/* The current tab is marked by a FILL and an accent UNDERLINE, never a full
-   rectangle: rectangles are the ring vocabulary (green hover/focus, red
-   disabled) and at 2px the accent teal is indistinguishable from the ring
-   green, so on launch the current tab read as though it were hover-focused.
-   Only the bottom border colour changes, so nothing reflows. */
+/* The current tab is marked by its FILL alone: a raised panel behind the icon
+   and nothing else. It carried an accent underline as well, which was one mark
+   too many. The border stays fully transparent here, so rectangles remain the
+   ring's own vocabulary (hover and focus, red when disabled) and the current
+   tab can never be mistaken for a focused one. Only the background changes, so
+   nothing reflows. */
 QPushButton#NavTabButton[currentTab="true"] {{
     background-color: {t["panel_bg"]};
-    border-bottom-color: {t["accent"]};
 }}
 
 QPushButton#NavTabButton:enabled:hover,

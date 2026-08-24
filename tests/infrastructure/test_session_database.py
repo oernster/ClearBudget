@@ -18,6 +18,7 @@ from clear_budget.infrastructure.sqlite.session_database import (
 )
 from clear_budget.shared import currency as currency_module
 from clear_budget.shared.budget_registry import active_db_path
+from clear_budget.shared.db_ownership import challenge_required, owner_from_stamp
 
 
 @pytest.fixture(autouse=True)
@@ -92,3 +93,23 @@ def test_a_closed_database_activates_nothing(tmp_path) -> None:
     currency_module.set_currency("USD")
     load_currency(Database(tmp_path / "never-opened.db"))
     assert currency_module.get_currency().code == "USD"
+
+
+def test_opening_a_budget_stamps_who_it_belongs_to() -> None:
+    """Ownership travels with the file, so copying it cannot launder it."""
+    database = open_user_database("grace")
+    try:
+        assert owner_from_stamp(database.db_path) == "grace"
+    finally:
+        database.close()
+
+
+def test_the_stamp_survives_being_reopened_by_someone_else() -> None:
+    """A second open must not re-stamp: opening a file is not claiming it."""
+    database = open_user_database("grace")
+    path = database.db_path
+    database.close()
+    reopened = open_user_database("grace")
+    reopened.close()
+    assert owner_from_stamp(path) == "grace"
+    assert challenge_required(path, "mallory", ["grace", "mallory"]) == "grace"
