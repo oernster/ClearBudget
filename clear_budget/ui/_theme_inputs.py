@@ -78,7 +78,11 @@ QComboBox:disabled {{
     color: {t["text_disabled"]};
 }}
 
-QComboBox::drop-down {{
-    border: none;
-}}
+/* ::drop-down is deliberately NOT styled. Giving that subcontrol any rule at
+   all, even `border: none`, stops the platform painting the chevron in it;
+   every dropdown in the app then reads as a plain field. There is no
+   asset-free way to draw a replacement: Qt paints ::down-arrow as an image,
+   so the CSS trick of a zero-sized box with borders renders as a blank
+   block. Leaving the subcontrol alone is what puts the arrow back. */
+
 """

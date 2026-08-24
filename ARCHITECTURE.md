@@ -1342,6 +1342,12 @@ renderings of the same figures to hold in step. Every month any page shows
 - `ui/widgets/reset_password_dialog.ResetPasswordDialog` - split out of
   login_dialog.py for the 400-line limit; imported where it is used so the two
   modules need not import each other
+- `ui/widgets/_login_styles` - the field, dropdown and link styling the four
+  sign-in-shaped dialogs share, resolved when a dialog is BUILT so it follows
+  the theme in force. The username dropdown styles the COMBO rather than its
+  inner line edit: styling only the child left an unthemed control whose edit
+  fell back to a point-sized font too tall for the box, which clipped the name
+  it was showing
 
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `switch_user_requested`,
@@ -1353,6 +1359,11 @@ renderings of the same figures to hold in step. Every month any page shows
     restore travels the `full_restore_requested` signal to `main.py`, which
     tears the session down before touching a file
   - Settings menu (adjacent to File): Preferences, Bank Account
+  - `ui/_theme_inputs` deliberately leaves `QComboBox::drop-down` unstyled.
+    Any rule on that subcontrol, `border: none` included, stops the platform
+    painting the chevron inside it, which left every dropdown in the app
+    reading as a plain field. Qt paints `::down-arrow` as an image, so there
+    is no asset-free CSS replacement to draw
   - Users menu: Switch User and Log Out for every account; admins also get
     Manage Users (list, Add User, Delete Selected). The two ways out are
     separate signals on purpose and differ only in what a cancelled sign-in

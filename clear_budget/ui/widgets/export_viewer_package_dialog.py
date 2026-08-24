@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 from clear_budget.auth.viewer_package import export_viewer_package
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.ui_paths import default_downloads_dir
-from clear_budget.ui.widgets.login_dialog import LoginDialog
+from clear_budget.ui.widgets._login_styles import input_style
 
 # Fixed-width mask shown in place of the password until "Reveal" is clicked.
 # Fixed length so the mask itself doesn't leak the real password's length.
@@ -57,7 +57,7 @@ class ExportViewerPackageDialog(QDialog):
         layout.addWidget(lbl_user)
         self.username_edit = QLineEdit()
         self.username_edit.setPlaceholderText("Choose a username")
-        self.username_edit.setStyleSheet(LoginDialog._input_style())
+        self.username_edit.setStyleSheet(input_style())
         layout.addWidget(self.username_edit)
 
         lbl_pass = QLabel("Viewer Password  (min. 6 characters)")
@@ -66,7 +66,7 @@ class ExportViewerPackageDialog(QDialog):
         self.password_edit = QLineEdit()
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_edit.setPlaceholderText("Choose a password")
-        self.password_edit.setStyleSheet(LoginDialog._input_style())
+        self.password_edit.setStyleSheet(input_style())
         layout.addWidget(self.password_edit)
 
         lbl_confirm = QLabel("Confirm Password")
@@ -75,7 +75,7 @@ class ExportViewerPackageDialog(QDialog):
         self.confirm_edit = QLineEdit()
         self.confirm_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.confirm_edit.setPlaceholderText("Repeat password")
-        self.confirm_edit.setStyleSheet(LoginDialog._input_style())
+        self.confirm_edit.setStyleSheet(input_style())
         self.confirm_edit.returnPressed.connect(self._on_export)
         layout.addWidget(self.confirm_edit)
 

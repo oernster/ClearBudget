@@ -20,6 +20,11 @@ from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
 from clear_budget.shared.resources import find_logo_png_path
 from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui.widgets._login_styles import (
+    combo_style,
+    input_style,
+    link_style,
+)
 from clear_budget.ui.widgets._viewer_package_import_flow import (
     run_import_viewer_package_flow,
 )
@@ -104,7 +109,7 @@ class LoginDialog(QDialog):
         self.password_edit = QLineEdit()
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_edit.setPlaceholderText("Enter password")
-        self.password_edit.setStyleSheet(self._input_style())
+        self.password_edit.setStyleSheet(input_style())
         self.password_edit.returnPressed.connect(self._on_login)
         layout.addWidget(self.password_edit)
 
@@ -137,7 +142,7 @@ class LoginDialog(QDialog):
 
         self.forgot_btn = QPushButton("Forgot password?")
         self.forgot_btn.setFlat(True)
-        self.forgot_btn.setStyleSheet(self._link_style())
+        self.forgot_btn.setStyleSheet(link_style())
         self.forgot_btn.clicked.connect(self._on_forgot_password)
         grid.addWidget(self.forgot_btn, 0, 0, Qt.AlignmentFlag.AlignLeft)
 
@@ -149,7 +154,7 @@ class LoginDialog(QDialog):
 
         self.import_viewer_btn = QPushButton("Import Viewer Package…")
         self.import_viewer_btn.setFlat(True)
-        self.import_viewer_btn.setStyleSheet(self._link_style())
+        self.import_viewer_btn.setStyleSheet(link_style())
         self.import_viewer_btn.clicked.connect(self._on_import_viewer_package)
         grid.addWidget(self.import_viewer_btn, 1, 0, Qt.AlignmentFlag.AlignLeft)
 
@@ -159,45 +164,6 @@ class LoginDialog(QDialog):
 
         grid.setColumnStretch(0, 1)
         layout.addLayout(grid)
-
-    @staticmethod
-    def _link_style() -> str:
-        # Resolved at dialog build time, so a fresh dialog follows the
-        # currently active theme.
-        from PySide6.QtWidgets import QApplication
-
-        from clear_budget.ui import theme
-        from clear_budget.ui.theme_tokens import tokens_for
-
-        t = tokens_for(theme.current_theme(QApplication.instance()))
-        return ui_scale.style(
-            f"QPushButton {{ color: {t['link']}; font-size: 12px;"
-            " border: none; background: transparent; padding: 0; margin: 0; }"
-            f"QPushButton:hover {{ color: {t['link_hover']};"
-            " text-decoration: underline; }"
-        )
-
-    @staticmethod
-    def _input_style() -> str:
-        from PySide6.QtWidgets import QApplication
-
-        from clear_budget.ui import theme
-        from clear_budget.ui.theme_tokens import tokens_for
-
-        t = tokens_for(theme.current_theme(QApplication.instance()))
-        return ui_scale.style(
-            "QLineEdit {"
-            f"  background-color: {t['input_bg']};"
-            f"  color: {t['input_text']};"
-            f"  border: 1px solid {t['separator']};"
-            "  border-radius: 4px;"
-            "  padding: 6px 8px;"
-            "  font-size: 14px;"
-            "}"
-            "QLineEdit:focus {"
-            f"  border-color: {t['info']};"
-            "}"
-        )
 
     def _build_username_control(self):
         """The username field, as a dropdown when there is a choice to offer.
@@ -214,14 +180,24 @@ class LoginDialog(QDialog):
         if len(remembered) < _DROPDOWN_FROM:
             self.username_combo = None
             self.username_edit = QLineEdit()
+            self.username_edit.setStyleSheet(input_style())
         else:
             self.username_combo = QComboBox()
             self.username_combo.setEditable(True)
             self.username_combo.addItems(remembered)
-            self.username_combo.currentTextChanged.connect(self._on_username_chosen)
+            # textActivated, never currentTextChanged: the latter fires on
+            # every KEYSTROKE in an editable combo, so typing a name emptied
+            # the password box letter by letter on the way to it. This one
+            # fires only when an entry is actually chosen.
+            self.username_combo.textActivated.connect(self._on_username_chosen)
+            # The box drawn on screen is the COMBO, so the combo is what gets
+            # the field styling. Styling only its inner line edit left an
+            # unthemed control with no visible arrow, reading as a plain
+            # field; it also left that edit on a 27px point-sized font inside
+            # a 29px box, which clipped the name it was showing.
+            self.username_combo.setStyleSheet(combo_style())
             self.username_edit = self.username_combo.lineEdit()
         self.username_edit.setPlaceholderText("Enter username")
-        self.username_edit.setStyleSheet(self._input_style())
         return self.username_combo or self.username_edit
 
     def _prefill_remembered(self) -> None:

@@ -18,7 +18,7 @@ from clear_budget.auth.models import User
 from clear_budget.auth.remembered_login import RememberedLogin
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import label_roles, ui_scale
-from clear_budget.ui.widgets.login_dialog import LoginDialog
+from clear_budget.ui.widgets._login_styles import input_style
 
 # Flags that give a titled dialog window WITHOUT a close button on Windows.
 # Used ONLY by RecoveryCodeDialog: the one-time code must be acknowledged, so
@@ -91,7 +91,7 @@ class CreateUserDialog(QDialog):
         layout.addWidget(lbl_user)
         self.username_edit = QLineEdit()
         self.username_edit.setPlaceholderText("Choose a username")
-        self.username_edit.setStyleSheet(LoginDialog._input_style())
+        self.username_edit.setStyleSheet(input_style())
         layout.addWidget(self.username_edit)
 
         lbl_pass = QLabel("Password  (min. 6 characters)")
@@ -100,7 +100,7 @@ class CreateUserDialog(QDialog):
         self.password_edit = QLineEdit()
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_edit.setPlaceholderText("Choose a password")
-        self.password_edit.setStyleSheet(LoginDialog._input_style())
+        self.password_edit.setStyleSheet(input_style())
         layout.addWidget(self.password_edit)
 
         lbl_confirm = QLabel("Confirm Password")
@@ -109,7 +109,7 @@ class CreateUserDialog(QDialog):
         self.confirm_edit = QLineEdit()
         self.confirm_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.confirm_edit.setPlaceholderText("Repeat password")
-        self.confirm_edit.setStyleSheet(LoginDialog._input_style())
+        self.confirm_edit.setStyleSheet(input_style())
         self.confirm_edit.returnPressed.connect(self._on_create)
         layout.addWidget(self.confirm_edit)
 

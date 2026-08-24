@@ -19,13 +19,7 @@ from PySide6.QtWidgets import (
 
 from clear_budget.auth.user_store import UserStore
 from clear_budget.ui import label_roles, ui_scale
-
-
-def _input_style() -> str:
-    """The sign-in screen's field styling, so the two screens match."""
-    from clear_budget.ui.widgets.login_dialog import LoginDialog
-
-    return LoginDialog._input_style()
+from clear_budget.ui.widgets._login_styles import input_style
 
 
 class ResetPasswordDialog(QDialog):
@@ -77,7 +71,7 @@ class ResetPasswordDialog(QDialog):
             edit = QLineEdit()
             edit.setEchoMode(echo)
             edit.setPlaceholderText(placeholder)
-            edit.setStyleSheet(_input_style())
+            edit.setStyleSheet(input_style())
             setattr(self, attr, edit)
             layout.addWidget(edit)
 
