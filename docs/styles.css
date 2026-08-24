@@ -228,6 +228,7 @@ h1 {
     max-width: 920px;
     margin: 36px auto 0;
     text-align: left;
+    scroll-margin-top: 24px;
 }
 
 .shot img {
@@ -265,6 +266,13 @@ h1 {
 
 .prose p { color: var(--muted); margin: 0 0 14px; }
 .prose strong { color: var(--text); }
+.prose h3 {
+    color: var(--teal);
+    font-size: 17px;
+    font-weight: 650;
+    margin: 26px 0 8px;
+}
+.prose h3:first-child { margin-top: 0; }
 
 .faq {
     max-width: 760px;

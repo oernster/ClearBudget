@@ -65,50 +65,36 @@
         <section class="section" id="exists" aria-labelledby="exists-h">
             <h2 id="exists-h" class="sr-only">The reasoning</h2>
             <div class="prose">
-                <p>Budgeting software is almost universally retrospective: it answers "where did the
-                    money go?" long after the answer could change anything. A monthly total can look
-                    safe while the month itself is structurally unsafe: income lands late, bills
-                    cluster early, a card stays under its limit while its trajectory points the
-                    wrong way and a payment that is affordable at month end is impossible on the day
-                    it actually falls.</p>
-                <p>ClearBudget asks the forward question instead: will the month survive? It
-                    projects the balance day by day, bill by bill and card by card, treating credit
-                    cards as pressure systems rather than static balances. Each feature is a
-                    decision made explicit: a per-month skip or override says "this obligation does
-                    not apply this month", a paid flag says "this money has already left" and
-                    the solvency panel is
-                    where scattered obligations resolve into a single answer, across a window of
-                    months you choose.
-                    Its headline is the most actionable form that answer takes: Safe to Spend
-                    Today, the most you could spend right now without any projected day in that
-                    window dropping below your chosen buffer, named with the day that constrains
-                    it.</p>
-                <p>When software tells you whether the balance survives the month, approximately
-                    right is wrong. So the projection logic sits in a pure domain no UI event or
-                    database write can reach into, inside a four-layer architecture with every
-                    dependency pointing inward, held on every run by structural tests, a 100%
-                    line and branch coverage gate and a 400-line file limit, with a
-                    no-magic-numbers rule the code is written and reviewed against.
-                    The setup program is inside that same gate, because installing is the most
-                    privileged thing this software ever does to your machine.</p>
-                <p>What works now is a finished cross-platform tool: Windows, macOS and Linux from
-                    one codebase, multiple users with bcrypt sign-in and isolated per-user
-                    databases holding any number of named budgets, 25 display currencies,
-                    archive snapshots and validated import and
-                    export. The same projection can be read as a graph or exported as a
-                    self-contained page whose table adds up row by row, which is the form in which
-                    a claim about your money can be checked against a bank statement rather than
-                    taken on trust. With one deliberate break in that chain: the month you are
-                    currently in opens from the balance you actually recorded rather than from the
-                    previous month's projected close, because the recorded balance is the only
-                    figure in the report that is a fact and the gap between the two is exactly the
-                    drift the report exists to show you. It is dogfood in the full sense: the application I open to
-                    decide whether my own month holds together, which is the surest way I know to
-                    keep a solvency tool honest.</p>
-                <p>The same standard applies to using it. There is one keyboard path through every
-                    screen and dialog, one place a colour can come from and one rule for what a
-                    ring around a control means, because an application you trust with a question
-                    this consequential should not make you guess where you are in it.</p>
+                <h3>Ledgers look backward</h3>
+                <p>Budgeting software is almost universally retrospective: it answers "where did
+                    the money go?" long after the answer could change anything.</p>
+                <p>A monthly total can look safe while the month itself is not. Income lands late,
+                    bills cluster early and a payment that is affordable at month end is impossible
+                    on the day it actually falls.</p>
+
+                <h3>ClearBudget looks forward</h3>
+                <p>It asks: will the month survive? The balance is projected day by day, bill by
+                    bill and card by card, with credit cards treated as pressure systems rather
+                    than static balances.</p>
+                <p>The headline is the most actionable form that answer takes: Safe to Spend
+                    Today, the most you could spend right now without any projected day dropping
+                    below your chosen buffer.</p>
+
+                <h3>Checkable, not taken on trust</h3>
+                <p>The same projection can be read as a graph or exported as a self-contained page
+                    whose table adds up row by row, so a claim about your money can be checked
+                    against a bank statement.</p>
+                <p>One deliberate exception: the current month opens from the balance you actually
+                    recorded, not the previous month's projected close. The recorded balance is
+                    the only figure that is a fact; the gap between the two is exactly the drift
+                    the report exists to show you.</p>
+
+                <h3>Dogfood</h3>
+                <p>This is the application I open to decide whether my own month holds together,
+                    which is the surest way I know to keep a solvency tool honest.</p>
+                <p>The same standard applies to using it: one keyboard path through every screen,
+                    one place a colour can come from, one meaning for a ring around a control.</p>
+
                 <p>Full reasoning at <a href="https://www.crankthecode.com/posts/clearbudget" style="color:var(--teal);">crankthecode.com</a>.</p>
             </div>
         </section>
