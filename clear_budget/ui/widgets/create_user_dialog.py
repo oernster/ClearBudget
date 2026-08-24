@@ -20,6 +20,12 @@ from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.widgets.login_dialog import LoginDialog
 
 # Flags that give a titled dialog window WITHOUT a close button on Windows.
+# Used ONLY by RecoveryCodeDialog: the one-time code must be acknowledged, so
+# closing it unread would lose the code forever. The first-run wizard once
+# used them too, which left the app UNKILLABLE from the keyboard and the
+# mouse alike on a fresh database: the wizard was the only window and it
+# could not be dismissed. Its close button is back; rejecting the wizard
+# quits the app cleanly (main._run_login_flow returns None on reject).
 _NO_CLOSE_FLAGS = (
     Qt.WindowType.Dialog
     | Qt.WindowType.WindowTitleHint
@@ -52,8 +58,6 @@ class CreateUserDialog(QDialog):
         )
         self.setWindowTitle(title)
         self.setMinimumWidth(ui_scale.px(420))
-        if is_first_user:
-            self.setWindowFlags(_NO_CLOSE_FLAGS)
         self._build_ui()
 
     def _build_ui(self) -> None:
