@@ -90,8 +90,16 @@ def show_installer_licence(window: InstallerMainWindow) -> None:
 
 
 def default_install_dir() -> Path:
+    """The per-user Programs directory, the Windows convention for user apps.
+
+    It was `%LOCALAPPDATA%\\Clear Budget` once, one level too high: program
+    files sat beside the app's DATA directory and the setup log, three
+    near-identical names at the top of AppData\\Local. Program files belong
+    under Programs; an existing install keeps its registered location until
+    it is uninstalled, since the maintenance flow reads the registry entry.
+    """
     local = os.getenv("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
-    return Path(local) / APP_NAME
+    return Path(local) / "Programs" / APP_NAME
 
 
 def browse_install_dir(window: InstallerMainWindow) -> None:
