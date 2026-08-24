@@ -209,12 +209,15 @@ what is deliberately left and what only looks like debt.
   bar or a marked point reads out that day's balance; any day the balance
   sits below zero paints in red, on screen and in the export alike
 - Export the graph as a single HTML file: one page carrying both the bar and
-  the line rendering with text explaining what each shows. On Monthly Budget
-  a second export takes a range of months and charts your bank balance across
-  them, month end against the lowest point reached inside each month, with a
-  table and a traffic light per month. Both files are self-contained (inline
-  styles, inline SVG) in the dark theme, so they can be emailed and opened
-  offline and both default to your Downloads folder
+  the line rendering with text explaining what each shows. A second export
+  takes a range of months and charts your bank balance across them, month end
+  against the lowest point reached inside each month, with a table and a
+  traffic light per month. A third writes that range as a FOLDER: an
+  `index.html` holding the same summary, with every row leading to that
+  month's own day-by-day page and every page leading back. Nothing is ever
+  fetched from anywhere: styles and charts are inline, in the dark theme, so a
+  single file can be emailed and a folder can be copied to a stick and opened
+  offline. All three default to your Downloads folder
 - Full keyboard navigation: Tab or Right steps forward, Shift+Tab or Left
   steps back (wrapping); Up/Down walk table rows; Enter equals Space; focus
   and hover show a neutral ring, disabled controls a red one; nothing is focused

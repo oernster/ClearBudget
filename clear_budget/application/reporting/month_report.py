@@ -16,6 +16,7 @@ from clear_budget.application.reporting.curve import daily_totals
 from clear_budget.application.reporting.document import document, escape, money
 
 _X_TICK_STEP_DAYS = 5
+_BACK_TEXT = "Back to the summary"
 
 _BAR_TEXT = (
     "Each bar is the balance at the end of that day. Read it to find a "
@@ -61,8 +62,20 @@ def _figures(totals) -> str:
     return f'<dl class="figures">{items}</dl>'
 
 
+def _back_to_index(home_link) -> str:
+    """A link home; nothing at all when this page stands alone.
+
+    The only outward reference a month page ever carries; it points at a
+    sibling in the same folder. See `package_report` for what that costs.
+    """
+    if not home_link:
+        return ""
+    href = escape(home_link)
+    return f'\n<p class="note"><a href="{href}">{escape(_BACK_TEXT)}</a></p>'
+
+
 def month_report_html(
-    *, title: str, subtitle: str, series, floor_pence: int = 0
+    *, title: str, subtitle: str, series, floor_pence: int = 0, home_link=None
 ) -> str:
     """Render one month's graph as a standalone HTML document.
 
@@ -72,11 +85,16 @@ def month_report_html(
         series: The GraphSeries the dialog is showing.
         floor_pence: the arranged overdraft, so an exported bar inside it
             reads amber exactly as it does on screen. Zero means no facility.
+        home_link: the filename of the index this page belongs to, when it is
+            one page of a package rather than an export on its own. None keeps
+            the page standalone, which is what a single-month export is: it
+            must survive being emailed by itself, so it gets no link out.
     """
     plotted = list(series)
+    back = _back_to_index(home_link)
     if not plotted or not plotted[0].values:
         body = "<section><p>There is nothing to plot for this month.</p></section>"
-        return document(title=title, subtitle=subtitle, body=body)
+        return document(title=title, subtitle=subtitle, body=body + back)
 
     totals = daily_totals([s.values for s in plotted])
     labels = _day_labels(len(plotted[0].values))
@@ -97,6 +115,6 @@ def month_report_html(
         f"<p>{escape(_LINE_TEXT)}</p>\n"
         f'<figure>{chart_svg(plotted, mode="line", labels=labels)}</figure>\n'
         f'<p class="note">{escape(_ZERO_TEXT)}</p>\n'
-        "</section>"
+        "</section>" + back
     )
     return document(title=title, subtitle=subtitle, body=body)

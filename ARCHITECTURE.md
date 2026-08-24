@@ -23,7 +23,8 @@ Everything below this section explains how the code satisfies them.
 | The exported report and the on-screen month graph can never disagree about a month they both cover, because both run the same day-by-day projection | `tests/application/test_projection_series.py::test_the_projection_agrees_with_the_month_graph` |
 | The card graph and the Credit Cards tab open a future month from the SAME chained figure (`card_openings_at`), never from the stored balance and each month closes where the next one opens, its interest landing on its last day | `tests/application/test_month_graph_series.py::TestCardGraphChaining` |
 | With ONE deliberate exception: the month in progress opens from the recorded bank balance, not the previous month's projected close. The recorded balance is the only figure in the report that is a fact; the gap is the drift the report exists to expose | `tests/application/test_projection_series.py::test_the_current_month_is_anchored_on_the_recorded_balance` and `::test_months_outside_the_current_one_still_chain_when_today_is_inside` |
-| An exported HTML file references nothing outside itself, so it survives being emailed and opens offline | `tests/application/reporting/test_reports.py::test_a_report_references_nothing_outside_itself` |
+| A single exported HTML file references nothing outside itself, so it survives being emailed and opens offline | `tests/application/reporting/test_reports.py::test_a_report_references_nothing_outside_itself` |
+| An exported PACKAGE is self-contained as a folder: every link is a bare sibling filename and nothing is fetched | `tests/application/reporting/test_package_report.py::TestThePackageIsSelfContained` |
 | User-entered text cannot inject markup into an exported report | `tests/application/reporting/test_reports.py::test_user_text_cannot_inject_markup_into_a_report` |
 | Highlight text takes the ACCENT, never the ring colour: the ring says where focus is, the accent says what is selected. Stated in roles, so it survived both colours being retired | `tests/ui_logic/test_highlight_text_colour.py` |
 | Every colour value in the tree lives in `clear_budget/shared/palette.py` and nowhere else. `ui.theme_tokens`, `installer.ui.themes` and `application.reporting` hold what a colour is FOR and reference it by name; a hex literal anywhere else fails the build. Prose is exempt, so a docstring may still quote a hex it is recording a decision about | `tests/structural/test_colour_source.py` |
@@ -592,7 +593,19 @@ it is all under the coverage gate and testable without a QApplication.
   month-end balance and the LOWEST point inside that month, plus a table and a
   traffic light per month. The two lines are the point of it: a month that opens
   and closes in credit can still bounce a payment mid-month and a report drawn
-  from closing balances alone would show that month as healthy
+  from closing balances alone would show that month as healthy. Given
+  `month_links` it becomes a package INDEX and each row leads to that month's
+  page; given none it is the standalone report, linking nowhere
+- `package_report.py` - a month range as a FOLDER: the projection as
+  `index.html`, then `<year>-<month>.html` per month, each carrying the same
+  day-by-day pair the single-month export does plus a link home. ISO-ish names
+  so a folder listing sorts into calendar order with nothing open. This is the
+  one place the self-contained rule widened: a page may link to a SIBLING by
+  bare filename; to nothing else. The FOLDER is what survives being moved;
+  a page taken out of it loses only the link home. Nothing is fetched: styles
+  and charts stay inline exactly as before. A month whose series cannot be
+  built gets its row on the index and no link, rather than a link to a page
+  that was never written
 
 `ProjectionMonth` (`application/dto/projection_month.py`) carries one month's
 figures and derives its own state: red below the agreed overdraft floor, caution

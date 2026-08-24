@@ -1,4 +1,4 @@
-"""MonthRangeDialog - pick the first and last month of a projected export.
+"""MonthRangeDialog - pick the first and last month of an export.
 
 Two month pickers and nothing else. It opens focused on the first month's
 picker, ready to type; Escape closes; the ring is the dialog's own tab
@@ -36,6 +36,11 @@ _MONTH_NAMES = (
     "November",
     "December",
 )
+# What the dialog says when nobody tells it otherwise: the projection export,
+# which is the one it was written for. Both are arguments so a second export
+# can reuse the picker without describing itself as the first one.
+_DEFAULT_TITLE = "Export projection"
+_DEFAULT_PROMPT = "Project the bank balance across a range of months."
 _DIALOG_MIN_WIDTH = 380
 # How far either side of the anchor month a range may be picked. Wide enough
 # for a mortgage-length view, bounded so the picker stays usable.
@@ -55,15 +60,22 @@ def _shift(year_month: YearMonth, months: int) -> YearMonth:
 class MonthRangeDialog(FirstStopDialog):
     """Asks for the first and last month of a projection."""
 
-    def __init__(self, parent=None, *, anchor: YearMonth) -> None:
+    def __init__(
+        self,
+        parent=None,
+        *,
+        anchor: YearMonth,
+        title: str = _DEFAULT_TITLE,
+        prompt: str = _DEFAULT_PROMPT,
+    ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Export projection")
+        self.setWindowTitle(title)
         self.setModal(True)
         self.setMinimumWidth(ui_scale.px(_DIALOG_MIN_WIDTH))
         self._anchor = anchor
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Project the bank balance across a range of months."))
+        layout.addWidget(QLabel(prompt))
         form = QFormLayout()
         self.from_month, self.from_year = self._picker(anchor)
         self.to_month, self.to_year = self._picker(_shift(anchor, _DEFAULT_SPAN_MONTHS))

@@ -51,6 +51,9 @@ from clear_budget.ui.utils.icon_buttons import (
 )
 from clear_budget.ui.utils.tab_icons import build_tab_buttons, ring_tab_stops
 from clear_budget.ui.views._graph_exports import GraphExportsMixin
+from clear_budget.ui.views._graph_package_export import (
+    GraphPackageExportMixin,
+)
 from clear_budget.ui.widgets._line_bar_chart import MODE_BAR, MODE_LINE, LineBarChart
 from clear_budget.ui.widgets._tray_buttons import (
     build_budgets_button,
@@ -90,12 +93,16 @@ _EXPORT_LABEL = "Export HTML…"
 _EXPORT_ICON = "exporttohtml.png"
 _PROJECTION_LABEL = "Export projection HTML…"
 _PROJECTION_ICON = "exportprojection.png"
+_PACKAGE_LABEL = "Export a folder of months…"
+# Not yet drawn. A missing picture leaves the button working and named,
+# which is the rule every asset lookup here follows.
+_PACKAGE_ICON = "exportpackage.png"
 
 _SOURCE_BANK = "bank"
 _SOURCE_CARDS = "cards"
 
 
-class GraphView(QWidget, GraphExportsMixin):
+class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
     """Plots the viewed month, bank or cards, with the tray driving the month."""
 
     def __init__(
@@ -178,6 +185,11 @@ class GraphView(QWidget, GraphExportsMixin):
         )
         button_row.addWidget(self.projection_btn)
 
+        self.package_btn = build_tray_icon_button(_PACKAGE_LABEL)
+        self.package_btn.clicked.connect(self._export_package)
+        apply_image_face(self.package_btn, _PACKAGE_ICON, _PACKAGE_LABEL, _glyph_h)
+        button_row.addWidget(self.package_btn)
+
         button_row.addStretch()
         layout.addLayout(button_row)
         self._glyph_height = _glyph_h
@@ -243,7 +255,10 @@ class GraphView(QWidget, GraphExportsMixin):
         self.chart.set_data(self._series, self._mode)
         # A bank-balance projection offered beside a graph of cards would name
         # something other than what is on screen, so it goes with the switch.
-        self.projection_btn.setVisible(self._showing_bank())
+        # The package is the same projection in a folder, so it goes with it.
+        showing_bank = self._showing_bank()
+        self.projection_btn.setVisible(showing_bank)
+        self.package_btn.setVisible(showing_bank)
 
     def _apply_source_face(self) -> None:
         """Show the picture of what a press will PLOT, words in the tooltip."""
@@ -304,8 +319,9 @@ class GraphView(QWidget, GraphExportsMixin):
         others = ring_tab_stops(self.tab_btns[:-1])
         archive_stop = ring_tab_stops(self.tab_btns[-1:])
         page_stops = [self.source_btn, self.pilot_btn, self.export_btn]
-        if self.projection_btn.isVisible():
-            page_stops.append(self.projection_btn)
+        for hidden_with_the_bank in (self.projection_btn, self.package_btn):
+            if hidden_with_the_bank.isVisible():
+                page_stops.append(hidden_with_the_bank)
         return [
             self.prev_btn,
             self.next_btn,

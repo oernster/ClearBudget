@@ -80,7 +80,21 @@ def _summary_figures(months) -> str:
     return f'<dl class="figures">{items}</dl>'
 
 
-def _table(months) -> str:
+def _month_cell(month, month_links) -> str:
+    """The Month column's cell: its name, linked when a page exists for it.
+
+    A link only where one was supplied, so the same table serves the standalone
+    report (no links, nothing outside the file) and a package index (a link per
+    page). See `package_report` for why that distinction is load-bearing.
+    """
+    label = escape(month.label)
+    target = (month_links or {}).get(month.label)
+    if not target:
+        return f"<td>{label}</td>"
+    return f'<td><a href="{escape(target)}">{label}</a></td>'
+
+
+def _table(months, month_links=None) -> str:
     """Opening, net and close side by side so the chain can be checked by eye."""
     head = (
         "<thead><tr><th>Month</th><th>Opening balance</th><th>Income</th>"
@@ -92,7 +106,7 @@ def _table(months) -> str:
         state = month.state
         rows.append(
             "<tr>"
-            f"<td>{escape(month.label)}</td>"
+            f"{_month_cell(month, month_links)}"
             f"<td>{escape(money(month.opening_pence))}</td>"
             f"<td>{escape(money(month.income_pence))}</td>"
             f"<td>{escape(money(month.bank_bills_pence))}</td>"
@@ -116,7 +130,12 @@ def _chart(months) -> str:
 
 
 def projection_report_html(
-    *, title: str, subtitle: str, months, recorded_balance_pence: int | None = None
+    *,
+    title: str,
+    subtitle: str,
+    months,
+    recorded_balance_pence: int | None = None,
+    month_links=None,
 ) -> str:
     """Render a month range as a standalone HTML document.
 
@@ -128,6 +147,9 @@ def projection_report_html(
             from. Stated in the report so the figures can be traced back to a
             number the user recognises rather than read as coming from
             nowhere.
+        month_links: {month label: filename} when this report is the index of
+            a package, so each row leads to that month's own page. None keeps
+            the report standalone, referencing nothing outside itself.
     """
     projected = list(months)
     if not projected:
@@ -158,7 +180,7 @@ def projection_report_html(
         f"<figure>{_chart(projected)}</figure>\n"
         "</section>\n"
         "<section>\n<h2>Month by month</h2>\n"
-        f"{_table(projected)}\n"
+        f"{_table(projected, month_links)}\n"
         f'<p class="note">{escape(_STATE_TEXT_NOTE)}</p>\n'
         "</section>"
     )
