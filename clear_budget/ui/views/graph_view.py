@@ -44,7 +44,11 @@ from clear_budget.ui.utils.format_helpers import (
     build_centered_nav_header,
     nav_glyph_height,
 )
-from clear_budget.ui.utils.image_icons import image_icon_pixmap
+from clear_budget.ui.utils.icon_buttons import (
+    apply_glyph_face,
+    apply_image_face,
+    build_tray_icon_button,
+)
 from clear_budget.ui.utils.tab_icons import build_tab_buttons, ring_tab_stops
 from clear_budget.ui.views._graph_exports import GraphExportsMixin
 from clear_budget.ui.widgets._line_bar_chart import MODE_BAR, MODE_LINE, LineBarChart
@@ -76,9 +80,19 @@ _CARDS_ICON = "creditcards2.png"
 # number of its own, so the row keeps one height whatever the display's UI
 # scale does to the text. A fixed 18 was tried and came out 13px tall on a
 # 0.72 scale, a stamp in a button twice its height.
+# The rendering switch, in pictures like the rest of the row. Each face is
+# what a press will DRAW: a rising line, else bars.
 _PILOT_TO_LINE = "Switch to line graph"
 _PILOT_TO_BAR = "Switch to bar graph"
+_LINE_GLYPH = "📈"
+_BAR_GLYPH = "📊"
+_EXPORT_LABEL = "Export HTML…"
+_EXPORT_ICON = "exporttohtml.png"
 _PROJECTION_LABEL = "Export projection HTML…"
+# A tear-off calendar for the projection: the two exports write the same kind
+# of file and differ by SCOPE, this month against the months ahead, so the
+# picture carries the months rather than repeating the export.
+_PROJECTION_GLYPH = "📆"
 
 _SOURCE_BANK = "bank"
 _SOURCE_CARDS = "cards"
@@ -144,6 +158,39 @@ class GraphView(QWidget, GraphExportsMixin):
         )
         self._refresh_month_label()
 
+        # The page's own controls, ABOVE the chart rather than under it,
+        # drawn at the tray's icon size so the two rows read as one band of
+        # controls with the page beneath them. Underneath they sat below the
+        # fold on a short window, so the chart's own switches were the part
+        # you had to go looking for.
+        button_row = QHBoxLayout()
+        button_row.setSpacing(8)
+        self.source_btn = build_tray_icon_button(_TO_CARDS_LABEL)
+        self.source_btn.clicked.connect(self._toggle_source)
+        button_row.addWidget(self.source_btn)
+
+        self.pilot_btn = build_tray_icon_button(_PILOT_TO_LINE)
+        self.pilot_btn.clicked.connect(self._toggle_mode)
+        button_row.addWidget(self.pilot_btn)
+
+        self.export_btn = build_tray_icon_button(_EXPORT_LABEL)
+        self.export_btn.clicked.connect(self._export_month)
+        apply_image_face(self.export_btn, _EXPORT_ICON, _EXPORT_LABEL, _glyph_h)
+        button_row.addWidget(self.export_btn)
+
+        self.projection_btn = build_tray_icon_button(_PROJECTION_LABEL)
+        self.projection_btn.clicked.connect(self._export_projection)
+        apply_glyph_face(
+            self.projection_btn, _PROJECTION_GLYPH, _PROJECTION_LABEL, _glyph_h
+        )
+        button_row.addWidget(self.projection_btn)
+
+        button_row.addStretch()
+        layout.addLayout(button_row)
+        self._glyph_height = _glyph_h
+        self._apply_source_face()
+        self._apply_pilot_face()
+
         # The heading the dialog put in its title bar. A page has no title bar,
         # and it is the only thing naming which series is on screen, so it is
         # a label rather than being left out with the window frame.
@@ -153,29 +200,6 @@ class GraphView(QWidget, GraphExportsMixin):
 
         self.chart = LineBarChart(self)
         layout.addWidget(self.chart, 1)
-
-        button_row = QHBoxLayout()
-        self.source_btn = QPushButton()
-        self.source_btn.clicked.connect(self._toggle_source)
-        button_row.addWidget(self.source_btn)
-
-        self.pilot_btn = QPushButton(_PILOT_TO_LINE)
-        self.pilot_btn.clicked.connect(self._toggle_mode)
-        button_row.addWidget(self.pilot_btn)
-        # After the pilot exists: the switch takes its height from it, so it
-        # cannot be dressed before the button it measures has been built.
-        self._apply_source_face()
-
-        self.export_btn = QPushButton("Export HTML…")
-        self.export_btn.clicked.connect(self._export_month)
-        button_row.addWidget(self.export_btn)
-
-        self.projection_btn = QPushButton(_PROJECTION_LABEL)
-        self.projection_btn.clicked.connect(self._export_projection)
-        button_row.addWidget(self.projection_btn)
-
-        button_row.addStretch()
-        layout.addLayout(button_row)
 
         self.setLayout(layout)
 
@@ -229,42 +253,23 @@ class GraphView(QWidget, GraphExportsMixin):
         self.projection_btn.setVisible(self._showing_bank())
 
     def _apply_source_face(self) -> None:
-        """Show the picture of what a press will PLOT, words in the tooltip.
-
-        Falls back to the words on the button when the artwork cannot be
-        resolved, on the same rule the tray and the tabs follow: a missing
-        asset costs a control its picture, never its purpose.
-        """
-        from PySide6.QtCore import QSize
-        from PySide6.QtGui import QIcon
-
-        from clear_budget.ui.utils.nav_glyph_size import (
-            NAV_ICON_BTN_CHROME_PX,
-            NAV_ICON_BTN_PADDING_PX,
-            nav_icon_button_size,
+        """Show the picture of what a press will PLOT, words in the tooltip."""
+        showing_bank = self._showing_bank()
+        apply_image_face(
+            self.source_btn,
+            _CARDS_ICON if showing_bank else _BANK_ICON,
+            _TO_CARDS_LABEL if showing_bank else _TO_BANK_LABEL,
+            self._glyph_height,
         )
 
-        showing_bank = self._showing_bank()
-        label = _TO_CARDS_LABEL if showing_bank else _TO_BANK_LABEL
-        spec = _CARDS_ICON if showing_bank else _BANK_ICON
-        self.source_btn.setToolTip(label)
-        # Cropped to its own opaque pixels and fitted by HEIGHT, which is what
-        # puts this picture on the same footing as every other icon in the
-        # window whatever margin its author left around it.
-        surround = 2 * NAV_ICON_BTN_PADDING_PX + NAV_ICON_BTN_CHROME_PX
-        target = max(1, self.pilot_btn.sizeHint().height() - surround)
-        pixmap = image_icon_pixmap(spec, target)
-        if pixmap is None:
-            self.source_btn.setIcon(QIcon())
-            self.source_btn.setText(label)
-            return
-        self.source_btn.setText("")
-        self.source_btn.setIcon(QIcon(pixmap))
-        self.source_btn.setIconSize(QSize(pixmap.width(), pixmap.height()))
-        # Fixed to the same total height as the text buttons beside it, by the
-        # arithmetic the tray's icon buttons already use.
-        self.source_btn.setFixedSize(
-            *nav_icon_button_size(spec, target, measure_width=lambda *_: pixmap.width())
+    def _apply_pilot_face(self) -> None:
+        """Show the shape a press will DRAW, words in the tooltip."""
+        drawing_bars = self._mode == MODE_BAR
+        apply_glyph_face(
+            self.pilot_btn,
+            _LINE_GLYPH if drawing_bars else _BAR_GLYPH,
+            _PILOT_TO_LINE if drawing_bars else _PILOT_TO_BAR,
+            self._glyph_height,
         )
 
     def _toggle_source(self) -> None:
@@ -274,9 +279,7 @@ class GraphView(QWidget, GraphExportsMixin):
 
     def _toggle_mode(self) -> None:
         self._mode = MODE_LINE if self._mode == MODE_BAR else MODE_BAR
-        self.pilot_btn.setText(
-            _PILOT_TO_LINE if self._mode == MODE_BAR else _PILOT_TO_BAR
-        )
+        self._apply_pilot_face()
         self.chart.set_data(self._series, self._mode)
 
     # ---- the tray drives the month ------------------------------------------

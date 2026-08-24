@@ -1,4 +1,4 @@
-"""Bundled PICTURES used as button icons, matched to the tray's emoji.
+"""Icon buttons for the trays: bundled PICTURES and emoji, matched in size.
 
 `tab_icons` does this for the tab strip, at the tab run's own scale. This is
 the same idea for the controls that are not tabs: the tray's Bank Account
@@ -61,39 +61,100 @@ def image_icon_pixmap(spec: str, height_px: int, *, bottom_pad_px: int = 0):
     return padded
 
 
-def build_tray_image_button(
-    spec: str, tooltip: str, glyph_height: int, *, bottom_pad_px: int = 0
-):
-    """A tray button carrying a bundled picture, sized like the emoji ones.
+def _fit_button(btn, spec_or_glyph: str, pixmap, glyph_height: int) -> None:
+    """Fix `btn` to the size the tray gives an icon of this width and height.
 
-    Sized through `nav_icon_button_size`, the same arithmetic the emoji
-    buttons use, with this picture's measured width standing in for the
-    glyph's. Matching on HEIGHT and following on WIDTH is what keeps a row of
-    differently shaped icons on one baseline.
-
-    Returns a TEXT button carrying the tooltip when the artwork cannot be
-    resolved, so a missing asset leaves the control reachable and named.
+    The same arithmetic the emoji tray buttons use, with the pixmap's measured
+    width standing in for a glyph's. Matching on HEIGHT and following on WIDTH
+    is what keeps a row of differently shaped icons on one baseline.
     """
-    from PySide6.QtCore import QSize, Qt
+    from PySide6.QtCore import QSize
     from PySide6.QtGui import QIcon
-    from PySide6.QtWidgets import QPushButton
 
-    from clear_budget.ui import label_roles
     from clear_budget.ui.utils.nav_glyph_size import nav_icon_button_size
 
-    btn = QPushButton()
-    btn.setToolTip(tooltip)
-    btn.setObjectName(label_roles.ICON_ACTION)
-    btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    pixmap = image_icon_pixmap(spec, glyph_height, bottom_pad_px=bottom_pad_px)
-    if pixmap is None:
-        btn.setText(tooltip)
-        return btn
     btn.setIcon(QIcon(pixmap))
     btn.setIconSize(QSize(pixmap.width(), pixmap.height()))
     btn.setFixedSize(
         *nav_icon_button_size(
-            spec, glyph_height, measure_width=lambda *_: pixmap.width()
+            spec_or_glyph, glyph_height, measure_width=lambda *_: pixmap.width()
         )
     )
+
+
+def apply_image_face(
+    btn, spec: str, tooltip: str, glyph_height: int, *, bottom_pad_px: int = 0
+) -> None:
+    """Dress `btn` with the bundled picture `spec` and its hover text.
+
+    Applied rather than built, because a button whose face changes under it
+    (a switch between two things) must keep its identity: rebuilding it would
+    cost its signal connections and its place in the keyboard ring.
+
+    Falls back to the tooltip as TEXT when the artwork cannot be resolved, so
+    a missing asset leaves the control reachable and named.
+    """
+    btn.setToolTip(tooltip)
+    pixmap = image_icon_pixmap(spec, glyph_height, bottom_pad_px=bottom_pad_px)
+    if pixmap is None:
+        from PySide6.QtGui import QIcon
+
+        btn.setIcon(QIcon())
+        btn.setText(tooltip)
+        return
+    btn.setText("")
+    _fit_button(btn, spec, pixmap, glyph_height)
+
+
+def apply_glyph_face(btn, glyph: str, tooltip: str, glyph_height: int) -> None:
+    """Dress `btn` with an emoji `glyph` and its hover text.
+
+    The glyph is painted once, cropped to its own opaque pixels and set as the
+    button's ICON rather than left as text, for the reason the tray records:
+    text is placed by the font's em box and every emoji needs a different font
+    size to reach the same painted height, so the boxes differ and the glyphs
+    stop sharing a baseline. An icon is centred on the artwork instead.
+    """
+    from clear_budget.ui.utils.glyph_metrics import cropped_glyph_pixmap
+
+    btn.setToolTip(tooltip)
+    pixmap = cropped_glyph_pixmap(glyph, glyph_height)
+    if pixmap.isNull():
+        btn.setText(glyph)
+        return
+    btn.setText("")
+    _fit_button(btn, glyph, pixmap, glyph_height)
+
+
+def build_tray_image_button(
+    spec: str, tooltip: str, glyph_height: int, *, bottom_pad_px: int = 0
+):
+    """A tray button carrying a bundled picture, sized like the emoji ones."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QPushButton
+
+    from clear_budget.ui import label_roles
+
+    btn = QPushButton()
+    btn.setObjectName(label_roles.ICON_ACTION)
+    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    apply_image_face(btn, spec, tooltip, glyph_height, bottom_pad_px=bottom_pad_px)
+    return btn
+
+
+def build_tray_icon_button(tooltip: str):
+    """An EMPTY tray-styled icon button, for a caller that dresses it itself.
+
+    A two-faced control (a switch) needs the button before it knows which
+    face to wear, so building and dressing are separate steps here.
+    """
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QPushButton
+
+    from clear_budget.ui import label_roles
+
+    btn = QPushButton()
+    btn.setObjectName(label_roles.ICON_ACTION)
+    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn.setToolTip(tooltip)
     return btn

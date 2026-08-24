@@ -82,6 +82,7 @@ BUNDLED_ICONS = [
     "bank-icon.png",
     "bank-icon2.png",
     "creditcards2.png",
+    "exporttohtml.png",
 ]
 
 DEVELOPER_ID = os.environ.get(

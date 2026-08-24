@@ -30,7 +30,7 @@ from clear_budget.ui.save_location import load_save_location, store_save_locatio
 from clear_budget.ui.ui_paths import default_data_dir
 
 # One source for the icon-button geometry, shared with the theme toggle.
-from clear_budget.ui.utils.image_icons import build_tray_image_button
+from clear_budget.ui.utils.icon_buttons import build_tray_image_button
 from clear_budget.ui.utils.nav_glyph_size import nav_icon_button_size
 
 # The tray's Bank Account picture, plus the transparent space left below

@@ -67,6 +67,8 @@ _TAB_ICON_NAMES = frozenset(
         # plots a balance, so they should not be the same picture.
         "bank-icon2.png",
         "creditcards2.png",
+        # The Graph page's Export HTML button.
+        "exporttohtml.png",
     )
 )
 
