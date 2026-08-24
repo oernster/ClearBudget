@@ -298,8 +298,6 @@ modules:
       - type: file
         path: switchbudget.png
       - type: file
-        path:
-      - type: file
         path: opendb.png
       - type: file
         path: savedb.png
