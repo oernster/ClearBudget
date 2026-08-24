@@ -24,9 +24,11 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[2]
 _COMPOSITION_ROOT = _ROOT / "main.py"
 _MIXIN = _ROOT / "clear_budget" / "ui" / "widgets" / "_handover_progress.py"
+_FLOW = _ROOT / "clear_budget" / "ui" / "login_flow.py"
 
 _BEGIN = "begin_handover"
 _END = "end_handover"
+_HOLD_OPEN = "exec_holding_open"
 
 
 def _tree(path: Path) -> ast.Module:
@@ -89,4 +91,38 @@ class TestTheHandoverAlwaysEnds:
             f"{_END} no longer returns early when there is nothing left to "
             "end, so the backstop in main.py would raise from a finally on "
             "a widget Qt has already destroyed."
+        )
+
+
+class TestTheScreenNeverLeavesAndComesBack:
+    """The sign-in screen is shown once and hidden once.
+
+    `QDialog.exec` returns by way of `done()`, which HIDES the dialog, so an
+    accepted `exec` put the screen away and `begin_handover` brought it
+    straight back: a Hide, a Show and a repaint in between, which is a flash
+    at the exact moment the user is watching. Refusing the hide from Python
+    does not work; Qt calls it internally in C++ and PySide does not route
+    that to an override (measured, both halves). The accepted path therefore
+    never reaches `done()`.
+    """
+
+    def test_the_flow_runs_both_dialogs_without_closing_them(self):
+        tree = ast.parse(_FLOW.read_text(encoding="utf-8"))
+        plain_exec = [
+            node.lineno
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "exec"
+        ]
+        assert not plain_exec, (
+            f"login_flow calls exec() on line(s) {sorted(plain_exec)}. An "
+            "accepted exec() hides the dialog on its way out and the handover "
+            f"shows it again a moment later, which is the flash. Use "
+            f"{_HOLD_OPEN}."
+        )
+        assert _HOLD_OPEN in _FLOW.read_text(encoding="utf-8"), (
+            f"login_flow no longer runs its dialogs through {_HOLD_OPEN}; "
+            "either the guard has lost its subject or the screen is being "
+            "closed and reopened again"
         )

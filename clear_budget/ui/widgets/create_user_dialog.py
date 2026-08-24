@@ -182,7 +182,7 @@ class CreateUserDialog(HandoverProgressMixin, QDialog):
         if self.remembered_login is not None and self.remember_user_check.isChecked():
             self.remembered_login.remember_username(username)
         self._show_recovery_code(recovery_code)
-        self.accept()
+        self.finish_accepted()
 
     def _show_recovery_code(self, code: str) -> None:
         dlg = RecoveryCodeDialog(code, parent=self)

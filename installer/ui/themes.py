@@ -22,7 +22,7 @@ Measured after the swap, foreground against background (WCAG AA wants 4.5:1 for
 body text): dark theme, body text 15.97:1, muted text 7.79:1, heading 11.17:1,
 button label on its fill 5.67:1 and 4.95:1 hovered, Uninstall label 10.02:1;
 light theme, body text 16.12:1, heading 5.39:1, button label 5.67:1, Uninstall
-label 4.83:1. One pair sits under the bar: light-theme muted text at 4.39:1,
+label 10.24:1 on the muted red it keeps (see `_LIGHT_OVERRIDES`). One pair sits under the bar: light-theme muted text at 4.39:1,
 which is the value it already had here (`#6b7280` on `#f4f4f4` before, on
 `#f3f4f6` now) and the pairing the app itself uses for every muted line it
 draws. It moves when the app's token moves, which is the point.
@@ -43,6 +43,7 @@ from dataclasses import dataclass
 # rather than declaring one.
 from string import Template
 
+from clear_budget.shared import palette
 from clear_budget.ui.theme import toggle_icon, toggle_tooltip
 from clear_budget.ui.theme_tokens import DARK as APP_DARK
 from clear_budget.ui.theme_tokens import LIGHT as APP_LIGHT
@@ -128,11 +129,24 @@ _QSS = Template("""
 """)
 
 
+# The one role the setup program keeps its own value for, by decision. The
+# app's light danger button is a bright red, which is right inside a budget
+# where deleting an account is a rare, deliberate act among quiet controls. It
+# is wrong on a page whose whole content is three buttons: there it becomes the
+# loudest thing on screen and reads as a warning about the page rather than a
+# label on one button. The muted red is the one this window already wore; it
+# carries its white label at 10.24:1 against 4.83:1 for the bright one.
+_LIGHT_OVERRIDES = {
+    "danger_btn_bg": palette.RED_30,
+    "danger_btn_hover": palette.RED_26,
+}
+
+
 LIGHT = Theme(
     name="light",
     toggle_icon=toggle_icon(THEME_LIGHT),
     toggle_tooltip=toggle_tooltip(THEME_LIGHT),
-    qss=_QSS.substitute(APP_LIGHT),
+    qss=_QSS.substitute({**APP_LIGHT, **_LIGHT_OVERRIDES}),
 )
 
 

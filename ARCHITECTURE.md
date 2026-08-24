@@ -1472,6 +1472,21 @@ renderings of the same figures to hold in step. Every month any page shows
   from the login flow rather than closed: `run_login_flow` returns a frozen
   `SignedIn(user, screen)` and the caller owns the screen until it has
   something to replace it with
+- THE SCREEN IS SHOWN ONCE AND HIDDEN ONCE. `QDialog.exec` returns by way of
+  `done()`, which hides the dialog, so an accepted sign-in put the screen away
+  and `begin_handover` brought it straight back: a Hide, a Show and a repaint
+  between them, seen as a flash at the exact moment the user is watching.
+  Refusing the hide from Python does not work, because Qt calls it internally
+  in C++ and PySide does not route that back to an override (measured: an
+  `accept` override is entered, a `setVisible` override beside it never is). So
+  the accepted path never reaches `done()`: `exec_holding_open` runs the
+  dialog's own event loop, `finish_accepted` sets the result and quits that
+  loop while the dialog stays exactly where it is. Cancel, Escape and the
+  close button go on using `reject()`, hiding the ordinary way and quitting
+  through `finished`. A dialog opened anywhere else is unaffected, since
+  `finish_accepted` falls back to a plain `accept()` when no held-open loop is
+  running (Create Account from the sign-in screen is the case that proves it).
+  Held by `tests/structural/test_handover_invariants.py`
 - `begin_handover` swaps in a determinate progress bar, `report_progress` moves
   it as each stage completes and `end_handover` closes the screen. The bar is
   DETERMINATE by necessity, not by preference: the build runs on the GUI

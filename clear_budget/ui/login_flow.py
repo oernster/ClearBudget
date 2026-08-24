@@ -24,6 +24,10 @@ class SignedIn:
     takes long enough to be seen: it stays up showing progress and closes
     only once there is something to hand over to. The caller MUST call
     `end_handover` on it; otherwise the sign-in screen never goes away.
+
+    Never hidden in between either, which is why the dialogs are run through
+    `exec_holding_open` rather than `exec`: an accepted `exec` returns by
+    hiding the dialog, so showing it again a line later is a visible flash.
     """
 
     user: User
@@ -51,13 +55,16 @@ def run_login_flow(
         # These have no parent to be centred on, so without this they take
         # Qt's default placement on the primary screen.
         launch_screen.centre(dlg)
-        if dlg.exec() != CreateUserDialog.Accepted or dlg.created_user is None:
+        if (
+            dlg.exec_holding_open() != CreateUserDialog.Accepted
+            or dlg.created_user is None
+        ):
             return None
         # First user just created - log them in directly.
         return SignedIn(user=dlg.created_user, screen=dlg)
 
     dlg = LoginDialog(user_store, remembered_login)
     launch_screen.centre(dlg)
-    if dlg.exec() != LoginDialog.Accepted:
+    if dlg.exec_holding_open() != LoginDialog.Accepted:
         return None
     return SignedIn(user=dlg.authenticated_user, screen=dlg)

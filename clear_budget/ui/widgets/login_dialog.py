@@ -250,7 +250,7 @@ class LoginDialog(HandoverProgressMixin, QDialog):
             return
         self._record_choices(user.username, password)
         self.authenticated_user = user
-        self.accept()
+        self.finish_accepted()
 
     def _record_choices(self, username: str, password: str) -> None:
         """Apply the two ticks to what is remembered about this account.

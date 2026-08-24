@@ -24,8 +24,15 @@ is right for a bar that says nothing about the budget.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QObject
-from PySide6.QtWidgets import QApplication, QLabel, QProgressBar, QVBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QEventLoop, QObject
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QLabel,
+    QProgressBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 from clear_budget.ui import label_roles, ui_scale
 
@@ -46,6 +53,51 @@ _BAR_HEIGHT_PX = 14
 class HandoverProgressMixin:
     """A sign-in dialog that stays up while the window behind it is built."""
 
+    def exec_holding_open(self) -> int:
+        """Run the dialog like `exec()`, minus the close on success.
+
+        `QDialog.exec` returns by way of `done()`, which HIDES the dialog on
+        its way out. That is the flash: the screen went away when the password
+        was accepted and `begin_handover` brought it straight back, a Hide, a
+        Show and a repaint between them (measured as exactly those events).
+        Refusing the hide from Python does not work, because Qt calls it
+        internally in C++ and PySide does not route that back to an override
+        (measured: the `accept` override is entered, a `setVisible` override
+        beside it never is).
+
+        So the accepted path never reaches `done()`. This runs its own event
+        loop, `finish_accepted` sets the result and quits it while the dialog
+        stays exactly where it is. Cancel, Escape and the close button go
+        on using `reject()`, hiding the ordinary way and quitting the loop
+        through `finished`.
+        """
+        loop = QEventLoop()
+        self._handover_loop = loop
+        self.finished.connect(loop.quit)
+        self.setModal(True)
+        self.show()
+        try:
+            loop.exec()
+        finally:
+            self._handover_loop = None
+            self.finished.disconnect(loop.quit)
+        return self.result()
+
+    def finish_accepted(self) -> None:
+        """Accept the dialog: without closing it under `exec_holding_open`.
+
+        Falls back to a plain `accept()` when there is no held-open loop, so
+        the same dialog opened from anywhere else (Create Account from the
+        sign-in screen, say) closes exactly as it always did.
+        """
+        loop = getattr(self, "_handover_loop", None)
+        if loop is None:
+            self.accept()
+            return
+        self._handover_pending = True
+        self.setResult(QDialog.DialogCode.Accepted)
+        loop.quit()
+
     def install_handover_progress(self, layout: QVBoxLayout) -> None:
         """Add the hidden progress surface to `layout`; call while building."""
         self._handover = QWidget()
@@ -64,9 +116,11 @@ class HandoverProgressMixin:
         layout.addWidget(self._handover)
 
     def begin_handover(self) -> None:
-        """Show the dialog again, now as a progress surface.
+        """Swap the form for a progress surface, in place.
 
-        `accept()` has already hidden it, so this shows it a second time.
+        The dialog is still on screen: the accepted path never went through
+        `done()` (see `exec_holding_open`), so nothing is shown a second time
+        and there is no flash.
 
         The form is left exactly as it looks and is made INERT instead, by
         swallowing input rather than by disabling the widgets. Disabling was
@@ -83,7 +137,6 @@ class HandoverProgressMixin:
         self.installEventFilter(self._handover_guard)
         QApplication.instance().installEventFilter(self._handover_guard)
         self._handover.setVisible(True)
-        self.show()
         self.raise_()
         QApplication.processEvents()
 
@@ -108,6 +161,7 @@ class HandoverProgressMixin:
         """
         if getattr(self, "_handover", None) is None:
             return
+        self._handover_pending = False
         guard = getattr(self, "_handover_guard", None)
         if guard is not None:
             QApplication.instance().removeEventFilter(guard)
