@@ -2,7 +2,7 @@
 
 Save snapshots the live database to the remembered save file (prompting to
 overwrite when it already exists); the first ever Save behaves as Save As,
-prompting for a filename and defaulting to the user's Downloads folder. The
+prompting for a filename and defaulting to the app's own data directory. The
 chosen location is persisted between runs (see clear_budget.ui.save_location).
 The snapshot goes through SQLite's backup API rather than a file copy,
 because the database is open and a byte copy of one mid-transaction is a
@@ -124,9 +124,10 @@ def build_settings_bank_buttons(
     """Return (separator, settings_btn, bank_btn) for a nav tray.
 
     The separator is a themed vertical rule, returned here but placed by the
-    caller AFTER both buttons: it divides the four controls that act on the
-    application (load, save, Preferences, Bank Account) from the four tabs
-    that follow them, which only decide which page you are looking at. It used
+    caller AFTER both buttons: it divides the six controls that act on the
+    application (load, save, switch budget, switch user, Preferences, Bank
+    Account) from the tabs that follow them, which only decide which page you
+    are looking at. It used
     to sit between load/save and the settings pair, back when the tabs were
     a strip of their own and there was nothing else in the tray to divide
     them from. Both buttons are disabled for read-only

@@ -83,17 +83,23 @@ def _body_html() -> str:
           "one panel per card, with a six-month projection.", px)}
 {_tab_row(ARCHIVE_ICON, "Archive",
           "months that have finished. They are filed automatically; there is "
-          "no archive button.", px)}
+          "no archive button. Its icon sits apart, at the right of the tray "
+          "beside the light or dark toggle.", px)}
 <p>Hover any tab to see its name.</p>
 
 <hr>
 <h3>The tray</h3>
 <p>&#128194; load &nbsp;&middot;&nbsp; &#128190; save
 &nbsp;&middot;&nbsp; &#128260; switch budget &nbsp;&middot;&nbsp;
-&#9881;&#65039; currency &nbsp;&middot;&nbsp; &#127974; overdraft plus the
-Safe to Spend buffer and window &nbsp;&middot;&nbsp; {app_icon}the month as a
-graph &nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or dark
+&#128101; switch user &nbsp;&middot;&nbsp; &#9881;&#65039; currency
+&nbsp;&middot;&nbsp; &#127974; overdraft plus the Safe to Spend buffer and
+window &nbsp;&middot;&nbsp; {app_icon}this tab's numbers as a graph
+&nbsp;&middot;&nbsp; &#9728;&#65039;/&#127769; light or dark
 &nbsp;&middot;&nbsp; &#8505;&#65039; this screen</p>
+<p>Load and save open in the app's own data folder, where the live budgets
+already are. The graph appears only on the three tabs that plot something,
+so Archive has none. Your signed-in name sits at the left of the row above,
+with the month.</p>
 
 <hr>
 <h3>Three rules behind the numbers</h3>
@@ -125,6 +131,11 @@ given a new amount from a month onward. Deleting offers two scopes: stop it
 here (earlier months keep it) or remove it everywhere.</p>
 <p>An admin can export a read-only viewer package for someone else to import
 from their sign-in screen. A viewer sees everything and changes nothing.</p>
+<p>The sign-in screen remembers accounts: choose one from the dropdown, with
+a tick each for keeping the username and keeping the password.</p>
+<p>The Users menu holds Manage Users (admins only), Switch User and Log Out.
+Switch User leaves this session running until somebody signs in, so
+cancelling costs nothing; Log Out ends it there and then.</p>
 
 <hr>
 <h3>Keyboard</h3>
