@@ -23,26 +23,27 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 # The sun and the moon come FROM the application, never a second copy of
-# them. See installer.ui._theme_toggle for why the installer borrows its
-# toggle face rather than declaring one.
+# them: the same two PICTURES the app's tray wears. See
+# installer.ui._theme_toggle for why the installer borrows its toggle face
+# rather than declaring one.
 from string import Template
 
 from clear_budget.shared import palette
-from clear_budget.ui.theme import toggle_glyph, toggle_tooltip
+from clear_budget.ui.theme import toggle_icon, toggle_tooltip
 from clear_budget.ui.theme_tokens import THEME_DARK, THEME_LIGHT
 
 
 @dataclass(frozen=True, slots=True)
 class Theme:
     name: str
-    toggle_glyph: str
+    toggle_icon: str
     toggle_tooltip: str
     qss: str
 
 
 LIGHT = Theme(
     name="light",
-    toggle_glyph=toggle_glyph(THEME_LIGHT),
+    toggle_icon=toggle_icon(THEME_LIGHT),
     toggle_tooltip=toggle_tooltip(THEME_LIGHT),
     qss=Template("""
         QWidget { background: $GREY_96; color: $MUTED_BLUE_17; font-family: 'Segoe UI'; }
@@ -113,7 +114,7 @@ LIGHT = Theme(
 
 DARK = Theme(
     name="dark",
-    toggle_glyph=toggle_glyph(THEME_DARK),
+    toggle_icon=toggle_icon(THEME_DARK),
     toggle_tooltip=toggle_tooltip(THEME_DARK),
     qss=Template("""
         QWidget { background: $MUTED_INDIGO_12; color: $GREY_91; font-family: 'Segoe UI'; }

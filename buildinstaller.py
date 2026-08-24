@@ -110,6 +110,11 @@ def main() -> int:
         f"{PROJECT_ROOT / 'clearbudget_128.png'};.",
         f"{PROJECT_ROOT / 'clearbudget_256.png'};.",
         f"{PROJECT_ROOT / 'clearbudget_512.png'};.",
+        # The theme toggle's two faces, the same artwork the application's
+        # tray wears, so the setup program and the app never disagree about
+        # which picture means which mode.
+        f"{PROJECT_ROOT / 'lightmode.png'};.",
+        f"{PROJECT_ROOT / 'darkmode.png'};.",
     ]
 
     cmd = [
