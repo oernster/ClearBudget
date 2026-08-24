@@ -42,6 +42,7 @@ import os
 from clear_budget.shared.config import APP_DIR_ENV_VAR, Config
 from clear_budget.shared.currency import set_currency
 from clear_budget.shared.data_migration import migrate_legacy_data
+from clear_budget.shared import diagnostics
 from clear_budget.shared.resources import find_runtime_window_icon
 from clear_budget.shared import single_instance
 from clear_budget.ui import _window_geometry as geom
@@ -159,8 +160,14 @@ def main() -> int:
 
     app = QApplication([])
 
+    diagnostics.install(Config.app_dir() / "logs")
+    diagnostics.log(
+        "session starting, version %s, data dir %s", __version__, Config.app_dir()
+    )
+
     _instance_lock = single_instance.acquire(app_dir=Config.app_dir())
     if _instance_lock is None:
+        diagnostics.log("refused to start: another instance holds the lock")
         QMessageBox.warning(None, "ClearBudget", "ClearBudget is already running.")
         return 1
 
@@ -263,8 +270,10 @@ def main() -> int:
         database = _open_user_database(user.username)
         _active_database.append(database)
         _load_currency(database)
+        diagnostics.log("reloaded budget %s", database.db_path)
         window = _build_main_window(database, user, user_store)
         _show_window(user, window)
+        diagnostics.log("main window rebuilt")
         old_window.deleteLater()
 
     def _restore_everything(zip_path: str, old_window: "MainWindow") -> None:
@@ -299,6 +308,7 @@ def main() -> int:
         """Run login → main window → (optional) re-login cycle."""
         user = _run_login_flow(user_store, remembered_login)
         if user is None:
+            diagnostics.log("login flow returned no user; quitting")
             app.quit()
             return
 
@@ -306,9 +316,11 @@ def main() -> int:
             _active_database[0].close()
             _active_database.clear()
 
+        diagnostics.log("signed in as %s", user.username)
         try:
             database = _open_user_database(user.username)
         except sqlite3.DatabaseError as exc:
+            diagnostics.log("FAILED opening budget for %s: %s", user.username, exc)
             # Without this the sign-in simply produced NOTHING: the error
             # escaped the timer slot, a windowed build has nowhere to print
             # it and no window was ever shown. An unreadable budget is the
@@ -328,12 +340,15 @@ def main() -> int:
         _active_database.append(database)
         _load_currency(database)
 
+        diagnostics.log("opened budget %s", database.db_path)
         window = _build_main_window(database, user, user_store)
         _show_window(user, window)
+        diagnostics.log("main window shown")
 
     QTimer.singleShot(0, _session_loop)
 
     result = app.exec()
+    diagnostics.log("event loop returned %s, shutting down", result)
     if _active_database:
         _active_database[0].close()
     user_store.close()
