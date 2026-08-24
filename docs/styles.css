@@ -192,6 +192,38 @@ h1 {
     border-radius: 8px;
 }
 
+.hero-shot {
+    max-width: 920px;
+    margin: 34px auto 0;
+}
+.hero-shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel);
+}
+.hero-shot figcaption {
+    color: var(--faint);
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.card img.thumb {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+.card a.more {
+    color: var(--teal);
+    text-decoration: none;
+    font-size: 14px;
+}
+
 .shot {
     max-width: 920px;
     margin: 36px auto 0;

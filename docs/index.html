@@ -61,6 +61,8 @@
     </a>
     <div class="links">
         <a href="why.html">Why</a>
+        <a href="features.html">Features</a>
+        <a href="screenshots.html">Screenshots</a>
         <a href="download.html">Download</a>
         <a href="https://github.com/oernster/ClearBudget">GitHub</a>
     </div>
@@ -77,9 +79,8 @@
         <h1>ClearBudget</h1>
 
         <p class="subtitle">
-            A private desktop budget planner built around a question, not a ledger:
+            A private desktop budget planner built around one question:
             <strong style="color:var(--text)">will the month survive?</strong>
-            It models forward solvency, bill timing and credit card pressure before problems arrive.
         </p>
 
         <div class="actions">
@@ -102,176 +103,54 @@
             </p>
         </section>
 
-        <!-- What it does -->
-        <section class="section" id="features" aria-labelledby="features-h">
-            <h2 id="features-h">What ClearBudget does</h2>
-            <p class="lead">Most budgeting software is retrospective. ClearBudget looks forward instead.</p>
+        <!-- The product, in one image -->
+        <section class="section" id="verdict" aria-label="The solvency verdict" style="margin-top:8px;">
+            <figure class="hero-shot">
+                <a href="screenshots.html">
+                    <img src="screenshots/solvency1.png" alt="The Solvency tab of a sample budget: a green banner reading safe, a health breakdown, then the next two months walked day by day with the second marked overdrawn in red and priced." fetchpriority="high" decoding="async">
+                </a>
+                <figcaption>The verdict page, on an invented sample budget: this month is safe, the next survives and the one after goes overdrawn on day 28, priced at exactly what it needs. That is the product.</figcaption>
+            </figure>
+        </section>
 
+        <!-- Four hooks -->
+        <section class="section" id="hooks" aria-label="Highlights">
             <div class="grid">
                 <div class="card">
+                    <a href="screenshots.html"><img class="thumb" src="screenshots/solvency2.png" alt="The Safe to Spend page: one amber headline figure with its promise and a shortfall line beneath it." loading="lazy" decoding="async"></a>
                     <h3>Safe to Spend Today</h3>
-                    <p>One number: the most you could spend today without knocking over any month ahead. It says how far that promise reaches and names the day that limits it.</p>
-                    <p>A month that is short whatever you do gets its own line, in red, rather than silencing the figure.</p>
-                    <p>Beneath it, a short schedule shows what you could spend from each later day money lands. The buffer it keeps in hand and how many months it must protect are yours to set.</p>
+                    <p>One number you can act on: the most you could spend today without knocking over any month ahead.</p>
                 </div>
                 <div class="card">
-                    <h3>Forward solvency</h3>
-                    <p>Projects the next two months and answers the only operational question that matters: will the balance hold?</p>
+                    <a href="screenshots.html"><img class="thumb" src="screenshots/graph1.png" alt="The month graph: a bar per day stepping down through the month, the final days below zero drawn in red." loading="lazy" decoding="async"></a>
+                    <h3>See the month coming</h3>
+                    <p>Every day as a bar, judged against the overdraft you actually have. Red means a payment would bounce.</p>
                 </div>
                 <div class="card">
-                    <h3>What the month needs</h3>
-                    <p>Every month states the gap between its bills and its income, so a month in trouble comes with a size rather than just a warning.</p>
-                    <p>A month can close in credit while quietly running at a loss. This is the figure that shows it.</p>
+                    <a href="screenshots.html"><img class="thumb" src="screenshots/creditcards.png" alt="A credit card panel with a danger badge above a six-month projection strip shading from red to green." loading="lazy" decoding="async"></a>
+                    <h3>Cards, priced forward</h3>
+                    <p>Utilisation, interest and a six-month projection per card, coloured by the headroom left.</p>
                 </div>
                 <div class="card">
-                    <h3>If the months ahead are like this one</h3>
-                    <p>Months you have not typed in yet look poorer than they really are. The Safe to Spend page assumes this month's income arrives again wherever a later month lacks it, states that assumption in plain words and names exactly what has to arrive and when.</p>
-                    <p>Then it walks the next two months again on that assumption. So when the bank page shows a month going overdrawn, this page answers the question you actually have: does the money you expect rescue it?</p>
-                </div>
-                <div class="card">
-                    <h3>Mid-month overdraft alerts</h3>
-                    <p>Catches the dip when bills cluster before payday, even when the month still ends positive; it also names the first month you would go overdrawn.</p>
-                </div>
-                <div class="card">
-                    <h3>Credit card pressure</h3>
-                    <p>Per-card utilisation, interest and a six-month balance projection, colour-coded by available headroom. Credit-limit changes can be scheduled ahead so every projection honours them.</p>
-                </div>
-                <div class="card">
-                    <h3>Bill and income timing</h3>
-                    <p>Per-month skips, amount and due-day overrides, paid and received flags and one-off entries.</p>
-                    <p>Something that stops is ended, never erased: bills and income carry a final month, so the months they really ran in keep them. A rent increase changes a bill's amount from one month onward without rewriting what earlier months cost.</p>
-                </div>
-                <div class="card">
-                    <h3>Self-maintaining balance</h3>
-                    <p>Set your bank balance once. Dated bills and income are applied to it at midnight on their day and ticked off automatically; delete an applied item and the amount is handed back.</p>
-                </div>
-                <div class="card">
-                    <h3>A Graph tab</h3>
-                    <p>The month as a picture, on a page of its own: the bank balance day by day or every card on one chart, drawn as bars or a line.</p>
-                    <p>Each day's bar is judged against the overdraft you actually have: calm at or above zero, amber inside your facility, red only where a payment would bounce.</p>
-                </div>
-                <div class="card">
-                    <h3>Shareable reports</h3>
-                    <p>Export the month as one self-contained web page; export a whole range of months as a folder, an index whose table adds up and every row opening that month's own day-by-day page.</p>
-                    <p>Nothing is fetched from anywhere, so a report can be emailed or opened offline from a stick.</p>
-                </div>
-                <div class="card">
-                    <h3>Several budgets, one sign-in</h3>
-                    <p>Keep more than one budget under one account: a household beside a business, this year beside a plan for next.</p>
-                    <p>Each budget is its own separate database. Switching changes nothing in either one and the budget you already had keeps the file it always used.</p>
-                </div>
-                <div class="card">
-                    <h3>Back up everything at once</h3>
-                    <p>Every account and every budget in a single zip, restorable in full onto a rebuilt machine.</p>
-                    <p>A restore is checked in a staging area first, so a file that is not a genuine backup changes nothing. The zip is not encrypted; the app says so before writing one.</p>
-                </div>
-                <div class="card">
-                    <h3>Private by design</h3>
-                    <p>Per-user isolated databases behind a bcrypt sign-in. No cloud, no account servers; the only network request the app ever makes is a daily check of the project's GitHub releases for a newer version, carrying nothing about you.</p>
-                    <p>Remember me keeps your credentials in the operating system's own credential store, never in a plain file. One click saves the whole budget to a file you choose; the app remembers where, separately for every account.</p>
-                </div>
-                <div class="card">
-                    <h3>Light and dark</h3>
-                    <p>One button switches the whole application, sign-in screen included. The choice is remembered and the graphs follow, with a palette chosen to stay readable on each background.</p>
-                </div>
-                <div class="card">
-                    <h3>Usable without a mouse</h3>
-                    <p>An explicit keyboard path through every screen and dialog: Tab and the arrows step the same ring, the tabs are walked one at a time, long pages scroll from the keyboard and what has focus is always ringed.</p>
-                </div>
-                <div class="card">
-                    <h3>25 currencies</h3>
-                    <p>Choose your currency once and every figure follows it. Defaults to GBP.</p>
-                </div>
-                <div class="card">
-                    <h3>Installs without touching your data</h3>
-                    <p>A native package per platform: a per-user Windows setup needing no administrator rights, a macOS disk image and a Linux Flatpak.</p>
-                    <p>Install, upgrade, repair and uninstall deal in program files only, so your budgets, accounts and saved theme survive all of them.</p>
+                    <a href="screenshots.html"><img class="thumb" src="screenshots/monthlybudget.png" alt="The Monthly Budget tab: bills and income as two plain tables with a self-maintaining balance." loading="lazy" decoding="async"></a>
+                    <h3>Private and offline</h3>
+                    <p>Your months live on your machine, behind a sign-in, with no cloud and no account servers.</p>
                 </div>
             </div>
         </section>
 
-        <!-- Screenshots -->
-        <section class="section" id="see" aria-labelledby="see-h">
-            <h2 id="see-h">What it looks like</h2>
-            <p class="lead">The dark theme is shown here; one button switches the whole application to light, sign-in screen included.</p>
-            <p class="lead"><strong>Every screenshot shows the same sample budget, signed in as the demonstration account "john doe".</strong> The bills, balances and card figures are invented examples chosen to exercise the app's warnings; none of it is a real person's finances.</p>
-
-            <figure class="shot">
-                <h3>The month you are in</h3>
-                <p>Bills and income as two plain tables. Each bill carries its amount, category, what pays it and the day it falls, with Active, Skip and Paid as columns rather than buried in a dialog. Nothing here is a ledger of what already happened; it is the month as it currently stands.</p>
-                <img src="screenshots/monthlybudget.png" alt="The Monthly Budget tab of the john doe sample budget: a Bills table listing each bill with amount, category, payment method and due day beside Active, Skip and Paid checkboxes, an Income table below it and the current bank balance top right." loading="lazy" decoding="async">
-                <figcaption>Monthly Budget. The balance top right maintains itself: dated items are applied on the day they fall due and tick themselves off, so nothing is counted twice. The sample month carries £1,400 of income against £2,400 of bills, which is what arms the warnings on the pages that follow.</figcaption>
-            </figure>
-
-            <figure class="shot">
-                <h3>Whether it holds</h3>
-                <p>The bank page answers one question from money you have actually entered. It states the account position, then walks the next two months day by day, each naming its low point, the day that low falls on and what the month needs to hold flat. A month that cannot hold is not merely flagged; it is priced.</p>
-                <img src="screenshots/solvency1.png" alt="The Solvency tab's bank page for the sample budget: an Account Position banner in green reading safe, an Overall Health breakdown of projected balance, committed and still-due amounts, then a Next Two Months As Entered block where the first month survives and the second is marked overdrawn in red with no overdraft facility." loading="lazy" decoding="async">
-                <figcaption>Solvency, bank page. The sample account is safe this month and survives the next; the month after goes overdrawn with no facility arranged, which is a payment being refused rather than a warning about borrowing. Each month is priced: "needs £1,000.00 more to hold flat".</figcaption>
-            </figure>
-
-            <figure class="shot">
-                <h3>What you can actually spend</h3>
-                <p>One number, with the promise behind it spelled out: how far it holds and the day that limits it. A month that cannot be rescued by spending nothing does not silence the figure, because that would be answering a different question; it gets its own line, in red, saying so plainly.</p>
-                <img src="screenshots/solvency2.png" alt="The Solvency tab's Safe to Spend page for the sample budget: a large amber headline giving the amount safe to spend today, a muted line naming how far that holds above the buffer and the day constraining it, a red line naming a later month that is short whatever you do and a final line stating there is nothing to assume because every month ahead already carries this month's income." loading="lazy" decoding="async">
-                <figcaption>Solvency, Safe to Spend page. Two colours because they are two kinds of statement: the muted line is a caution about a figure you can still act on, the red one reports a gap no restraint closes. The assumption the page rests on is stated in words; here there is nothing to assume, so it says exactly that.</figcaption>
-            </figure>
-
-            <figure class="shot">
-                <h3>Cards, priced forward</h3>
-                <p>One panel per card carries its limit, what is used, the headroom left and the interest it is accruing. Beneath it, the projection runs each card forward and colours every month by the headroom it leaves rather than by the balance alone.</p>
-                <img src="screenshots/creditcards.png" alt="The Credit Cards tab for the sample budget: a card panel showing limit, used, available, utilisation, due day, interest rate and this month's charges, payment and interest, with a red DANGER badge, above a six-month balance projection table whose rows shade from red through amber to green as the balance falls." loading="lazy" decoding="async">
-                <figcaption>Credit Cards. The sample card sits at 92% utilisation, so its badge reads danger and the strip starts red; the projection greens as the monthly payment outruns the interest, so the recovery is visible months before it happens.</figcaption>
-            </figure>
-
-            <figure class="shot">
-                <h3>The month as a picture</h3>
-                <p>Every day of the month as its own bar, with a curve following the real values rather than smoothing across them. The bars carry the verdict a single line cannot: the calm resting colour on a day the account is at or above zero, amber inside an overdraft you arranged and red only where a payment would actually bounce.</p>
-                <img src="screenshots/graph1.png" alt="The Graph tab plotting the sample budget's bank balance by day: lavender bars stepping down through the month with a light blue curve following them, the final days dropping below zero and drawn in red." loading="lazy" decoding="async">
-                <figcaption>The Graph tab reading the bank balance day by day, a page of its own stepped by the same Previous and Next as every other tab. The sample month drains as bills fall due and the last few days go red: with no facility arranged, those are payments that would bounce.</figcaption>
-            </figure>
-
-            <figure class="shot">
-                <h3>Every card on one chart</h3>
-                <p>The same page, switched to the cards. One line per card, so a balance that is quietly climbing stands out against the ones being paid down; the switch's own face shows what a press will plot next.</p>
-                <img src="screenshots/graph2.png" alt="The Graph tab switched to card balances for the sample budget: a single light blue line for the one sample card, stepping down when its payment lands and rising slightly at month end as interest accrues." loading="lazy" decoding="async">
-                <figcaption>The Graph tab reading card balances by day. The sample card's line drops when its payment lands mid-month, then lifts at the month's end as interest is charged: the shape of a card being paid down faster than it grows.</figcaption>
-            </figure>
-        </section>
-
-        <!-- The five tabs -->
-        <section class="section" id="tabs" aria-labelledby="tabs-h">
-            <h2 id="tabs-h">Five views, one question</h2>
-            <p class="lead">Each tab is a different angle on the same question: whether this month holds together and whether the ones after it do. Each carries a picture rather than a name, sitting in the navigation tray beside the other controls and naming itself on hover.</p>
-
-            <div class="grid">
-                <div class="card">
-                    <h3>Monthly Budget</h3>
-                    <p>Bills and income for the month, with a balance that keeps itself up to date as dated items fall due, the projected month-end figure for future months and a mid-month overdraft warning.</p>
-                </div>
-                <div class="card">
-                    <h3>Solvency</h3>
-                    <p>Two pages, each a whole answer rather than half of one long scroll. The bank page is built only from money you have entered: your account position, then the next two months walked day by day. The Safe to Spend page adds the one assumption worth making, that the months ahead resemble this one, states it in words and shows what follows from it.</p>
-                </div>
-                <div class="card">
-                    <h3>Credit Cards</h3>
-                    <p>One panel per card with live pro-rated balances and a six-month projection strip across every card.</p>
-                </div>
-                <div class="card">
-                    <h3>Graph</h3>
-                    <p>The viewed month as a chart: the bank balance day by day or every card on one line chart, switched on the page itself, with the HTML exports beside it.</p>
-                </div>
-                <div class="card">
-                    <h3>Archive</h3>
-                    <p>Completed months summarised by year, with drill-down into any individual month.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Explore -->
+        <!-- Dig deeper -->
         <section class="section" id="explore" aria-labelledby="explore-h">
-            <h2 id="explore-h">Explore</h2>
+            <h2 id="explore-h">Dig deeper</h2>
             <div class="grid">
+                <div class="card">
+                    <h3><a href="features.html" style="color:var(--teal);text-decoration:none;">Everything it does</a></h3>
+                    <p>The full feature list: budgets, backups, bill timing, exports, keyboard, currencies.</p>
+                </div>
+                <div class="card">
+                    <h3><a href="screenshots.html" style="color:var(--teal);text-decoration:none;">Screenshots</a></h3>
+                    <p>Every page of the app, walked through on a sample budget.</p>
+                </div>
                 <div class="card">
                     <h3><a href="why.html" style="color:var(--teal);text-decoration:none;">Why this exists</a></h3>
                     <p>The reasoning behind the solvency model and the architecture that keeps it honest.</p>
@@ -400,7 +279,10 @@
             '#download': 'download.html',
             '#faq': 'download.html#faq',
             '#architecture': 'why.html#architecture',
-            '#why': 'why.html'
+            '#why': 'why.html',
+            '#features': 'features.html',
+            '#tabs': 'features.html#tabs',
+            '#see': 'screenshots.html'
         };
         var target = moved[window.location.hash];
         if (target) { window.location.replace(target); }

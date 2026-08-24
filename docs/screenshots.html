@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>ClearBudget screenshots: a sample budget, page by page</title>
+    <meta name="description" content="ClearBudget page by page: the month, the solvency verdict, Safe to Spend Today, credit cards priced forward and the month graphs, all shown on an invented sample budget.">
+    <meta name="author" content="Oliver Ernster">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://ernster.dev/ClearBudget/screenshots.html">
+
+    <meta name="theme-color" content="#0a0a0d">
+    <meta name="color-scheme" content="dark">
+
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+
+    <meta property="og:title" content="ClearBudget screenshots">
+    <meta property="og:description" content="ClearBudget page by page, shown on an invented sample budget.">
+    <meta property="og:image" content="https://ernster.dev/ClearBudget/clearbudget-512.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="ClearBudget app icon">
+    <meta property="og:url" content="https://ernster.dev/ClearBudget/screenshots.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ClearBudget">
+    <meta property="og:locale" content="en_GB">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ClearBudget screenshots">
+    <meta name="twitter:description" content="ClearBudget page by page, shown on an invented sample budget.">
+    <meta name="twitter:image" content="https://ernster.dev/ClearBudget/clearbudget-512.png">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<nav class="site">
+    <a class="brand" href="./">
+        <img src="favicon-64.png" alt="ClearBudget icon">
+        ClearBudget
+    </a>
+    <div class="links">
+        <a href="why.html">Why</a>
+        <a href="features.html">Features</a>
+        <a href="screenshots.html">Screenshots</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/oernster/ClearBudget">GitHub</a>
+    </div>
+</nav>
+
+<div class="container">
+
+    <main>
+
+        <section class="section" id="see" aria-labelledby="see-h" style="margin-top:0;">
+            <h2 id="see-h">What it looks like</h2>
+            <p class="lead">The dark theme is shown here; one button switches the whole application to light, sign-in screen included.</p>
+            <p class="lead"><strong>Every screenshot shows the same sample budget, signed in as the demonstration account "john doe".</strong> The bills, balances and card figures are invented examples chosen to exercise the app's warnings; none of it is a real person's finances.</p>
+
+            <figure class="shot">
+                <h3>The month you are in</h3>
+                <p>Bills and income as two plain tables. Each bill carries its amount, category, what pays it and the day it falls, with Active, Skip and Paid as columns rather than buried in a dialog. Nothing here is a ledger of what already happened; it is the month as it currently stands.</p>
+                <img src="screenshots/monthlybudget.png" alt="The Monthly Budget tab of the john doe sample budget: a Bills table listing each bill with amount, category, payment method and due day beside Active, Skip and Paid checkboxes, an Income table below it and the current bank balance top right." loading="lazy" decoding="async">
+                <figcaption>Monthly Budget. The balance top right maintains itself: dated items are applied on the day they fall due and tick themselves off, so nothing is counted twice. The sample month carries £1,400 of income against £2,400 of bills, which is what arms the warnings on the pages that follow.</figcaption>
+            </figure>
+
+            <figure class="shot">
+                <h3>Whether it holds</h3>
+                <p>The bank page answers one question from money you have actually entered. It states the account position, then walks the next two months day by day, each naming its low point, the day that low falls on and what the month needs to hold flat. A month that cannot hold is not merely flagged; it is priced.</p>
+                <img src="screenshots/solvency1.png" alt="The Solvency tab's bank page for the sample budget: an Account Position banner in green reading safe, an Overall Health breakdown of projected balance, committed and still-due amounts, then a Next Two Months As Entered block where the first month survives and the second is marked overdrawn in red with no overdraft facility." loading="lazy" decoding="async">
+                <figcaption>Solvency, bank page. The sample account is safe this month and survives the next; the month after goes overdrawn with no facility arranged, which is a payment being refused rather than a warning about borrowing. Each month is priced: "needs £1,000.00 more to hold flat".</figcaption>
+            </figure>
+
+            <figure class="shot">
+                <h3>What you can actually spend</h3>
+                <p>One number, with the promise behind it spelled out: how far it holds and the day that limits it. A month that cannot be rescued by spending nothing does not silence the figure, because that would be answering a different question; it gets its own line, in red, saying so plainly.</p>
+                <img src="screenshots/solvency2.png" alt="The Solvency tab's Safe to Spend page for the sample budget: a large amber headline giving the amount safe to spend today, a muted line naming how far that holds above the buffer and the day constraining it, a red line naming a later month that is short whatever you do and a final line stating there is nothing to assume because every month ahead already carries this month's income." loading="lazy" decoding="async">
+                <figcaption>Solvency, Safe to Spend page. Two colours because they are two kinds of statement: the muted line is a caution about a figure you can still act on, the red one reports a gap no restraint closes. The assumption the page rests on is stated in words; here there is nothing to assume, so it says exactly that.</figcaption>
+            </figure>
+
+            <figure class="shot">
+                <h3>Cards, priced forward</h3>
+                <p>One panel per card carries its limit, what is used, the headroom left and the interest it is accruing. Beneath it, the projection runs each card forward and colours every month by the headroom it leaves rather than by the balance alone.</p>
+                <img src="screenshots/creditcards.png" alt="The Credit Cards tab for the sample budget: a card panel showing limit, used, available, utilisation, due day, interest rate and this month's charges, payment and interest, with a red DANGER badge, above a six-month balance projection table whose rows shade from red through amber to green as the balance falls." loading="lazy" decoding="async">
+                <figcaption>Credit Cards. The sample card sits at 92% utilisation, so its badge reads danger and the strip starts red; the projection greens as the monthly payment outruns the interest, so the recovery is visible months before it happens.</figcaption>
+            </figure>
+
+            <figure class="shot">
+                <h3>The month as a picture</h3>
+                <p>Every day of the month as its own bar, with a curve following the real values rather than smoothing across them. The bars carry the verdict a single line cannot: the calm resting colour on a day the account is at or above zero, amber inside an overdraft you arranged and red only where a payment would actually bounce.</p>
+                <img src="screenshots/graph1.png" alt="The Graph tab plotting the sample budget's bank balance by day: lavender bars stepping down through the month with a light blue curve following them, the final days dropping below zero and drawn in red." loading="lazy" decoding="async">
+                <figcaption>The Graph tab reading the bank balance day by day, a page of its own stepped by the same Previous and Next as every other tab. The sample month drains as bills fall due and the last few days go red: with no facility arranged, those are payments that would bounce.</figcaption>
+            </figure>
+
+            <figure class="shot">
+                <h3>Every card on one chart</h3>
+                <p>The same page, switched to the cards. One line per card, so a balance that is quietly climbing stands out against the ones being paid down; the switch's own face shows what a press will plot next.</p>
+                <img src="screenshots/graph2.png" alt="The Graph tab switched to card balances for the sample budget: a single light blue line for the one sample card, stepping down when its payment lands and rising slightly at month end as interest accrues." loading="lazy" decoding="async">
+                <figcaption>The Graph tab reading card balances by day. The sample card's line drops when its payment lands mid-month, then lifts at the month's end as interest is charged: the shape of a card being paid down faster than it grows.</figcaption>
+            </figure>
+        </section>
+
+        <section class="section">
+            <div class="actions">
+                <a class="primary" href="download.html">Download ClearBudget</a>
+                <a class="secondary" href="features.html">Read the full feature list</a>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        Created by Oliver Ernster &nbsp;·&nbsp; Python and PySide6 &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget/blob/main/LICENSE">LGPL-3.0</a> &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget">Source on GitHub</a> &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget/releases">Releases</a>
+    </footer>
+
+</div>
+
+</body>
+</html>
