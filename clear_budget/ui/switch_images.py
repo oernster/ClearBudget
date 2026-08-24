@@ -25,7 +25,12 @@ _DIR_NAME = "switches"
 # Unscaled pill size; the knob fills the height minus the inset each side.
 _WIDTH_PX = 36
 _HEIGHT_PX = 18
-_KNOB_INSET_PX = 2
+# How far the knob sits inside the PILL on every side. Measured from the
+# track's own rectangle, never the image's: the track is itself inset by
+# `_EDGE` for antialiasing, so an inset taken from the image left the knob a
+# single pixel short of the pill top and bottom, which magnified reads as a
+# knob larger than the slider carrying it.
+_KNOB_INSET_PX = 3
 # Inset so antialiasing has a pixel to work with instead of clipping the edge.
 _EDGE = 0.5
 
@@ -43,15 +48,16 @@ def _draw(
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     painter.setPen(QColor(0, 0, 0, 0))
     painter.setBrush(QColor(track))
-    radius = (height - 2 * _EDGE) / 2
-    painter.drawRoundedRect(
-        QRectF(_EDGE, _EDGE, width - 2 * _EDGE, height - 2 * _EDGE), radius, radius
-    )
+    pill = QRectF(_EDGE, _EDGE, width - 2 * _EDGE, height - 2 * _EDGE)
+    radius = pill.height() / 2
+    painter.drawRoundedRect(pill, radius, radius)
+    # Everything about the knob is measured from the PILL, so the gap around
+    # it is the same on all four sides whichever end it is at.
     inset = ui_scale.px(_KNOB_INSET_PX)
-    diameter = height - 2 * inset
-    x = (width - inset - diameter) if on else inset
+    diameter = pill.height() - 2 * inset
+    x = (pill.right() - inset - diameter) if on else (pill.left() + inset)
     painter.setBrush(QColor(knob))
-    painter.drawEllipse(QRectF(x, inset, diameter, diameter))
+    painter.drawEllipse(QRectF(x, pill.top() + inset, diameter, diameter))
     painter.end()
     pixmap.save(str(path))
 
