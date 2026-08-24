@@ -34,6 +34,10 @@ _BREAKDOWN_FONT_PX = 15
 _NOTE_FONT_PX = 11
 _STRONG_WARN_FONT_PX = 14
 _LOGIN_TITLE_FONT_PX = 22
+# The signed-in account, shown at the left of the month tray. Sized with
+# the month beside it: it names WHOSE budget is on screen, which is worth
+# as much as which month it is.
+_NAV_USER_FONT_PX = 20
 _CODE_BOX_FONT_PX = 15
 
 
@@ -148,6 +152,12 @@ QLabel#LabelStrongWarn {{
 QLabel#LabelChangeWarn {{
     font-size: {ui_scale.px(_SMALL_LABEL_FONT_PX)}px;
     color: {t["warn_strong"]};
+}}
+
+QLabel#NavUserLabel {{
+    font-size: {ui_scale.px(_NAV_USER_FONT_PX)}px;
+    font-weight: bold;
+    color: {t["text"]};
 }}
 
 QLabel#LoginTitle {{

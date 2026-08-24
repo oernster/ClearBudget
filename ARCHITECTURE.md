@@ -1349,6 +1349,23 @@ renderings of the same figures to hold in step. Every month any page shows
   fell back to a point-sized font too tall for the box, which clipped the name
   it was showing
 
+**Who is signed in**:
+- The account name sits at the left of every tab's month tray, built by
+  `ui/utils/nav_header._build_nav_user_pair` and filled by `MainWindow` through
+  `set_nav_user`. It is set on the HEADER, never the view: `ScrollableTab`
+  lifts the header out of its view so it spans the full tab width, which
+  leaves the label no longer a descendant of that view
+- An empty MIRROR of the label sits at the far right of the same row, kept the
+  same width, so the month cluster stays centred on the WINDOW rather than on
+  what the name leaves behind (which would drift per account)
+- `ui/utils/nav_label.NavUserLabel` caps its own width and elides a name that
+  does not fit, putting the whole of it on the tooltip. Its size hint is
+  measured from the FULL text: taken from the drawn text it collapses to an
+  ellipsis and never recovers. Its minimum hint matches, because a hint alone
+  gets shaved under width pressure
+- `tests/structural/test_nav_user_label.py` pins all of it, including that the
+  title bar no longer names the account
+
 **Main Application**:
 - `MainWindow` - all tabs in `ScrollableTab`; signals: `switch_user_requested`,
   `sign_out_requested`, `database_replaced`

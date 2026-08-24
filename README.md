@@ -289,8 +289,11 @@ Monthly Budget, Solvency and Credit Cards followed by the app icon that opens
 the graph. Archive sits at the far right beside the sun/moon theme toggle and
 the blue information button opening How It Works.
 
-Read-only viewer accounts have most of these actions disabled and the window title
-shows "(Read-only)".
+The account you are signed in as is shown at the left of the month row on every
+tab, in the same size as the month itself, rather than in the title bar. A name
+too long for the space is shortened with an ellipsis and shown in full when
+hovered. Read-only viewer accounts have most of these actions disabled and are
+marked "(Read-only)" beside the name.
 
 ---
 

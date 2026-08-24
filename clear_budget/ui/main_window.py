@@ -24,6 +24,7 @@ from clear_budget.ui.views.credit_card_view import CreditCardView
 from clear_budget.ui.views.month_view import MonthView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
 from clear_budget.ui.update_check import UpdateCheckController
+from clear_budget.ui.utils.nav_header import nav_user_text, set_nav_user
 from clear_budget.ui.utils.tab_icons import mark_current_tab
 from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 
@@ -74,10 +75,11 @@ class MainWindow(
         self.user_store = user_store
         self.db_path = db_path
         self.read_only = current_user.is_read_only
-        title = f"ClearBudget - {current_user.username}"
-        if self.read_only:
-            title += " (Read-only)"
-        self.setWindowTitle(title)
+        # The account is NOT in the title any more. It was a few pixels of
+        # system chrome naming whose budget was on screen, which is the one
+        # thing a shared machine most needs to be sure of; it is now shown at
+        # the left of every tab's month tray, in the size the month is.
+        self.setWindowTitle("ClearBudget")
         self.setMinimumSize(ui_scale.px(900), ui_scale.px(580))
         self.init_ui()
         self._build_window_chrome()
@@ -155,6 +157,10 @@ class MainWindow(
             _tray_view.settings_btn.clicked.connect(self._on_preferences)
             _tray_view.bank_btn.clicked.connect(self._on_bank_account_settings)
             _tray_view.info_btn.clicked.connect(self._on_how_it_works)
+            set_nav_user(
+                _tray_view.nav_header,
+                nav_user_text(self.current_user.username, read_only=self.read_only),
+            )
 
         layout.addWidget(self.tabs)
         central_widget.setLayout(layout)

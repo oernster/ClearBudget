@@ -23,6 +23,7 @@ TITLE = "LabelTitle"
 SECTION_TITLE = "LabelSectionTitle"
 VALUE = "LabelValue"
 SEPARATOR = "Separator"
+NAV_USER = "NavUserLabel"
 ICON_ACTION = "IconAction"
 
 # Severity roles, swapped at runtime by set_role.

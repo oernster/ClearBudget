@@ -190,6 +190,11 @@ def _tray_margins():
     return ui_scale.px(NAV_HEADER_EDGE_PADDING), ui_scale.px(NAV_HEADER_V_PADDING)
 
 
+# The empty twin of the account label, kept the same width so the month
+# cluster stays centred on the window rather than on what is left of the row.
+_NAV_USER_MIRROR = "NavUserMirror"
+
+
 def build_centered_nav_header(
     initial_text: str,
     prev_btn=None,
@@ -238,9 +243,18 @@ def build_centered_nav_header(
     month_tray = _bordered_tray()
     month_row = QHBoxLayout(month_tray)
     month_row.setContentsMargins(edge, vpad, edge, vpad)
+    # The signed-in account sits at the far left, with an empty MIRROR of it
+    # at the far right. Without that mirror the cluster is no longer centred on
+    # the window but on what is left of the row, so it drifts right by half
+    # the name's width and every tab drifts by a different amount as soon as
+    # the names differ in length. The mirror costs a widget and keeps the
+    # arithmetic at zero.
+    user_lbl, user_mirror = _build_nav_user_pair()
+    month_row.addWidget(user_lbl, 0, align_v)
     month_row.addStretch(1)
     month_row.addWidget(nav_center, 0, align_v)
     month_row.addStretch(1)
+    month_row.addWidget(user_mirror, 0, align_v)
 
     # TRAY 2: the application's controls, left to right, with the toggle and
     # How It Works at the far right where they have always been.
@@ -281,3 +295,69 @@ def build_centered_nav_header(
     outer.addWidget(month_tray)
     outer.addWidget(action_tray)
     return header, month_lbl, theme_btn
+
+
+def _build_nav_user_pair():
+    """Return (label, mirror) for the month tray's signed-in-account slot.
+
+    The mirror is a plain empty widget whose width is kept equal to the
+    label's, so the month cluster between them stays centred on the window
+    rather than on whatever the name leaves behind.
+    """
+    from PySide6.QtWidgets import QWidget
+
+    from clear_budget.ui import label_roles
+    from clear_budget.ui.utils.nav_label import NavUserLabel
+
+    # It carries a real QLabel margin (see NavUserLabel) rather than
+    # stylesheet padding, for the same reason the month label does: padding is
+    # painted but not reliably counted in a label's size hints, so a tray
+    # under width pressure reserves less than the text needs and clips it.
+    label = NavUserLabel.create()
+    label.setObjectName(label_roles.NAV_USER)
+    mirror = QWidget()
+    mirror.setObjectName(_NAV_USER_MIRROR)
+    return label, mirror
+
+
+def nav_user_text(username: str, *, read_only: bool) -> str:
+    """The account name a tray shows, with its mode when that is limited.
+
+    Pure, kept separate from the widget work, so what the tray SAYS can be
+    tested without a running Qt application. A read-only viewer is told so
+    here because the title bar no longer carries either half of it.
+    """
+    return f"{username} (Read-only)" if read_only else username
+
+
+def set_nav_user(header, text: str) -> None:
+    """Show `text` as the signed-in account on a tab's month tray.
+
+    Set from MainWindow rather than passed into each view's constructor,
+    because the views are built from a budget and know nothing about who is
+    signed in; this keeps that knowledge in the one place that has it.
+
+    Takes the HEADER, never the view that built it. `ScrollableTab` lifts the
+    header out of its view so it spans the full tab width outside the scroll
+    area, which leaves the label no longer a descendant of that view: looking
+    for it there finds nothing and silently sets no name at all.
+
+    Does nothing when the header has no such slot, which is what makes it
+    safe to call across every tab in one loop.
+    """
+    from PySide6.QtWidgets import QLabel, QWidget
+
+    from clear_budget.ui import label_roles
+
+    label = header.findChild(QLabel, label_roles.NAV_USER)
+    if label is None:
+        return
+    label.set_full_text(text)
+    label.ensurePolished()
+    parent = label.parentWidget()
+    mirror = None if parent is None else parent.findChild(QWidget, _NAV_USER_MIRROR)
+    if mirror is not None:
+        # Capped at the label's own maximum. Without that cap a long name
+        # reserves a mirror wider than the label it mirrors, which shifts the
+        # month the other way.
+        mirror.setFixedWidth(min(label.sizeHint().width(), label.maximumWidth()))
