@@ -37,8 +37,11 @@ from clear_budget.infrastructure.sqlite.payment_method_repository import (
 from clear_budget.infrastructure.update.github_release_source import (
     GitHubReleaseSource,
 )
-from clear_budget.shared.config import Config
+import os
+
+from clear_budget.shared.config import APP_DIR_ENV_VAR, Config
 from clear_budget.shared.currency import set_currency
+from clear_budget.shared.data_migration import migrate_legacy_data
 from clear_budget.ui._window_geometry import default_window_rect
 from clear_budget.version import __version__
 from clear_budget.ui.main_window import MainWindow
@@ -223,6 +226,17 @@ def _build_main_window(
 
 def main() -> int:
     """Initialize application and start event loop."""
+    # The one-time data-directory move runs FIRST: before the single-instance
+    # lock (which lives in the data directory on macOS and Linux) and before
+    # anything reads a setting. A redirected run (CLEARBUDGET_HOME set: the
+    # suite, a probe) never migrates real data. If the move cannot complete,
+    # resolution keeps preferring the still-present legacy directory, so the
+    # app runs on the data it always had and retries at the next launch.
+    if not os.environ.get(APP_DIR_ENV_VAR, "").strip():
+        migrate_legacy_data(
+            legacy=Config.legacy_app_dir(), target=Config.platform_app_dir()
+        )
+
     app = QApplication([])
 
     _instance_lock = _acquire_single_instance_lock()

@@ -317,7 +317,21 @@ budget but cannot edit anything.
 ## Data Storage and Security
 
 Clear Budget is a local-first desktop application. All data lives on your own
-machine under `~/.clearbudget/`:
+machine in the platform's conventional application-data location:
+
+| Platform | Data directory |
+|----------|----------------|
+| Windows | `%LOCALAPPDATA%\ClearBudget` |
+| macOS | `~/Library/Application Support/ClearBudget` |
+| Linux | `$XDG_DATA_HOME/clearbudget`, by default `~/.local/share/clearbudget` |
+
+An install that predates this layout kept everything in `~/.clearbudget`;
+the app moves that directory to the new location automatically the first
+time it starts, verifying the move before the old directory is removed. If
+the move cannot complete, the app simply keeps using the old directory
+(nothing is lost) and tries again at the next launch.
+
+The directory holds:
 
 - `users.db` - account records. Passwords and recovery codes are stored only as
   bcrypt hashes, never in plain text.
@@ -339,7 +353,7 @@ Installing, upgrading, repairing and uninstalling do not touch any of this.
 They deal in program files, shortcuts and the registry entry only, so
 reinstalling picks up where you left off, saved theme included. Uninstall
 deliberately offers no option to delete the directory: to remove your data,
-delete `~/.clearbudget` yourself.
+delete the data directory above yourself.
 
 All amounts are held as integer pence. No financial figure in the application
 is ever a floating-point number, so nothing rounds away between the value you
@@ -602,8 +616,9 @@ application will not close, setup stops and says so rather than failing part
 way through.
 
 Two absences are deliberate. Uninstall offers **no** "remove my user data"
-option: `~/.clearbudget` holds every account and every user's budget on the
-machine and deleting it cannot be undone, so it is left for you to do by hand
+option: the data directory (see Data Storage and Security) holds every
+account and every user's budget on the machine and deleting it cannot be
+undone, so it is left for you to do by hand
 (`tests/structural/test_data_dir_isolation.py` fails if any installer module so
 much as names the directory). And there is **no** launch-on-sign-in entry,
 because Clear Budget has no such feature and a setup switch for one would be a

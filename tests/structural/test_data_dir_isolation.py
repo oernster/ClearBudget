@@ -39,6 +39,25 @@ _HOME_ALLOWED = {_CONFIG_MODULE, Path("clear_budget") / "ui" / "ui_paths.py"}
 
 _APP_DIR_LITERAL = re.compile(r"""["']\.clearbudget["']""")
 _HOME_CALL = re.compile(r"Path\.home\(\)")
+# The platform data roots: a module reading these is deriving the data
+# directory for itself, the same bypass as naming `.clearbudget`.
+_DATA_ROOT_ENV = re.compile(r"LOCALAPPDATA|XDG_DATA_HOME")
+
+
+def _platform_real_dir() -> Path:
+    """The platform-conventional directory, derived independently here."""
+    import os
+    import sys
+
+    if sys.platform == "win32":
+        base = (os.environ.get("LOCALAPPDATA") or "").strip()
+        root = Path(base) if base else Path.home() / "AppData" / "Local"
+        return root / "ClearBudget"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "ClearBudget"
+    xdg = (os.environ.get("XDG_DATA_HOME") or "").strip()
+    root = Path(xdg) if xdg else Path.home() / ".local" / "share"
+    return root / "clearbudget"
 
 
 def _package_sources():
@@ -51,14 +70,14 @@ def _package_sources():
 class TestTheSuiteCannotTouchRealUserData:
     """The autouse redirect in conftest is load-bearing; prove it is on."""
 
-    def _real_app_dir(self) -> Path:
-        return Path.home() / ".clearbudget"
+    def _real_candidates(self) -> list[Path]:
+        """Both places real data can live: legacy and platform-conventional."""
+        return [Path.home() / ".clearbudget", _platform_real_dir()]
 
     def test_app_dir_is_not_the_real_one(self):
-        assert Config.app_dir() != self._real_app_dir()
+        assert Config.app_dir() not in self._real_candidates()
 
     def test_every_path_lands_outside_the_real_one(self):
-        real = self._real_app_dir()
         paths = [
             Config.app_dir(),
             Config.users_db_path(),
@@ -67,7 +86,12 @@ class TestTheSuiteCannotTouchRealUserData:
             Config.default().db_path,
             Config.default().log_dir,
         ]
-        inside = [p for p in paths if real in p.parents or p == real]
+        inside = [
+            p
+            for p in paths
+            for real in self._real_candidates()
+            if real in p.parents or p == real
+        ]
         assert not inside, "Test paths resolve inside real user data:\n" + "\n".join(
             str(p) for p in inside
         )
@@ -77,8 +101,15 @@ class TestTheSuiteCannotTouchRealUserData:
         assert Config.app_dir() == isolate_app_dir
 
     def test_the_real_path_is_restored_when_the_override_is_cleared(self, real_app_dir):
-        """The guard is the env var, not a permanent rewrite of the paths."""
-        assert Config.app_dir() == self._real_app_dir()
+        """The guard is the env var, not a permanent rewrite of the paths.
+
+        The expectation replicates the resolution rule independently: the
+        legacy directory while it exists (its disappearance is the
+        migration's completion signal), else the platform directory.
+        """
+        legacy = Path.home() / ".clearbudget"
+        expected = legacy if legacy.is_dir() else _platform_real_dir()
+        assert Config.app_dir() == expected
 
 
 class TestOnlyConfigDerivesTheDataDirectory:
@@ -106,6 +137,44 @@ class TestOnlyConfigDerivesTheDataDirectory:
             not offenders
         ), "Path.home() is read outside the modules allowed to:\n" + "\n".join(
             offenders
+        )
+
+    def test_no_other_module_reads_the_platform_data_roots(self):
+        """LOCALAPPDATA and XDG_DATA_HOME are config.py's business alone."""
+        offenders = [
+            str(rel)
+            for rel, source in _package_sources()
+            if rel != _CONFIG_MODULE and _DATA_ROOT_ENV.search(source)
+        ]
+        assert not offenders, (
+            "A platform data root is derived outside "
+            f"{_CONFIG_MODULE}, which bypasses {APP_DIR_ENV_VAR}:\n"
+            + "\n".join(offenders)
+        )
+
+
+class TestTheMigrationRunsFirstAtStartup:
+    """`main()` must migrate before the lock and never under the override.
+
+    The single-instance lock file lives in the data directory on macOS and
+    Linux, so locking first would lock the directory about to move; and a
+    redirected run (the suite, a probe) must never touch real data.
+    """
+
+    def test_main_migrates_before_the_lock_and_behind_the_override(self):
+        source = (_PROJECT_ROOT / "main.py").read_text(encoding="utf-8")
+        migrate_at = source.find("migrate_legacy_data(")
+        lock_at = source.find("_instance_lock = _acquire_single_instance_lock()")
+        assert migrate_at != -1, "main.py never calls migrate_legacy_data"
+        assert lock_at != -1, "main.py lost the single-instance lock"
+        assert migrate_at < lock_at, (
+            "main.py migrates AFTER acquiring the single-instance lock, "
+            "which locks the directory about to move"
+        )
+        guard_at = source.find("APP_DIR_ENV_VAR")
+        assert guard_at != -1 and guard_at < migrate_at, (
+            "main.py migrates without checking the override, so a "
+            "redirected run would move real user data"
         )
 
 

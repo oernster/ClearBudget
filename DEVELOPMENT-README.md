@@ -142,10 +142,12 @@ what matters is what gets painted. Run those with
 substitutes Qt's own font database, so a font size tuned there does not match
 what ships. Measure those on the real platform.
 
-**Always point a probe at a scratch data directory.** `~/.clearbudget` holds
-live user data: both databases, the saved UI settings (theme, remembered
-save-file location and any skipped update version) and the Remember me
-sidecar (`remembered_login.json`). Set
+**Always point a probe at a scratch data directory.** The real data
+directory (`%LOCALAPPDATA%\ClearBudget` on Windows; see README's Data
+Storage section for the other platforms, plus a surviving pre-5.1
+`~/.clearbudget`) holds live user data: both databases, the saved UI
+settings (theme, remembered save-file location and any skipped update
+version) and the Remember me sidecar (`remembered_login.json`). Set
 `CLEARBUDGET_HOME` and every path the app resolves moves with it:
 
 ```powershell

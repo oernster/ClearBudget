@@ -15,6 +15,7 @@ Everything below this section explains how the code satisfies them.
 | The auth layer's surface stays where it is declared: identity and credentials never leak into budget infrastructure | `tests/structural/test_auth_structure.py` |
 | No source file exceeds 400 lines and none sits in the 381 to 399 danger band: a file refactored down from over the cap lands at 350 or below rather than stopping the moment it clears 400 | `tests/structural/test_loc_limits.py` (both halves) |
 | Only `shared/config.py` derives the real data directory. The suite never resolves it; the installer never so much as names it, so no test and no install can disturb live user data | `tests/structural/test_data_dir_isolation.py` (plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py`) |
+| The data-directory migration cannot lose data: resolution prefers the legacy `~/.clearbudget` while it exists (its disappearance is the completion signal), the copied tree verifies byte for byte before the old directory is removed and `main()` migrates before the single-instance lock, never under the override | `tests/shared/test_data_migration.py`, `tests/shared/test_config.py` and `tests/structural/test_data_dir_isolation.py::TestTheMigrationRunsFirstAtStartup` |
 | 100% line AND branch coverage over `clear_budget`, `main` and the Qt-free half of the setup program | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
 | An exported report adds up: `opening + net == close` for every month whose Paid/Received flags agree with the calendar. In the anchored month an item actioned early (or missed) moves the close off the totals by exactly that amount, because the series never charges twice what the recorded balance already contains | `tests/application/test_projection_series.py::test_opening_plus_net_equals_the_close` and `::test_a_bill_paid_early_moves_the_anchored_close` |
 | The exported report and the on-screen month graph can never disagree about a month they both cover, because both run the same day-by-day projection | `tests/application/test_projection_series.py::test_the_projection_agrees_with_the_month_graph` |
@@ -421,7 +422,7 @@ Key methods:
 
 ### Infrastructure Layer
 
-**Per-user database** (`~/.clearbudget/budget_<username>.db`):
+**Per-user database** (`budget_<username>.db` in the app data directory):
 - `Database(db_path)` - SQLite connection and schema management. `_schema.py`
   holds the baseline DDL; `_migrations.py` holds the numbered migrations that
   bring an existing database forward. A column is added only after reading
@@ -492,7 +493,7 @@ Key methods:
 
 Separate from budget infrastructure. Manages user identity and credentials.
 
-**Central users database** (`~/.clearbudget/users.db`):
+**Central users database** (`users.db` in the app data directory):
 - Single SQLite database shared across all users on the machine
 - `users` table: `id`, `username`, `password_hash` (bcrypt), `recovery_code_hash` (bcrypt), `is_admin`
 
@@ -642,7 +643,19 @@ holding each budget's slug and display name plus which one is active.
   the unsuffixed legacy filename, which is why naming budgets moved no data
 - `Config.budgets_index_path(username)` → `budgets_<safe_username>.json`
 - `Config.users_db_path()` → `users.db`
-- `Config.app_dir()` → `~/.clearbudget/`
+- `Config.app_dir()` → the app data directory: `%LOCALAPPDATA%\ClearBudget`
+  on Windows, `~/Library/Application Support/ClearBudget` on macOS,
+  `$XDG_DATA_HOME/clearbudget` (default `~/.local/share/clearbudget`) on
+  Linux. The pre-5.1 `~/.clearbudget` is PREFERRED for as long as it exists:
+  its disappearance is the startup migration's completion signal
+  (`shared/data_migration.py`), so a failed or interrupted move leaves the
+  app running on the data it always had and retries next launch. The
+  migration renames the whole directory when it can (atomic on one volume);
+  otherwise it copies to a staging directory, verifies byte for byte,
+  adopts the copy and only then retires the old directory, deleting the
+  backup once the move has verified. A target already holding a `users.db`
+  is a conflict (a downgraded launch recreated legacy data) and nothing is
+  merged; the app keeps running on the legacy directory
 - Every one of those derives from ONE function, `_resolve_app_dir()`, which
   honours the `CLEARBUDGET_HOME` environment variable when it is set and
   non-blank. The app never sets it: it exists so that anything running OUTSIDE
@@ -1368,7 +1381,7 @@ renderings of the same figures to hold in step. Every month any page shows
     while the app was closed are folded into the bank balance; while the app is
     open, a MainWindow timer re-runs the bank fold just after each local midnight
   - Cross-platform single-instance lock: a named kernel mutex on Windows, an
-    exclusive `fcntl` advisory lock on a file in `~/.clearbudget/` on macOS and Linux
+    exclusive `fcntl` advisory lock on a file in the app data directory on macOS and Linux
   - Launch monitor (`launch_screen.init`): resolved ONCE at startup as the screen
     under the mouse pointer, falling back to the primary screen when the pointer is
     on none. Everything the session opens (the login dialog, the main window) is
@@ -1410,7 +1423,8 @@ renderings of the same figures to hold in step. Every month any page shows
   (`theme_qss.build_qss(tokens)`) fed by semantic token dicts in
   `theme_tokens.py`; the sun/moon toggle in every nav tray's icon run
   switches them at runtime (`theme.toggle_theme`) and the choice persists in
-  `~/.clearbudget/ui_settings.json`, applying from the login screen onward
+  `ui_settings.json` in the app data directory, applying from the login
+  screen onward
 - The toggle's emoji is sized to MATCH the nav icon, both from
   `format_helpers.nav_glyph_height` (the Previous button's height). One source
   because the two are built in different functions, which is how they drifted
@@ -1494,7 +1508,7 @@ renderings of the same figures to hold in step. Every month any page shows
   leaves the button box, which is why the year pickers showed two empty
   rectangles (measured: the up button was 366 pixels of one flat colour).
   `image: url(...)` is Qt's only stylesheet route to a glyph there. The images
-  are drawn into `~/.clearbudget/arrows/` and cached under a filename made from
+  are drawn into the app data directory's `arrows/` and cached under a filename made from
   the colour and size, so each theme gets its own without any being shipped,
   hand-maintained or added to the packaging scripts. A `QProxyStyle` drawing
   `PE_IndicatorSpinUp` is NOT an alternative: once a global stylesheet is set,
@@ -1617,11 +1631,17 @@ window = MainWindow(
 
 ## Database Locations
 
-| File | Path | Purpose |
-|------|------|---------|
-| `users.db` | `~/.clearbudget/users.db` | Central user accounts (all users) |
-| `budget_<username>.db` | `~/.clearbudget/budget_<username>.db` | Per-user budget data |
-| `remembered_login.json` | `~/.clearbudget/remembered_login.json` | The Remember me username (the password is in the OS credential store, never on disk) |
+All files live in the app data directory: `%LOCALAPPDATA%\ClearBudget` on
+Windows, `~/Library/Application Support/ClearBudget` on macOS,
+`$XDG_DATA_HOME/clearbudget` (default `~/.local/share/clearbudget`) on
+Linux; a surviving pre-5.1 `~/.clearbudget` is still used until its
+startup migration completes.
+
+| File | Purpose |
+|------|---------|
+| `users.db` | Central user accounts (all users) |
+| `budget_<username>.db` | Per-user budget data |
+| `remembered_login.json` | The Remember me username (the password is in the OS credential store, never on disk) |
 
 Username is sanitised to lowercase alphanumeric + `_-` before use in filename.
 
@@ -1643,8 +1663,10 @@ platform differences are isolated to a few well-defined seams:
 
 - **Single-instance lock**: per-OS implementation in `main.py` (named kernel mutex
   on Windows, `fcntl` advisory file lock on macOS and Linux).
-- **Data directory**: `Config.app_dir()` is `~/.clearbudget/` on every platform;
-  all databases and the lock file live there.
+- **Data directory**: `Config.app_dir()` resolves to each platform's
+  conventional application-data location (see Database Locations); all
+  databases and the lock file live there. A pre-5.1 `~/.clearbudget` is
+  migrated at startup by `shared/data_migration.py`.
 - **File-dialog defaults**: `ui_paths` uses Qt `QStandardPaths`, so dialogs open
   in the correct per-OS location.
 - **Runtime assets**: `shared/resources.py` discovers icons, the splash image
@@ -1738,7 +1760,7 @@ a product decision rather than a packaging one.
 
 **The installer never touches user data.** Install, repair, reinstall and
 uninstall all deal in program files, shortcuts and the registry entry only, so
-`~/.clearbudget` survives every one of them and a reinstall carries on from
+the data directory survives every one of them and a reinstall carries on from
 where the user left off, saved theme included. Uninstall offers no option to
 delete it: that directory holds every account and every user's budget, deleting
 it is irreversible and an installer is the wrong place to offer it. Anyone who
@@ -1818,9 +1840,10 @@ an option that read as "remove my data" removed nothing.
   danger band, so a file is never shaved to just under the cap only to break
   it again on the next edit
 - `test_auth_structure.py` - Auth layer structure validation
-- `test_data_dir_isolation.py` - the suite cannot resolve the real
-  `~/.clearbudget`, only `shared/config.py` derives it and the installer never
-  names it. A `conftest.py` autouse fixture points `CLEARBUDGET_HOME` at a
+- `test_data_dir_isolation.py` - the suite cannot resolve the real data
+  directory (legacy or platform), only `shared/config.py` derives it, the
+  installer never names it and `main()` migrates before the lock, never
+  under the override. A `conftest.py` autouse fixture points `CLEARBUDGET_HOME` at a
   scratch directory for EVERY test and these assert that it is in force
 
 ## Code Quality Standards

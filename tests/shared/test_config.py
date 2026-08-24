@@ -1,10 +1,41 @@
 """Tests for Config."""
 
+import os
 from pathlib import Path
 
 import pytest
 
-from clear_budget.shared.config import APP_DIR_ENV_VAR, Config, _safe_username
+from clear_budget.shared.config import (
+    APP_DIR_ENV_VAR,
+    Config,
+    _choose_app_dir,
+    _platform_app_dir,
+    _safe_username,
+)
+
+
+def _expected_real_dir() -> Path:
+    """The real directory, derived INDEPENDENTLY of the code under test.
+
+    The resolution rule prefers the legacy directory while it exists (its
+    disappearance is the migration's completion signal), so the expectation
+    depends on this machine's state; replicating the rule here keeps the
+    test true before and after the machine migrates.
+    """
+    import sys
+
+    legacy = Path.home() / ".clearbudget"
+    if legacy.is_dir():
+        return legacy
+    if sys.platform == "win32":
+        base = (os.environ.get("LOCALAPPDATA") or "").strip()
+        root = Path(base) if base else Path.home() / "AppData" / "Local"
+        return root / "ClearBudget"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "ClearBudget"
+    xdg = (os.environ.get("XDG_DATA_HOME") or "").strip()
+    root = Path(xdg) if xdg else Path.home() / ".local" / "share"
+    return root / "clearbudget"
 
 
 class TestConfigDefault:
@@ -59,10 +90,8 @@ class TestConfigUsersDatabasePath:
 class TestConfigAppDir:
     """Test Config.app_dir()."""
 
-    def test_app_dir_is_clearbudget_folder(self, real_app_dir) -> None:
-        d = Config.app_dir()
-        assert d.name == ".clearbudget"
-        assert d.parent == Path.home()
+    def test_app_dir_follows_the_resolution_rule(self, real_app_dir) -> None:
+        assert Config.app_dir() == _expected_real_dir()
 
 
 class TestConfigAppDirOverride:
@@ -81,19 +110,90 @@ class TestConfigAppDirOverride:
         assert Config.default().db_path.parent == tmp_path
 
     def test_no_override_uses_the_real_directory(self, real_app_dir) -> None:
-        assert Config.app_dir() == Path.home() / ".clearbudget"
+        assert Config.app_dir() == _expected_real_dir()
 
     @pytest.mark.parametrize("blank", ["", "   ", "\t"])
     def test_a_blank_override_is_ignored(self, blank, monkeypatch) -> None:
         """An empty variable means unset, not "write to the current directory"."""
         monkeypatch.setenv(APP_DIR_ENV_VAR, blank)
-        assert Config.app_dir() == Path.home() / ".clearbudget"
+        assert Config.app_dir() == _expected_real_dir()
 
     def test_the_override_is_read_at_call_time(self, tmp_path, monkeypatch) -> None:
         """Not cached at import; otherwise a test could never redirect it."""
         first = Config.app_dir()
         monkeypatch.setenv(APP_DIR_ENV_VAR, str(tmp_path / "elsewhere"))
         assert Config.app_dir() != first
+
+
+class TestPlatformAppDir:
+    """Every platform branch of the conventional-directory rule."""
+
+    def test_windows_uses_localappdata(self) -> None:
+        d = _platform_app_dir(platform="win32", env={"LOCALAPPDATA": r"C:\LAD"})
+        assert d == Path(r"C:\LAD") / "ClearBudget"
+
+    @pytest.mark.parametrize("env", [{}, {"LOCALAPPDATA": "   "}])
+    def test_windows_falls_back_when_localappdata_is_absent(self, env) -> None:
+        d = _platform_app_dir(platform="win32", env=env)
+        assert d == Path.home() / "AppData" / "Local" / "ClearBudget"
+
+    def test_macos_uses_application_support(self) -> None:
+        d = _platform_app_dir(platform="darwin", env={})
+        assert d == Path.home() / "Library" / "Application Support" / "ClearBudget"
+
+    def test_linux_honours_xdg_data_home(self, tmp_path) -> None:
+        d = _platform_app_dir(platform="linux", env={"XDG_DATA_HOME": str(tmp_path)})
+        assert d == tmp_path / "clearbudget"
+
+    @pytest.mark.parametrize("env", [{}, {"XDG_DATA_HOME": "   "}])
+    def test_linux_defaults_to_local_share(self, env) -> None:
+        d = _platform_app_dir(platform="linux", env=env)
+        assert d == Path.home() / ".local" / "share" / "clearbudget"
+
+    def test_defaults_read_the_running_platform(self) -> None:
+        assert _platform_app_dir() == _platform_app_dir(platform=None, env=None)
+
+
+class TestChooseAppDir:
+    """The resolution rule: override, then a still-present legacy, then new."""
+
+    def test_the_override_wins_outright(self, tmp_path) -> None:
+        legacy = tmp_path / "legacy"
+        legacy.mkdir()
+        chosen = _choose_app_dir(
+            override=str(tmp_path / "override"),
+            legacy=legacy,
+            platform_dir=tmp_path / "platform",
+        )
+        assert chosen == tmp_path / "override"
+
+    def test_a_surviving_legacy_directory_is_preferred(self, tmp_path) -> None:
+        """Its disappearance is the migration's completion signal, so a failed
+        move keeps the app on the data it always had."""
+        legacy = tmp_path / "legacy"
+        legacy.mkdir()
+        chosen = _choose_app_dir(
+            override="", legacy=legacy, platform_dir=tmp_path / "platform"
+        )
+        assert chosen == legacy
+
+    def test_no_legacy_means_the_platform_directory(self, tmp_path) -> None:
+        chosen = _choose_app_dir(
+            override="",
+            legacy=tmp_path / "gone",
+            platform_dir=tmp_path / "platform",
+        )
+        assert chosen == tmp_path / "platform"
+
+
+class TestConfigMigrationPaths:
+    """The two paths the startup migration is handed."""
+
+    def test_legacy_app_dir_is_the_dot_directory(self) -> None:
+        assert Config.legacy_app_dir() == Path.home() / ".clearbudget"
+
+    def test_platform_app_dir_ignores_the_legacy_preference(self) -> None:
+        assert Config.platform_app_dir() == _platform_app_dir()
 
 
 class TestSafeUsername:

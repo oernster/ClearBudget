@@ -124,9 +124,11 @@ section "Writing packaging helpers"
 mkdir -p packaging
 
 # site-packages path matches the runtime's Python version.  ClearBudget writes
-# its data under ~/.clearbudget (see clear_budget/shared/config.py), which the
-# --filesystem=home permission below makes writable, so no user-dirs override
-# env var is needed.
+# its data under XDG_DATA_HOME (the sandbox's own data dir; a surviving
+# pre-5.1 ~/.clearbudget is migrated at startup, see
+# clear_budget/shared/config.py and shared/data_migration.py); the
+# --filesystem=home permission below keeps both reachable, so no user-dirs
+# override env var is needed.
 cat > packaging/clearbudget-launcher.sh <<LAUNCHER
 #!/bin/sh
 export LD_LIBRARY_PATH="/app/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
@@ -202,8 +204,9 @@ finish-args:
   # endpoint); without network access the sandbox blocks it and every check
   # reports unreachable.
   - --share=network
-  # ClearBudget stores its databases under ~/.clearbudget and reads/writes
-  # user-chosen files for import/export, so it needs home access.
+  # ClearBudget reads/writes user-chosen files for import/export and must
+  # still reach a pre-5.1 ~/.clearbudget to migrate it, so it needs home
+  # access.
   - --filesystem=home
   # Remember me stores the password in the desktop keyring via the Secret
   # Service DBus API; without this the sandbox blocks the keychain and the
