@@ -1,5 +1,9 @@
 """Narrative-building helpers for SolvencyPanel - extracted for LOC limit."""
 
+from clear_budget.application.services._month_walk import (
+    LOW_AT_START,
+    walk_month,
+)
 from clear_budget.ui import theme
 from clear_budget.ui.theme_tokens import (
     STATE_AT_RISK,
@@ -17,7 +21,8 @@ _CAUTION_BALANCE_PENCE = 50000
 _MONTHS_COVERAGE_FOR_SAFE = 2
 # Sentinel day for a low that sits at the opening balance, before any event.
 # Days of the month are 1-based, so 0 cannot collide with a real one.
-_LOW_AT_START = 0
+# Re-exported from the walk that owns it, so the two cannot drift.
+_LOW_AT_START = LOW_AT_START
 
 
 class SolvencyPanelNarrativeMixin:
@@ -141,48 +146,14 @@ class SolvencyPanelNarrativeMixin:
 
     @staticmethod
     def _walk_month(opening_pence: int, summary) -> dict:
-        """Simulate one month day by day and report what it did.
+        """The month's simulation, now owned by the application layer.
 
-        The numeric core of a month's story, separated from the telling of it
-        so the full narrative and the shorter assumed-income line are two
-        renderings of ONE simulation rather than two simulations that could
-        disagree about the same month.
+        Kept as a method because every caller here reads it through `self`;
+        also because the Reserves page must read the SAME walk: two pages
+        agreeing about a month is a property of there being one simulation,
+        never of two being written carefully.
         """
-        events = []
-        for inc in summary.income_sources:
-            events.append((inc.day_of_month or 1, inc.amount.pence, inc.name))
-        for bill in summary.bills:
-            if bill.payment_method_id == 1:
-                events.append((bill.day_of_month or 28, -bill.amount.pence, bill.name))
-        # Income before bills on same day (positive delta sorts first)
-        events.sort(key=lambda e: (e[0], -e[1]))
-
-        balance = opening_pence
-        min_balance = opening_pence
-        min_day = _LOW_AT_START
-        first_negative_day = None
-        rescue_event = None
-        for day, delta, name in events:
-            balance += delta
-            if balance < min_balance:
-                min_balance = balance
-                min_day = day
-            if balance < 0 and first_negative_day is None:
-                first_negative_day = day
-            if (
-                first_negative_day is not None
-                and rescue_event is None
-                and delta > 0
-                and balance >= 0
-            ):
-                rescue_event = (day, delta, name)
-        return {
-            "min_balance": min_balance,
-            "min_day": min_day,
-            "first_negative_day": first_negative_day,
-            "rescue_event": rescue_event,
-            "closing": balance,
-        }
+        return walk_month(opening_pence, summary)
 
     def _build_month_cashflow_summary(
         self,

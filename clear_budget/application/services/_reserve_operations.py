@@ -21,10 +21,42 @@ from clear_budget.domain.services.reserve_accrual import (
     natural_rate_pence,
     reserve_pence,
 )
+from clear_budget.application.services._month_walk import walk_month
 from clear_budget.domain.services._prorating import days_in_month
 from clear_budget.domain.services.reserve_floor import ReserveFloor
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
+
+
+@dataclass(frozen=True, slots=True)
+class ReserveMonthLine:
+    """Where one month lands once what it holds back is taken off its low.
+
+    The same shape the Recommendations page's "Where that leaves each month"
+    block uses, so the two pages read as one system. Every figure comes from
+    the one month walk the Solvency bank page reads, which is what makes the
+    two agree about a month rather than merely tend to.
+
+    Attributes:
+        year_month: The month being reported
+        low_pence: Its lowest balance, from the walk
+        low_day: The day that low falls on; zero means at the opening
+        floor_pence: What must stay in the account on that day, the buffer
+            and the commitments together
+        clear_pence: The low less the floor. Negative is a shortfall, which
+            is the one figure on the block the page paints red
+    """
+
+    year_month: YearMonth
+    low_pence: int
+    low_day: int
+    floor_pence: int
+    clear_pence: int
+
+    @property
+    def is_short(self) -> bool:
+        """Whether the month cannot cover what it has to hold back."""
+        return self.clear_pence < 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,6 +178,51 @@ class ReserveOperationsMixin:
             floor.at(date(year_month.year, year_month.month, day))
             for day in range(1, last + 1)
         ]
+
+    def get_reserve_month_lines(
+        self, *, months: int, today: date | None = None
+    ) -> list[ReserveMonthLine]:
+        """Where each of the next `months` months lands against its floor.
+
+        Read through the SAME walk the Solvency bank page reads, chained from
+        the same opening: this month's projected end, then each month opening
+        where the last one closed. Two pages that answer differently about one
+        month are worse than a page that says nothing, so there is one walk
+        and both call it.
+
+        The floor is taken on the BINDING day, the day the low falls on, for
+        the same reason Safe to Spend does: the tightest point of the month is
+        where the answer either holds or does not.
+        """
+        day = today if today is not None else date.today()  # noqa: DTZ011
+        current = YearMonth(year=day.year, month=day.month)
+        floor = self.get_reserve_floor()
+        balance = self.get_projected_month_end_balance_pence(
+            year_month=current,
+            summary=self.get_month_summary(year_month=current),
+        )
+        lines = []
+        cursor = current
+        for _ in range(months):
+            cursor = cursor.next_month()
+            summary = self.get_month_summary(year_month=cursor)
+            walk = walk_month(balance, summary)
+            low_day = walk["min_day"]
+            # Day zero means the low sits at the opening, before anything
+            # happened, so the floor is read on the month's first day.
+            binding = date(cursor.year, cursor.month, max(1, low_day))
+            floor_pence = floor.at(binding)
+            lines.append(
+                ReserveMonthLine(
+                    year_month=cursor,
+                    low_pence=walk["min_balance"],
+                    low_day=low_day,
+                    floor_pence=floor_pence,
+                    clear_pence=walk["min_balance"] - floor_pence,
+                )
+            )
+            balance = walk["closing"]
+        return lines
 
     def get_reserve_held_pence(self, *, year_month: YearMonth) -> int:
         """What the commitments were actually holding back when `year_month` ended.

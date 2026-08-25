@@ -17,6 +17,7 @@ no congratulation: a commitment is a bill that has not asked yet.
 
 from datetime import date
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -27,7 +28,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -37,13 +37,15 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.utils import reserves_text as copy
-from clear_budget.application.formatting import money_from_pence
 from clear_budget.ui.utils.format_helpers import (
-    MONTH_NAMES,
     build_centered_nav_header,
     nav_glyph_height,
 )
 from clear_budget.ui.utils.table_focus import keyboard_only_focus
+from clear_budget.ui.views._reserves_view_content import (
+    ReservesContentMixin,
+    month_name,
+)
 from clear_budget.ui.utils.view_buttons import build_view_buttons, ring_view_stops
 from clear_budget.ui.widgets._tray_buttons import (
     build_bank_button,
@@ -59,11 +61,7 @@ _TABLE_MIN_HEIGHT_PX = 160
 _ACTIVE_COLUMN = 7
 
 
-def _month_name(year: int, month: int) -> str:
-    return f"{MONTH_NAMES[month]} {year}"
-
-
-class ReservesView(QWidget):
+class ReservesView(ReservesContentMixin, QWidget):
     """What is being held back, with the obligations it is held for."""
 
     def __init__(self, budget_service: BudgetService, current_month: YearMonth) -> None:
@@ -87,7 +85,7 @@ class ReservesView(QWidget):
         self.info_btn = build_info_button(glyph_h)
         self.view_btns = build_view_buttons(glyph_h)
         self.nav_header, self.month_label, self.theme_btn = build_centered_nav_header(
-            _month_name(self._current_month.year, self._current_month.month),
+            month_name(self._current_month.year, self._current_month.month),
             prev_btn=self.prev_btn,
             next_btn=self.next_btn,
             leading=(
@@ -160,6 +158,15 @@ class ReservesView(QWidget):
         button_row.addStretch(1)
         layout.addLayout(button_row)
 
+        self.where_title = QLabel(copy.SECTION_WHERE)
+        self.where_title.setObjectName(label_roles.SECTION_TITLE)
+        layout.addWidget(self.where_title)
+        self.where_label = QLabel("")
+        self.where_label.setObjectName(label_roles.BODY_DETAIL)
+        self.where_label.setWordWrap(True)
+        self.where_label.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(self.where_label)
+
         self.everyday_title = QLabel(copy.SECTION_EVERYDAY)
         self.everyday_title.setObjectName(label_roles.SECTION_TITLE)
         layout.addWidget(self.everyday_title)
@@ -189,70 +196,22 @@ class ReservesView(QWidget):
     def refresh(self) -> None:
         """Rebuild every figure from the service."""
         enabled, buffer_amount = self.budget_service.get_recommendation_buffer()
+        # Signals off while the stored figure is put back on screen. Ticking
+        # the box fires the same handler a USER'S tick does. On the first
+        # build it fired before the amount beside it had been filled in: the
+        # handler read an empty field, made it zero and wrote that over the
+        # stored buffer. Opening the page erased the setting it came to show.
+        self.buffer_check.blockSignals(True)
         self.buffer_check.setChecked(enabled)
+        self.buffer_check.blockSignals(False)
         self.buffer_edit.setText(f"{buffer_amount.pence / 100:.2f}")
         self.buffer_edit.setEnabled(enabled)
 
         self._rows = self.budget_service.get_reserve_rows()
         self._fill_table()
         self._fill_verdict()
+        self._fill_where()
 
-    def _fill_verdict(self) -> None:
-        """The two lines that say what is held back and what it costs."""
-        count = len(self._rows)
-        if count == 0:
-            self.verdict_label.setText(copy.EMPTY_HEADING)
-            self.cost_label.setText("")
-            self.empty_label.setText(f"{copy.EMPTY_BODY}\n\n{copy.EMPTY_PROMPT}")
-            self.empty_label.setVisible(True)
-            self.table.setVisible(False)
-            self.section_label.setVisible(False)
-            self.edit_btn.setEnabled(False)
-            self.delete_btn.setEnabled(False)
-            return
-        total = self.budget_service.get_reserved_today_pence()
-        self.verdict_label.setText(
-            copy.verdict_line(total=money_from_pence(total), count=count)
-        )
-        self.cost_label.setText(
-            copy.cost_line(
-                amount=money_from_pence(self.budget_service.get_reserve_cost_pence())
-            )
-        )
-        self.empty_label.setVisible(False)
-        self.table.setVisible(True)
-        self.section_label.setVisible(True)
-        self.edit_btn.setEnabled(True)
-        self.delete_btn.setEnabled(True)
-
-    def _fill_table(self) -> None:
-        """One row per commitment, in the order the service gave them."""
-        self.table.setRowCount(len(self._rows))
-        for index, row in enumerate(self._rows):
-            commitment = row.commitment
-            due = commitment.due_date
-            values = (
-                commitment.name,
-                money_from_pence(commitment.amount.pence),
-                f"{due.day} {MONTH_NAMES[due.month][:3]} {due.year}",
-                copy.repeats_label(months=commitment.recurrence.months),
-                money_from_pence(row.monthly_pence),
-                money_from_pence(row.held_pence),
-                money_from_pence(row.outstanding_pence),
-                "Yes" if commitment.active else "No",
-            )
-            for column, text in enumerate(values):
-                item = QTableWidgetItem(text)
-                self.table.setItem(index, column, item)
-            if row.is_steep:
-                note = copy.steep_note(
-                    monthly=money_from_pence(row.monthly_pence),
-                    natural=money_from_pence(row.natural_pence),
-                    month_name=MONTH_NAMES[due.month],
-                )
-                self.table.item(index, 4).setToolTip(note)
-
-    # ---- actions ------------------------------------------------------------
     def _save_buffer(self) -> None:
         """Store the buffer as typed; an unreadable figure is left alone."""
         self.buffer_edit.setEnabled(self.buffer_check.isChecked())
@@ -306,7 +265,7 @@ class ReservesView(QWidget):
     def set_month(self, year_month: YearMonth) -> None:
         """Follow the shared month label like every other view."""
         self._current_month = year_month
-        self.month_label.setText(_month_name(year_month.year, year_month.month))
+        self.month_label.setText(month_name(year_month.year, year_month.month))
 
     def on_month_summary_updated(self, *_args) -> None:
         """Recompute when a bill or income changes on another view."""

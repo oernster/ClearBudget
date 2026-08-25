@@ -142,3 +142,24 @@ ARCHIVE_COLUMN = "Set aside"
 def archive_detail_line(*, amount: str) -> str:
     """The reserve as the archived month's detail dialog states it."""
     return f"Set aside at month end: {amount}"
+
+
+# ---- where that leaves each month --------------------------------------------
+# Mirrors the Recommendations page's block of the same name, in structure and
+# in wording, so the two pages read as one system rather than two opinions.
+# Every figure comes from the one month walk the Solvency bank page reads.
+SECTION_WHERE = "Where that leaves each month"
+
+
+def month_line(
+    *, month_name: str, low: str, day: int, floor: str, clear: str, short: bool
+) -> str:
+    """One month: its low, what it must hold on that day, what is left over.
+
+    "short by" rather than a negative figure, because a minus sign in front of
+    money is read as a balance and this is not one: it is the gap between what
+    the month has at its tightest and what it has already promised.
+    """
+    where = f"on day {day}" if day else "at the start"
+    ending = f"short by {clear}" if short else f"{clear} free"
+    return f"{month_name}: low of {low} {where}, {floor} set aside, {ending}."

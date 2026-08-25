@@ -29,6 +29,7 @@ from clear_budget.infrastructure.sqlite.payment_method_repository import (
 )
 
 AUGUST = YearMonth(year=2026, month=8)
+_TODAY = date(2026, 8, 15)
 NOVEMBER = YearMonth(year=2026, month=11)
 FULL_PENCE = 62000
 
@@ -229,3 +230,91 @@ class TestWhatAMonthActuallyHeld:
         without = service.get_reserve_held_pence(year_month=AUGUST)
         service.set_recommendation_buffer(enabled=True, amount=Amount(pence=99999))
         assert service.get_reserve_held_pence(year_month=AUGUST) == without
+
+
+class TestWhereThatLeavesEachMonth:
+    """The Reserves page's per-month block, plus the invariant behind it.
+
+    Brief section 9, invariant 7: the Reserves page's per-month figures equal
+    the Solvency bank page's for the same months. It holds by construction
+    rather than by care, because both read the one month walk from the one
+    opening; these tests are what stops that quietly ceasing to be true.
+    """
+
+    def test_it_returns_one_line_per_month_asked_for(self, conn):
+        lines = _service(conn).get_reserve_month_lines(months=3, today=_TODAY)
+        assert len(lines) == 3
+
+    def test_the_months_start_after_the_current_one(self, conn):
+        """The current month is mostly behind or committed; ahead is the point."""
+        lines = _service(conn).get_reserve_month_lines(months=2, today=_TODAY)
+        assert [line.year_month.month for line in lines] == [9, 10]
+
+    def test_with_nothing_set_aside_the_floor_is_the_buffer(self, conn):
+        service = _service(conn)
+        service.set_recommendation_buffer(enabled=True, amount=Amount(pence=15000))
+        for line in service.get_reserve_month_lines(months=2, today=_TODAY):
+            assert line.floor_pence == 15000
+
+    def test_a_commitment_lifts_the_floor_above_the_buffer(self, conn):
+        service = _service(conn)
+        service.set_recommendation_buffer(enabled=True, amount=Amount(pence=15000))
+        service.add_commitment(commitment=_commitment())
+        for line in service.get_reserve_month_lines(months=2, today=_TODAY):
+            assert line.floor_pence > 15000
+
+    def test_what_is_clear_is_the_low_less_the_floor(self, conn):
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        for line in service.get_reserve_month_lines(months=3, today=_TODAY):
+            assert line.clear_pence == line.low_pence - line.floor_pence
+
+    def test_a_month_that_cannot_cover_its_floor_reads_as_short(self, conn):
+        service = _service(conn)
+        service.set_recommendation_buffer(enabled=True, amount=Amount(pence=99_999_00))
+        for line in service.get_reserve_month_lines(months=1, today=_TODAY):
+            assert line.is_short
+            assert line.clear_pence < 0
+
+    def test_a_month_that_covers_it_does_not(self, conn):
+        service = _service(conn)
+        for line in service.get_reserve_month_lines(months=1, today=_TODAY):
+            assert not line.is_short
+
+    def test_invariant_seven_the_lows_match_the_solvency_bank_page(self, conn):
+        """The same months, the same lows, the same days they fall on.
+
+        Solvency chains its forward months from this month's projected end
+        through the same walk. Reading them side by side is the only way to
+        know the two pages agree rather than merely look as though they do.
+        """
+        from clear_budget.application.services._month_walk import walk_month
+
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        lines = service.get_reserve_month_lines(months=3, today=_TODAY)
+
+        current = YearMonth(year=_TODAY.year, month=_TODAY.month)
+        balance = service.get_projected_month_end_balance_pence(
+            year_month=current,
+            summary=service.get_month_summary(year_month=current),
+        )
+        cursor = current
+        for line in lines:
+            cursor = cursor.next_month()
+            walk = walk_month(balance, service.get_month_summary(year_month=cursor))
+            assert line.year_month == cursor
+            assert line.low_pence == walk["min_balance"]
+            assert line.low_day == walk["min_day"]
+            balance = walk["closing"]
+
+    def test_the_floor_is_read_on_the_day_the_low_falls(self, conn):
+        """The tightest point of the month is where the answer holds or does not."""
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        floor = service.get_reserve_floor()
+        for line in service.get_reserve_month_lines(months=3, today=_TODAY):
+            binding = date(
+                line.year_month.year, line.year_month.month, max(1, line.low_day)
+            )
+            assert line.floor_pence == floor.at(binding)
