@@ -1,4 +1,4 @@
-"""The tab strip's icons: six bundled images, matched in size.
+"""The view strip's icons: seven bundled images, matched in size.
 
 The primary view buttons carry pictures rather than words. The words are not
 gone, they moved into the tooltips, so the strip still names itself to anyone

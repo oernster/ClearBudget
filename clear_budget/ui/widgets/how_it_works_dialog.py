@@ -40,6 +40,7 @@ from clear_budget.ui.utils.view_buttons import (
     GRAPH_ICON,
     MONTHLY_BUDGET_ICON,
     RECOMMENDATIONS_ICON,
+    RESERVES_ICON,
     SOLVENCY_ICON,
 )
 from clear_budget.ui.widgets.auto_scroller import AutoScroller
@@ -101,7 +102,7 @@ def _body_html() -> str:
     return f"""\
 <h2>How ClearBudget Works</h2>
 
-<h3>The six views</h3>
+<h3>The seven views</h3>
 {_view_row(MONTHLY_BUDGET_ICON, "Monthly Budget",
           "this month's bills and income, plus what the balance does.", px)}
 {_view_row(SOLVENCY_ICON, "Solvency",
@@ -109,6 +110,13 @@ def _body_html() -> str:
           "behind the button at the top: the bank and Safe to Spend.", px)}
 {_view_row(CREDIT_CARDS_ICON, "Credit Cards",
           "one panel per card, with a six-month projection.", px)}
+{_view_row(RESERVES_ICON, "Reserves",
+          "money held back for a bill that has not arrived yet. Name what is "
+          "coming and it accrues a little each month, so Safe to Spend and "
+          "the graph stop counting that money as spendable. Nothing is moved "
+          "anywhere and no second account is assumed; what changes is only "
+          "what the app is willing to call spendable. The emergency buffer "
+          "the Recommendations page aims at is set here too.", px)}
 {_view_row(GRAPH_ICON, "Graph",
           "the month drawn day by day, as bars or as a line. The heading "
           "above the chart always names what is plotted. The tray's arrows "
