@@ -107,3 +107,26 @@ def solvency_set_aside_line(*, amount: str) -> str:
     is being held right now. The Reserves page answers the second question.
     """
     return f"Set aside this month: {amount}"
+
+
+# ---- the Monthly Budget's reminder row ---------------------------------------
+# A commitment due this month appears among the bills so the same obligation is
+# not entered a second time by hand. It is a reminder and must read as one: it
+# carries no total, it cannot be edited there and the money it names is already
+# being held back day by day on the Reserves page.
+MONTH_ROW_CATEGORY = "Reserved"
+
+
+def month_row_name(*, name: str) -> str:
+    """The commitment's name as the bills table shows it."""
+    return f"{name} (from Reserves)"
+
+
+def month_row_tooltip(*, name: str) -> str:
+    """Why the row is there and why its figure is not in the total."""
+    return (
+        f"{name} is already being set aside for on the Reserves page, a little"
+        " each month. It is shown here so the same thing is not entered twice."
+        " It is not counted in this month's bills and cannot be edited from"
+        " this table."
+    )

@@ -1,10 +1,19 @@
-"""MonthViewTableMixin - table population extracted from MonthView (LOC limit)."""
+"""MonthViewTableMixin - table population extracted from MonthView (LOC limit).
+
+The bills table also carries a REMINDER row for each commitment whose money
+leaves during the viewed month. It is not a bill and must never behave like
+one: it is inert to every edit path, it adds nothing to the total and it says
+in its own name where it came from. It exists so the same obligation is not
+entered twice, which would take the money once as a bill and again as a
+reserve.
+"""
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QTableWidgetItem
 
 from clear_budget.ui import theme
+from clear_budget.ui.utils import reserves_text
 from clear_budget.ui.utils.format_helpers import format_category
 
 _BANK_ACCOUNT_ID = 1
@@ -13,12 +22,27 @@ _EDITABLE = (
     | Qt.ItemFlag.ItemIsSelectable
     | Qt.ItemFlag.ItemIsEditable
 )
+# A reminder row can be read and nothing else: not edited, not ticked. The
+# flags are the first of two guards; `_get_bill_from_row` is the second, so a
+# path that never touches these flags still cannot mistake one for a bill.
+_READ_ONLY = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+
+# Marks a row as a commitment reminder rather than a bill. Read by
+# `_get_bill_from_row`, which is where every edit and delete path starts.
+COMMITMENT_ROLE = Qt.ItemDataRole.UserRole + 1
 
 
 def _ei(text: str) -> QTableWidgetItem:
     """Return an editable QTableWidgetItem."""
     item = QTableWidgetItem(text)
     item.setFlags(_EDITABLE)
+    return item
+
+
+def _ro(text: str) -> QTableWidgetItem:
+    """Return a read-only QTableWidgetItem, for a row that is not a bill."""
+    item = QTableWidgetItem(text)
+    item.setFlags(_READ_ONLY)
     return item
 
 
@@ -50,8 +74,13 @@ class MonthViewTableMixin:
         self.bills_table.setRowCount(0)
         self.bills_table.blockSignals(False)
         self.bills_table.blockSignals(True)
-        for row, bill in enumerate(self._sort_bills(summary.all_bills)):
+        bills = self._sort_bills(summary.all_bills)
+        for row, bill in enumerate(bills):
             self._add_bill_row(row, bill, card_map)
+        # After the bills rather than sorted among them: a reminder that reads
+        # as one of the rows around it is the confusion this exists to stop.
+        for offset, due in enumerate(self._commitments_due()):
+            self._add_commitment_row(len(bills) + offset, due)
         self.bills_table.blockSignals(False)
         self.income_table.blockSignals(True)
         self.income_table.setRowCount(0)
@@ -76,6 +105,43 @@ class MonthViewTableMixin:
         self.bills_table.setItem(row, 6, _checkbox_item(bill.skipped_for_month))
         self.bills_table.setItem(row, 7, _checkbox_item(bill.paid_for_month))
         self._apply_bill_row_style(row, bill, name_item)
+
+    def _commitments_due(self) -> list:
+        """The commitments whose money leaves during the viewed month."""
+        return self.view_model.budget_service.get_commitments_due_in(
+            year_month=self.view_model.current_month
+        )
+
+    def _add_commitment_row(self, row: int, due) -> None:
+        """One reminder row: read-only throughout, marked as not a bill.
+
+        Every cell is read-only, including the three the bills carry as
+        checkboxes: a tick here would say the commitment had been paid or
+        skipped, which is a claim only the Reserves page can make.
+        """
+        self.bills_table.insertRow(row)
+        self.bills_table.setVerticalHeaderItem(row, QTableWidgetItem("🔒"))
+        name_item = _ro(reserves_text.month_row_name(name=due.name))
+        name_item.setData(COMMITMENT_ROLE, True)
+        cells = [
+            name_item,
+            _ro(str(due.amount)),
+            _ro(reserves_text.MONTH_ROW_CATEGORY),
+            _ro(self._get_payment_method_label(_BANK_ACCOUNT_ID, {})),
+            _ro(str(due.day)),
+        ]
+        tooltip = reserves_text.month_row_tooltip(name=due.name)
+        colour = QColor(theme.colours()["info"])
+        for column, item in enumerate(cells):
+            item.setForeground(colour)
+            item.setToolTip(tooltip)
+            self.bills_table.setItem(row, column, item)
+        # The remaining columns are the bills' own state ticks. Blank rather
+        # than unticked: an empty box would invite a click that means nothing.
+        for column in range(len(cells), self.bills_table.columnCount()):
+            blank = _ro("")
+            blank.setToolTip(tooltip)
+            self.bills_table.setItem(row, column, blank)
 
     def _apply_bill_row_style(self, row: int, bill, name_item) -> None:
         if bill.skipped_for_month:

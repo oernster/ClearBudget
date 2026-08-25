@@ -15,6 +15,7 @@ from datetime import date
 
 from clear_budget.domain.entities.commitment import Commitment
 from clear_budget.domain.services.reserve_accrual import (
+    occurrence_at,
     accrued_pence,
     monthly_rate_pence,
     natural_rate_pence,
@@ -24,6 +25,26 @@ from clear_budget.domain.services._prorating import days_in_month
 from clear_budget.domain.services.reserve_floor import ReserveFloor
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
+
+
+@dataclass(frozen=True, slots=True)
+class DueCommitment:
+    """A commitment whose money actually leaves during one given month.
+
+    Carried to the Monthly Budget as a REMINDER, never as a bill: what it
+    costs is already held back day by day, so counting it among the month's
+    bills would take the same money twice. The page shows it so the same
+    obligation does not get entered a second time by hand.
+
+    Attributes:
+        name: The commitment's own name
+        amount: What leaves the account
+        day: Day of the month it falls due
+    """
+
+    name: str
+    amount: Amount
+    day: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +146,32 @@ class ReserveOperationsMixin:
             floor.at(date(year_month.year, year_month.month, day))
             for day in range(1, last + 1)
         ]
+
+    def get_commitments_due_in(self, *, year_month: YearMonth) -> list[DueCommitment]:
+        """Every commitment whose money leaves during `year_month`, by day.
+
+        Read from the live occurrence rather than the stored due date, so a
+        repeating commitment answers for the cycle this month actually sits
+        in. A commitment ended before the month has no occurrence, nor has
+        one that has not started by it, so either is simply absent.
+        """
+        opening = year_month.first_day()
+        due_here = []
+        for commitment in self.list_commitments():
+            # `closing` because the due day belongs to the cycle it closes:
+            # the question here is when the money goes, not what is held.
+            occurrence = occurrence_at(commitment, opening, closing=True)
+            if occurrence is None:
+                continue
+            due = occurrence.due
+            if (due.year, due.month) != (year_month.year, year_month.month):
+                continue
+            due_here.append(
+                DueCommitment(
+                    name=commitment.name, amount=commitment.amount, day=due.day
+                )
+            )
+        return sorted(due_here, key=lambda row: (row.day, row.name))
 
     def get_month_reserve_cost_pence(self, *, year_month: YearMonth) -> int:
         """What `year_month` has to set aside, for the whole-month arithmetic.

@@ -22,6 +22,7 @@ from clear_budget.ui.views._month_view_income_convert import (
 )
 from clear_budget.ui.views._month_view_table_mixin import (
     _BANK_ACCOUNT_ID,
+    COMMITMENT_ROLE,
     MonthViewTableMixin,
 )
 from clear_budget.ui.widgets.balance_dialog import BalanceDialog
@@ -216,10 +217,17 @@ class MonthView(
         )
 
     def _get_bill_from_row(self, row: int):
+        """The bill a table row stands for; None when the row is not one.
+
+        Every edit and delete path starts here, so a row that is not a bill
+        is refused once, in one place. The commitment reminders are the case
+        that matters: they carry no bill id, so answering with a bill that
+        merely shares an id would edit or delete the wrong thing entirely.
+        """
         if row < 0 or not self.view_model.month_summary:
             return None
         item = self.bills_table.item(row, 0)
-        if item is None:
+        if item is None or item.data(COMMITMENT_ROLE):
             return None
         bill_id = item.data(Qt.ItemDataRole.UserRole)
         return next(
