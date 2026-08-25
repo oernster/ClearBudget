@@ -14,12 +14,12 @@ from clear_budget.ui.utils.format_helpers import (
     nav_glyph_height,
 )
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
-from clear_budget.ui.utils.tab_icons import (
-    CREDIT_CARDS_TAB,
-    build_tab_buttons,
-    ring_tab_stops,
+from clear_budget.ui.utils.view_buttons import (
+    CREDIT_CARDS_VIEW,
+    build_view_buttons,
+    ring_view_stops,
     stops_before,
-    tab_button,
+    view_button,
 )
 from clear_budget.ui.widgets._tray_buttons import (
     build_budgets_button,
@@ -115,7 +115,7 @@ class SolvencyPanel(
         # The primary view buttons live in this tray, so every view builds its
         # own set; MainWindow wires them and keeps the current-view mark in
         # step across all four.
-        self.tab_btns = build_tab_buttons(_glyph_h)
+        self.view_btns = build_view_buttons(_glyph_h)
         self.nav_header, self.month_label, self.theme_btn = build_centered_nav_header(
             "May 2026",
             prev_btn=self.prev_btn,
@@ -127,8 +127,8 @@ class SolvencyPanel(
                 _sep,
                 self.bank_btn,
             ),
-            tabs=self.tab_btns[:-1],
-            pre_theme=(build_tray_separator(_glyph_h), self.tab_btns[-1]),
+            views=self.view_btns[:-1],
+            pre_theme=(build_tray_separator(_glyph_h), self.view_btns[-1]),
             trailing=(self.info_btn,),
         )
 
@@ -181,7 +181,7 @@ class SolvencyPanel(
         READING order, which with two stacked trays means the TOP tray first
         and the lower one after it, each left to right as drawn. A ring that
         disagrees with the drawing does not present as a wrong order, it
-        presents as a SKIPPED control: the user tabs past where a button
+        presents as a SKIPPED control: the user views past where a button
         visibly is and lands somewhere else entirely.
 
         The button for the view being shown is not in the list. It is a stop that could do
@@ -205,12 +205,12 @@ class SolvencyPanel(
         # of the five positions and dropped the Graph button out of this view's
         # ring completely, which presents as the ring jumping a button that is
         # plainly on screen.
-        tab_run = stops_before(
-            ring_tab_stops(self.tab_btns[:-1]),
-            tab_button(self.tab_btns, CREDIT_CARDS_TAB),
+        button_run = stops_before(
+            ring_view_stops(self.view_btns[:-1]),
+            view_button(self.view_btns, CREDIT_CARDS_VIEW),
             list(self.pilot_btns.values()),
         )
-        archive_stop = ring_tab_stops(self.tab_btns[-1:])
+        archive_stop = ring_view_stops(self.view_btns[-1:])
         return [
             self.prev_btn,
             self.next_btn,
@@ -218,7 +218,7 @@ class SolvencyPanel(
             self.save_btn,
             self.budgets_btn,
             self.bank_btn,
-            *tab_run,
+            *button_run,
             *archive_stop,
             self.theme_btn,
             self.info_btn,

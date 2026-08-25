@@ -42,7 +42,7 @@ from clear_budget.ui.utils.format_helpers import (
     build_centered_nav_header,
     nav_glyph_height,
 )
-from clear_budget.ui.utils.tab_icons import build_tab_buttons, ring_tab_stops
+from clear_budget.ui.utils.view_buttons import build_view_buttons, ring_view_stops
 from clear_budget.ui.utils.recommendation_text import panel_html
 from clear_budget.ui.views._recommendation_sections import build_sections
 from clear_budget.ui.widgets._tray_buttons import (
@@ -87,7 +87,7 @@ class RecommendationsView(QWidget):
         self.budgets_btn = build_budgets_button(_glyph_h)
         _sep, self.bank_btn = build_bank_button(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
-        self.tab_btns = build_tab_buttons(_glyph_h)
+        self.view_btns = build_view_buttons(_glyph_h)
         self.nav_header, self.month_label, self.theme_btn = build_centered_nav_header(
             _month_name(self._current_month.year, self._current_month.month),
             prev_btn=self.prev_btn,
@@ -99,8 +99,8 @@ class RecommendationsView(QWidget):
                 _sep,
                 self.bank_btn,
             ),
-            tabs=self.tab_btns[:-1],
-            pre_theme=(build_tray_separator(_glyph_h), self.tab_btns[-1]),
+            views=self.view_btns[:-1],
+            pre_theme=(build_tray_separator(_glyph_h), self.view_btns[-1]),
             trailing=(self.info_btn,),
         )
 
@@ -268,8 +268,8 @@ class RecommendationsView(QWidget):
     # ---- keyboard ring ------------------------------------------------------
     def nav_targets(self) -> list:
         """Ordered keyboard-ring stops: trays first, then the page's own."""
-        others = ring_tab_stops(self.tab_btns[:-1])
-        archive_stop = ring_tab_stops(self.tab_btns[-1:])
+        others = ring_view_stops(self.view_btns[:-1])
+        archive_stop = ring_view_stops(self.view_btns[-1:])
         return [
             self.prev_btn,
             self.next_btn,

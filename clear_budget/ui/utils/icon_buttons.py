@@ -1,6 +1,6 @@
 """Icon buttons for the trays: bundled PICTURES and emoji, matched in size.
 
-`tab_icons` does this for the tab strip, at the tab run's own scale. This is
+`view_buttons` does this for the button run, at the run's own scale. This is
 the same idea for the controls that are not view buttons: the tray's Bank Account
 button and the Graph page's bank/cards switch, both of which sit beside
 emoji buttons and have to agree with them on height.
@@ -26,8 +26,8 @@ from __future__ import annotations
 # eight seconds to appear, six of them here. Measured, not estimated.
 #
 # Qt objects, so this cannot be a functools cache built at import time: it
-# needs a QApplication alive. `tab_icons` caches the same way for the same
-# reason; that one was written first, which is why the tab strip was never
+# needs a QApplication alive. `view_buttons` caches the same way for the same
+# reason; that one was written first, which is why the button run was never
 # the slow part.
 _PIXMAP_CACHE: dict[tuple[str, int, int], object] = {}
 
@@ -55,10 +55,10 @@ def _build_pixmap(spec: str, height_px: int, bottom_pad_px: int):
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 
-    from clear_budget.shared.resources import find_tab_icon_path
+    from clear_budget.shared.resources import find_nav_icon_path
     from clear_budget.ui.utils.glyph_metrics import opaque_bounding_rect
 
-    path = find_tab_icon_path(spec)
+    path = find_nav_icon_path(spec)
     if path is None:
         return None
     image = QImage(str(path))

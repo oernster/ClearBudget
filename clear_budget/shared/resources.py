@@ -52,7 +52,7 @@ _SPLASH_NAMES = _both_cases("256")
 # The view-button artwork, one file per view that carries a picture rather than a
 # glyph. Looked up by filename through the same roots as every other asset, so
 # a frozen build finds them wherever the packaging step staged them.
-_TAB_ICON_NAMES = frozenset(
+_VIEW_ICON_NAMES = frozenset(
     (
         "monthlybudget.png",
         "solvency.png",
@@ -242,14 +242,14 @@ def iter_qt_window_icon_candidates(*, project_root: Path | None = None) -> list[
     )
 
 
-def find_tab_icon_path(name: str, *, project_root: Path | None = None) -> Path | None:
+def find_nav_icon_path(name: str, *, project_root: Path | None = None) -> Path | None:
     """Locate one of the view-button images; None if it is not bundled.
 
     Restricted to the names this application ships: the caller passes a
     filename and a filename is not something a resource lookup should take on
     trust, however local the call site is today.
     """
-    if name not in _TAB_ICON_NAMES:
+    if name not in _VIEW_ICON_NAMES:
         return None
     exe_dir = _exe_dir()
     roots = [

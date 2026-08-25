@@ -14,12 +14,12 @@ from clear_budget.ui import ui_scale
 from clear_budget.ui._theme_controls import control_qss, widget_extras_qss
 from clear_budget.ui._theme_inputs import combo_qss, input_qss
 from clear_budget.ui._theme_menus import menu_qss
-from clear_budget.ui._theme_tabs import TAB_BAR_LEFT_INSET_PX, tab_qss
+from clear_budget.ui._theme_pane import TAB_BAR_LEFT_INSET_PX, pane_qss
 from clear_budget.ui.theme_tokens import STATE_SAFE
 
 SCROLLBAR_WIDTH_PX = 8
 
-# TAB_BAR_LEFT_INSET_PX is re-exported from _theme_tabs, where it sits beside
+# TAB_BAR_LEFT_INSET_PX is re-exported from _theme_pane, where it sits beside
 # the rule that uses it. The pill geometry that used to be re-exported here
 # (margins, border width, corner radius) went with NavTabBar: it existed so the
 # cursor ring could be painted on exactly the pill the stylesheet drew; there
@@ -164,7 +164,7 @@ QMainWindow {{
     background-color: {t["window_bg"]};
 }}
 
-{tab_qss(t)}
+{pane_qss(t)}
 QGroupBox {{
     border: 1px solid {t["border"]};
     border-radius: 6px;

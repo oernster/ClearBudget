@@ -49,8 +49,8 @@ from clear_budget.version import __version__
 # Stages the sign-in screen's bar is divided into: the services, then one per
 # view, then the window's chrome.
 SERVICE_STAGES = 2
-TAB_STAGES = 6
-BUILD_STAGES = SERVICE_STAGES + TAB_STAGES + 1
+VIEW_STAGES = 6
+BUILD_STAGES = SERVICE_STAGES + VIEW_STAGES + 1
 
 
 def build_main_window(

@@ -13,7 +13,7 @@ from clear_budget.ui.utils.format_helpers import (
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.views._month_view_apply_prompt import MonthViewApplyPromptMixin
 from clear_budget.ui.views._month_view_balance_mixin import MonthViewBalanceMixin
-from clear_budget.ui.utils.tab_icons import ring_tab_stops
+from clear_budget.ui.utils.view_buttons import ring_view_stops
 from clear_budget.ui.views._month_view_builders import MonthViewBuilderMixin
 from clear_budget.ui.views._month_view_delete_mixin import MonthViewDeleteMixin
 from clear_budget.ui.views._month_view_edit_mixin import MonthViewEditMixin
@@ -146,7 +146,7 @@ class MonthView(
         READING order, which with two stacked trays means the TOP tray first
         and the lower one after it, each left to right as drawn. A ring that
         disagrees with the drawing does not present as a wrong order, it
-        presents as a SKIPPED control: the user tabs past where a button
+        presents as a SKIPPED control: the user views past where a button
         visibly is and lands somewhere else entirely.
 
         The button for the view being shown is not in the list. It is a stop that could do
@@ -157,8 +157,8 @@ class MonthView(
         # Archive was moved out of the button run to the right-hand group,
         # so the ring has to walk it there. A ring that disagrees with the
         # drawing reads as a SKIPPED control, not as a wrong order.
-        others = ring_tab_stops(self.tab_btns[:-1])
-        archive_stop = ring_tab_stops(self.tab_btns[-1:])
+        others = ring_view_stops(self.view_btns[:-1])
+        archive_stop = ring_view_stops(self.view_btns[-1:])
         return [
             self.prev_btn,
             self.next_btn,

@@ -6,7 +6,7 @@ one fails silently on its own. Drop the label and the tray simply has a gap;
 drop the mirror and the month cluster stops being centred on the window,
 drifting by half the name's width and by a different amount per account; drop
 the fill and every tray shows an empty space where a name should be, which is
-exactly what happened once already, because ScrollableTab lifts the header out
+exactly what happened once already, because ScrollableView lifts the header out
 of its view and the name was being set by searching the view.
 
 Asserted by source scan because the suite is deliberately Qt-free (see
@@ -22,7 +22,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 _HEADER = _ROOT / "clear_budget" / "ui" / "utils" / "nav_header.py"
 # The trays are filled in where the pages are built, which is here
 # since main_window was split at the LOC danger band.
-_WINDOW = _ROOT / "clear_budget" / "ui" / "_main_window_tabs.py"
+_WINDOW = _ROOT / "clear_budget" / "ui" / "_main_window_views.py"
 
 
 def _source(path: Path) -> str:

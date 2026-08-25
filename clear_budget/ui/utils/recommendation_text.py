@@ -1,6 +1,6 @@
 """Wording for the Recommendations page's moves section.
 
-Qt-free on purpose, like `tab_icons`: the sentences are pure string work, so
+Qt-free on purpose, like `view_buttons`: the sentences are pure string work, so
 they can be tested without a QApplication.
 
 The engine reasons per month and proposes the same retiming in every month

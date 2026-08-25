@@ -39,8 +39,8 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[2]
 _UI = _ROOT / "clear_budget" / "ui"
 _NAV_MIXIN = _UI / "_main_window_nav.py"
-_MAIN_WINDOW = _UI / "_main_window_tabs.py"
-_TAB_ICONS = _UI / "utils" / "tab_icons.py"
+_MAIN_WINDOW = _UI / "_main_window_views.py"
+_VIEW_ICONS = _UI / "utils" / "view_buttons.py"
 
 # Every view that draws a nav tray. All of them draw the SAME shortcuts, so a
 # view that skips one loses that shortcut on that view alone and nowhere else,
@@ -59,8 +59,8 @@ _RING_DECLARATIONS = {
     "_month_view_builders.py": _UI / "views" / "month_view.py",
 }
 
-_TABS_BUILDER = "build_tab_buttons"
-_TABS_ATTR = "tab_btns"
+_VIEWS_BUILDER = "build_view_buttons"
+_VIEWS_ATTR = "view_btns"
 _SINK = "_focus_sink"
 
 
@@ -114,8 +114,8 @@ def _string_constants(tree: ast.Module) -> dict[str, str]:
     return found
 
 
-def _tab_spec_labels() -> list[str]:
-    """The view names declared in `TAB_SPECS`, in strip order.
+def _view_spec_labels() -> list[str]:
+    """The view names declared in `VIEW_SPECS`, in strip order.
 
     A label may be a literal or a module constant naming one, since a view
     that has to name a view should not spell it a second time. An entry that
@@ -124,13 +124,13 @@ def _tab_spec_labels() -> list[str]:
     from the strip, which is the failure this guard exists to report
     truthfully.
     """
-    tree = _tree(_TAB_ICONS)
+    tree = _tree(_VIEW_ICONS)
     constants = _string_constants(tree)
     for node in ast.walk(tree):
         if not isinstance(node, ast.Assign):
             continue
         if not any(
-            isinstance(t, ast.Name) and t.id == "TAB_SPECS" for t in node.targets
+            isinstance(t, ast.Name) and t.id == "VIEW_SPECS" for t in node.targets
         ):
             continue
         labels = []
@@ -150,7 +150,7 @@ def _tab_spec_labels() -> list[str]:
 
 
 def _added_page_labels() -> list[str]:
-    """The page names passed to `tabs.addTab`, in the order they are added."""
+    """The page names passed to `views.addTab`, in the order they are added."""
     labels = []
     for node in ast.walk(_tree(_MAIN_WINDOW)):
         if not isinstance(node, ast.Call):
@@ -164,46 +164,46 @@ def _added_page_labels() -> list[str]:
     return labels
 
 
-def test_the_tab_strip_and_the_pages_are_the_same_list() -> None:
+def test_the_button_run_and_the_pages_are_the_same_list() -> None:
     """A view button's index IS the page index, so the two lists must match.
 
-    `_wire_tab_buttons` connects button `i` to `setCurrentIndex(i)`. A page
-    added in a different order from `TAB_SPECS` therefore sends every tray in
+    `_wire_view_buttons` connects button `i` to `setCurrentIndex(i)`. A page
+    added in a different order from `VIEW_SPECS` therefore sends every tray in
     the application to the wrong page, with nothing on screen looking wrong.
     """
-    specs = _tab_spec_labels()
+    specs = _view_spec_labels()
     pages = _added_page_labels()
-    assert specs, "TAB_SPECS could not be read, so this guard is checking nothing"
+    assert specs, "VIEW_SPECS could not be read, so this guard is checking nothing"
     assert specs == pages, (
         "the tab strip and the pages have drifted apart:\n"
-        f"  TAB_SPECS: {specs}\n"
+        f"  VIEW_SPECS: {specs}\n"
         f"  addTab   : {pages}\n"
         "every view button is wired to its page BY POSITION, so a mismatch "
         "points the tray at the wrong page rather than showing an error"
     )
 
 
-def test_every_tray_view_builds_the_tab_buttons() -> None:
+def test_every_tray_view_builds_the_view_buttons() -> None:
     """A tray without the button run is a page with no way out of itself."""
     for path in _TRAY_VIEWS:
-        assert _assigns_from_call(_tree(path), _TABS_ATTR, _TABS_BUILDER), (
-            f"{path.name} never assigns self.{_TABS_ATTR} from "
-            f"{_TABS_BUILDER}(), so that view cannot reach the others"
+        assert _assigns_from_call(_tree(path), _VIEWS_ATTR, _VIEWS_BUILDER), (
+            f"{path.name} never assigns self.{_VIEWS_ATTR} from "
+            f"{_VIEWS_BUILDER}(), so that view cannot reach the others"
         )
 
 
-def test_every_tray_view_rings_the_tab_buttons() -> None:
+def test_every_tray_view_rings_the_view_buttons() -> None:
     """The keyboard must reach the view buttons from every page, not just the mouse."""
     for path in _TRAY_VIEWS:
         ring_path = _RING_DECLARATIONS.get(path.name, path)
         stops = _self_attrs_returned_by(_tree(ring_path), "nav_targets")
-        assert _TABS_ATTR in stops, (
-            f"{ring_path.name}'s nav_targets() omits self.{_TABS_ATTR}, so the "
+        assert _VIEWS_ATTR in stops, (
+            f"{ring_path.name}'s nav_targets() omits self.{_VIEWS_ATTR}, so the "
             "keyboard cannot reach the view buttons that page draws"
         )
 
 
-def test_a_tab_switch_returns_focus_to_the_neutral_sink() -> None:
+def test_a_view_switch_returns_focus_to_the_neutral_sink() -> None:
     """`currentChanged` must reach a handler that focuses the sink."""
     tree = _tree(_NAV_MIXIN)
     handlers = set()
@@ -219,13 +219,13 @@ def test_a_tab_switch_returns_focus_to_the_neutral_sink() -> None:
                 if isinstance(arg, ast.Attribute):
                     handlers.add(arg.attr)
     assert handlers, (
-        f"{_NAV_MIXIN.name} never connects tabs.currentChanged, so a switch "
+        f"{_NAV_MIXIN.name} never connects views.currentChanged, so a switch "
         "leaves focus on whatever the new page offered first"
     )
     focuses_sink = any(
         _SINK in _self_attrs_returned_by(tree, name) for name in handlers
     )
     assert focuses_sink, (
-        "the tabs.currentChanged handler never touches "
+        "the views.currentChanged handler never touches "
         f"self.{_SINK}, so the new page does not start neutral"
     )

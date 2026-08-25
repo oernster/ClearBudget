@@ -1,7 +1,7 @@
 """Application-wide keyboard navigation - the Meridian ring for widgets.
 
 One event filter drives a single explicit focus ring: the menu-bar titles,
-then the active tab's stops (each view's nav_targets()). Tab and Right step
+then the active view's stops (each view's nav_targets()). Tab and Right step
 forward, Shift+Tab and Backtab and Left step back, both wrapping; the
 horizontal arrows are tested first so they step the ring everywhere, out of an
 open menu or out of a table. Up and Down stay internal to a stop that owns

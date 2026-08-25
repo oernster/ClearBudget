@@ -25,7 +25,7 @@ NAV_ICON_BTN_PADDING_PX = 0
 
 # Every glyph in the tray paints this multiple of the measured box. Slightly
 # over 1.0 because the view buttons' artwork is dense pictograms: at a height equal to
-# an emoji's they read as the smaller of the two. It lived in `tab_icons` and
+# an emoji's they read as the smaller of the two. It lived in `view_buttons` and
 # applied to the view buttons alone, which is what left the tray's own icons a third
 # smaller than the buttons beside them in the same band. It is the base now, so
 # every icon in the tray is sized through it and they end up equal.
@@ -57,7 +57,7 @@ def nav_icon_button_size(
 ) -> tuple[int, int]:
     """The (width, height) an emoji tray button takes to hold `glyph`.
 
-    Matched on HEIGHT and sized on WIDTH, which is the rule `tab_icons`
+    Matched on HEIGHT and sized on WIDTH, which is the rule `view_buttons`
     already applies to the picture buttons: a shared height is what puts a row
     of differently-shaped icons on one baseline, while a shared WIDTH just
     squeezes the wide ones.

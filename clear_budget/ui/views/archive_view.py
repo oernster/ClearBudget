@@ -16,9 +16,9 @@ from clear_budget.ui.utils.format_helpers import (
     build_centered_nav_header,
     nav_glyph_height,
 )
-from clear_budget.ui.utils.tab_icons import (
-    build_tab_buttons,
-    ring_tab_stops,
+from clear_budget.ui.utils.view_buttons import (
+    build_view_buttons,
+    ring_view_stops,
 )
 from clear_budget.ui.widgets._tray_buttons import (
     build_budgets_button,
@@ -59,7 +59,7 @@ class ArchiveView(QWidget):
         # The primary view buttons live in this tray, so every view builds its
         # own set; MainWindow wires them and keeps the current-view mark in
         # step across all four.
-        self.tab_btns = build_tab_buttons(_glyph_h)
+        self.view_btns = build_view_buttons(_glyph_h)
         self.nav_header, self.year_label, self.theme_btn = build_centered_nav_header(
             "",
             prev_btn=self.prev_year_btn,
@@ -71,8 +71,8 @@ class ArchiveView(QWidget):
                 _sep,
                 self.bank_btn,
             ),
-            tabs=self.tab_btns[:-1],
-            pre_theme=(build_tray_separator(_glyph_h), self.tab_btns[-1]),
+            views=self.view_btns[:-1],
+            pre_theme=(build_tray_separator(_glyph_h), self.view_btns[-1]),
             trailing=(self.info_btn,),
         )
 
@@ -146,7 +146,7 @@ class ArchiveView(QWidget):
         READING order, which with two stacked trays means the TOP tray first
         and the lower one after it, each left to right as drawn. A ring that
         disagrees with the drawing does not present as a wrong order, it
-        presents as a SKIPPED control: the user tabs past where a button
+        presents as a SKIPPED control: the user views past where a button
         visibly is and lands somewhere else entirely.
 
         The button for the view being shown is not in the list. It is a stop that could do
@@ -157,8 +157,8 @@ class ArchiveView(QWidget):
         # Archive was moved out of the button run to the right-hand group,
         # so the ring has to walk it there. A ring that disagrees with the
         # drawing reads as a SKIPPED control, not as a wrong order.
-        others = ring_tab_stops(self.tab_btns[:-1])
-        archive_stop = ring_tab_stops(self.tab_btns[-1:])
+        others = ring_view_stops(self.view_btns[:-1])
+        archive_stop = ring_view_stops(self.view_btns[-1:])
         return [
             self.prev_year_btn,
             self.next_year_btn,

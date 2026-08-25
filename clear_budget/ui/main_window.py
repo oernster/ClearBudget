@@ -12,7 +12,7 @@ from clear_budget.ui import ui_scale
 from clear_budget.ui._main_window_account import MainWindowAccountMixin
 from clear_budget.ui._main_window_menus import MainWindowMenuMixin
 from clear_budget.ui._main_window_nav import MainWindowNavMixin
-from clear_budget.ui._main_window_tabs import MainWindowTabsMixin
+from clear_budget.ui._main_window_views import MainWindowViewsMixin
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.ui.update_check import UpdateCheckController
@@ -29,7 +29,7 @@ class MainWindow(
     MainWindowAccountMixin,
     MainWindowMenuMixin,
     MainWindowNavMixin,
-    MainWindowTabsMixin,
+    MainWindowViewsMixin,
     QMainWindow,
 ):
     """Application main window with tabbed views."""

@@ -196,10 +196,10 @@ QPushButton#ThemeToggleButton:disabled {{
    only "the pointer or the keyboard is here".
 
    Marked through a dynamic property rather than an inline stylesheet, so a
-   live theme switch repaints it (see tab_icons.mark_current_tab, which
+   live theme switch repaints it (see view_buttons.mark_current_view, which
    repolishes). The property selector needs the value quoted; Qt matches it as
    a string, so an unquoted true silently never matches. */
-QPushButton#NavTabButton {{
+QPushButton#NavViewButton {{
     background: transparent;
     border: 2px solid transparent;
     border-radius: 6px;
@@ -212,16 +212,16 @@ QPushButton#NavTabButton {{
    ring's own vocabulary (hover and focus, red when disabled) and the current
    button can never be mistaken for a focused one. Only the background changes, so
    nothing reflows. */
-QPushButton#NavTabButton[currentTab="true"] {{
+QPushButton#NavViewButton[currentView="true"] {{
     background-color: {t["panel_bg"]};
 }}
 
-QPushButton#NavTabButton:enabled:hover,
-QPushButton#NavTabButton:enabled:focus {{
+QPushButton#NavViewButton:enabled:hover,
+QPushButton#NavViewButton:enabled:focus {{
     border: 2px solid {t["ring"]};
 }}
 
-QPushButton#NavTabButton:disabled {{
+QPushButton#NavViewButton:disabled {{
     border: 2px solid {t["danger"]};
 }}
 
@@ -230,12 +230,12 @@ QPushButton#NavTabButton:disabled {{
    nothing to say so. Only :focus, never :hover: the pointer is over this
    surface most of the time the app is open and a ring following the mouse
    around the page would be noise rather than a signal. */
-QScrollArea#TabScrollArea {{
+QScrollArea#ViewScrollArea {{
     border: 2px solid transparent;
     border-radius: 6px;
 }}
 
-QScrollArea#TabScrollArea:enabled:focus {{
+QScrollArea#ViewScrollArea:enabled:focus {{
     border: 2px solid {t["ring"]};
 }}
 

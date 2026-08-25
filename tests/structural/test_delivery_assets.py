@@ -15,7 +15,7 @@ asserted.
 `ClearBudget.spec` is deliberately absent from this list: it is gitignored, so
 it is not a shipped delivery path and would fail the test on a clean checkout.
 
-The list under test is `resources._TAB_ICON_NAMES`, which is the resolver's own
+The list under test is `resources._VIEW_ICON_NAMES`, which is the resolver's own
 allowlist. That is the point: an asset the app can load at runtime is exactly
 an asset a package has to carry, so the two cannot drift apart.
 """
@@ -26,10 +26,10 @@ from pathlib import Path
 
 import pytest
 
-from clear_budget.shared.resources import _TAB_ICON_NAMES
+from clear_budget.shared.resources import _VIEW_ICON_NAMES
 
 _ROOT = Path(__file__).resolve().parents[2]
-_ASSETS = sorted(_TAB_ICON_NAMES)
+_ASSETS = sorted(_VIEW_ICON_NAMES)
 
 
 def _text(name: str) -> str:

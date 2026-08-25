@@ -6,9 +6,9 @@ mapping every tray's copy of the view buttons onto the pages. Together they
 were what pushed that module into the LOC danger band
 (`tests/structural/test_loc_limits.py`).
 
-The pages are POSITIONAL. `_wire_tab_buttons` hands button index `i` to
+The pages are POSITIONAL. `_wire_view_buttons` hands button index `i` to
 `setCurrentIndex(i)`, so the order the pages are added here must match
-`tab_icons.TAB_SPECS` exactly; `tests/structural/test_tray_switch_invariants`
+`view_buttons.VIEW_SPECS` exactly; `tests/structural/test_tray_switch_invariants`
 asserts the two lists against each other, because a page in the wrong slot
 sends every tray to the wrong page and looks entirely normal doing it.
 """
@@ -18,20 +18,20 @@ from __future__ import annotations
 from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from clear_budget.ui.utils.nav_header import set_nav_user
-from clear_budget.ui.utils.tab_icons import mark_current_tab
+from clear_budget.ui.utils.view_buttons import mark_current_view
 from clear_budget.ui.views.archive_view import ArchiveView
 from clear_budget.ui.views.credit_card_view import CreditCardView
 from clear_budget.ui.views.graph_view import GraphView
 from clear_budget.ui.views.month_view import MonthView
 from clear_budget.ui.views.recommendations_view import RecommendationsView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
-from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
+from clear_budget.ui.widgets.scrollable_view import ScrollableView
 
 
-class MainWindowTabsMixin:
+class MainWindowViewsMixin:
     """Builds the view pages and keeps every tray's view buttons in step."""
 
-    def _report_tab(self, index: int, name: str) -> None:
+    def _report_view(self, index: int, name: str) -> None:
         """Say which view is being built, so the sign-in screen can show it.
 
         Reported BEFORE the view is constructed rather than after: the label
@@ -46,56 +46,56 @@ class MainWindowTabsMixin:
         layout = QVBoxLayout(central_widget)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.tabs = QTabWidget()
+        self.views = QTabWidget()
         # The bar is HIDDEN and stays that way. The views are reached by icon buttons
         # in each view's navigation tray, so a strip above them would be a
         # second, empty copy of the same control. The QTabWidget is kept for
         # what it is actually good at, owning the pages and switching between
         # them; nothing styles or navigates the bar, because nobody sees it.
-        self.tabs.tabBar().hide()
+        self.views.tabBar().hide()
 
-        self._report_tab(0, "Monthly Budget")
+        self._report_view(0, "Monthly Budget")
         month_view = MonthView(self.month_view_model)
-        self.tabs.addTab(self._scrollable(month_view), "Monthly Budget")
+        self.views.addTab(self._scrollable(month_view), "Monthly Budget")
 
-        self._report_tab(1, "Solvency")
+        self._report_view(1, "Solvency")
         solvency_panel = SolvencyPanel(
             self.solvency_view_model,
             base_month=self.month_view_model.base_month,
         )
-        self.tabs.addTab(self._scrollable(solvency_panel), "Solvency")
+        self.views.addTab(self._scrollable(solvency_panel), "Solvency")
 
-        self._report_tab(2, "Credit Cards")
+        self._report_view(2, "Credit Cards")
         credit_card_view = CreditCardView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
             base_month=self.month_view_model.base_month,
         )
-        self.tabs.addTab(self._scrollable(credit_card_view), "Credit Cards")
+        self.views.addTab(self._scrollable(credit_card_view), "Credit Cards")
 
         # Between Credit Cards and Archive, which is where the graph icon has
         # always been drawn. It was an icon button opening a modal dialog; it
         # is a page now, so the tray looks the same and behaves like the rest
         # of it.
-        self._report_tab(3, "Graph")
+        self._report_view(3, "Graph")
         graph_view = GraphView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
         )
-        self.tabs.addTab(self._scrollable(graph_view), "Graph")
+        self.views.addTab(self._scrollable(graph_view), "Graph")
 
-        # Right of Graph, left of Archive, matching TAB_SPECS. The advice is
+        # Right of Graph, left of Archive, matching VIEW_SPECS. The advice is
         # anchored to today whatever month the tray shows.
-        self._report_tab(4, "Recommendations")
+        self._report_view(4, "Recommendations")
         recommendations_view = RecommendationsView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
         )
-        self.tabs.addTab(self._scrollable(recommendations_view), "Recommendations")
+        self.views.addTab(self._scrollable(recommendations_view), "Recommendations")
 
-        self._report_tab(5, "Archive")
+        self._report_view(5, "Archive")
         archive_view = ArchiveView(self.month_view_model.budget_service)
-        self.tabs.addTab(self._scrollable(archive_view), "Archive")
+        self.views.addTab(self._scrollable(archive_view), "Archive")
 
         # Every tray carries the same icon shortcuts; all of them drive the
         # same window-level flows their menu items do.
@@ -117,7 +117,7 @@ class MainWindowTabsMixin:
                 self.current_user.username,
             )
 
-        layout.addWidget(self.tabs)
+        layout.addWidget(self.views)
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
@@ -200,14 +200,14 @@ class MainWindowTabsMixin:
             recommendations_view,
             archive_view,
         ]
-        self._wire_tab_buttons(_views)
+        self._wire_view_buttons(_views)
         self._setup_keyboard_nav(_views)
 
     @staticmethod
-    def _scrollable(widget: QWidget) -> ScrollableTab:
-        return ScrollableTab(widget)
+    def _scrollable(widget: QWidget) -> ScrollableView:
+        return ScrollableView(widget)
 
-    def _wire_tab_buttons(self, views: list) -> None:
+    def _wire_view_buttons(self, views: list) -> None:
         """Point every view's buttons at the pages and keep them in step.
 
         Every view carries its OWN four buttons, because every view builds its
@@ -216,17 +216,17 @@ class MainWindowTabsMixin:
         tray you happen to be looking at.
         """
         for view in views:
-            for index, button in enumerate(view.tab_btns):
+            for index, button in enumerate(view.view_btns):
                 button.clicked.connect(
-                    lambda _checked=False, target=index: self.tabs.setCurrentIndex(
+                    lambda _checked=False, target=index: self.views.setCurrentIndex(
                         target
                     )
                 )
-        self._tab_button_sets = [view.tab_btns for view in views]
-        self.tabs.currentChanged.connect(self._mark_current_tab)
-        self._mark_current_tab(self.tabs.currentIndex())
+        self._view_button_sets = [view.view_btns for view in views]
+        self.views.currentChanged.connect(self._mark_current_view)
+        self._mark_current_view(self.views.currentIndex())
 
-    def _mark_current_tab(self, index: int) -> None:
+    def _mark_current_view(self, index: int) -> None:
         """Mark `index` as current on every view's copy of the view buttons."""
-        for buttons in self._tab_button_sets:
-            mark_current_tab(buttons, index)
+        for buttons in self._view_button_sets:
+            mark_current_view(buttons, index)

@@ -1,7 +1,7 @@
 """The ring's entry point is a view decision and the wiring must hold.
 
 Three pieces make the behaviour: a view declares `nav_entry_stop()` (the
-control the first Tab lands on after arriving on that tab), MainWindow hands
+control the first Tab lands on after arriving on that view), MainWindow hands
 the navigator a callable that asks the active view and the navigator prefers
 that stop when the ring is entered from neutral. Any of the three silently
 missing degrades to "first Tab goes to the File menu", which reads as the

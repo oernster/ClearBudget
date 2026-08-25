@@ -127,7 +127,7 @@ def build_centered_nav_header(
     prev_btn=None,
     next_btn=None,
     leading=(),
-    tabs=(),
+    views=(),
     pre_theme=(),
     trailing=(),
 ):
@@ -141,12 +141,12 @@ def build_centered_nav_header(
       own emptiness rather than by balancing anything.
     * TRAY 2 carries everything that acts on the application: the `leading`
       widgets (load, save, Preferences, Bank Account and a separator), then
-      the `tabs` (the primary view buttons, which live here rather than in a strip
+      the `views` (the primary view buttons, which live here rather than in a strip
       of their own), then at the FAR RIGHT the sun/moon toggle (`theme_btn`)
       followed by the `trailing` widgets (How It Works).
 
     The returned widget is meant to be placed OUTSIDE the scroll area (see
-    ScrollableTab), so it spans the full view width and reads identically on
+    ScrollableView), so it spans the full view width and reads identically on
     every view, unaffected by that view's scrollbar gutter or content overflow.
     """
     from PySide6.QtCore import Qt
@@ -203,7 +203,7 @@ def build_centered_nav_header(
                 action_row.addWidget(widget, 0, align_v)
 
     _place(leading)
-    _place(tabs)
+    _place(views)
     action_row.addStretch(1)
     # `pre_theme` is the RIGHT-hand group: everything here sits after the
     # stretch, so it is pinned to the right edge beside the toggle rather than
@@ -254,7 +254,7 @@ def set_nav_user(header, text: str) -> None:
     because the views are built from a budget and know nothing about who is
     signed in; this keeps that knowledge in the one place that has it.
 
-    Takes the HEADER, never the view that built it. `ScrollableTab` lifts the
+    Takes the HEADER, never the view that built it. `ScrollableView` lifts the
     header out of its view so it spans the full view width outside the scroll
     area, which leaves the label no longer a descendant of that view: looking
     for it there finds nothing and silently sets no name at all.

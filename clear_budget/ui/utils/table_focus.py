@@ -8,7 +8,7 @@ reads as a control the user has activated; the next Tab then carried on
 from a place they had not chosen.
 
 `TabFocus` says the same thing the page body already says
-(`ScrollableTab._scroll`): focus arrives here from the ring, never from the
+(`ScrollableView._scroll`): focus arrives here from the ring, never from the
 pointer. What a click does is unchanged, which is the point. Selection is not
 focus: clicking a row still selects it and still arms Delete (measured on both
 policies, with the row selected either way); once the ring does arrive the

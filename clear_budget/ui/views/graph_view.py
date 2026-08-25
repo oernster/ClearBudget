@@ -49,7 +49,7 @@ from clear_budget.ui.utils.icon_buttons import (
     apply_image_face,
     build_tray_icon_button,
 )
-from clear_budget.ui.utils.tab_icons import build_tab_buttons, ring_tab_stops
+from clear_budget.ui.utils.view_buttons import build_view_buttons, ring_view_stops
 from clear_budget.ui.views._graph_exports import GraphExportsMixin
 from clear_budget.ui.views._graph_package_export import (
     GraphPackageExportMixin,
@@ -129,7 +129,7 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         self.info_btn = build_info_button(_glyph_h)
         # Every view builds its own set of the buttons; MainWindow wires
         # them and keeps the current-view mark in step across all of them.
-        self.tab_btns = build_tab_buttons(_glyph_h)
+        self.view_btns = build_view_buttons(_glyph_h)
         (
             self.nav_header,
             self.month_label,
@@ -145,8 +145,8 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
                 _sep,
                 self.bank_btn,
             ),
-            tabs=self.tab_btns[:-1],
-            pre_theme=(build_tray_separator(_glyph_h), self.tab_btns[-1]),
+            views=self.view_btns[:-1],
+            pre_theme=(build_tray_separator(_glyph_h), self.view_btns[-1]),
             trailing=(self.info_btn,),
         )
         self._refresh_month_label()
@@ -299,8 +299,8 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         it takes no focus and offers nothing to activate, exactly as it did
         inside the dialog.
         """
-        others = ring_tab_stops(self.tab_btns[:-1])
-        archive_stop = ring_tab_stops(self.tab_btns[-1:])
+        others = ring_view_stops(self.view_btns[:-1])
+        archive_stop = ring_view_stops(self.view_btns[-1:])
         page_stops = [self.source_btn, self.pilot_btn, self.export_btn]
         if self.package_btn.isVisible():
             page_stops.append(self.package_btn)

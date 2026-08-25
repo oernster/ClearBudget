@@ -30,13 +30,13 @@ from __future__ import annotations
 
 # Painted size of a view-button icon, before UI scaling, as the side of the square box
 # each one is fitted into.
-TAB_ICON_PX = 26
+VIEW_ICON_PX = 26
 # A view-button icon paints this multiple of the box it is given. 1.0 because the box
 # ALREADY carries the scale: `nav_glyph_size.NAV_GLYPH_SCALE` used to live here
 # and lift the view buttons alone, which is exactly what left every other icon in the
 # tray a third smaller than the buttons sitting beside them. Scaling here again
 # would restore that gap in the other direction.
-TAB_IMAGE_SCALE = 1.0
+VIEW_IMAGE_SCALE = 1.0
 # The views, in strip order. Each entry is a bundled image filename, so adding
 # a view means adding one line here and nothing else.
 MONTHLY_BUDGET_ICON = "monthlybudget.png"
@@ -53,20 +53,20 @@ RECOMMENDATIONS_ICON = "recommendations.png"
 ARCHIVE_ICON = "archive.png"
 
 # View names, so a view that needs to name one does not spell it again.
-CREDIT_CARDS_TAB = "Credit Cards"
+CREDIT_CARDS_VIEW = "Credit Cards"
 # The strip, in order, as (icon spec, the name that becomes the tooltip).
-TAB_SPECS = (
+VIEW_SPECS = (
     (MONTHLY_BUDGET_ICON, "Monthly Budget"),
     (SOLVENCY_ICON, "Solvency"),
-    (CREDIT_CARDS_ICON, CREDIT_CARDS_TAB),
+    (CREDIT_CARDS_ICON, CREDIT_CARDS_VIEW),
     (GRAPH_ICON, "Graph"),
     (RECOMMENDATIONS_ICON, "Recommendations"),
     (ARCHIVE_ICON, "Archive"),
 )
 # QSS hooks: the object name carrying the three-state ring rules, plus the
 # dynamic property the stylesheet reads to mark the view being shown.
-TAB_BUTTON_ROLE = "NavTabButton"
-TAB_CURRENT_PROPERTY = "currentTab"
+VIEW_BUTTON_ROLE = "NavViewButton"
+VIEW_CURRENT_PROPERTY = "currentView"
 
 # Cache of built pixmaps, keyed by (spec, height). Qt objects, so this cannot
 # be a functools cache built at import time: it needs a QApplication alive.
@@ -83,10 +83,10 @@ def _image_pixmap(spec: str, box_px: int):
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QImage, QPixmap
 
-    from clear_budget.shared.resources import find_tab_icon_path
+    from clear_budget.shared.resources import find_nav_icon_path
     from clear_budget.ui.utils.glyph_metrics import opaque_bounding_rect
 
-    path = find_tab_icon_path(spec)
+    path = find_nav_icon_path(spec)
     if path is None:
         return None
     image = QImage(str(path))
@@ -98,11 +98,11 @@ def _image_pixmap(spec: str, box_px: int):
     pixmap = QPixmap.fromImage(cropped)
     # By HEIGHT, so every icon in the row shares a bottom edge whatever its
     # aspect. Width is left to follow.
-    target = max(1, round(box_px * TAB_IMAGE_SCALE))
+    target = max(1, round(box_px * VIEW_IMAGE_SCALE))
     return pixmap.scaledToHeight(target, Qt.TransformationMode.SmoothTransformation)
 
 
-def tab_icon_pixmap(spec: str, box_px: int):
+def view_icon_pixmap(spec: str, box_px: int):
     """Return the pixmap for one view; None when its source is unavailable.
 
     None rather than a placeholder: a missing asset must leave the view usable
@@ -117,25 +117,25 @@ def tab_icon_pixmap(spec: str, box_px: int):
     return pixmap
 
 
-def tab_icon(spec: str, box_px: int):
+def view_icon(spec: str, box_px: int):
     """Return the QIcon for one view; None when its source is unavailable."""
     from PySide6.QtGui import QIcon
 
-    pixmap = tab_icon_pixmap(spec, box_px)
+    pixmap = view_icon_pixmap(spec, box_px)
     return None if pixmap is None else QIcon(pixmap)
 
 
-def tab_icon_box_px() -> int:
+def view_icon_box_px() -> int:
     """The square box every view-button icon is fitted into, at the current UI scale."""
     from clear_budget.ui import ui_scale
 
-    return max(1, ui_scale.px(TAB_ICON_PX))
+    return max(1, ui_scale.px(VIEW_ICON_PX))
 
 
-def build_tab_buttons(box_px: int) -> list:
+def build_view_buttons(box_px: int) -> list:
     """Return the primary view buttons, in strip order.
 
-    Buttons rather than a `QTabBar` because the tabs live in the navigation
+    Buttons rather than a `QTabBar` because the views live in the navigation
     tray now, beside the database and settings shortcuts, rather than in a
     strip of their own. That SIMPLIFIES the keyboard model rather than
     complicating it: `NavTabBar` existed because Qt ties a tab bar's focus to
@@ -155,12 +155,12 @@ def build_tab_buttons(box_px: int) -> list:
     from clear_budget.ui.utils.nav_glyph_size import NAV_ICON_BTN_CHROME_PX
 
     buttons = []
-    for spec, label in TAB_SPECS:
+    for spec, label in VIEW_SPECS:
         button = QPushButton()
-        button.setObjectName(TAB_BUTTON_ROLE)
+        button.setObjectName(VIEW_BUTTON_ROLE)
         button.setToolTip(label)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
-        pixmap = tab_icon_pixmap(spec, box_px)
+        pixmap = view_icon_pixmap(spec, box_px)
         if pixmap is None:
             # No artwork: the button keeps its NAME rather than becoming a blank
             # square. A missing asset costs the tray its looks, never a route
@@ -177,13 +177,13 @@ def build_tab_buttons(box_px: int) -> list:
     return buttons
 
 
-def tab_button(buttons, label: str):
+def view_button(buttons, label: str):
     """The button for the view called `label`; None when there is none.
 
     By NAME rather than by position, so a view that needs to put a stop
     beside a particular view says which view it means.
     """
-    for position, (_spec, name) in enumerate(TAB_SPECS):
+    for position, (_spec, name) in enumerate(VIEW_SPECS):
         if name == label and position < len(buttons):
             return buttons[position]
     return None
@@ -205,7 +205,7 @@ def stops_before(run: list, marker, extras: list) -> list:
     return run + extras
 
 
-def mark_current_tab(buttons, index: int) -> None:
+def mark_current_view(buttons, index: int) -> None:
     """Mark button `index` as the view being shown, clearing the others.
 
     Through a dynamic property and a repolish rather than an inline
@@ -218,12 +218,12 @@ def mark_current_tab(buttons, index: int) -> None:
     declaration instead, which is where "not a stop" belongs.
     """
     for i, button in enumerate(buttons):
-        button.setProperty(TAB_CURRENT_PROPERTY, i == index)
+        button.setProperty(VIEW_CURRENT_PROPERTY, i == index)
         button.style().unpolish(button)
         button.style().polish(button)
 
 
-def ring_tab_stops(buttons) -> list:
+def ring_view_stops(buttons) -> list:
     """The view buttons that are keyboard-ring stops: every one but the current.
 
     The button already showing is not a stop. Landing on it would spend a
@@ -231,4 +231,4 @@ def ring_tab_stops(buttons) -> list:
     the dead stop `NavTabBar`'s separate cursor was built to avoid back when
     these were a `QTabBar`. The rule survived the widget it was written for.
     """
-    return [b for b in buttons if not b.property(TAB_CURRENT_PROPERTY)]
+    return [b for b in buttons if not b.property(VIEW_CURRENT_PROPERTY)]

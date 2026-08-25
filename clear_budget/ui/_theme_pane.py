@@ -9,7 +9,7 @@ nobody can see is not styling, it is a description of a former design.
 What survives is the one rule that is still drawn: the pane, which is the card
 the view CONTENT sits on. The three-state ring and the current-view mark for the
 buttons that replaced the strip live in `_theme_controls` with the rest of the
-tray, under `QPushButton#NavTabButton`.
+tray, under `QPushButton#NavViewButton`.
 
 Pure string building, no Qt. `build_qss` as a whole is NOT callable without a
 QApplication, since it resolves the system font and generates the spin-box
@@ -24,7 +24,7 @@ from __future__ import annotations
 TAB_BAR_LEFT_INSET_PX = 4
 
 
-def tab_qss(t: dict[str, str]) -> str:
+def pane_qss(t: dict[str, str]) -> str:
     """Return the stylesheet for the card the view content sits on."""
     return f"""
 /* The content below the buttons is one card. The bar itself is hidden (the

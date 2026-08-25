@@ -1,4 +1,4 @@
-"""ScrollableTab - QScrollArea wrapper with up/down scroll indicators beside it."""
+"""ScrollableView - QScrollArea wrapper with up/down scroll indicators beside it."""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -34,7 +34,7 @@ _INDICATOR_STYLE = (
 )
 
 
-class ScrollableTab(QWidget):
+class ScrollableView(QWidget):
     """Wraps a content widget in a QScrollArea with ▲/▼ indicators beside it."""
 
     def __init__(self, content: QWidget, parent: QWidget | None = None) -> None:
@@ -63,7 +63,7 @@ class ScrollableTab(QWidget):
                 content_layout.setContentsMargins(cm.left(), 0, cm.right(), cm.bottom())
 
         self._scroll = QScrollArea()
-        self._scroll.setObjectName("TabScrollArea")
+        self._scroll.setObjectName("ViewScrollArea")
         self._scroll.setWidget(content)
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)

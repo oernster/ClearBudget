@@ -14,7 +14,11 @@ inserts, so everything handed in comes back out. That property is what these
 assert, since it is the one the slices could not state.
 """
 
-from clear_budget.ui.utils.tab_icons import CREDIT_CARDS_TAB, TAB_SPECS, stops_before
+from clear_budget.ui.utils.view_buttons import (
+    CREDIT_CARDS_VIEW,
+    VIEW_SPECS,
+    stops_before,
+)
 
 _RUN = ["monthly", "solvency", "cards", "graph"]
 _PILOTS = ["turn the page"]
@@ -63,6 +67,6 @@ class TestWhereTheExtrasLand:
         assert run == _RUN
 
 
-def test_the_named_tab_is_one_the_strip_actually_has():
+def test_the_named_view_is_one_the_run_actually_has():
     """The name is looked up in the strip, so a typo cannot pass unnoticed."""
-    assert CREDIT_CARDS_TAB in [name for _spec, name in TAB_SPECS]
+    assert CREDIT_CARDS_VIEW in [name for _spec, name in VIEW_SPECS]

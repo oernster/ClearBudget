@@ -32,9 +32,9 @@ from clear_budget.ui.views._credit_card_projection_strip import (
 from clear_budget.ui.views._credit_card_view_loaders import (
     CreditCardViewLoaderMixin,
 )
-from clear_budget.ui.utils.tab_icons import (
-    build_tab_buttons,
-    ring_tab_stops,
+from clear_budget.ui.utils.view_buttons import (
+    build_view_buttons,
+    ring_view_stops,
 )
 from clear_budget.ui.widgets._tray_buttons import (
     build_budgets_button,
@@ -87,7 +87,7 @@ class CreditCardView(
         # The primary view buttons live in this tray, so every view builds its
         # own set; MainWindow wires them and keeps the current-view mark in
         # step across all four.
-        self.tab_btns = build_tab_buttons(_glyph_h)
+        self.view_btns = build_view_buttons(_glyph_h)
         (
             self.nav_header,
             self.month_label,
@@ -103,8 +103,8 @@ class CreditCardView(
                 _sep,
                 self.bank_btn,
             ),
-            tabs=self.tab_btns[:-1],
-            pre_theme=(build_tray_separator(_glyph_h), self.tab_btns[-1]),
+            views=self.view_btns[:-1],
+            pre_theme=(build_tray_separator(_glyph_h), self.view_btns[-1]),
             trailing=(self.info_btn,),
         )
         self._refresh_month_label()
@@ -113,7 +113,7 @@ class CreditCardView(
         cards_outer_layout = QVBoxLayout()
 
         # Cards stack directly in the group. The whole view already lives inside a
-        # ScrollableTab, so a second inner scroll only stole height and left an
+        # ScrollableView, so a second inner scroll only stole height and left an
         # empty gap above the Add Card button whenever few cards were present.
         self.cards_container = QWidget()
         self.cards_layout = QVBoxLayout(self.cards_container)
@@ -212,7 +212,7 @@ class CreditCardView(
         READING order, which with two stacked trays means the TOP tray first
         and the lower one after it, each left to right as drawn. A ring that
         disagrees with the drawing does not present as a wrong order, it
-        presents as a SKIPPED control: the user tabs past where a button
+        presents as a SKIPPED control: the user views past where a button
         visibly is and lands somewhere else entirely.
 
         The button for the view being shown is not in the list. It is a stop that could do
@@ -229,8 +229,8 @@ class CreditCardView(
         # Delete per panel, then Add Card, then continues into the graph icon
         # and the right-hand tray group. A task-flow override of the strict
         # reading order, chosen deliberately.
-        others = ring_tab_stops(self.tab_btns[:-1])
-        archive_stop = ring_tab_stops(self.tab_btns[-1:])
+        others = ring_view_stops(self.view_btns[:-1])
+        archive_stop = ring_view_stops(self.view_btns[-1:])
         card_stops = list(getattr(self, "card_nav_stops", []))
         return [
             self.prev_btn,

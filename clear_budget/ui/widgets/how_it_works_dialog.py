@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.ui import ui_scale
-from clear_budget.ui.utils.tab_icons import (
+from clear_budget.ui.utils.view_buttons import (
     ARCHIVE_ICON,
     CREDIT_CARDS_ICON,
     GRAPH_ICON,
@@ -70,57 +70,57 @@ def _img(path, px: int) -> str:
     )
 
 
-def _tab_row(spec: str, name: str, text: str, px: int) -> str:
+def _view_row(spec: str, name: str, text: str, px: int) -> str:
     """One view's line, led by the picture its button actually draws."""
-    from clear_budget.shared.resources import find_tab_icon_path
+    from clear_budget.shared.resources import find_nav_icon_path
 
-    return f"<p>{_img(find_tab_icon_path(spec), px)}<b>{name}</b>: {text}</p>"
+    return f"<p>{_img(find_nav_icon_path(spec), px)}<b>{name}</b>: {text}</p>"
 
 
 def _body_html() -> str:
     """Build the help text, resolving the real icons at open time."""
-    from clear_budget.shared.resources import find_tab_icon_path
+    from clear_budget.shared.resources import find_nav_icon_path
 
     px = ui_scale.px(_INLINE_ICON_PX)
     # The Bank Account button is a PICTURE in the tray, so it is a picture
     # here. An icon guide showing something other than the icon is worse
     # than no guide.
-    bank_icon = _img(find_tab_icon_path("bank-icon.png"), px)
-    budgets_icon = _img(find_tab_icon_path("switchbudget.png"), px)
-    load_icon = _img(find_tab_icon_path("opendb.png"), px)
-    save_icon = _img(find_tab_icon_path("savedb.png"), px)
-    info_icon = _img(find_tab_icon_path("information.png"), px)
-    light_icon = _img(find_tab_icon_path("lightmode.png"), px)
-    dark_icon = _img(find_tab_icon_path("darkmode.png"), px)
+    bank_icon = _img(find_nav_icon_path("bank-icon.png"), px)
+    budgets_icon = _img(find_nav_icon_path("switchbudget.png"), px)
+    load_icon = _img(find_nav_icon_path("opendb.png"), px)
+    save_icon = _img(find_nav_icon_path("savedb.png"), px)
+    info_icon = _img(find_nav_icon_path("information.png"), px)
+    light_icon = _img(find_nav_icon_path("lightmode.png"), px)
+    dark_icon = _img(find_nav_icon_path("darkmode.png"), px)
     # The Graph page's own controls, which are pictures too and which no
     # other line here names.
-    plot_bank_icon = _img(find_tab_icon_path("bank-icon2.png"), px)
-    plot_cards_icon = _img(find_tab_icon_path("creditcards2.png"), px)
-    export_icon = _img(find_tab_icon_path("exporttohtml.png"), px)
-    package_icon = _img(find_tab_icon_path("exportpackage.png"), px)
+    plot_bank_icon = _img(find_nav_icon_path("bank-icon2.png"), px)
+    plot_cards_icon = _img(find_nav_icon_path("creditcards2.png"), px)
+    export_icon = _img(find_nav_icon_path("exporttohtml.png"), px)
+    package_icon = _img(find_nav_icon_path("exportpackage.png"), px)
     return f"""\
 <h2>How ClearBudget Works</h2>
 
 <h3>The six views</h3>
-{_tab_row(MONTHLY_BUDGET_ICON, "Monthly Budget",
+{_view_row(MONTHLY_BUDGET_ICON, "Monthly Budget",
           "this month's bills and income, plus what the balance does.", px)}
-{_tab_row(SOLVENCY_ICON, "Solvency",
+{_view_row(SOLVENCY_ICON, "Solvency",
           "whether the month holds, plus the two months after it. Two pages "
           "behind the button at the top: the bank and Safe to Spend.", px)}
-{_tab_row(CREDIT_CARDS_ICON, "Credit Cards",
+{_view_row(CREDIT_CARDS_ICON, "Credit Cards",
           "one panel per card, with a six-month projection.", px)}
-{_tab_row(GRAPH_ICON, "Graph",
+{_view_row(GRAPH_ICON, "Graph",
           "the month drawn day by day, as bars or as a line. The heading "
           "above the chart always names what is plotted. The tray's arrows "
           "step its month like any other page.", px)}
-{_tab_row(RECOMMENDATIONS_ICON, "Recommendations",
+{_view_row(RECOMMENDATIONS_ICON, "Recommendations",
           "what would make the months ahead survivable: which bills or "
           "incomes could move and how much extra the months still need, "
           "with an optional emergency buffer set at the top of the page. "
           "Suggestions only; nothing is changed for you. Tick any "
           "suggestion to see it tried across the page, still changing "
           "nothing.", px)}
-{_tab_row(ARCHIVE_ICON, "Archive",
+{_view_row(ARCHIVE_ICON, "Archive",
           "months that have finished. They are filed automatically; there is "
           "no archive button. Its icon sits apart, at the right of the tray "
           "beside the light or dark toggle.", px)}
