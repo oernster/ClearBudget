@@ -15,7 +15,11 @@ already survives is not harmed by it.
 from __future__ import annotations
 
 from clear_budget.application.formatting import money_from_pence
-from clear_budget.domain.services.recommendations import KIND_BILL, TrialDay
+from clear_budget.domain.services.recommendations import (
+    KIND_BILL,
+    TrialDay,
+    TrialPause,
+)
 
 # How many optional items are worth saying. Secondary and tertiary
 # suggestions plus one: below this the lifts are noise beside the plan.
@@ -173,7 +177,7 @@ def _effect_items(before_result, after_result, month_name) -> list[str]:
 
 
 def panel_html(
-    with_result, without_result, month_name, *, solo=None, baseline=None
+    with_result, without_result, month_name, *, solo=None, baseline=None, price=""
 ) -> str:
     """A ticked row's tray panel: what this change contributes, measured.
 
@@ -201,10 +205,10 @@ def panel_html(
     if not items:
         return (
             "<p>With everything else ticked, this change adds nothing"
-            " further.</p>" + footer
+            " further.</p>" + price + footer
         )
     bullets = "".join(f"<li>{item}</li>" for item in items)
-    return f"<p>{lead}</p><ul>{bullets}</ul>{covered}{footer}"
+    return f"<p>{lead}</p><ul>{bullets}</ul>{covered}{price}{footer}"
 
 
 def sooner_note_html(moves, extras, horizon_start, month_name) -> str | None:
@@ -247,3 +251,75 @@ def sooner_note_html(moves, extras, horizon_start, month_name) -> str | None:
     if payoffs:
         note += f" Measured, it pays straight away: {join_clauses(payoffs)}."
     return note + "</p>"
+
+
+# ---- the third lever ---------------------------------------------------------
+# Retiming and asking for income both look for money. This one does not: it
+# stops putting money by, so the relief on screen is borrowed from a month
+# further out. Every sentence therefore states the price in the same breath as
+# the lift; the heading says so before a single figure is read.
+PAUSE_HEADING = "Set aside less, at a price"
+PAUSE_INTRO = (
+    "None of these finds money. Each one lifts the months above by holding"
+    " back less; the bill it was for still arrives. Tick any to see it"
+    " tried; nothing is applied for you."
+)
+
+
+def _lift_clause(lift, month_name) -> str:
+    """One month's lift, as the sentence says it."""
+    return (
+        f"{month_name(lift.year, lift.month)}'s low from"
+        f" {money_from_pence(lift.low_before_pence)} to"
+        f" {money_from_pence(lift.low_after_pence)}"
+    )
+
+
+def pause_html(pause, month_name) -> str:
+    """One pause: what it lifts, then what the due month arrives short by.
+
+    The price is a sentence of its own rather than a clause tacked on, so it
+    cannot be skimmed past; when the due month falls outside the window it
+    says so, because that is the case where the page shows all of the relief
+    and none of the cost.
+    """
+    lifts = join_clauses([_lift_clause(lift, month_name) for lift in pause.lifts])
+    due = month_name(pause.due_year, pause.due_month)
+    beyond = "" if pause.due_within_horizon else ", which is past this window"
+    return (
+        f"<p>Pause setting aside for <b>{pause.name}</b> from"
+        f" {month_name(pause.from_year, pause.from_month)}: lifts {lifts}."
+        f" {due} then arrives"
+        f" <b>{money_from_pence(pause.shortfall_pence)}</b> short{beyond}.</p>"
+    )
+
+
+def pause_price_html(pause, month_name) -> str:
+    """What the pause costs, for its try-it-on panel.
+
+    The panel above it lists what improved. Without this line that is all it
+    would list; a lever that borrows from a later month would then preview
+    as a free win.
+    """
+    return (
+        "<p>This finds no money."
+        f" {month_name(pause.due_year, pause.due_month)} would arrive"
+        f" <b>{money_from_pence(pause.shortfall_pence)}</b> short of what"
+        f" {pause.name} needs.</p>"
+    )
+
+
+def pause_rows(pauses, month_name) -> list:
+    """Each pause as (trial, html, price), in the order the engine found them."""
+    return [
+        (
+            TrialPause(
+                name=pause.name,
+                from_year=pause.from_year,
+                from_month=pause.from_month,
+            ),
+            pause_html(pause, month_name),
+            pause_price_html(pause, month_name),
+        )
+        for pause in pauses
+    ]

@@ -20,14 +20,21 @@ from clear_budget.application.services._overdraft_projection import (
     _UNDATED_INCOME_DAY,
 )
 from clear_budget.domain.services._prorating import days_in_month
+from clear_budget.domain.services.reserve_accrual import (
+    occurrence_at,
+    reserve_pence,
+)
 from clear_budget.domain.services.recommendations import (
     KIND_BILL,
     KIND_INCOME,
+    KIND_PAUSE,
     PlannedItem,
     PlannedMonth,
+    PlannedReserve,
     Recommendations,
     TrialDay,
     immovable_months,
+    paused_months,
     recommend,
     retimed_months,
 )
@@ -35,7 +42,41 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 
 
-def _planned_month(summary, year: int, month: int) -> PlannedMonth:
+def _reserve_by_day(commitments, year: int, month: int) -> tuple[int, ...]:
+    """What the commitments hold back on each day of one month.
+
+    Zero everywhere while nothing is set aside, which the engine reads as no
+    reserve at all and answers exactly as it always did.
+    """
+    return tuple(
+        sum(reserve_pence(c, date(year, month, day)) for c in commitments)
+        for day in range(1, days_in_month(year, month) + 1)
+    )
+
+
+def _planned_reserve(commitment, horizon) -> PlannedReserve | None:
+    """One commitment as the engine sees it, else None when it holds nothing.
+
+    The due month is read from the occurrence live at the START of the window
+    rather than from the stored due date, so a repeating commitment is priced
+    against the cycle the window is actually saving for.
+    """
+    opening = horizon[0].first_day()
+    occurrence = occurrence_at(commitment, opening)
+    if occurrence is None:
+        return None
+    return PlannedReserve(
+        name=commitment.name,
+        amount_pence=commitment.amount.pence,
+        by_day=tuple(
+            _reserve_by_day((commitment,), ym.year, ym.month) for ym in horizon
+        ),
+        due_year=occurrence.due.year,
+        due_month=occurrence.due.month,
+    )
+
+
+def _planned_month(summary, year: int, month: int, reserve_by_day=()) -> PlannedMonth:
     """One month's bank-side plan, income listed before bills.
 
     The construction order carries the shared-day rule: the engine's stable
@@ -67,7 +108,13 @@ def _planned_month(summary, year: int, month: int) -> PlannedMonth:
         for bill in summary.bills
         if bill.payment_method_id == _BANK_PAYMENT_METHOD_ID
     ]
-    return PlannedMonth(year=year, month=month, days=days, items=tuple(items))
+    return PlannedMonth(
+        year=year,
+        month=month,
+        days=days,
+        items=tuple(items),
+        reserve_by_day=tuple(reserve_by_day),
+    )
 
 
 class RecommendationOperationsMixin:
@@ -114,10 +161,11 @@ class RecommendationOperationsMixin:
         horizon is the sustainable window, so this page and Safe to Spend
         agree about how far ahead "ahead" reaches.
 
-        `trial` is the try-it-on set: each entry's item is SIMULATED on its
-        trial day in every horizon month before the engine runs, nothing
-        stored. The result then reads as "were you to make these changes":
-        remaining moves, asks and outlook all reflect them.
+        `trial` is the try-it-on set: each entry is SIMULATED before the
+        engine runs, nothing stored. A retiming puts its item on its trial day
+        in every horizon month; a pause stops one commitment's hold-back from
+        its month on. The result then reads as "were you to make these
+        changes": remaining moves, asks and outlook all reflect them.
 
         `pinned` additionally pins every item to its (possibly tried) day,
         so the engine proposes nothing of its own. The try-it-on panels
@@ -132,13 +180,32 @@ class RecommendationOperationsMixin:
         for _ in range(self.get_sustainable_window_months()):
             cursor = cursor.next_month()
             horizon.append(cursor)
+        commitments = self.list_commitments()
+        reserves = tuple(
+            reserve
+            for reserve in (
+                _planned_reserve(commitment, tuple(horizon))
+                for commitment in commitments
+            )
+            if reserve is not None
+        )
+        # A trial is either a day or a pause; each rewrites the plan in its own
+        # way, so they are separated here rather than inside either rewriter.
+        days = tuple(t for t in trial if t.kind != KIND_PAUSE)
+        pauses = tuple(t for t in trial if t.kind == KIND_PAUSE)
         months = retimed_months(
             tuple(
-                _planned_month(self.get_month_summary(year_month=ym), ym.year, ym.month)
+                _planned_month(
+                    self.get_month_summary(year_month=ym),
+                    ym.year,
+                    ym.month,
+                    _reserve_by_day(commitments, ym.year, ym.month),
+                )
                 for ym in horizon
             ),
-            trial,
+            days,
         )
+        months = paused_months(months, reserves, pauses)
         if pinned:
             months = immovable_months(months)
         enabled, buffer = self.get_recommendation_buffer()
@@ -150,5 +217,6 @@ class RecommendationOperationsMixin:
             ),
             overdraft_limit_pence=self.get_overdraft_limit().pence,
             buffer_pence=buffer.pence if enabled else 0,
+            reserves=reserves,
         )
         return result, tuple(horizon)

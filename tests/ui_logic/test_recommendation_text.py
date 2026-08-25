@@ -12,16 +12,26 @@ from clear_budget.domain.services.recommendations import (
     MonthOutlook,
     Recommendations,
 )
+from clear_budget.domain.services.recommendations import MonthLift, ReservePause
 from clear_budget.ui.utils.recommendation_text import (
     HEADROOM_ITEM_CAP,
     headroom_rows,
     join_clauses,
     move_rows,
     panel_html,
+    pause_html,
+    pause_price_html,
+    pause_rows,
     sooner_note_html,
 )
 
-_NAMES = {9: "September", 10: "October", 11: "November"}
+_NAMES = {
+    3: "March",
+    9: "September",
+    10: "October",
+    11: "November",
+    12: "December",
+}
 
 
 def _month_name(year: int, month: int) -> str:
@@ -177,3 +187,98 @@ class TestPanelHtml:
         html = panel_html(_result([10000]), _result([10000]), _month_name)
         assert "adds nothing further" in html
         assert "Preview only; nothing is applied." in html
+
+
+# ---- the third lever ---------------------------------------------------------
+_CHRISTMAS = ReservePause(
+    name="Christmas",
+    from_year=2026,
+    from_month=10,
+    lifts=(
+        MonthLift(year=2026, month=10, low_before_pence=50226, low_after_pence=60226),
+        MonthLift(year=2026, month=11, low_before_pence=6226, low_after_pence=16226),
+    ),
+    shortfall_pence=40000,
+    due_year=2026,
+    due_month=12,
+    due_within_horizon=True,
+)
+
+
+class TestAPauseSentence:
+    def test_it_names_the_commitment_and_the_month_it_starts_from(self) -> None:
+        html = pause_html(_CHRISTMAS, _month_name)
+        assert "Pause setting aside for <b>Christmas</b> from October 2026" in html
+
+    def test_it_lists_every_month_it_lifts_with_both_figures(self) -> None:
+        html = pause_html(_CHRISTMAS, _month_name)
+        assert "October 2026's low from £502.26 to £602.26" in html
+        assert "November 2026's low from £62.26 to £162.26" in html
+
+    def test_it_states_the_price_in_the_same_breath(self) -> None:
+        """The sentence must not be readable as a free win."""
+        assert "December 2026 then arrives <b>£400.00</b> short." in pause_html(
+            _CHRISTMAS, _month_name
+        )
+
+    def test_a_due_month_beyond_the_window_says_so(self) -> None:
+        """Otherwise the page shows all the relief and none of the cost."""
+        beyond = ReservePause(
+            name=_CHRISTMAS.name,
+            from_year=_CHRISTMAS.from_year,
+            from_month=_CHRISTMAS.from_month,
+            lifts=_CHRISTMAS.lifts,
+            shortfall_pence=_CHRISTMAS.shortfall_pence,
+            due_year=2027,
+            due_month=3,
+            due_within_horizon=False,
+        )
+        assert "which is past this window" in pause_html(beyond, _month_name)
+
+    def test_a_due_month_inside_the_window_does_not(self) -> None:
+        assert "past this window" not in pause_html(_CHRISTMAS, _month_name)
+
+
+class TestAPauseRow:
+    def test_the_trial_names_the_commitment_and_its_start(self) -> None:
+        ((trial, _html, _price),) = pause_rows((_CHRISTMAS,), _month_name)
+        assert (trial.name, trial.from_year, trial.from_month) == (
+            "Christmas",
+            2026,
+            10,
+        )
+
+    def test_the_trial_keys_the_way_a_retiming_does(self) -> None:
+        """The page identifies a ticked change by (kind, name), whatever it is."""
+        ((trial, _html, _price),) = pause_rows((_CHRISTMAS,), _month_name)
+        assert (trial.kind, trial.name) == ("pause", "Christmas")
+
+
+class TestThePricePanel:
+    def test_it_says_the_change_finds_no_money(self) -> None:
+        assert "finds no money" in pause_price_html(_CHRISTMAS, _month_name)
+
+    def test_it_names_the_month_and_what_it_would_be_short(self) -> None:
+        price = pause_price_html(_CHRISTMAS, _month_name)
+        assert "December 2026 would arrive <b>£400.00</b> short" in price
+
+    def test_a_preview_showing_only_relief_still_carries_the_price(self) -> None:
+        """The failure this exists to prevent: a lever previewing as a gift."""
+        html = panel_html(
+            _result([10000]),
+            _result([20000]),
+            _month_name,
+            price=pause_price_html(_CHRISTMAS, _month_name),
+        )
+        assert "low: from" in html
+        assert "finds no money" in html
+
+    def test_a_change_that_adds_nothing_further_still_carries_it(self) -> None:
+        html = panel_html(
+            _result([10000]),
+            _result([10000]),
+            _month_name,
+            price=pause_price_html(_CHRISTMAS, _month_name),
+        )
+        assert "adds nothing further" in html
+        assert "finds no money" in html

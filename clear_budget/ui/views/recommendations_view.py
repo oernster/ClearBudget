@@ -262,6 +262,7 @@ class RecommendationsView(QWidget):
                     _month_name,
                     solo=_pinned((row.trial,)),
                     baseline=baseline,
+                    price=row.price_html,
                 )
             )
 

@@ -15,10 +15,13 @@ from clear_budget.application.services._overdraft_projection import (
 )
 from clear_budget.application.services._recommendation_operations import (
     _planned_month,
+    _planned_reserve,
+    _reserve_by_day,
 )
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.entities.bill import Bill
+from clear_budget.domain.entities.commitment import Commitment
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.services.recommendations import (
     KIND_BILL,
@@ -26,6 +29,7 @@ from clear_budget.domain.services.recommendations import (
     TrialDay,
 )
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.recurrence import Recurrence
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
 from clear_budget.infrastructure.sqlite.database import Database
@@ -247,3 +251,68 @@ class TestBufferSetting:
             False,
             Amount(pence=12345),
         )
+
+
+# ---- the reserve side of the plan --------------------------------------------
+_COMMITMENT_PENCE = 62000
+_DUE = date(2026, 11, 14)
+
+
+def _commitment(**overrides) -> Commitment:
+    fields = {
+        "id": 1,
+        "name": "Car insurance",
+        "amount": Amount(pence=_COMMITMENT_PENCE),
+        "due_date": _DUE,
+        "recurrence": Recurrence.annual(),
+        "created_month": _AUGUST,
+    }
+    fields.update(overrides)
+    return Commitment(**fields)
+
+
+class TestWhatAMonthHoldsBack:
+    def test_a_month_with_no_commitments_holds_back_nothing(self):
+        held = _reserve_by_day((), _AUGUST.year, _AUGUST.month)
+        assert set(held) == {0}
+
+    def test_there_is_one_figure_for_every_day_of_the_month(self):
+        held = _reserve_by_day((_commitment(),), _AUGUST.year, _AUGUST.month)
+        assert len(held) == 31
+
+    def test_the_hold_back_climbs_across_the_month(self):
+        """A ramp toward the due date, which is what makes it a reserve."""
+        held = _reserve_by_day((_commitment(),), _AUGUST.year, _AUGUST.month)
+        assert held[-1] > held[0]
+
+    def test_two_commitments_are_added_together(self):
+        one = _reserve_by_day((_commitment(),), _AUGUST.year, _AUGUST.month)
+        two = _reserve_by_day(
+            (_commitment(), _commitment(id=2, name="MOT")),
+            _AUGUST.year,
+            _AUGUST.month,
+        )
+        assert list(two) == [value * 2 for value in one]
+
+
+class TestOneCommitmentAsTheEngineSeesIt:
+    def test_it_carries_the_name_and_the_amount(self):
+        reserve = _planned_reserve(_commitment(), (_AUGUST, _SEPTEMBER))
+        assert reserve.name == "Car insurance"
+        assert reserve.amount_pence == _COMMITMENT_PENCE
+
+    def test_it_carries_one_day_tuple_per_horizon_month(self):
+        reserve = _planned_reserve(_commitment(), (_AUGUST, _SEPTEMBER))
+        assert [len(days) for days in reserve.by_day] == [31, 30]
+
+    def test_it_names_the_month_the_money_is_wanted_in(self):
+        """Read from the live occurrence, so a repeat is priced against its cycle."""
+        reserve = _planned_reserve(_commitment(), (_AUGUST, _SEPTEMBER))
+        assert (reserve.due_year, reserve.due_month) == (_DUE.year, _DUE.month)
+
+    def test_a_commitment_holding_nothing_is_not_offered_at_all(self):
+        """Ended before the window opens: there is no reserve left to pause."""
+        ended = _commitment(
+            created_month=YearMonth(2026, 5), final_month=YearMonth(2026, 6)
+        )
+        assert _planned_reserve(ended, (_AUGUST, _SEPTEMBER)) is None

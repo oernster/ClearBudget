@@ -28,33 +28,50 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-# What kind of entry a planned item is; a bill's amount is negative.
-KIND_INCOME = "income"
-KIND_BILL = "bill"
+from clear_budget.domain.services._recommendation_pauses import (
+    MonthLift,
+    ReservePause,
+    reserve_pauses,
+)
+from clear_budget.domain.services._recommendation_plan import (
+    FIRST_DAY as _FIRST_DAY,
+)
+from clear_budget.domain.services._recommendation_plan import (
+    KIND_BILL,
+    KIND_INCOME,
+    PlannedItem,
+    PlannedMonth,
+    PlannedReserve,
+)
+from clear_budget.domain.services._recommendation_trials import (
+    KIND_PAUSE,
+    TrialDay,
+    TrialPause,
+    immovable_months,
+    paused_months,
+    retimed_months,
+)
 
-# A month's first day, where a movable income is proposed to arrive.
-_FIRST_DAY = 1
-
-
-@dataclass(frozen=True, slots=True)
-class PlannedItem:
-    """One dated entry in a month's plan, as the bank projection sees it."""
-
-    name: str
-    kind: str
-    day: int
-    amount_pence: int  # positive income, negative bank bill
-    movable: bool
-
-
-@dataclass(frozen=True, slots=True)
-class PlannedMonth:
-    """A month's bank-side entries, income listed before bills."""
-
-    year: int
-    month: int
-    days: int
-    items: tuple[PlannedItem, ...]
+__all__ = [
+    "KIND_BILL",
+    "KIND_INCOME",
+    "KIND_PAUSE",
+    "IncomeAsk",
+    "MonthLift",
+    "MonthOutlook",
+    "PlannedItem",
+    "PlannedMonth",
+    "PlannedReserve",
+    "Recommendations",
+    "ReservePause",
+    "TimingMove",
+    "TrialDay",
+    "TrialPause",
+    "immovable_months",
+    "paused_months",
+    "recommend",
+    "retimed_months",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,12 +125,20 @@ class Recommendations:
     them is needed to clear the target, which is why they are carried apart
     from `moves` and why `healthy` ignores them: a plan can be perfectly sound
     and still have cheap insurance on offer.
+
+    `pauses` are the third lever and the only one that COSTS something, so
+    they are carried apart from the moves for the opposite reason: not because
+    they are cheap; because they must never be counted as a repair. Each
+    states what it lifts as well as what its due month then arrives short by.
+    `healthy` ignores them too: a plan is not sound because it could stop
+    saving.
     """
 
     moves: tuple[TimingMove, ...]
     asks: tuple[IncomeAsk, ...]
     outlook: tuple[MonthOutlook, ...]
     extras: tuple[TimingMove, ...] = ()
+    pauses: tuple[ReservePause, ...] = ()
 
     @property
     def healthy(self) -> bool:
@@ -121,87 +146,44 @@ class Recommendations:
         return not self.moves and not self.asks
 
 
-@dataclass(frozen=True, slots=True)
-class TrialDay:
-    """One try-it-on retiming: this item on this day, nowhere written.
-
-    A trial is identified by what the user would actually change (the item
-    and its new day), not by a month: a payment day changed in the real
-    world changes every month at once, so the trial does too.
-    """
-
-    kind: str
-    name: str
-    to_day: int
-
-
-def retimed_months(
-    months: tuple[PlannedMonth, ...], trials: tuple[TrialDay, ...]
-) -> tuple[PlannedMonth, ...]:
-    """The months with each trial's item on its trial day, where present.
-
-    Pure and side-effect free: this is how the page previews a suggestion
-    without applying anything. Only a movable item follows its trial (an
-    immovable one has no business being tried; the guard makes a stale or
-    hand-built trial harmless) and the day is capped at each month's length.
-    """
-    by_item = {(t.kind, t.name): t.to_day for t in trials}
-    if not by_item:
-        return months
-    return tuple(
-        replace(
-            month,
-            items=tuple(
-                (
-                    replace(item, day=min(by_item[(item.kind, item.name)], month.days))
-                    if (item.kind, item.name) in by_item and item.movable
-                    else item
-                )
-                for item in month.items
-            ),
-        )
-        for month in months
-    )
-
-
-def immovable_months(months: tuple[PlannedMonth, ...]) -> tuple[PlannedMonth, ...]:
-    """The months with every item pinned to its day.
-
-    Fed to `recommend`, this yields the plan-free reading: no moves are
-    proposed, the asks state what the months as given still need and the
-    outlook shows where they land. The try-it-on panels are its caller:
-    comparing two pinned runs isolates what the USER'S ticked changes do,
-    where the normal run would hide them under the engine's own plan.
-    """
-    return tuple(
-        replace(
-            month,
-            items=tuple(replace(item, movable=False) for item in month.items),
-        )
-        for month in months
-    )
-
-
 def _low(opening_pence: int, month: PlannedMonth) -> tuple[int, int]:
-    """The month's lowest balance and the day it lands on.
+    """The month's lowest HEADROOM and the day it lands on.
 
-    A stable sort by day keeps the construction order on shared days; the
-    construction order lists income first: on a shared day money is received
-    before bills are taken, the same optimistic ordering the bank page uses.
+    Headroom is the balance less what that day has already spoken for. With
+    nothing set aside the two are the same figure and this is the plain
+    balance low it has always been; with a reserve the binding day is the one
+    where the balance comes closest to the floor, which need not be the day
+    the balance itself is lowest. Safe to Spend reads its own month the same
+    way, so a month cannot be tight on one page and comfortable on the other.
+
+    Walked day by day rather than item by item, because a reserve ramps on
+    days that carry no item at all. Within a day the items are applied before
+    the day is measured, income ahead of bills by construction order: on a
+    shared day money is received before bills are taken, the same optimistic
+    ordering the bank page uses.
     """
-    balance = opening_pence
-    low = opening_pence
-    low_day = _FIRST_DAY
+    by_day: dict[int, list[PlannedItem]] = {}
     for item in sorted(month.items, key=lambda entry: entry.day):
-        balance += item.amount_pence
-        if balance < low:
-            low = balance
-            low_day = item.day
+        by_day.setdefault(item.day, []).append(item)
+    balance = opening_pence
+    low = opening_pence - month.reserve_at(_FIRST_DAY)
+    low_day = _FIRST_DAY
+    for day in range(_FIRST_DAY, month.days + 1):
+        for item in by_day.get(day, ()):
+            balance += item.amount_pence
+        headroom = balance - month.reserve_at(day)
+        if headroom < low:
+            low = headroom
+            low_day = day
     return low, low_day
 
 
 def _close(opening_pence: int, month: PlannedMonth) -> int:
-    """Where the month ends; timing moves inside the month cannot change it."""
+    """Where the month ends; timing moves inside the month cannot change it.
+
+    The BALANCE, never the headroom: money set aside is still in the account,
+    so it carries into the next month exactly as it would have.
+    """
     return opening_pence + sum(item.amount_pence for item in month.items)
 
 
@@ -302,6 +284,7 @@ def recommend(
     opening_balance_pence: int,
     overdraft_limit_pence: int,
     buffer_pence: int,
+    reserves: tuple[PlannedReserve, ...] = (),
 ) -> Recommendations:
     """The smallest measured set of changes that clears every month.
 
@@ -310,6 +293,11 @@ def recommend(
     month by month until no move improves the low; whatever shortfall
     remains becomes that month's ask, assumed found before the next month is
     judged, so the asks read as an incremental plan.
+
+    `reserves` name what each commitment holds back, so a pause can be priced
+    against the months as GIVEN. They are read before the plan is applied on
+    purpose: a pause is an alternative to the engine's own repairs, not a
+    further one on top of them, so it must be measured from the same start.
     """
     target = buffer_pence - overdraft_limit_pence
     moves: list[TimingMove] = []
@@ -361,4 +349,22 @@ def recommend(
         asks=tuple(asks),
         outlook=tuple(outlook),
         extras=tuple(extras),
+        # Each pause is priced by re-running THIS engine over the months
+        # with that commitment's hold-back removed, so its figures are the
+        # same unaided lows the outlook prints. The re-run passes no reserves,
+        # which is what stops it recurring.
+        pauses=reserve_pauses(
+            months=months,
+            reserves=reserves,
+            target=target,
+            lows_of=lambda plan: tuple(
+                month.unaided_low_pence
+                for month in recommend(
+                    months=plan,
+                    opening_balance_pence=opening_balance_pence,
+                    overdraft_limit_pence=overdraft_limit_pence,
+                    buffer_pence=buffer_pence,
+                ).outlook
+            ),
+        ),
     )

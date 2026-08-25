@@ -26,10 +26,13 @@ from PySide6.QtWidgets import (
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui._theme_labels import BODY_PADDING_PX
 from clear_budget.ui.utils.recommendation_text import (
+    PAUSE_HEADING,
+    PAUSE_INTRO,
     ask_html,
     headroom_rows,
     move_rows,
     outlook_html,
+    pause_rows,
     sooner_note_html,
 )
 
@@ -45,8 +48,12 @@ _PANEL_PAD_PX = 8
 class SuggestionRow:
     """One suggestion: its trial, its checkbox and its tray panel."""
 
-    def __init__(self, trial, layout, html, on_toggle) -> None:
+    def __init__(self, trial, layout, html, on_toggle, price_html="") -> None:
         self.trial = trial
+        # What this change costs, for a change that has a cost. Carried on
+        # the row so the view can hand it to the panel without knowing
+        # which kind of suggestion it is looking at.
+        self.price_html = price_html
         row = QHBoxLayout()
         self.check = QCheckBox()
         self.check.setToolTip(_TRY_TOOLTIP)
@@ -129,8 +136,12 @@ def build_sections(*, result, horizon, month_name, on_toggle) -> tuple[QWidget, 
     layout.setContentsMargins(0, 0, 0, 0)
     rows: list[SuggestionRow] = []
 
-    def _add_row(trial, html) -> None:
-        rows.append(SuggestionRow(trial, layout, html, lambda _on: on_toggle()))
+    def _add_row(trial, html, price_html="") -> None:
+        rows.append(
+            SuggestionRow(
+                trial, layout, html, lambda _on: on_toggle(), price_html=price_html
+            )
+        )
 
     if result.healthy:
         layout.addWidget(_label("<h3>Nothing needed</h3>"))
@@ -148,6 +159,11 @@ def build_sections(*, result, horizon, month_name, on_toggle) -> tuple[QWidget, 
         layout.addWidget(_label("<h3>Extra income needed</h3>"))
         for ask in result.asks:
             layout.addWidget(_label(ask_html(ask, month_name)))
+    if result.pauses:
+        layout.addWidget(_label(f"<h3>{PAUSE_HEADING}</h3>"))
+        layout.addWidget(_label(PAUSE_INTRO))
+        for trial, html, price_html in pause_rows(result.pauses, month_name):
+            _add_row(trial, html, price_html)
     layout.addWidget(_label("<h3>Where that leaves each month</h3>"))
     for month in result.outlook:
         layout.addWidget(_label(outlook_html(month, month_name)))
