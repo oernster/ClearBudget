@@ -2512,6 +2512,16 @@ an option that read as "remove my data" removed nothing.
   `VIEW_SPECS` has a row on the screen carrying its own icon and its own
   tooltip name, no row survives a button that is gone and the heading counts
   what it lists
+- `test_view_page_lists_agree.py` - the three lists of views in
+  `_main_window_views.py` (the `addTab` calls, the tray-shortcut loop, the
+  positional `_views` literal) agree with each other and with `VIEW_SPECS`,
+  in order. Both consumers of `_views` index by page position, so a view
+  missing from it has buttons wired to nothing and another view's keyboard
+  ring, which is exactly how Reserves shipped
+- `test_delivery_assets.py` - every runtime asset in the resolver's own
+  allowlist is on disk and staged by all three delivery paths, the flatpak's
+  two halves separately, so a picture cannot be lost silently in a packaged
+  build
 - `test_colour_source.py` - a hex literal lives only in `shared/palette.py`
 - `test_combo_box_invariants.py` - no plain `QComboBox` is built, so none can
   lose its arrow to the transparent `drop-down` rule
