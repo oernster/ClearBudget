@@ -105,11 +105,15 @@ deployment, process termination and directory removal. `installer/app.py` and
 `installer/ui` are excluded on the same grounds as `clear_budget/ui` and
 `installer/build_payload.py` is a build script.
 
-Outside the gate: the `.coveragerc` omissions (UI, interfaces, `main.py`, build
-scripts) and any line marked `# pragma: no cover`, of which there are a fair
-number on thin pass-throughs and on the SQLite payment-method repository. Read
-100% as "100% of what is gated", not as "every line is tested"; ARCHITECTURE.md
-says which parts sit outside it.
+Outside the gate, stated in full so the number is not read as more than it is:
+`main.py`, `clear_budget/ui/*`, `clear_budget/domain/interfaces/*`,
+`clear_budget/application/ports/*` (Protocol-only, nothing to execute),
+`clear_budget/shared/resources.py`, the root build scripts, `installer/app.py`,
+`installer/ui/*` and `installer/build_payload.py`; then any line marked
+`# pragma: no cover`, of which there are a fair number on thin pass-throughs
+and on the SQLite payment-method repository. Read 100% as "100% of what is
+gated", not as "every line is tested"; ARCHITECTURE.md says which parts sit
+outside it.
 
 ### Testing the setup program
 

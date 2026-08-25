@@ -139,7 +139,12 @@ what is deliberately left and what only looks like debt.
   limit on today, so it does not veto the figure: it gets a line of its own,
   in red, naming the month, the amount and the fact that spending the headline
   deepens it. The window you set (one to twelve months, four by default)
-  decides how far ahead the app looks, never how much it offers
+  decides how far ahead the app looks, never how much it offers. What the
+  figure has to clear is no longer one number for every day: the buffer is
+  held on every day alike, then whatever the Reserves page is accruing that day
+  is held on top of it, so the floor rises as a distant bill gets closer. A
+  budget with no commitments has a flat floor and projects exactly as it always
+  did
 - What you could spend if you wait: today is often the tightest day of the
   month, so beneath the headline a short schedule gives the figure from each
   later day money lands ("From 19 Aug: £108.04", "From 20 Aug: £443.31"),
@@ -170,7 +175,9 @@ what is deliberately left and what only looks like debt.
   spare"). Whole-month arithmetic on both sides, so the answer describes the
   shape of the month rather than how far through it you are and does not move
   as the month elapses. A month can close in credit while still running at a
-  loss, which is exactly what a closing balance alone hides
+  loss, which is exactly what a closing balance alone hides. What the month is
+  setting aside counts in that figure alongside its bills, because a month that
+  cannot cover its own reserve is short whatever its bills come to
 - Credit card interest is reported beside that figure, never inside it: it
   accrues on the cards and never leaves the bank account, so adding the two
   together would claim money that was never going to move
@@ -213,7 +220,9 @@ what is deliberately left and what only looks like debt.
   reads out that day's balance. Each day's bar is read against the overdraft
   you have arranged: its calm resting colour at or above zero, amber inside
   an arranged facility, red only where a payment would actually bounce, on
-  screen and in the export alike
+  screen and in the export alike. Where a reserve is being held the floor is
+  drawn across the month and the part of each bar beneath it is dimmed, so a
+  day in credit that is already spoken for stops reading as free money
 - Export the graph as a single HTML file: one page carrying both the bar and
   the line rendering with text explaining what each shows. A second export
   writes a range of months as a FOLDER: an `index.html` charting your bank
@@ -230,15 +239,30 @@ what is deliberately left and what only looks like debt.
   to the start of the month), then states whatever shortfall survives the
   best timing as per-month income asks, each assuming the earlier ones
   arrived, judged against your arranged overdraft plus an optional emergency
-  buffer set at the top of the page. Every figure is a re-run of the same
+  buffer set at the top of the page (the same buffer the Reserves page sets:
+  there is one of it, in two places). Every figure is a re-run of the same
   day-by-day simulation the bank page uses. Suggestions only: there is no
   Apply button, by design; you make each change knowingly in its own dialog
   and the page recomputes. Every suggestion carries a try-it-on checkbox
   instead: ticking opens a panel under that suggestion showing its measured
   effect, several at once if you like, with nothing applied anywhere;
-  untick to close it. Below the outlook, an optional headroom section names
-  the few best retimings solvency does not need, each buying measured slack
-  against surprises
+  untick to close it. Where a month is still short it will offer pausing a
+  reserve as a third lever, always priced: a pause does not find money, it
+  stops putting money by, so each one states what it lifts now AND what the
+  month the bill falls due in then arrives short by. Below the outlook, an
+  optional headroom section names the few best retimings solvency does not
+  need, each buying measured slack against surprises
+- A Reserves view: what a month is holding back for a bill that has not
+  arrived yet. Name an annual premium, an MOT or Christmas with its amount and
+  the day it falls due and the money is accrued across the months before it
+  lands, so Safe to Spend, the graph and the Solvency pages stop offering money
+  that is already spoken for. The accrual runs over the months REMAINING rather
+  than over the bill's natural period, because that is what the calendar
+  actually asks for; the gentler natural rate is reported beside it so a first
+  steep cycle can be explained rather than merely endured. A commitment that
+  stops names its final month rather than being deleted, so a month that really
+  did hold a reserve keeps it. Nothing is moved anywhere and no separate
+  account is assumed
 - A "cannot be moved" tick in the bill and income dialogs for payment days
   fixed in the real world; Recommendations never proposes retiming anything
   so marked
@@ -265,7 +289,8 @@ what is deliberately left and what only looks like debt.
   display the system calls primary; dialogs open over the window that raised
   them, focused on their first usable control
 - Built-in "How It Works" help screen: one page that names every icon the app
-  draws, each entry led by the picture it is describing, then states the three
+  draws, every view button included, each entry led by the picture it is
+  describing, then states the three
   rules behind the numbers (how an undated bill accrues, how the balance
   maintains itself, what Safe to Spend Today promises)
 - SQLite storage: per-user budget database + shared users database
@@ -274,19 +299,26 @@ what is deliberately left and what only looks like debt.
 
 ## Application Views
 
-The six primary view buttons carry a picture rather than a name: a calendar and cash
+The seven primary view buttons carry a picture rather than a name: a calendar and cash
 for Monthly Budget, a shield over coins for Solvency, a pair of cards for
-Credit Cards, the app's own icon for Graph, a ticked clipboard under a lit
-bulb for Recommendations and a filing box for Archive. They sit in the
-navigation tray rather than in a strip of their own. Hovering one names it;
-the keyboard ring still stops on each button in turn.
+Credit Cards, a strongbox with a coin for Reserves, the app's own icon for
+Graph, a ticked clipboard under a lit bulb for Recommendations and a filing
+box for Archive. They sit in the navigation tray rather than in a strip of
+their own. Hovering one names it; the keyboard ring still stops on each
+button in turn.
 
-- **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning
+- **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning. A commitment falling due this month appears among the bills as a reminder, marked "(from Reserves)", so the same obligation is not entered a second time by hand; it carries no total and cannot be edited there
 - **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
+- **Reserves** - What is being held back for a bill that has not arrived
+  yet: a table of commitments with what each has accrued and what is still to
+  find, the emergency buffer, then where each month lands once its reserve is
+  taken off its lowest day. Money is never moved and no second account is
+  assumed; the page changes only what the application is willing to call
+  spendable
 - **Graph** - The viewed month as a chart. A switch chooses what is plotted (the bank balance day by day or every card on one chart), a pilot button swaps bar and line renderings and the exports live here: a self-contained page for the month, plus a folder of months offered while the bank series is shown
 - **Recommendations** - Measured suggestions for surviving the months ahead: which bills or incomes could be retimed and how much extra each month still needs, against an optional emergency buffer, plus an optional headroom section for the few best retimings solvency does not need. A reference set only; every change is yours to make in its own dialog and the page recomputes. Each suggestion has a try-it-on checkbox opening a panel with that change's measured effect, multi-selectable and applying nothing
-- **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
+- **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). A completed month reports the reserve it really carried, read at its own last day; the column appears only for a budget that sets something aside, so an archive that never had a commitment reads exactly as it always did. Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
 ---
 
@@ -312,8 +344,8 @@ view's navigation tray, which is two rows. The upper row carries only the
 month or year: Previous, the date and Next, centred. The lower row carries
 everything that acts on the application: the folder and diskette, the
 switch-budget arrows, a separator, the bank, then the Monthly Budget,
-Solvency, Credit Cards, Graph and Recommendations view buttons. A second separator
-sets Archive apart at the far right, beside the sun/moon theme toggle and
+Solvency, Credit Cards, Reserves, Graph and Recommendations view buttons. A
+second separator sets Archive apart at the far right, beside the sun/moon theme toggle and
 the blue information button opening How It Works.
 
 The account you are signed in as is shown at the left of the month row on every
@@ -642,10 +674,11 @@ entered before these existed continues to do.
   toward the background so they read as provisional at a glance. Both readings
   run through the same month engine, so they differ in their evidence and never
   in their arithmetic
-- **What the month needs**: the gap between the month's full bank bills and
-  its full income, stated for every month the page shows. Credit card interest
-  is reported on its own line beneath it and is never added in, because it
-  accrues on the cards rather than leaving the bank account
+- **What the month needs**: the gap between the month's full bank bills plus
+  whatever it is setting aside and its full income, stated for every month the
+  page shows. Credit card interest is reported on its own line beneath it and
+  is never added in, because it accrues on the cards rather than leaving the
+  bank account
 - **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected
   balance; a deficit month names how fast savings are falling per month and the
   first month you would go overdrawn; it also flags "no overdraft facility" when
@@ -682,10 +715,12 @@ standing (one to twelve, four by default).
   into what is bundled with the application and what is only used to build it
 - **Check for Updates** - queries this project's GitHub releases and reports
   whether a newer version exists, offering the download for your platform
-- **How It Works** - names the views, the Graph page's switches and exports and
-  the tray, each entry led by the icon itself, then the three rules the
-  numbers rest on: pro-rating, the self-maintaining balance and what Safe to
-  Spend Today promises. One page, kept in sync with the calculation logic
+- **How It Works** - names all seven views, the Graph page's switches and
+  exports and the tray, each entry led by the icon itself, then the three rules
+  the numbers rest on: pro-rating, the self-maintaining balance and what Safe
+  to Spend Today promises. One page, kept in sync with the calculation logic;
+  a structural test fails the build if a view button is missing from it or the
+  heading miscounts the strip
 - **View Licence (LGPL-3.0)**
 
 ---

@@ -177,6 +177,8 @@
         forward solvency for the next two months, detects mid-month overdrafts when bills cluster before income,
         recommends measured changes when a month ahead cannot hold (retiming what can move, then pricing the
         extra income each month still needs, with try-it-on previews and an optional emergency buffer),
+        holds back money for bills that have not arrived yet so a distant annual premium stops being counted
+        as spendable,
         tracks credit card utilisation and interest with a six-month balance projection and supports multiple
         users with bcrypt sign-in and isolated per-user databases, each holding any number of named budgets.
         A Graph view plots the month as the bank balance day by day or every card on one chart; a month exports
@@ -252,6 +254,8 @@
                 "Try-it-on previews: tick any suggestion to see its measured effect, alone or alongside others, with nothing applied for you",
                 "An optional emergency buffer raising the recommendations target above bare survival",
                 "Payment and arrival days markable as fixed in the real world, so no suggestion proposes moving them",
+                "A Reserves view holding back money for a bill that has not arrived yet: an annual premium, an MOT, Christmas, each accrued across the months before it lands so Safe to Spend stops offering money already spoken for",
+                "Pausing a reserve offered as a third recommendation lever, always priced with what the due month then arrives short by",
                 "Credit card utilisation, interest and six-month balance projection",
                 "Scheduled credit-limit changes",
                 "Per-month bill and income overrides, skips and one-off entries",
