@@ -33,7 +33,9 @@ class OverdraftOperationsMixin:
 
         Card interest is gathered here too but kept separate on the value
         object, because it accrues on the cards and never leaves the bank
-        account.
+        account. The reserve is NOT separate: it leaves the same account the
+        bills do, so a month that cannot fund it is a month that does not
+        hold flat.
         """
         summary = self.get_month_summary(
             year_month=year_month, include_assumed=include_assumed
@@ -51,6 +53,7 @@ class OverdraftOperationsMixin:
             income_pence=summary.total_income.pence,
             bank_bills_pence=bank_bills,
             card_interest_pence=card_interest,
+            reserve_pence=self.get_month_reserve_cost_pence(year_month=year_month),
         )
 
     def get_overdraft_limit(self) -> Amount:  # pragma: no cover

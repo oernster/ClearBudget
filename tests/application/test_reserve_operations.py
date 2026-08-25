@@ -13,6 +13,7 @@ import pytest
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.entities.commitment import Commitment
+from clear_budget.domain.services.reserve_accrual import monthly_rate_pence
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.recurrence import Recurrence
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -268,3 +269,68 @@ class TestTheFloorTheGraphPlots:
         assert max(values) > 0
         # A ramp, not a step: what is held on the last day exceeds the first.
         assert values[-1] != values[0]
+
+
+class TestWhatAMonthMustSetAside:
+    """The whole-month figure the Solvency page states beside the bills.
+
+    Read as at the month's FIRST day, so it describes the shape of the month
+    rather than the moment it is read. That is what lets it sit beside "needs
+    X more to hold flat", a figure that must not move as the month elapses.
+    """
+
+    def test_nothing_set_aside_costs_a_month_nothing(self, conn):
+        service = _service(conn)
+        assert service.get_month_reserve_cost_pence(year_month=AUGUST) == 0
+
+    def test_a_budget_with_no_reserves_store_is_charged_nothing(self, conn):
+        service = _service(conn, with_reserves=False)
+        assert service.get_month_reserve_cost_pence(year_month=AUGUST) == 0
+
+    def test_a_commitment_costs_the_month_what_it_has_to_find(self, conn):
+        """August opens with the November bill four months out, so a quarter."""
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        cost = service.get_month_reserve_cost_pence(year_month=AUGUST)
+        assert cost == monthly_rate_pence(_commitment(), AUGUST.first_day())
+        assert cost > 0
+
+    def test_the_figure_does_not_move_as_the_month_elapses(self, conn):
+        """Two reads of the same month agree; only the month decides it."""
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        first = service.get_month_reserve_cost_pence(year_month=AUGUST)
+        second = service.get_month_reserve_cost_pence(year_month=AUGUST)
+        assert first == second
+
+    def test_a_nearer_month_has_more_to_find(self, conn):
+        """October is one month from the due date where August is three."""
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        august = service.get_month_reserve_cost_pence(year_month=AUGUST)
+        october = service.get_month_reserve_cost_pence(
+            year_month=YearMonth(year=2026, month=10)
+        )
+        assert october > august
+
+    def test_two_commitments_are_added_together(self, conn):
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        one = service.get_month_reserve_cost_pence(year_month=AUGUST)
+        service.add_commitment(commitment=_commitment(name="MOT"))
+        assert service.get_month_reserve_cost_pence(year_month=AUGUST) == one * 2
+
+
+class TestTheMonthGapCarriesTheReserve:
+    """A month that pays every bill and sets nothing aside is not holding flat."""
+
+    def test_setting_aside_raises_what_the_month_needs(self, conn):
+        service = _service(conn)
+        before = service.get_month_gap(year_month=AUGUST).needed_pence
+        service.add_commitment(commitment=_commitment())
+        after = service.get_month_gap(year_month=AUGUST)
+        assert after.reserve_pence > 0
+        assert after.needed_pence == before + after.reserve_pence
+
+    def test_a_budget_setting_nothing_aside_reads_exactly_as_before(self, conn):
+        assert _service(conn).get_month_gap(year_month=AUGUST).reserve_pence == 0

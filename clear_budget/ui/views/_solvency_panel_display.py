@@ -9,6 +9,7 @@ from clear_budget.domain.services._prorating import (
 from clear_budget.ui import theme, ui_scale
 from clear_budget.ui.label_roles import set_role as _repolish_role
 from clear_budget.ui.theme_tokens import STATE_RED, STATE_SAFE
+from clear_budget.ui.utils import reserves_text
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     fmt,
@@ -189,6 +190,7 @@ class SolvencyPanelDisplayMixin:
             self.midmonth_alert.show()
 
         self.balance_label.setText(f"Projected Balance: {fmt(balance)}")
+        self._update_set_aside(report.year_month)
 
         if summary:
             if is_current_month:
@@ -292,6 +294,27 @@ class SolvencyPanelDisplayMixin:
         self._update_month_gap(report.year_month)
         self._update_assumed(report)
         self._render_forward_projection(report, overdraft_limit_pence, is_current_month)
+
+    def _update_set_aside(self, year_month) -> None:
+        """What the viewed month has to put by, beside what it has committed.
+
+        A whole-month figure like the gap below it, read as at the month's
+        first day, so it states what a month like this costs rather than what
+        is being held at this moment. The Reserves page answers that second
+        question and this line would contradict it if it tried to.
+
+        Hidden entirely while nothing is set aside, so a budget that never
+        opens the Reserves page keeps the breakdown it has always had.
+        """
+        service = self.view_model.budget_service
+        if not service.list_commitments():
+            self.set_aside_label.hide()
+            return
+        cost = service.get_month_reserve_cost_pence(year_month=year_month)
+        self.set_aside_label.setText(
+            reserves_text.solvency_set_aside_line(amount=fmt(cost))
+        )
+        self.set_aside_label.show()
 
     def _update_month_gap(self, year_month) -> None:
         """State what the month needs to hold flat and what its cards cost.

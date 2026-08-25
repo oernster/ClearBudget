@@ -97,3 +97,13 @@ def delete_question(*, name: str) -> str:
         f"Delete {name}? The months it has already run in lose the reserve"
         " they carried. Nothing else changes and no money moves."
     )
+
+
+def solvency_set_aside_line(*, amount: str) -> str:
+    """The Solvency breakdown's row, beside "Committed" and "Still due".
+
+    Named for the month rather than for today, because it sits among figures
+    that describe the month's shape: what this month has to put by, not what
+    is being held right now. The Reserves page answers the second question.
+    """
+    return f"Set aside this month: {amount}"

@@ -126,6 +126,22 @@ class ReserveOperationsMixin:
             for day in range(1, last + 1)
         ]
 
+    def get_month_reserve_cost_pence(self, *, year_month: YearMonth) -> int:
+        """What `year_month` has to set aside, for the whole-month arithmetic.
+
+        Read as at the FIRST day of that month rather than as at today, which
+        is what makes it a fact about the month rather than about now: the
+        Solvency page states it as part of what a month like this needs;
+        that answer must not move simply because the month elapsed. Reading it
+        as at the first day also keeps a steep first cycle honest, where the
+        settled rate would understate what the month actually has to find.
+        """
+        opening = year_month.first_day()
+        return sum(
+            monthly_rate_pence(commitment, opening)
+            for commitment in self.list_commitments()
+        )
+
     def get_reserve_rows(self, *, today: date | None = None) -> list[ReserveRow]:
         """Every commitment with the figures the page puts in its table."""
         day = today if today is not None else date.today()  # noqa: DTZ011

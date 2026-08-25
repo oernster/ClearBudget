@@ -28,6 +28,7 @@ reload rather than a turn of the page.
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui.utils import reserves_text
 from clear_budget.ui.utils.format_helpers import fmt
 
 # Section headings on this view share one QSS role (see _theme_controls).
@@ -107,6 +108,14 @@ class SolvencyPanelLayoutMixin:
         layout.addWidget(self.balance_label)
         self.committed_label = _line("SolvencyCommitted", "Committed this month: -")
         layout.addWidget(self.committed_label)
+        # Hidden until a budget actually sets something aside. The Reserves
+        # page is opt-in; a permanently empty row on a page this dense is a
+        # line of noise for everyone who never opens it.
+        self.set_aside_label = _line(
+            "SolvencyCommitted", reserves_text.solvency_set_aside_line(amount=fmt(0))
+        )
+        self.set_aside_label.hide()
+        layout.addWidget(self.set_aside_label)
         self.remaining_bank_label = _line(
             "SolvencyRemainingBank", "Still due this month (bank): -"
         )
