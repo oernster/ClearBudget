@@ -113,12 +113,12 @@ class RecommendationsView(QWidget):
         layout.addLayout(buffer_row)
 
         self.anchor_label = QLabel("")
-        self.anchor_label.setObjectName(label_roles.SUBTLE)
+        self.anchor_label.setObjectName(label_roles.BODY_DETAIL)
         self.anchor_label.setWordWrap(True)
         layout.addWidget(self.anchor_label)
 
         self.body_label = QLabel("")
-        self.body_label.setObjectName(label_roles.NOTE)
+        self.body_label.setObjectName(label_roles.BODY)
         self.body_label.setWordWrap(True)
         self.body_label.setTextFormat(Qt.TextFormat.RichText)
         self.body_label.setAlignment(

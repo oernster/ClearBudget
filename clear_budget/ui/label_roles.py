@@ -14,6 +14,8 @@ object name changes are followed by an unpolish/polish pair.
 from __future__ import annotations
 
 # Static roles.
+BODY = "LabelBody"
+BODY_DETAIL = "LabelBodyDetail"
 HINT = "LabelHint"
 MUTED = "LabelMuted"
 SUBTLE = "LabelSubtle"

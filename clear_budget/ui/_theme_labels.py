@@ -66,6 +66,21 @@ QLabel#LabelMuted {{
     color: {t["text_muted"]};
 }}
 
+/* Page body text, sized on the Solvency scale so every reading page shares
+   one type ramp: paragraphs at the section size, captions at the breakdown
+   size. Rich text inside a body label gets its h3 weight from Qt, landing
+   beside the Solvency banner. */
+QLabel#LabelBody {{
+    font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
+    padding: 5px;
+}}
+
+QLabel#LabelBodyDetail {{
+    font-size: {ui_scale.px(_BREAKDOWN_FONT_PX)}px;
+    padding: 5px;
+    color: {t["text_muted"]};
+}}
+
 QLabel#LabelSubtle {{
     font-size: {small}px;
     color: {t["text_subtle"]};
