@@ -43,6 +43,11 @@ DARK: dict[str, str] = {
     # Sharing one value put a saturated block of the ring colour into every
     # ticked box, which is glare rather than signal.
     "checked_fill": palette.INDIGO_55,
+    # The one checkbox whose TICK is a warning: "this day cannot be moved"
+    # (bill and income dialogs). A deeper red than `danger`, which is tuned
+    # to be read as TEXT on dark panels; a 15px solid block of that value
+    # glares, while this one reads as a firm red fill beside it.
+    "danger_check_fill": palette.RED_42,
     "danger": palette.RED_71,
     "warn": palette.AMBER_56,
     "primary_bg": palette.INDIGO_55,
@@ -96,6 +101,7 @@ LIGHT: dict[str, str] = {
     "info": palette.SKY_32,
     "ring": palette.EMERALD_30,
     "checked_fill": palette.INDIGO_55,
+    "danger_check_fill": palette.RED_51,
     "danger": palette.RED_51,
     "warn": palette.ORANGE_37,
     "primary_bg": palette.INDIGO_55,

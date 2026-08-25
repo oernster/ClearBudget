@@ -1,4 +1,10 @@
-"""BankAccountSettingsDialog - configure the overdraft facility."""
+"""BankAccountSettingsDialog - overdraft, Safe to Spend and currency.
+
+The display-currency picker lived in its own Preferences dialog behind a
+cog button; both folded in here because one small dialog per setting was
+clutter the tray paid for. The bank button now opens everything the
+account can configure.
+"""
 
 from PySide6.QtWidgets import (
     QSpinBox,
@@ -12,8 +18,9 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.domain.value_objects.amount import Amount
-from clear_budget.shared.currency import get_symbol
+from clear_budget.shared.currency import CURRENCIES, get_symbol
 from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 
 _BASIS_POINTS_PER_PERCENT = 100
 
@@ -33,6 +40,7 @@ class BankAccountSettingsDialog(QDialog):
         overdraft_apr_basis_points: int = 0,
         safe_to_spend_floor: Amount | None = None,
         sustainable_window_months: int = 4,
+        currency_code: str = "GBP",
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Bank Account Settings")
@@ -41,6 +49,7 @@ class BankAccountSettingsDialog(QDialog):
         self._overdraft_apr_basis_points = overdraft_apr_basis_points
         self._safe_to_spend_floor = safe_to_spend_floor or Amount(pence=0)
         self._sustainable_window_months = sustainable_window_months
+        self._currency_code = currency_code
         self._new_overdraft_limit: Amount | None = None
         self._new_overdraft_apr_basis_points: int | None = None
         self._new_safe_to_spend_floor: Amount | None = None
@@ -115,6 +124,32 @@ class BankAccountSettingsDialog(QDialog):
         )
         layout.addWidget(self._window_spin)
 
+        currency_title = QLabel("Display Currency")
+        currency_title.setStyleSheet(
+            ui_scale.style("font-size: 16px; font-weight: bold;")
+        )
+        layout.addWidget(currency_title)
+
+        currency_info = QLabel(
+            "The symbol shown throughout the app. Takes effect immediately"
+            " after saving."
+        )
+        currency_info.setWordWrap(True)
+        currency_info.setObjectName(label_roles.SUBTLE)
+        layout.addWidget(currency_info)
+
+        self._currency_combo = ThemedComboBox()
+        self._currency_combo.setMinimumHeight(ui_scale.px(32))
+        current_index = 0
+        for i, c in enumerate(CURRENCIES):
+            self._currency_combo.addItem(
+                f"{c.symbol}  {c.code} - {c.name}", userData=c.code
+            )
+            if c.code == self._currency_code:
+                current_index = i
+        self._currency_combo.setCurrentIndex(current_index)
+        layout.addWidget(self._currency_combo)
+
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         cancel_btn = QPushButton("Cancel")
@@ -162,6 +197,11 @@ class BankAccountSettingsDialog(QDialog):
         self._new_safe_to_spend_floor = Amount.from_pounds(floor_pounds)
         self._new_sustainable_window_months = self._window_spin.value()
         return True
+
+    @property
+    def currency_code(self) -> str:
+        """The display currency the combo currently offers."""
+        return self._currency_combo.currentData()
 
     @property
     def overdraft_limit(self) -> Amount | None:

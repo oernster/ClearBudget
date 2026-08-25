@@ -39,6 +39,7 @@ from clear_budget.ui.utils.tab_icons import (
     CREDIT_CARDS_ICON,
     GRAPH_ICON,
     MONTHLY_BUDGET_ICON,
+    RECOMMENDATIONS_ICON,
     SOLVENCY_ICON,
 )
 from clear_budget.ui.widgets.auto_scroller import AutoScroller
@@ -81,15 +82,13 @@ def _body_html() -> str:
     from clear_budget.shared.resources import find_tab_icon_path
 
     px = ui_scale.px(_INLINE_ICON_PX)
-    # The Bank Account and Switch user buttons are PICTURES in the tray, so
-    # they are pictures here. An icon guide showing something other than the
-    # icon is worse than no guide.
+    # The Bank Account button is a PICTURE in the tray, so it is a picture
+    # here. An icon guide showing something other than the icon is worse
+    # than no guide.
     bank_icon = _img(find_tab_icon_path("bank-icon.png"), px)
-    users_icon = _img(find_tab_icon_path("switchuser.png"), px)
     budgets_icon = _img(find_tab_icon_path("switchbudget.png"), px)
     load_icon = _img(find_tab_icon_path("opendb.png"), px)
     save_icon = _img(find_tab_icon_path("savedb.png"), px)
-    settings_icon = _img(find_tab_icon_path("preferences.png"), px)
     info_icon = _img(find_tab_icon_path("information.png"), px)
     light_icon = _img(find_tab_icon_path("lightmode.png"), px)
     dark_icon = _img(find_tab_icon_path("darkmode.png"), px)
@@ -102,19 +101,23 @@ def _body_html() -> str:
     return f"""\
 <h2>How ClearBudget Works</h2>
 
-<h3>The five tabs</h3>
+<h3>The six tabs</h3>
 {_tab_row(MONTHLY_BUDGET_ICON, "Monthly Budget",
           "this month's bills and income, plus what the balance does.", px)}
 {_tab_row(SOLVENCY_ICON, "Solvency",
-          "whether the month holds, plus the two months after it. Three pages "
-          "behind the buttons at the top: the bank, the cards and Safe to "
-          "Spend.", px)}
+          "whether the month holds, plus the two months after it. Two pages "
+          "behind the button at the top: the bank and Safe to Spend.", px)}
 {_tab_row(CREDIT_CARDS_ICON, "Credit Cards",
           "one panel per card, with a six-month projection.", px)}
 {_tab_row(GRAPH_ICON, "Graph",
           "the month drawn day by day, as bars or as a line. The heading "
           "above the chart always names what is plotted. The tray's arrows "
           "step its month like any other page.", px)}
+{_tab_row(RECOMMENDATIONS_ICON, "Recommendations",
+          "what would make the months ahead survivable: which bills or "
+          "incomes could move and how much extra the months still need, "
+          "with an optional emergency buffer set at the top of the page. "
+          "Suggestions only; nothing is changed for you.", px)}
 {_tab_row(ARCHIVE_ICON, "Archive",
           "months that have finished. They are filed automatically; there is "
           "no archive button. Its icon sits apart, at the right of the tray "
@@ -135,9 +138,8 @@ fetch, so they open on a machine that has never seen this app.</p>
 <h3>The tray</h3>
 <p>{load_icon}load &nbsp;&middot;&nbsp; {save_icon}save
 &nbsp;&middot;&nbsp; {budgets_icon}switch budget &nbsp;&middot;&nbsp;
-{users_icon}switch user &nbsp;&middot;&nbsp; {settings_icon}currency
-&nbsp;&middot;&nbsp; {bank_icon}overdraft plus the Safe to Spend buffer
-and window &nbsp;&middot;&nbsp; {light_icon}/{dark_icon}light or dark
+{bank_icon}currency, overdraft and the Safe to
+Spend buffer and window &nbsp;&middot;&nbsp; {light_icon}/{dark_icon}light or dark
 &nbsp;&middot;&nbsp; {info_icon}this screen</p>
 <p>Load and save open in the app's own data folder, where the live budgets
 already are. Your signed-in name sits at the left of the row above, beside
@@ -170,7 +172,9 @@ to spend.</p>
 <h3>Also worth knowing</h3>
 <p>A bill or income can be skipped, overridden, ended, made a one-off or
 given a new amount from a month onward. Deleting offers two scopes: stop it
-here (earlier months keep it) or remove it everywhere.</p>
+here (earlier months keep it) or remove it everywhere. A red tick in its
+dialog marks a day that cannot be moved in the real world; Recommendations
+then never proposes retiming it.</p>
 <p>The sign-in screen remembers accounts: choose one from the dropdown, with
 a tick each for keeping the username and keeping the password.</p>
 <p>The Users menu holds Manage Users (admins only), Switch User and Log Out.

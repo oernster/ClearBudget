@@ -40,8 +40,8 @@ from clear_budget.ui.widgets._tray_buttons import (
     build_budgets_button,
     build_info_button,
     build_save_load_buttons,
-    build_settings_bank_buttons,
-    build_users_button,
+    build_tray_separator,
+    build_bank_button,
 )
 from clear_budget.ui.widgets.credit_card_dialog import CreditCardDialog
 from clear_budget.ui.utils.table_focus import keyboard_only_focus
@@ -82,8 +82,7 @@ class CreditCardView(
         _glyph_h = nav_glyph_height(self.prev_btn)
         self.load_btn, self.save_btn = build_save_load_buttons(_glyph_h)
         self.budgets_btn = build_budgets_button(_glyph_h)
-        self.users_btn = build_users_button(_glyph_h)
-        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(_glyph_h)
+        _sep, self.bank_btn = build_bank_button(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
         # The four primary tabs live in this tray, so every view builds its
         # own set; MainWindow wires them and keeps the current-tab mark in
@@ -101,13 +100,11 @@ class CreditCardView(
                 self.load_btn,
                 self.save_btn,
                 self.budgets_btn,
-                self.users_btn,
-                self.settings_btn,
-                self.bank_btn,
                 _sep,
+                self.bank_btn,
             ),
             tabs=self.tab_btns[:-1],
-            pre_theme=(self.tab_btns[-1],),
+            pre_theme=(build_tray_separator(_glyph_h), self.tab_btns[-1]),
             trailing=(self.info_btn,),
         )
         self._refresh_month_label()
@@ -241,8 +238,6 @@ class CreditCardView(
             self.load_btn,
             self.save_btn,
             self.budgets_btn,
-            self.users_btn,
-            self.settings_btn,
             self.bank_btn,
             *others,
             *card_stops,

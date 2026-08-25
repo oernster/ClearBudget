@@ -71,14 +71,14 @@ _TAB_ICON_NAMES = frozenset(
         "exporttohtml.png",
         # The Graph page's Export-a-folder button.
         "exportpackage.png",
-        # The tray's Switch user and Switch budget buttons.
-        "switchuser.png",
+        # The tray's Switch budget button.
         "switchbudget.png",
-        # The tray's Load, Save, Preferences and How It Works buttons.
+        # The tray's Load, Save and How It Works buttons.
         "opendb.png",
         "savedb.png",
-        "preferences.png",
         "information.png",
+        # The Recommendations tab: what would make the months ahead survivable.
+        "recommendations.png",
         # The Archive tab, which was the last emoji on the strip.
         "archive.png",
         # The theme toggle's two faces, showing the mode a press switches to.

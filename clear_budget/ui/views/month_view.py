@@ -165,8 +165,6 @@ class MonthView(
             self.load_btn,
             self.save_btn,
             self.budgets_btn,
-            self.users_btn,
-            self.settings_btn,
             self.bank_btn,
             *others,
             *archive_stop,

@@ -92,6 +92,9 @@ Everything below this section explains how the code satisfies them.
   - `has_month_override: bool` - per-month override flag (joined from `bill_month_overrides`)
   - `paid_for_month: bool` - per-month paid flag; excludes the bill from "still due"
     totals and the projected balance for the rest of that month
+  - `day_fixed: bool` - the payment day is fixed in the real world, so
+    Recommendations never proposes moving it. The flag records the EXCEPTION;
+    it defaults False because most days can be moved by asking
   - `is_active_in_month(year_month)` - checks date range
 
 - `IncomeSource` - Recurring income (salary, benefits)
@@ -111,6 +114,8 @@ Everything below this section explains how the code satisfies them.
     wherever the two have to be compared
   - `skipped_for_month` / `has_month_override` / `received_for_month` - same
     per-month machinery as `Bill`
+  - `day_fixed: bool` - as on `Bill` (a Universal Credit date is the worked
+    example of an arrival day nobody can move)
 
 - `CreditCard` - Credit card tracking
   - `id`, `name`, `credit_limit`, `current_balance_used`
@@ -168,6 +173,16 @@ Everything below this section explains how the code satisfies them.
     `"none" | "amber" | "red"`
   - `estimate_daily_overdraft_interest_pence(overdrawn_pence, apr_basis_points)` -
     daily interest estimate from APR stored in basis points
+- `recommendations.py` - the Recommendations engine, pure over its inputs:
+  `recommend(months, opening_balance_pence, overdraft_limit_pence,
+  buffer_pence)` takes `PlannedMonth` tuples and returns
+  `Recommendations(moves, asks, outlook)`. A greedy best-move loop re-runs
+  the day-by-day simulation for every candidate retiming and applies the
+  single most lifting one until none improves the month's low; whatever
+  shortfall survives becomes that month's incremental ask. Ties resolve by
+  name so the result is stable run to run. 100% line and branch covered by
+  `tests/domain/services/test_recommendations.py`, each candidate rejection
+  planted as its own scenario
 - `safe_to_spend.py` - the Safe to Spend Today calculation, pure over its
   inputs and with `today` always a parameter, never read from the clock.
   `sustainable_spend(projection, today, floor_pence, window_months)` returns a
@@ -353,6 +368,14 @@ Key methods:
 - `get_overdraft_limit()` / `set_overdraft_limit(amount)` - overdraft facility limit
 - `get_overdraft_apr_basis_points()` / `set_overdraft_apr_basis_points(basis_points)` -
   overdraft APR, stored as basis points (1bp = 0.01%)
+- `get_recommendations(today=None)` → `(Recommendations, horizon)` - the
+  recommendation engine's answer plus the months it covers, computed over the
+  sustainable window starting the month after today and opening from the
+  current month's projected end-of-month balance (see the RecommendationsView
+  entry for the full shape)
+- `get_recommendation_buffer()` / `set_recommendation_buffer(enabled, amount)` -
+  the Recommendations page's emergency buffer; disabled and zero until the
+  user says otherwise and the amount survives disabling
 - `get_month_gap(year_month)` → `MonthGap` - the month's full bank bills against
   its full income, plus the interest accruing across its active cards; drives
   the Solvency "needs X more to hold flat" line
@@ -446,8 +469,10 @@ Key methods:
      retired `one_time` category is folded into `discretionary` by a numbered
      migration that runs once rather than on every launch. `amount_pence` here
      is only the ORIGINAL amount: what a bill costs in a given month comes from
-     table 18 via `domain.services.bill_amount_schedule`
-  3. `income_sources` - templates; `start_year` / `start_month` / `end_year` / `end_month` (migration) bound the months it appears in, all four nullable and all NULL on every row that predates them, so an upgraded database behaves exactly as it did
+     table 18 via `domain.services.bill_amount_schedule`. `day_fixed`
+     (migration) records a payment day fixed in the real world, defaulting 0
+     (movable) on every row written before the concept existed
+  3. `income_sources` - templates; `start_year` / `start_month` / `end_year` / `end_month` (migration) bound the months it appears in, all four nullable and all NULL on every row that predates them, so an upgraded database behaves exactly as it did; `day_fixed` (migration) as on `bills`
   4. `months` - one row per archived month (written by auto-archive at launch)
   5. `month_bills` - archived per-month bill snapshot
   6. `month_income` - archived per-month income snapshot
@@ -456,7 +481,8 @@ Key methods:
      `bank_balance_date` (the fold baseline; legacy databases without it fall
      back to `bank_balance_day`), `currency`,
      `overdraft_limit`, `overdraft_apr_bp`, `safe_to_spend_floor`,
-     `sustainable_window_months`)
+     `sustainable_window_months`, `recommendation_buffer_enabled`,
+     `recommendation_buffer`)
   9. `bill_month_overrides` - per-month bill amount/day override (`day_of_month` is a migration)
   10. `bill_month_skips` - per-month bill exclusion
   11. `bill_month_paid` - per-month bill "paid" flag (excludes it from "still due")
@@ -727,9 +753,12 @@ holding each budget's slug and display name plus which one is active.
 - `fmt(pounds: float)` → `"{symbol}{pounds:.2f}"`
 - Used throughout UI for all inline currency formatting not going through `Amount.__str__`
 - `build_centered_nav_header(...)` - the shared navigation tray used by all
-  five tabs, built as TWO bordered rows and hoisted above the scroll area by
+  six tabs, built as TWO bordered rows and hoisted above the scroll area by
   `ScrollableTab`: the month or year cluster centred in the upper row, every
-  icon button plus the five tabs in the lower one. The tray machinery itself
+  icon button plus the six tabs in the lower one. Its lower-row order is
+  load, save, switch-budget, a separator, the bank, the Monthly Budget to
+  Recommendations tabs, then a second separator setting Archive apart at the
+  right beside the theme toggle and the information button. The tray machinery itself
   (this builder, the theme toggle and the glyph sizing) lives in
   `ui/utils/nav_header.py`, with the month/year label machinery in
   `ui/utils/nav_label.py`, the sun/moon toggle's two faces and button in
@@ -1019,16 +1048,22 @@ renderings of the same figures to hold in step. Every month any page shows
 - `UserManagementDialog` - admin-only; lists users, Add User, Delete Selected
   (disabled when own row selected); deleting a user always deletes their budget
   data file too (double confirmation)
-- `CurrencyDialog` - combobox of 25 currencies; opened via Settings >
-  Preferences or the tray's cog button
-- `BankAccountSettingsDialog` - configure the overdraft facility (limit and
-  APR) plus the Safe to Spend Today buffer and the sustainable window (a spin
-  box, 1 to 12 months, defaulting to 4); opened via Settings > Bank Account or
-  the tray's bank button
+- `BankAccountSettingsDialog` - choose the display currency (a combobox of
+  25 currencies) and configure the overdraft facility (limit and APR) plus
+  the Safe to Spend Today buffer and the sustainable window (a spin box, 1 to
+  12 months, defaulting to 4); opened via Settings > Bank Account or the
+  tray's bank button. The currency lived in a Preferences dialog of its own
+  behind a tray cog; one setting did not justify a second settings surface,
+  so it was folded in here and the cog retired. The flow returns True when
+  the currency changed and `MainWindow` then emits `database_replaced`, so
+  every figure on every tab restyles at once
 - `BillDialog` - add/edit bill; "This month only" on Add creates a one-off
   scoped to exactly the viewed month (start == end), on Edit it stores a
   per-month override; optional end-month control (greyed while one-off is
-  ticked, since the ending is implied)
+  ticked, since the ending is implied). A red "Payment day cannot be moved"
+  checkbox (`DayFixedCheck`, the `danger_check_fill` token) records the
+  `day_fixed` flag Recommendations consults; `IncomeDialog` carries the same
+  control worded "Arrival day cannot be moved"
 - `CreditCardDialog` - add/edit credit card
 - `IncomeDialog` - add/edit income source. Which controls appear depends on
   what is being edited, each labelled for the job it does there: adding shows
@@ -1046,7 +1081,7 @@ renderings of the same figures to hold in step. Every month any page shows
   and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
 - `HowItWorksDialog` - two jobs in one page. It NAMES the furniture in four
-  runs (the five tabs, the Graph page's own controls, the tray, then the
+  runs (the six tabs, the Graph page's own controls, the tray, then the
   keyboard), each entry led by the real icon that control draws, which the
   tabs need because their text labels became pictures. Then it states the
   three rules the numbers rest on and that no screen can say for itself: how
@@ -1088,11 +1123,12 @@ renderings of the same figures to hold in step. Every month any page shows
   only hand-placed child widget in the app; everything else is laid out and a
   layout cannot overlap its own children (verified by an overlap sweep over all
   four tabs at three window sizes and nine dialogs at two: zero)
-- `_preferences_flow.py` / `_bank_account_settings_flow.py` - dialog-orchestration
-  helpers extracted from `MainWindow` to stay under the LOC limit
+- `_bank_account_settings_flow.py` - dialog-orchestration helper extracted
+  from `MainWindow` to stay under the LOC limit; returns whether the display
+  currency changed
 - `_save_load_flow.py` - the Save / Save As / Load flows behind the File menu
   and the tray buttons, plus the builders for the tray's icon buttons (load,
-  save, cog, bank, info) and their separator. Save copies the database to the
+  save, bank, info) and their separator. Save copies the database to the
   remembered location (first save prompts, defaulting to the app's own data
   directory via `ui_paths.default_data_dir`, then asks before overwriting).
   Load REFUSES FIRST AND CONFIRMS LAST: the accounts store, then the schema,
@@ -1218,6 +1254,45 @@ renderings of the same figures to hold in step. Every month any page shows
     with a dot to aim at; bar mode treats the whole bar as the target. Hit
     testing uses the chart's own `_geometry()`, so a readout can only land on a
     point that was drawn
+- `RecommendationsView` (`views/recommendations_view.py`) - the
+  Recommendations tab: what would make the months ahead survivable, rendered
+  as three plain sections (retime what can move, extra income needed, where
+  that leaves each month). The page is anchored to TODAY rather than to the
+  month being viewed; the tray's arrows still step the shared month label
+  like every other tab and the anchor line above the body says which months
+  the advice covers. It recomputes on every `month_summary_updated`, so an
+  edit made on Monthly Budget lands here the moment it is saved. At the top
+  sits the emergency-buffer row: a checkbox ("Keep an emergency buffer of")
+  and an amount field, persisted through
+  `BudgetService.set_recommendation_buffer` (settings keys
+  `recommendation_buffer_enabled` and `recommendation_buffer`), disabled and
+  zero until the user says otherwise.
+  - There is deliberately NO Apply button and never will be. The page is a
+    reference set, never an actor: a batch of auto-applied edits would leave
+    the user digging out what changed and reconciling it with their actual
+    bank, which is more work than making each change knowingly. The user
+    makes the change in the real world first, then in the bill or income
+    dialog and the page recomputes. The app follows reality; it does not
+    lead it
+  - The engine (`domain/services/recommendations.py`) is pure: PlannedMonth
+    tuples in, `Recommendations(moves, asks, outlook)` out. It re-runs the
+    same day-by-day simulation the bank page uses for every candidate, so a
+    move is only ever proposed with its measured effect; a greedy best-move
+    loop applies the single most lifting retiming until none improves the
+    month's low. Bills move to just after the month's last income, incomes
+    to day 1; a timing move never changes what a month closes at, so timing
+    repairs the mid-month dip while the asks repair the structural deficit.
+    Asks are INCREMENTAL: each month's ask assumes the earlier ones arrived,
+    so they read as one plan. The target is the agreed overdraft floor plus
+    the buffer while it is enabled
+  - The adapter (`application/services/_recommendation_operations.py`,
+    `RecommendationOperationsMixin` on `BudgetService`) builds the plans
+    from `get_month_summary` over the sustainable window, starting the month
+    AFTER the current one and opening from the current month's projected
+    end-of-month balance, mirroring the overdraft runway. Card bills are
+    excluded (retiming a card payment moves no bank money); an undated item
+    takes the projection's day conventions and is never movable; a dated
+    item is movable unless its `day_fixed` flag says the real world fixed it
 - `FirstStopDialog` (`first_stop_dialog.py`) - dialog base that opens with focus
   already on its FIRST stop: the first control in its own tab order that is
   enabled, visible and takes tab focus, found by walking Qt's focus chain so the
@@ -1434,11 +1509,12 @@ renderings of the same figures to hold in step. Every month any page shows
   SMALLER SHIPPED ASSETS rather than more caching
 
 **Tab icons** (`ui/utils/tab_icons.py`):
-- The five primary tabs carry a picture and no text; the text moved to the
+- The six primary tabs carry a picture and no text; the text moved to the
   tooltip, so the row still names itself on hover and nothing was lost but
   a run of labels wide enough to push the tabs across the window
-- All five are bundled images (`monthlybudget.png`, `solvency.png`,
-  `creditcards.png`, the app icon for Graph, `archive.png`, resolved by
+- All six are bundled images (`monthlybudget.png`, `solvency.png`,
+  `creditcards.png`, the app icon for Graph, `recommendations.png`,
+  `archive.png`, resolved by
   `shared.resources.find_tab_icon_path` through the same candidate roots as
   every other asset). The archive was an emoji once and the graph an icon
   button; both are pictures in `TAB_SPECS` now, so adding a tab is one line
@@ -1458,7 +1534,7 @@ renderings of the same figures to hold in step. Every month any page shows
   cost, since a shared bottom edge is what the eye checks along a row
 - EVERY icon in the tray paints at the same height; every button holding one
   is the same size. The scale used to be the tabs' alone, which left the
-  load, save, switch, users, preferences, bank and help icons painting 47
+  load, save, switch, bank and help icons painting 47
   against the tabs' 63 in the same band, a third smaller. Moving the scale to
   the base fixed all of them at once. `NAV_ICON_BTN_PADDING_PX` went to zero in
   the same pass, since a tray button carrying that padding was 8px taller than
@@ -1594,7 +1670,8 @@ renderings of the same figures to hold in step. Every month any page shows
     both admin only), Exit; a full
     restore travels the `full_restore_requested` signal to `main.py`, which
     tears the session down before touching a file
-  - Settings menu (adjacent to File): Preferences, Bank Account
+  - Settings menu (adjacent to File): Bank Account alone, which now carries
+    the display currency too (the Preferences dialog folded into it)
   - Every combo box is a `ui/widgets/themed_combo_box.ThemedComboBox`, which
     paints its own arrow; `ui/_theme_inputs` makes `QComboBox::drop-down`
     transparent. The two halves only work together: Qt draws that subcontrol
@@ -1621,16 +1698,17 @@ renderings of the same figures to hold in step. Every month any page shows
     viewed: the signed-in account at its left (with an empty mirror at the
     right so the cluster stays centred on the window), then Previous, the
     month and year, then Next. The LOWER tray carries everything that acts on
-    the application, built by `_save_load_flow.build_save_load_buttons` /
-    `build_budgets_button` / `build_settings_bank_buttons` /
-    `build_info_button` and sized against the
-    tab buttons: folder (Load), diskette (Save), arrows (Switch Budget), two
-    figures (Switch User), cog (Preferences), bank (Bank Account), a themed
-    separator, then the Monthly Budget, Solvency, Credit Cards and Graph
-    tabs. Archive is pinned to the RIGHT of the stretch, beside the sun/moon
-    toggle and the blue information button (How It Works). The separator
-    divides the controls that DO something from the tabs that only decide
-    which page is being looked at
+    the application, built by `_tray_buttons.build_save_load_buttons` /
+    `build_budgets_button` / `build_bank_button` / `build_info_button` and
+    sized against the tab buttons: folder (Load), diskette (Save), arrows
+    (Switch Budget), a themed separator, bank (Bank Account), then the
+    Monthly Budget, Solvency, Credit Cards, Graph and Recommendations tabs.
+    A second separator sets Archive apart, pinned to the RIGHT of the
+    stretch beside the sun/moon toggle and the blue information button (How
+    It Works). The first separator divides the controls that DO something
+    from the rest of the row; Switch User is menu-only now (a one-click way
+    out of a session in the tray would end it on a misclick) and the cog
+    went with the folded Preferences dialog
   - Every view builds its OWN tray, so a view that never calls a builder
     loses that control silently: the tray still draws and the app still runs,
     with the shortcut simply gone from that tab. Solvency lost the graph
@@ -1975,7 +2053,8 @@ Currency is stored per-user in the `settings` table (`key='currency'`, `value='G
 It is loaded from the DB immediately after opening the user session and activates the
 module-level symbol in `shared.currency`. `Amount.__str__` and `fmt()` both call
 `get_symbol()` at render time, so all displayed values reflect the active currency
-without any additional wiring. On currency change (Settings > Preferences), the new
+without any additional wiring. On currency change (Settings > Bank Account, where
+the picker lives beside the overdraft and Safe to Spend settings), the new
 code is saved to the DB, `set_currency()` is called and `database_replaced` is emitted
 to rebuild the window with updated labels.
 

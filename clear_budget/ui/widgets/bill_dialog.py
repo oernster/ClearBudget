@@ -120,6 +120,19 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
         self.day_spin.setValue(0)
         layout.addWidget(self.day_spin)
 
+        # Ticked means the day is fixed in the real world, so Recommendations
+        # will never propose retiming this bill. The tick is a warning rather
+        # than a setting, which is why it fills red (see theme_qss).
+        self.day_fixed_check = QCheckBox("Payment day cannot be moved")
+        self.day_fixed_check.setObjectName("DayFixedCheck")
+        self.day_fixed_check.setToolTip(
+            "Tick when the provider will not move this bill's collection day."
+            " The Recommendations page then never suggests retiming it. Most"
+            " bills can be moved by asking, so leave this unticked unless you"
+            " know the day is fixed."
+        )
+        layout.addWidget(self.day_fixed_check)
+
         self.pays_card_label = QLabel("Pays Card:")
         layout.addWidget(self.pays_card_label)
         self.pays_card_combo = ThemedComboBox()
@@ -232,6 +245,7 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
         self.type_combo.setCurrentText(bill.bill_type)
         if bill.day_of_month:
             self.day_spin.setValue(bill.day_of_month)
+        self.day_fixed_check.setChecked(bill.day_fixed)
         if bill.target_card_id is not None:
             for i in range(self.pays_card_combo.count()):
                 if self.pays_card_combo.itemData(i) == bill.target_card_id:
@@ -318,6 +332,7 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
                 end_ym=end_ym,
                 active=True,
                 target_card_id=target_card_id,
+                day_fixed=self.day_fixed_check.isChecked(),
             )
         except (ValueError, AttributeError):
             return None

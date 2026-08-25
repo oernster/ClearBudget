@@ -49,6 +49,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
                 b.end_year,
                 b.end_month,
                 b.active,
+                b.day_fixed,
                 CASE WHEN s.bill_id IS NOT NULL THEN 1 ELSE 0 END AS skipped_for_month,
                 CASE WHEN o.bill_id IS NOT NULL THEN 1 ELSE 0 END AS has_month_override,
                 CASE WHEN p.bill_id IS NOT NULL THEN 1 ELSE 0 END AS paid_for_month
@@ -102,6 +103,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
                 skipped_for_month=bool(row["skipped_for_month"]),
                 has_month_override=bool(row["has_month_override"]),
                 paid_for_month=bool(row["paid_for_month"]),
+                day_fixed=bool(row["day_fixed"]),
             )
             bills.append(bill)
 
@@ -205,7 +207,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
             """
             SELECT id, name, amount_pence, payment_method_id, category,
                    bill_type, day_of_month, start_year, start_month,
-                   end_year, end_month, active, target_card_id
+                   end_year, end_month, active, target_card_id, day_fixed
             FROM bills WHERE id = ?
             """,
             (bill_id,),
@@ -231,6 +233,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
             ),
             active=bool(row["active"]),
             target_card_id=row["target_card_id"],
+            day_fixed=bool(row["day_fixed"]),
         )
 
     def add(self, *, bill: Bill) -> Bill:
@@ -241,8 +244,8 @@ class SQLiteBillRepository(BillAmountChangesMixin):
             INSERT INTO bills
             (name, amount_pence, payment_method_id, category, bill_type,
              day_of_month, start_year, start_month,
-             end_year, end_month, active, target_card_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             end_year, end_month, active, target_card_id, day_fixed)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 bill.name,
@@ -257,6 +260,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
                 bill.end_ym.month if bill.end_ym else None,
                 1 if bill.active else 0,
                 bill.target_card_id,
+                1 if bill.day_fixed else 0,
             ),
         )
         self.conn.commit()
@@ -272,6 +276,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
             end_ym=bill.end_ym,
             active=bill.active,
             target_card_id=bill.target_card_id,
+            day_fixed=bill.day_fixed,
         )
 
     def update(self, *, bill: Bill) -> Bill:
@@ -283,7 +288,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
             SET name = ?, amount_pence = ?, payment_method_id = ?,
                 category = ?, bill_type = ?, day_of_month = ?,
                 start_year = ?, start_month = ?, end_year = ?,
-                end_month = ?, active = ?, target_card_id = ?
+                end_month = ?, active = ?, target_card_id = ?, day_fixed = ?
             WHERE id = ?
             """,
             (
@@ -299,6 +304,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
                 bill.end_ym.month if bill.end_ym else None,
                 1 if bill.active else 0,
                 bill.target_card_id,
+                1 if bill.day_fixed else 0,
                 bill.id,
             ),
         )

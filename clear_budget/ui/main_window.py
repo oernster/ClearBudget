@@ -130,21 +130,20 @@ class MainWindow(
         if run_budgets_flow(self, self.current_user.username):
             self.database_replaced.emit()
 
-    def _on_preferences(self) -> None:
-        """Open currency preferences dialog; rebuild window on change."""
-        from clear_budget.ui.widgets._preferences_flow import run_preferences_flow
-
-        conn = self.month_view_model.budget_service.bill_repo.conn
-        if run_preferences_flow(self, conn):
-            self.database_replaced.emit()
-
     def _on_bank_account_settings(self) -> None:
-        """Open the overdraft facility settings dialog."""
+        """Open the account settings dialog (overdraft, buffers, currency).
+
+        A currency change relabels every figure in the window, so it rebuilds
+        the session exactly as the retired Preferences dialog did; anything
+        else is picked up by an ordinary month refresh.
+        """
         from clear_budget.ui.widgets._bank_account_settings_flow import (
             run_bank_account_settings_flow,
         )
 
-        run_bank_account_settings_flow(self, self.month_view_model.budget_service)
+        if run_bank_account_settings_flow(self, self.month_view_model.budget_service):
+            self.database_replaced.emit()
+            return
         self.month_view_model.refresh_month_summary()
 
     def _on_how_it_works(self) -> None:

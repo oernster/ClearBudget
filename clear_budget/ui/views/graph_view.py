@@ -59,8 +59,8 @@ from clear_budget.ui.widgets._tray_buttons import (
     build_budgets_button,
     build_info_button,
     build_save_load_buttons,
-    build_settings_bank_buttons,
-    build_users_button,
+    build_tray_separator,
+    build_bank_button,
 )
 
 # What the two switches say. Each names what a press will DO rather than what
@@ -125,8 +125,7 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         _glyph_h = nav_glyph_height(self.prev_btn)
         self.load_btn, self.save_btn = build_save_load_buttons(_glyph_h)
         self.budgets_btn = build_budgets_button(_glyph_h)
-        self.users_btn = build_users_button(_glyph_h)
-        _sep, self.settings_btn, self.bank_btn = build_settings_bank_buttons(_glyph_h)
+        _sep, self.bank_btn = build_bank_button(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
         # Every view builds its own set of the five tabs; MainWindow wires
         # them and keeps the current-tab mark in step across all of them.
@@ -143,13 +142,11 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
                 self.load_btn,
                 self.save_btn,
                 self.budgets_btn,
-                self.users_btn,
-                self.settings_btn,
-                self.bank_btn,
                 _sep,
+                self.bank_btn,
             ),
             tabs=self.tab_btns[:-1],
-            pre_theme=(self.tab_btns[-1],),
+            pre_theme=(build_tray_separator(_glyph_h), self.tab_btns[-1]),
             trailing=(self.info_btn,),
         )
         self._refresh_month_label()
@@ -313,8 +310,6 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
             self.load_btn,
             self.save_btn,
             self.budgets_btn,
-            self.users_btn,
-            self.settings_btn,
             self.bank_btn,
             *others,
             *archive_stop,

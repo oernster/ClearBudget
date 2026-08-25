@@ -185,6 +185,21 @@ def _m09_income_start_and_end_month(cursor: sqlite3.Cursor) -> None:
     )
 
 
+def _m10_day_fixed_flags(cursor: sqlite3.Cursor) -> None:
+    """Whether an item's day of month is fixed in the real world.
+
+    Consulted by the Recommendations page, which proposes retiming only what
+    can actually be retimed. The flag records the EXCEPTION: most bills and
+    incomes can be moved by asking, while a Universal Credit date or a
+    provider's fixed collection day cannot, so the default 0 (movable) is the
+    honest reading of every row written before the concept existed.
+    """
+    _add_columns(cursor, "bills", (("day_fixed", "INTEGER NOT NULL DEFAULT 0"),))
+    _add_columns(
+        cursor, "income_sources", (("day_fixed", "INTEGER NOT NULL DEFAULT 0"),)
+    )
+
+
 _MIGRATIONS: tuple[Migration, ...] = (
     _m01_credit_card_detail_columns,
     _m02_bill_target_card,
@@ -195,6 +210,7 @@ _MIGRATIONS: tuple[Migration, ...] = (
     _m07_retire_one_time_category,
     _m08_bill_amount_changes,
     _m09_income_start_and_end_month,
+    _m10_day_fixed_flags,
 )
 
 # Derived from the list so the two cannot drift apart.

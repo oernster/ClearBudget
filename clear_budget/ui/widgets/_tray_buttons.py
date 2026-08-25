@@ -23,15 +23,13 @@ from clear_budget.ui.utils.icon_buttons import build_tray_image_button
 _BANK_ICON = "bank-icon.png"
 _BANK_ICON_PAD_PX = 2
 
-# The Switch user and Switch budget buttons, supplied pictures rather than
-# the emoji they replaced.
-_USERS_ICON = "switchuser.png"
+# The Switch budget button, a supplied picture rather than the emoji it
+# replaced.
 _BUDGETS_ICON = "switchbudget.png"
-# Load, Save, Preferences and How It Works, likewise. Each is fitted by its
+# Load, Save and How It Works, likewise. Each is fitted by its
 # painted HEIGHT, so the row keeps one baseline whatever the artwork's aspect.
 _LOAD_ICON = "opendb.png"
 _SAVE_ICON = "savedb.png"
-_SETTINGS_ICON = "preferences.png"
 _INFO_ICON = "information.png"
 
 
@@ -51,45 +49,43 @@ def build_budgets_button(glyph_height: int) -> QPushButton:
     return build_tray_image_button(_BUDGETS_ICON, "Switch budget…", glyph_height)
 
 
-def build_users_button(glyph_height: int) -> QPushButton:
-    """Return the switch-user button for a nav tray, drawn beside switch-budget.
+def build_bank_button(glyph_height: int) -> tuple[QFrame, QPushButton]:
+    """Return (separator, bank_btn) for a nav tray.
 
-    It carries SWITCH USER rather than Log Out; the reason is
-    reversibility. A tray button is one click with no confirmation; a
-    cancelled switch leaves the session exactly as it was, while a mis-clicked
-    Log Out would end it. Log Out therefore stays on the Users menu, where
-    choosing it is deliberate.
-    """
-    return build_tray_image_button(_USERS_ICON, "Switch user…", glyph_height)
-
-
-def build_settings_bank_buttons(
-    glyph_height: int,
-) -> tuple[QFrame, QPushButton, QPushButton]:
-    """Return (separator, settings_btn, bank_btn) for a nav tray.
-
-    The separator is a themed vertical rule, returned here but placed by the
-    caller AFTER both buttons: it divides the six controls that act on the
-    application (load, save, switch budget, switch user, Preferences, Bank
-    Account) from the tabs that follow them, which only decide which page you
-    are looking at. It used
-    to sit between load/save and the settings pair, back when the tabs were
-    a strip of their own and there was nothing else in the tray to divide
-    them from.
+    The separator is a themed vertical rule the caller places BEFORE the bank
+    button, setting the account's own settings apart from the file shortcuts
+    left of it. The settings button that used to stand here went when the
+    Preferences content folded into the Bank Account dialog, which this one
+    button now opens.
     """
     separator = QFrame()
     separator.setObjectName(label_roles.SEPARATOR)
     separator.setFrameShape(QFrame.Shape.VLine)
     separator.setFixedHeight(glyph_height)
-    settings_btn = build_tray_image_button(_SETTINGS_ICON, "Preferences…", glyph_height)
-    # A picture rather than the bank emoji, so the one control in this
-    # group that is not a glyph. The padding is the reason it needs its own
-    # builder: this building has a flat base, so cropped tight and centred
-    # it sits lower than the rounded emoji either side of it.
+    # A picture rather than the bank emoji. The padding is the reason it
+    # needs naming: this building has a flat base, so cropped tight and
+    # centred it sits lower than the artwork either side of it.
     bank_btn = build_tray_image_button(
-        _BANK_ICON, "Bank account", glyph_height, bottom_pad_px=_BANK_ICON_PAD_PX
+        _BANK_ICON,
+        "Bank account and preferences",
+        glyph_height,
+        bottom_pad_px=_BANK_ICON_PAD_PX,
     )
-    return separator, settings_btn, bank_btn
+    return separator, bank_btn
+
+
+def build_tray_separator(glyph_height: int) -> QFrame:
+    """Return a themed vertical rule for a nav tray.
+
+    A second copy of the rule `build_bank_button` returns, for the
+    right-hand group: it stands before Archive, dividing the pinned-right
+    trio (Archive, theme, help) from the stretch beside them.
+    """
+    separator = QFrame()
+    separator.setObjectName(label_roles.SEPARATOR)
+    separator.setFrameShape(QFrame.Shape.VLine)
+    separator.setFixedHeight(glyph_height)
+    return separator
 
 
 def build_info_button(glyph_height: int) -> QPushButton:

@@ -90,6 +90,18 @@ class IncomeDialog(QDialog):
         self.due_day_spinbox.setValue(0)
         layout.addWidget(self.due_day_spinbox)
 
+        # Ticked means the day is fixed in the real world (a benefit payment
+        # date, a payroll run), so Recommendations never proposes retiming
+        # this income. The tick is a warning, so it fills red (theme_qss).
+        self.day_fixed_check = QCheckBox("Arrival day cannot be moved")
+        self.day_fixed_check.setObjectName("DayFixedCheck")
+        self.day_fixed_check.setToolTip(
+            "Tick when this income's arrival day is outside your control,"
+            " such as a benefit payment date or an employer's payroll run."
+            " The Recommendations page then never suggests retiming it."
+        )
+        layout.addWidget(self.day_fixed_check)
+
         month = self._month_label
         self.one_off_check = QCheckBox(f"This is a one-off, {month} only")
         self.one_off_check.setToolTip(
@@ -147,6 +159,7 @@ class IncomeDialog(QDialog):
         self.name_edit.setText(income.name)
         self.amount_edit.setText(f"{income.amount.pounds:.2f}")
         self.due_day_spinbox.setValue(income.day_of_month or 0)
+        self.day_fixed_check.setChecked(income.day_fixed)
         self.one_off_check.setChecked(income.is_month_only)
         if not income.is_month_only and income.has_month_override:
             self.scope_check.setChecked(True)
@@ -255,6 +268,7 @@ class IncomeDialog(QDialog):
                 start_ym=self.income.start_ym if self.income else None,
                 end_ym=self._chosen_end_month(),
                 is_month_only=self.one_off_check.isChecked(),
+                day_fixed=self.day_fixed_check.isChecked(),
             )
         except (ValueError, AttributeError):
             return None

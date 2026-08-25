@@ -1,4 +1,4 @@
-"""The tab strip's icons: five bundled images, matched in size.
+"""The tab strip's icons: six bundled images, matched in size.
 
 The primary tabs carry pictures rather than words. The words are not
 gone, they moved into the tooltips, so the strip still names itself to anyone
@@ -46,8 +46,10 @@ CREDIT_CARDS_ICON = "creditcards.png"
 # before it became a tab, so becoming a tab changed where it sits and what it
 # does, never what it looks like.
 GRAPH_ICON = "ClearBudget_256.png"
-# The last of the five to stop being an emoji. A filing cabinet glyph was line
-# work with space in it and read light beside four dense pictograms.
+# What would make the months ahead survivable; sits right of the graph.
+RECOMMENDATIONS_ICON = "recommendations.png"
+# The last of the originals to stop being an emoji. A filing cabinet glyph was
+# line work with space in it and read light beside the dense pictograms.
 ARCHIVE_ICON = "archive.png"
 
 # Tab names, so a view that needs to name one does not spell it again.
@@ -58,6 +60,7 @@ TAB_SPECS = (
     (SOLVENCY_ICON, "Solvency"),
     (CREDIT_CARDS_ICON, CREDIT_CARDS_TAB),
     (GRAPH_ICON, "Graph"),
+    (RECOMMENDATIONS_ICON, "Recommendations"),
     (ARCHIVE_ICON, "Archive"),
 )
 # QSS hooks: the object name carrying the three-state ring rules, plus the

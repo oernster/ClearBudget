@@ -29,6 +29,9 @@ from clear_budget.application.services._overdraft_operations import (
 from clear_budget.application.services._projection_series import (
     ProjectionSeriesMixin,
 )
+from clear_budget.application.services._recommendation_operations import (
+    RecommendationOperationsMixin,
+)
 from clear_budget.application.services._safe_to_spend_operations import (
     SafeToSpendOperationsMixin,
 )
@@ -62,6 +65,7 @@ class BudgetService(
     MonthSummaryBuilderMixin,
     ProjectionSeriesMixin,
     SafeToSpendOperationsMixin,
+    RecommendationOperationsMixin,
 ):
     bill_repo: BillRepository
     income_repo: IncomeSourceRepository

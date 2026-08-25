@@ -1,6 +1,6 @@
 """The main window's tab pages and the wiring that keeps them in step.
 
-Split out of `main_window` as one cohesive concern: building the five pages,
+Split out of `main_window` as one cohesive concern: building the six pages,
 connecting the signals that keep their month and their data together, then
 mapping every tray's copy of the tab buttons onto the pages. Together they
 were what pushed that module into the LOC danger band
@@ -23,6 +23,7 @@ from clear_budget.ui.views.archive_view import ArchiveView
 from clear_budget.ui.views.credit_card_view import CreditCardView
 from clear_budget.ui.views.graph_view import GraphView
 from clear_budget.ui.views.month_view import MonthView
+from clear_budget.ui.views.recommendations_view import RecommendationsView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
 from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 
@@ -83,7 +84,16 @@ class MainWindowTabsMixin:
         )
         self.tabs.addTab(self._scrollable(graph_view), "Graph")
 
-        self._report_tab(4, "Archive")
+        # Right of Graph, left of Archive, matching TAB_SPECS. The advice is
+        # anchored to today whatever month the tray shows.
+        self._report_tab(4, "Recommendations")
+        recommendations_view = RecommendationsView(
+            self.month_view_model.budget_service,
+            self.month_view_model.current_month,
+        )
+        self.tabs.addTab(self._scrollable(recommendations_view), "Recommendations")
+
+        self._report_tab(5, "Archive")
         archive_view = ArchiveView(self.month_view_model.budget_service)
         self.tabs.addTab(self._scrollable(archive_view), "Archive")
 
@@ -94,13 +104,12 @@ class MainWindowTabsMixin:
             solvency_panel,
             credit_card_view,
             graph_view,
+            recommendations_view,
             archive_view,
         ):
             _tray_view.save_btn.clicked.connect(self._on_save_database)
             _tray_view.load_btn.clicked.connect(self._on_load_database)
             _tray_view.budgets_btn.clicked.connect(self._on_manage_budgets)
-            _tray_view.users_btn.clicked.connect(self._on_users)
-            _tray_view.settings_btn.clicked.connect(self._on_preferences)
             _tray_view.bank_btn.clicked.connect(self._on_bank_account_settings)
             _tray_view.info_btn.clicked.connect(self._on_how_it_works)
             set_nav_user(
@@ -115,6 +124,7 @@ class MainWindowTabsMixin:
         self.month_view_model.month_changed.connect(self.solvency_view_model.set_month)
         self.month_view_model.month_changed.connect(credit_card_view.set_month)
         self.month_view_model.month_changed.connect(graph_view.set_month)
+        self.month_view_model.month_changed.connect(recommendations_view.set_month)
         self.month_view_model.month_summary_updated.connect(
             self.solvency_view_model.update_month_summary
         )
@@ -130,6 +140,11 @@ class MainWindowTabsMixin:
         self.month_view_model.month_summary_updated.connect(
             graph_view.on_month_summary_updated
         )
+        # The advice is computed from the months as entered, so any edit that
+        # changes a summary re-answers the question this page asks.
+        self.month_view_model.month_summary_updated.connect(
+            recommendations_view.on_month_summary_updated
+        )
 
         solvency_panel.prev_btn.clicked.connect(self.month_view_model.previous_month)
         solvency_panel.next_btn.clicked.connect(self.month_view_model.next_month)
@@ -137,8 +152,17 @@ class MainWindowTabsMixin:
         credit_card_view.next_btn.clicked.connect(self.month_view_model.next_month)
         graph_view.prev_btn.clicked.connect(self.month_view_model.previous_month)
         graph_view.next_btn.clicked.connect(self.month_view_model.next_month)
+        recommendations_view.prev_btn.clicked.connect(
+            self.month_view_model.previous_month
+        )
+        recommendations_view.next_btn.clicked.connect(self.month_view_model.next_month)
 
-        for _nav in (solvency_panel, credit_card_view, graph_view):
+        for _nav in (
+            solvency_panel,
+            credit_card_view,
+            graph_view,
+            recommendations_view,
+        ):
             self.month_view_model.month_changed.connect(
                 lambda ym, b=_nav.prev_btn: b.setEnabled(
                     ym > self.month_view_model.base_month
@@ -151,9 +175,16 @@ class MainWindowTabsMixin:
         solvency_panel.prev_btn.setEnabled(not at_base)
         credit_card_view.prev_btn.setEnabled(not at_base)
         graph_view.prev_btn.setEnabled(not at_base)
+        recommendations_view.prev_btn.setEnabled(not at_base)
 
         # Solvency owns the nav-label health colour; mirror it onto every tab.
-        for _view in (month_view, credit_card_view, graph_view, archive_view):
+        for _view in (
+            month_view,
+            credit_card_view,
+            graph_view,
+            recommendations_view,
+            archive_view,
+        ):
             solvency_panel.month_label_color_changed.connect(_view.set_nav_label_color)
 
         if self.month_view_model.month_summary:
@@ -166,6 +197,7 @@ class MainWindowTabsMixin:
             solvency_panel,
             credit_card_view,
             graph_view,
+            recommendations_view,
             archive_view,
         ]
         self._wire_tab_buttons(_views)

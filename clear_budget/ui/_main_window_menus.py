@@ -63,9 +63,6 @@ class MainWindowMenuMixin:
         # Settings menu, adjacent to File.
         settings_menu = self.menuBar().addMenu("&Settings")
 
-        prefs_action = settings_menu.addAction("&Preferences…")
-        prefs_action.triggered.connect(self._on_preferences)
-
         bank_action = settings_menu.addAction("&Bank Account")
         bank_action.triggered.connect(self._on_bank_account_settings)
 

@@ -117,7 +117,6 @@ def test_the_help_screen_has_stopped_naming_a_glyph_it_replaced() -> None:
     retired = {
         "opendb.png": "\U0001f4c2",
         "savedb.png": "\U0001f4be",
-        "preferences.png": "⚙",
         "information.png": "ℹ",
     }
     for filename, glyph in retired.items():

@@ -348,6 +348,14 @@ QCheckBox::indicator:disabled {{
     background: transparent;
 }}
 
+/* The day-cannot-move flag (bill and income dialogs). Its TICK is a warning
+   rather than a setting, so it fills red instead of the ordinary checked
+   blue. Object-name scoped: id specificity beats the generic rule above. */
+QCheckBox#DayFixedCheck::indicator:checked {{
+    background: {t["danger_check_fill"]};
+    border-color: {t["danger_check_fill"]};
+}}
+
 QCheckBox:enabled:focus {{
     color: {t["accent"]};
 }}

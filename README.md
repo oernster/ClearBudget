@@ -202,9 +202,9 @@ what is deliberately left and what only looks like debt.
   another budget's contents
 - Database save to a remembered location and validated load (File menu and the
   folder/diskette buttons at the far left of every tab's navigation tray, with
-  the switch-budget, cog and bank buttons beside them; the theme toggle and a
-  blue information button sit at its far right)
-- Display currency selection - 25 currencies covering English-speaking countries (Settings > Preferences)
+  the switch-budget button beside them, then a separator and the bank button;
+  the theme toggle and a blue information button sit at its far right)
+- Display currency selection - 25 currencies covering English-speaking countries (Settings > Bank Account)
 - A Graph tab: the viewed month plotted as a page of its own, stepped between
   months by the same Previous/Next arrows every tab shares. A switch on the
   page chooses what is plotted, the bank balance day by day or every credit
@@ -225,6 +225,18 @@ what is deliberately left and what only looks like debt.
   anywhere: styles and charts are inline, in the dark theme, so a single file
   can be emailed and a folder can be copied to a stick and opened offline.
   Both default to your Downloads folder
+- A Recommendations tab: measured suggestions for the months ahead. It
+  retimes what can move (bills until after the month's last income, incomes
+  to the start of the month), then states whatever shortfall survives the
+  best timing as per-month income asks, each assuming the earlier ones
+  arrived, judged against your arranged overdraft plus an optional emergency
+  buffer set at the top of the page. Every figure is a re-run of the same
+  day-by-day simulation the bank page uses. Suggestions only: there is no
+  Apply button, by design; you make each change knowingly in its own dialog
+  and the page recomputes
+- A "cannot be moved" tick in the bill and income dialogs for payment days
+  fixed in the real world; Recommendations never proposes retiming anything
+  so marked
 - Full keyboard navigation: Tab or Right steps forward, Shift+Tab or Left
   steps back (wrapping); Up/Down walk table rows; Enter equals Space; focus
   and hover show a neutral ring, disabled controls a red one; nothing is focused
@@ -257,16 +269,18 @@ what is deliberately left and what only looks like debt.
 
 ## Application Tabs
 
-The five primary tabs carry a picture rather than a name: a calendar and cash
+The six primary tabs carry a picture rather than a name: a calendar and cash
 for Monthly Budget, a shield over coins for Solvency, a pair of cards for
-Credit Cards, the app's own icon for Graph and a filing box for Archive. They
-sit in the navigation tray rather than in a strip of their own. Hovering one
-names it; the keyboard ring still stops on each tab in turn.
+Credit Cards, the app's own icon for Graph, a ticked clipboard under a lit
+bulb for Recommendations and a filing box for Archive. They sit in the
+navigation tray rather than in a strip of their own. Hovering one names it;
+the keyboard ring still stops on each tab in turn.
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning
 - **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Graph** - The viewed month as a chart. A switch chooses what is plotted (the bank balance day by day or every card on one chart), a pilot button swaps bar and line renderings and the exports live here: a self-contained page for the month, plus a folder of months offered while the bank series is shown
+- **Recommendations** - Measured suggestions for surviving the months ahead: which bills or incomes could be retimed and how much extra each month still needs, against an optional emergency buffer. A reference set only; every change is yours to make in its own dialog and the page recomputes
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
 ---
@@ -283,21 +297,19 @@ names it; the keyboard ring still stops on each tab in turn.
 | File | Import / Export > Back Up Everything... (admin only) | Save every account and every budget as one zip file |
 | File | Import / Export > Restore Everything... (admin only) | Replace all accounts and budgets from a full backup (validated before anything is touched; signs everyone out) |
 | File | Exit | Close application |
-| Settings | Preferences... | Choose display currency |
-| Settings | Bank Account | Configure an overdraft facility (limit and APR) plus the Safe to Spend Today buffer and window |
+| Settings | Bank Account | Choose the display currency and configure an overdraft facility (limit and APR) plus the Safe to Spend Today buffer and window |
 | Users | Switch User... | Suspend this session and return to the sign-in screen; cancelling comes back to it |
 | Users | Log Out | End this session and return to the sign-in screen; cancelling there closes the application |
 | Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
 
-Load, Save, Switch Budget, Switch User, Preferences and Bank Account are also
-one click away in every tab's navigation tray, which is two rows. The upper row
-carries only the month or year: Previous, the date and Next, centred. The lower
-row carries everything that acts on the application: the folder and diskette,
-the switch-budget arrows, the two figures (Switch User), the cog (Preferences),
-the bank, then a separator, then
-the Monthly Budget, Solvency, Credit Cards and Graph tabs. Archive sits at
-the far right beside the sun/moon theme toggle and the blue information
-button opening How It Works.
+Load, Save, Switch Budget and Bank Account are also one click away in every
+tab's navigation tray, which is two rows. The upper row carries only the
+month or year: Previous, the date and Next, centred. The lower row carries
+everything that acts on the application: the folder and diskette, the
+switch-budget arrows, a separator, the bank, then the Monthly Budget,
+Solvency, Credit Cards, Graph and Recommendations tabs. A second separator
+sets Archive apart at the far right, beside the sun/moon theme toggle and
+the blue information button opening How It Works.
 
 The account you are signed in as is shown at the left of the month row on every
 tab, in the same size as the month itself, rather than in the title bar. A name
@@ -348,9 +360,8 @@ only in what cancelling the sign-in screen then does. **Switch User...**
 suspends the session: the window is hidden and its budget stays open, so
 cancelling returns to exactly where you were. **Log Out** ends the session, so
 cancelling closes the application instead. Neither loses anything, since the
-budget is saved on disk either way. Switch User is also the two-figures button
-in every tab's navigation tray; Log Out is deliberately menu-only, because a
-one-click Log Out would end a session on a misclick.
+budget is saved on disk either way. Both are deliberately menu-only: a
+one-click way out of a session in the tray would end it on a misclick.
 
 For admins the menu also carries **Manage Users...** for adding and removing
 accounts (added accounts are also non-admin). Admins cannot delete their own
@@ -464,7 +475,8 @@ reports when you are already up to date.
 
 ## Display Currency
 
-Settings > Preferences opens a currency picker. 25 currencies are supported:
+Settings > Bank Account carries the currency picker, in the same dialog as
+the overdraft and the Safe to Spend settings. 25 currencies are supported:
 
 GBP, USD, EUR, AUD, CAD, NZD, ZAR, SGD, HKD, INR, NGN, GHS, KES, PHP, PKR, BDT,
 JMD, TTD, NAD, BWP, ZMW, BZD, GYD, FJD, PGK
@@ -645,9 +657,9 @@ entered before these existed continues to do.
 ## Bank Account
 
 Settings > Bank Account (or the bank button in the navigation tray) opens a
-dialog to record an overdraft facility: a limit
-(in the active currency) and an APR. With a facility recorded, the Monthly Budget tab
-shows:
+dialog to choose the display currency and record an overdraft facility: a
+limit (in the active currency) and an APR. With a facility recorded, the
+Monthly Budget tab shows:
 - An amber warning if the projected balance dips below zero but stays within the
   facility, including an estimated daily interest cost
 - A red warning if the dip would exceed the facility or if no facility is set at all

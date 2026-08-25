@@ -42,6 +42,11 @@ class IncomeSource:
     skipped_for_month: bool = False
     has_month_override: bool = False
     received_for_month: bool = False
+    # Whether the arrival day is fixed in the real world (a benefit payment
+    # date, an employer's payroll run). Records the EXCEPTION, so the default
+    # is movable; the Recommendations engine proposes retiming only what can
+    # move.
+    day_fixed: bool = False
 
     def is_active_in_month(self, year_month: YearMonth) -> bool:
         """Whether this income appears in the given month.

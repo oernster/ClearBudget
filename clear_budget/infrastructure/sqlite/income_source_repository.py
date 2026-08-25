@@ -51,7 +51,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
         """List all active income sources."""
         cursor = self.conn.cursor()
         cursor.execute(f"""
-            SELECT id, name, amount_pence, is_reliable, day_of_month, active,
+            SELECT id, name, amount_pence, is_reliable, day_of_month, active, day_fixed,
                    {_BOUND_COLUMNS}
             FROM income_sources
             WHERE active = 1
@@ -62,7 +62,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
         """List all income sources including inactive."""
         cursor = self.conn.cursor()
         cursor.execute(f"""
-            SELECT id, name, amount_pence, is_reliable, day_of_month, active,
+            SELECT id, name, amount_pence, is_reliable, day_of_month, active, day_fixed,
                    {_BOUND_COLUMNS}
             FROM income_sources
             """)
@@ -81,6 +81,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
             active=bool(row["active"]),
             start_ym=start_ym,
             end_ym=end_ym,
+            day_fixed=bool(row["day_fixed"]),
         )
 
     def get_by_id(self, *, income_id: int) -> IncomeSource | None:
@@ -88,7 +89,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
         cursor = self.conn.cursor()
         cursor.execute(
             f"""
-            SELECT id, name, amount_pence, is_reliable, day_of_month, active,
+            SELECT id, name, amount_pence, is_reliable, day_of_month, active, day_fixed,
                    {_BOUND_COLUMNS}
             FROM income_sources WHERE id = ?
             """,
@@ -108,8 +109,8 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
             """
             INSERT INTO income_sources
             (name, amount_pence, is_reliable, day_of_month, active,
-             start_year, start_month, end_year, end_month)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+             start_year, start_month, end_year, end_month, day_fixed)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 income.name,
@@ -118,6 +119,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 income.day_of_month,
                 1 if income.active else 0,
                 *_bound_values(income),
+                1 if income.day_fixed else 0,
             ),
         )
         self.conn.commit()
@@ -131,6 +133,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
             active=income.active,
             start_ym=income.start_ym,
             end_ym=income.end_ym,
+            day_fixed=income.day_fixed,
         )
 
     def update(self, *, income: IncomeSource) -> IncomeSource:
@@ -141,7 +144,8 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
             UPDATE income_sources
             SET name = ?, amount_pence = ?, is_reliable = ?,
                 day_of_month = ?, active = ?,
-                start_year = ?, start_month = ?, end_year = ?, end_month = ?
+                start_year = ?, start_month = ?, end_year = ?, end_month = ?,
+                day_fixed = ?
             WHERE id = ?
             """,
             (
@@ -151,6 +155,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 income.day_of_month,
                 1 if income.active else 0,
                 *_bound_values(income),
+                1 if income.day_fixed else 0,
                 income.id,
             ),
         )
@@ -201,6 +206,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 i.is_reliable,
                 COALESCE(o.day_of_month, i.day_of_month) AS day_of_month,
                 i.active,
+                i.day_fixed,
                 i.start_year,
                 i.start_month,
                 i.end_year,
@@ -253,6 +259,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 skipped_for_month=bool(row["skipped_for_month"]),
                 has_month_override=bool(row["has_month_override"]),
                 received_for_month=bool(row["received_for_month"]),
+                day_fixed=bool(row["day_fixed"]),
             )
             for row in cursor.fetchall()
         ]

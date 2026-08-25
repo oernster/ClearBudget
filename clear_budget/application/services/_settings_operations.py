@@ -108,6 +108,47 @@ def set_sustainable_window_months(conn, months: int) -> None:  # pragma: no cove
     conn.commit()
 
 
+def get_recommendation_buffer_pence(conn) -> int | None:  # pragma: no cover
+    """Stored emergency buffer for the Recommendations page; None = never set."""
+    if conn is None:
+        return None
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT value FROM settings WHERE key = ?", ("recommendation_buffer",)
+    )
+    row = cursor.fetchone()
+    return int(row["value"]) if row else None
+
+
+def set_recommendation_buffer_pence(conn, pence: int) -> None:  # pragma: no cover
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+        ("recommendation_buffer", str(pence)),
+    )
+    conn.commit()
+
+
+def get_recommendation_buffer_enabled(conn) -> bool:  # pragma: no cover
+    if conn is None:
+        return False
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT value FROM settings WHERE key = ?", ("recommendation_buffer_enabled",)
+    )
+    row = cursor.fetchone()
+    return bool(int(row["value"])) if row else False
+
+
+def set_recommendation_buffer_enabled(conn, enabled: bool) -> None:  # pragma: no cover
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+        ("recommendation_buffer_enabled", "1" if enabled else "0"),
+    )
+    conn.commit()
+
+
 def get_overdraft_apr_basis_points(conn) -> int:  # pragma: no cover
     if conn is None:
         return 0

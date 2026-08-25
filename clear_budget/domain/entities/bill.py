@@ -52,6 +52,11 @@ class Bill:
     # bill viewed in a month after an increase would write the increased figure
     # back as the base and restate every earlier month.
     base_amount: Amount | None = None
+    # Whether the payment day is fixed in the real world (a collection date
+    # the provider will not move). Records the EXCEPTION: most bills can be
+    # retimed by asking, so the default is movable. Consulted by the
+    # Recommendations engine, which proposes retiming only what can move.
+    day_fixed: bool = False
 
     def is_active_in_month(self, year_month: YearMonth) -> bool:
         """Check if this bill is active in the given month."""
