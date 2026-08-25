@@ -212,6 +212,19 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
             return 0
         return self.budget_service.get_overdraft_limit().pence
 
+    def _reserve_floor_values(self) -> list[int]:
+        """The reserve floor across the viewed month; empty for a card plot.
+
+        A card carries its own limit rather than a reserve, so nothing is set
+        aside against it and the chart is given no line to read the bars
+        against, which is how it drew before reserves existed.
+        """
+        if not self._showing_bank():
+            return []
+        return self.budget_service.get_bank_graph_floor_values(
+            year_month=self.current_month
+        )
+
     def _current_series(self):
         """Return (title, series) for the viewed month under the switch.
 
@@ -238,6 +251,7 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         self._series = list(series)
         self.title_label.setText(self._title)
         self.chart.set_overdraft_limit_pence(self._floor_pence())
+        self.chart.set_reserve_floor_values(self._reserve_floor_values())
         self.chart.set_data(self._series, self._mode)
         # A bank-balance projection offered beside a graph of cards would name
         # something other than what is on screen, so it goes with the switch.

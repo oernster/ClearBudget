@@ -11,13 +11,15 @@ import re
 
 import pytest
 
-from clear_budget.application.reporting.chart_svg import (
+from clear_budget.application.reporting._chart_svg_theme import (
+    FLOOR_DASH,
     HEIGHT,
+    MARGIN_LEFT_MIN,
+    SOLO_BAR_UNDER,
     WIDTH,
     ZERO_LINE,
-    _MARGIN_LEFT_MIN,
-    chart_svg,
 )
+from clear_budget.application.reporting.chart_svg import chart_svg
 
 
 class _Series:
@@ -126,13 +128,13 @@ def _grid_left(svg):
 
 def test_the_left_margin_keeps_its_floor_for_short_labels():
     """Ordinary balances leave the margin at its minimum."""
-    assert _grid_left(_svg([_RISING], "line")) == _MARGIN_LEFT_MIN
+    assert _grid_left(_svg([_RISING], "line")) == MARGIN_LEFT_MIN
 
 
 def test_the_left_margin_widens_to_fit_a_large_balance():
     """A label wider than the floor grows the margin instead of truncating."""
     huge = _Series("Bank balance", [999_999_999_900] * _DAYS)
-    assert _grid_left(_svg([huge], "line")) > _MARGIN_LEFT_MIN
+    assert _grid_left(_svg([huge], "line")) > MARGIN_LEFT_MIN
 
 
 def test_a_label_with_markup_in_it_is_escaped():
@@ -141,3 +143,56 @@ def test_a_label_with_markup_in_it_is_escaped():
     svg = _svg([hostile], "bar")
     assert "<script>" not in svg
     assert "&lt;script&gt;" in svg
+
+
+# ---- the reserve floor ------------------------------------------------------
+# A day can be in credit and still not be free, because the month's own
+# commitments have already claimed part of the balance. The export has to say
+# so with the same four states the widget uses, else the report and the screen
+# disagree about the same month.
+
+_FLOOR_PENCE = 130_00
+
+
+def _floor_svg(series, *, floor_values, mode="bar"):
+    return chart_svg(series, mode=mode, labels=_LABELS, floor_values=floor_values)
+
+
+def _floor_line_count(svg):
+    """How many floor polylines the markup carries.
+
+    Matched on the floor's own dash rather than on `<polyline`, because the
+    line rendering draws the series that way too.
+    """
+    return svg.count(f'stroke-dasharray="{FLOOR_DASH}"')
+
+
+def test_a_day_in_credit_but_under_its_floor_is_dimmed():
+    """In credit, so nothing bounced; spoken for, so it is not money to spend."""
+    svg = _floor_svg([_RISING], floor_values=[_FLOOR_PENCE] * _DAYS)
+    under = sum(1 for v in _RISING.values if 0 <= v < _FLOOR_PENCE)
+    assert under > 0
+    assert under < _DAYS  # the rest clear the floor, so the test can tell them apart
+    assert svg.count(f'fill="{SOLO_BAR_UNDER}"') == under
+
+
+def test_without_a_floor_no_day_is_dimmed():
+    """The reading every export carried before reserves existed."""
+    assert f'fill="{SOLO_BAR_UNDER}"' not in _svg([_RISING], "bar")
+
+
+def test_the_floor_is_drawn_across_the_month():
+    svg = _floor_svg([_RISING], floor_values=[_FLOOR_PENCE] * _DAYS)
+    assert _floor_line_count(svg) == 1
+
+
+def test_no_floor_line_is_drawn_when_none_was_given():
+    assert _floor_line_count(_svg([_RISING], "bar")) == 0
+
+
+def test_a_floor_of_one_day_draws_no_line():
+    """A line needs two points; one day's floor is a dot nobody can read."""
+    svg = _floor_svg([_RISING], floor_values=[_FLOOR_PENCE])
+    assert _floor_line_count(svg) == 0
+    # The one day it does cover still reads against it.
+    assert f'fill="{SOLO_BAR_UNDER}"' in svg

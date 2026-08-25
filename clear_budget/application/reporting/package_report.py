@@ -105,6 +105,7 @@ def build_package(
                     subtitle=_MONTH_SUBTITLE.format(label=month.label),
                     series=series,
                     floor_pence=month.floor_pence,
+                    floor_values=month.reserve_floor_pence,
                     home_link=INDEX_NAME,
                 ),
             )

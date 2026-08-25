@@ -96,6 +96,9 @@ class ProjectionSeriesMixin:
                     income_pence=summary.total_income.pence,
                     bank_bills_pence=summary.bank_bills.pence,
                     floor_pence=floor_pence,
+                    reserve_floor_pence=tuple(
+                        self.get_bank_graph_floor_values(year_month=year_month)
+                    ),
                 )
             )
         return projected

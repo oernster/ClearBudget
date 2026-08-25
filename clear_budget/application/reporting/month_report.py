@@ -75,7 +75,13 @@ def _back_to_index(home_link) -> str:
 
 
 def month_report_html(
-    *, title: str, subtitle: str, series, floor_pence: int = 0, home_link=None
+    *,
+    title: str,
+    subtitle: str,
+    series,
+    floor_pence: int = 0,
+    floor_values=None,
+    home_link=None,
 ) -> str:
     """Render one month's graph as a standalone HTML document.
 
@@ -85,6 +91,9 @@ def month_report_html(
         series: The GraphSeries the dialog is showing.
         floor_pence: the arranged overdraft, so an exported bar inside it
             reads amber exactly as it does on screen. Zero means no facility.
+        floor_values: the reserve floor for each day, so an exported day that
+            is in credit but already spoken for reads dimmed and the floor is
+            drawn across the bars, exactly as it does on screen.
         home_link: the filename of the index this page belongs to, when it is
             one page of a package rather than an export on its own. None keeps
             the page standalone, which is what a single-month export is: it
@@ -99,9 +108,15 @@ def month_report_html(
     totals = daily_totals([s.values for s in plotted])
     labels = _day_labels(len(plotted[0].values))
     named = ", ".join(escape(s.label) for s in plotted)
-    # The bar rendering is the only one that reads the overdraft floor: bars
-    # carry a per-day fill, while the line is one stroke through every day.
-    bar_svg = chart_svg(plotted, mode="bar", labels=labels, floor_pence=floor_pence)
+    # The bar rendering is the only one that reads either floor: bars carry a
+    # per-day fill, while the line is one stroke through every day.
+    bar_svg = chart_svg(
+        plotted,
+        mode="bar",
+        labels=labels,
+        floor_pence=floor_pence,
+        floor_values=floor_values,
+    )
     body = (
         "<section>\n"
         f"{_figures(totals)}\n"

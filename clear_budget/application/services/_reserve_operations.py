@@ -20,6 +20,7 @@ from clear_budget.domain.services.reserve_accrual import (
     natural_rate_pence,
     reserve_pence,
 )
+from clear_budget.domain.services._prorating import days_in_month
 from clear_budget.domain.services.reserve_floor import ReserveFloor
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -107,6 +108,23 @@ class ReserveOperationsMixin:
         return self.build_reserve_floor(
             buffer_pence=buffer_amount.pence if enabled else 0
         )
+
+    def get_bank_graph_floor_values(self, *, year_month: YearMonth) -> list[int]:
+        """The floor on every day of `year_month`, in pence, for the graph.
+
+        Built on the Safe to Spend buffer rather than the Reserves page's own,
+        because the graph plots the bank balance; that is the threshold Safe
+        to Spend already quotes against it, so answering with the other
+        buffer would draw a second, different line under the same bars.
+        """
+        floor = self.build_reserve_floor(
+            buffer_pence=self.get_safe_to_spend_floor().pence
+        )
+        last = days_in_month(year_month.year, year_month.month)
+        return [
+            floor.at(date(year_month.year, year_month.month, day))
+            for day in range(1, last + 1)
+        ]
 
     def get_reserve_rows(self, *, today: date | None = None) -> list[ReserveRow]:
         """Every commitment with the figures the page puts in its table."""

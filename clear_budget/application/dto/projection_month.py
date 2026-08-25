@@ -31,6 +31,12 @@ class ProjectionMonth:
         floor_pence: The agreed overdraft floor, zero or negative. Below it a
             payment does not clear; above it but below zero is arranged
             borrowing.
+        reserve_floor_pence: What must STAY in the account on each day of the
+            month, one value per day. A different floor entirely from
+            `floor_pence`: that one is how far below zero the bank will let
+            the account go, this one is how far above zero the month's own
+            commitments hold it. Empty means none was supplied, which is how
+            every report built before reserves existed reads.
     """
 
     year: int
@@ -43,6 +49,7 @@ class ProjectionMonth:
     income_pence: int
     bank_bills_pence: int
     floor_pence: int
+    reserve_floor_pence: tuple[int, ...] = ()
 
     @property
     def net_pence(self) -> int:

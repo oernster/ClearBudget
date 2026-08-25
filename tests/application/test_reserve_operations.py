@@ -229,3 +229,42 @@ class TestTheFloor:
         service = _service(conn)
         assert service.get_variable_spend() == Amount(pence=30000)
         assert service.get_reserve_floor().variable_spend_monthly_pence == 30000
+
+
+class TestTheFloorTheGraphPlots:
+    """The per-day floor the month graph and its exports read the bars against.
+
+    Built on the Safe to Spend buffer rather than the Reserves page's own,
+    because the graph plots the bank balance and Safe to Spend already quotes
+    a threshold against exactly that.
+    """
+
+    def test_it_gives_one_value_for_every_day_of_the_month(self, conn):
+        values = _service(conn).get_bank_graph_floor_values(year_month=AUGUST)
+        assert len(values) == 31
+
+    def test_a_short_month_gets_its_own_length(self, conn):
+        february = YearMonth(year=2026, month=2)
+        values = _service(conn).get_bank_graph_floor_values(year_month=february)
+        assert len(values) == 28
+
+    def test_it_stands_on_the_safe_to_spend_buffer(self, conn):
+        service = _service(conn)
+        service.set_safe_to_spend_floor(amount=Amount(pence=2000))
+        assert set(service.get_bank_graph_floor_values(year_month=AUGUST)) == {2000}
+
+    def test_the_reserves_page_buffer_is_not_the_one_it_uses(self, conn):
+        """Two buffers exist and they are not the same setting."""
+        service = _service(conn)
+        service.set_safe_to_spend_floor(amount=Amount(pence=2000))
+        service.set_recommendation_buffer(enabled=True, amount=Amount(pence=99999))
+        assert set(service.get_bank_graph_floor_values(year_month=AUGUST)) == {2000}
+
+    def test_a_commitment_lifts_the_floor_as_its_due_date_nears(self, conn):
+        service = _service(conn)
+        service.set_safe_to_spend_floor(amount=Amount(pence=0))
+        service.add_commitment(commitment=_commitment())
+        values = service.get_bank_graph_floor_values(year_month=AUGUST)
+        assert max(values) > 0
+        # A ramp, not a step: what is held on the last day exceeds the first.
+        assert values[-1] != values[0]

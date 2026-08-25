@@ -35,6 +35,7 @@ class GraphExportsMixin:
             subtitle=f"Projected day by day across {self._month_label_text()}.",
             series=self._series,
             floor_pence=self._floor_pence(),
+            floor_values=self._reserve_floor_values(),
         )
         self._write(html, suggested=f"{self._slug(self._title)}{_HTML_SUFFIX}")
 

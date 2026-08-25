@@ -132,3 +132,26 @@ FUCHSIA_73 = "#e879f9"  # h292 s91% l73%
 # Pink. A series.
 PINK_51 = "#db2777"  # h333 s71% l51%
 PINK_70 = "#f472b6"  # h329 s86% l70%
+
+
+# How far a mark is mixed into its own background to read as dimmed. Stated
+# once because two layers derive from it: the on-screen chart through
+# ui.theme_tokens and the exported report through application.reporting. A
+# mark taken just past halfway keeps its own hue, so it is still recognisably
+# what it was, while reading clearly quieter than a resting one.
+BLEND_DIMMED = 0.55
+
+
+def blend(colour: str, toward: str, fraction: float) -> str:
+    """Mix `colour` toward `toward` by `fraction`, as a #rrggbb string.
+
+    Lives here rather than in a theme, so a derived colour is computed the
+    same way wherever it is needed and cannot drift between the screen and
+    an export. Deriving beats picking: a blend follows its source when the
+    source is repainted, where a hand-picked near-match quietly stops
+    matching.
+    """
+    a = tuple(int(colour[i : i + 2], 16) for i in (1, 3, 5))
+    b = tuple(int(toward[i : i + 2], 16) for i in (1, 3, 5))
+    mixed = (round(x + (y - x) * fraction) for x, y in zip(a, b))
+    return "#" + "".join(f"{value:02x}" for value in mixed)

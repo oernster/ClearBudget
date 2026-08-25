@@ -13,7 +13,8 @@ active theme (resolved per paint), so the chart follows the light/dark
 toggle: pastel series on the dark canvas, saturated mid-tones on the light.
 
 The axes chrome (measured y-axis margin, grid, day labels, legend) lives in
-_chart_axes and the hover readout in _chart_hover, one concern per file.
+_chart_axes, the colour each mark takes in _chart_colours and the hover
+readout in _chart_hover, one concern per file.
 """
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -27,6 +28,11 @@ from clear_budget.application.reporting.curve import (
 )
 from clear_budget.ui import ui_scale
 from clear_budget.ui.widgets._chart_axes import ChartAxesMixin
+from clear_budget.ui.widgets._chart_colours import (
+    ChartColoursMixin,
+    active_palette,
+    solo_palette,
+)
 from clear_budget.ui.widgets._chart_hover import ChartHoverMixin
 
 MODE_BAR = "bar"
@@ -50,49 +56,12 @@ _HOVER_SNAP_PX = 20
 _READOUT_PAD_PX = 7
 _READOUT_GAP_PX = 14
 _READOUT_RADIUS_PX = 4
+# Thin on purpose: the floor is a threshold to read a bar against, so a
+# heavier stroke would compete with the bars it exists to qualify.
+_FLOOR_LINE_WIDTH_PX = 1
 
 
-def _active_palette():
-    """Return (chrome tokens, series colours, curve colour) for the theme.
-
-    Resolved per paint rather than at construction, so an open graph repaints
-    in the new theme the moment the tray toggle switches it.
-    """
-    from PySide6.QtWidgets import QApplication
-
-    from clear_budget.ui import theme
-    from clear_budget.ui.theme_tokens import (
-        curve_colour_for,
-        series_colours_for,
-        tokens_for,
-    )
-
-    name = theme.current_theme(QApplication.instance())
-    return tokens_for(name), series_colours_for(name), curve_colour_for(name)
-
-
-def _solo_palette():
-    """Role colours for one plotted series: (line, bar, curve, bar-in-facility)."""
-    from PySide6.QtWidgets import QApplication
-
-    from clear_budget.ui import theme
-    from clear_budget.ui.theme_tokens import (
-        chart_bar_colour_for,
-        chart_bar_within_facility_colour_for,
-        chart_line_colour_for,
-        solo_curve_colour_for,
-    )
-
-    name = theme.current_theme(QApplication.instance())
-    return (
-        chart_line_colour_for(name),
-        chart_bar_colour_for(name),
-        solo_curve_colour_for(name),
-        chart_bar_within_facility_colour_for(name),
-    )
-
-
-class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
+class LineBarChart(ChartAxesMixin, ChartColoursMixin, ChartHoverMixin, QWidget):
     """Draws GraphSeries values as a line or grouped bar chart."""
 
     def __init__(self, parent=None) -> None:
@@ -100,9 +69,13 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         self._series = []
         self._mode = MODE_BAR
         self._hover = None
-        self._tokens, self._colours, self._curve_colour = _active_palette()
-        self._solo_colours = _solo_palette()
+        self._tokens, self._colours, self._curve_colour = active_palette()
+        self._solo_colours = solo_palette()
         self._overdraft_limit_pence = 0
+        # One floor value per day of the plotted month; empty means the chart
+        # was given none, which is how a card plot and every older caller
+        # behave; it is drawn exactly as before.
+        self._floor_values: list[int] = []
         self.setMinimumHeight(ui_scale.px(260))
         # Hover readouts need move events without a button held down.
         self.setMouseTracking(True)
@@ -125,48 +98,21 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         self._overdraft_limit_pence = max(0, int(limit_pence))
         self.update()
 
-    def _bar_colour_for(self, value_pence: int, colour: QColor) -> QColor:
-        """Three-state fill for one day's bar, read against the agreed floor.
+    def set_reserve_floor_values(self, values) -> None:
+        """The floor for each day of the plotted month, in pence.
 
-        At or above zero the day is in credit and keeps the series colour.
-        Below zero but no further than the arranged overdraft it is amber: the
-        facility is there to absorb that day, so red would say a payment
-        bounced when none did. Past the floor it is red, where one would.
+        Drawn as a line and used to tell a day in credit apart from a day
+        that is genuinely free. Passing nothing restores the older reading,
+        where only zero and the arranged overdraft divide the bars.
         """
-        if value_pence >= 0:
-            return colour
-        _line, _bar, _curve, within = self._solo_colours
-        if value_pence >= -self._overdraft_limit_pence:
-            return QColor(within)
-        return QColor(self._tokens["danger"])
+        self._floor_values = [int(v) for v in values]
+        self.update()
 
-    def _series_colour(self, idx: int) -> QColor:
-        """Return the palette colour for series `idx`, cycling the palette."""
-        return QColor(self._colours[idx % len(self._colours)])
-
-    def _solo(self) -> bool:
-        """Whether this chart plots exactly one series."""
-        return len(self._series) == 1
-
-    def _plot_colour(self, idx: int) -> QColor:
-        """The colour series `idx` is ACTUALLY drawn in, for the current mode.
-
-        A single series takes a role colour: a deep blue as a line, green as
-        bars. The line stays neutral because one stroke spans a whole month,
-        so green there read as "in credit" over days that were not; a bar is
-        one day, so green states a fact about a day that really is.
-        With several series the palette wins, because telling one card from
-        another is the only job the colour has there.
-        """
-        line_colour, bar_colour, _curve, _within = self._solo_colours
-        if not self._solo():
-            return self._series_colour(idx)
-        return QColor(bar_colour if self._mode == MODE_BAR else line_colour)
-
-    def _active_curve_colour(self) -> QColor:
-        """The curve's colour: the line's blue alone, else its own hue."""
-        _line, _bar, solo_curve, _within = self._solo_colours
-        return QColor(solo_curve if self._solo() else self._curve_colour)
+    def _floor_at(self, day: int) -> int | None:
+        """The floor on `day`; None when this chart was given no floor."""
+        if not self._floor_values or day > len(self._floor_values):
+            return None
+        return self._floor_values[day - 1]
 
     def _curve_values(self) -> tuple[int, ...]:
         """The day-end total the curve follows, across every plotted series.
@@ -257,8 +203,8 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
         # overdraft limit is NOT, because it is data the caller set and not a
         # property of the theme. Resetting it here silently painted every
         # below-zero bar red however large the arranged facility was.
-        self._tokens, self._colours, self._curve_colour = _active_palette()
-        self._solo_colours = _solo_palette()
+        self._tokens, self._colours, self._curve_colour = active_palette()
+        self._solo_colours = solo_palette()
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.fillRect(self.rect(), QColor(self._tokens["window_bg"]))
@@ -277,6 +223,7 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
             self._draw_bars(painter, geom)
         else:
             self._draw_lines(painter, geom)
+        self._draw_floor(painter, geom)
         if low < 0 < high:
             zero_pen = QPen(QColor(self._tokens["danger"]), 1, Qt.PenStyle.DashLine)
             painter.setPen(zero_pen)
@@ -324,13 +271,40 @@ class LineBarChart(ChartAxesMixin, ChartHoverMixin, QWidget):
     def _draw_bars(self, painter, geom) -> None:
         _left, _top, _plot_w, _plot_h, days, _low, _high = geom
         painter.setPen(Qt.PenStyle.NoPen)
-        # Three states per day, not two: in credit; inside an arranged
-        # overdraft; past it. See _bar_colour_for.
+        # Four states per day: free; in credit but spoken for; inside an
+        # arranged overdraft; past it. See _bar_colour_for.
         for idx, series in enumerate(self._series):
             colour = self._plot_colour(idx)
             for day in range(1, days + 1):
-                bar_colour = self._bar_colour_for(series.values[day - 1], colour)
+                bar_colour = self._bar_colour_for(
+                    series.values[day - 1], colour, floor_pence=self._floor_at(day)
+                )
                 painter.fillRect(self._bar_rect(geom, idx, day), bar_colour)
+
+    def _draw_floor(self, painter, geom) -> None:
+        """The floor across the month, so the shape of the reserve is visible.
+
+        A thin dashed line rather than a filled band: it is a threshold to
+        read a bar against, never a quantity of its own; a fill would
+        compete with the bars it exists to qualify.
+        """
+        _left, _top, _plot_w, _plot_h, days, _low, _high = geom
+        if not self._floor_values:
+            return
+        pen = QPen(QColor(self._tokens["border"]))
+        pen.setWidth(_FLOOR_LINE_WIDTH_PX)
+        pen.setStyle(Qt.PenStyle.DashLine)
+        painter.setPen(pen)
+        painter.drawPolyline(
+            QPolygonF(
+                [
+                    QPointF(self._x_at(geom, day), self._y_at(geom, floor))
+                    for day in range(1, days + 1)
+                    if (floor := self._floor_at(day)) is not None
+                ]
+            )
+        )
+        painter.setPen(Qt.PenStyle.NoPen)
 
     def _draw_curve(self, painter, geom) -> None:
         """Overlay a smooth curve FOLLOWING the totals, in the curve colour.

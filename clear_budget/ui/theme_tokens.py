@@ -282,6 +282,25 @@ def chart_bar_within_facility_colour_for(theme_name: str) -> str:
     )
 
 
+# How far a bar UNDER THE RESERVE FLOOR is blended toward the background. The
+# day is in credit, so it must not read as a bounce; it is spoken for, so it
+# must not read as free either. Derived from the resting bar colour rather
+# than picked, so it cannot drift from it. It is deliberately NOT amber: amber
+# already means "inside the arranged overdraft" and one colour cannot carry
+# two verdicts.
+_UNDER_FLOOR_BLEND = palette.BLEND_DIMMED
+
+
+def chart_bar_under_floor_colour_for(theme_name: str) -> str:
+    """The bar fill for a day in credit that is nonetheless spoken for.
+
+    Calm but under: at or above zero, so nothing bounces, yet below what the
+    buffer and the reserves need that day, so it is not money to spend.
+    """
+    background = tokens_for(theme_name)["window_bg"]
+    return _blend(chart_bar_colour_for(theme_name), background, _UNDER_FLOOR_BLEND)
+
+
 def solo_curve_colour_for(theme_name: str) -> str:
     """The following curve over a single series' bars."""
     return SOLO_CURVE_LIGHT if theme_name == THEME_LIGHT else SOLO_CURVE_DARK
@@ -301,12 +320,7 @@ def curve_colour_for(theme_name: str) -> str:
 _ASSUMED_BLEND = 0.45
 
 
-def _blend(colour: str, toward: str, fraction: float) -> str:
-    """Mix `colour` toward `toward` by `fraction`, as a #rrggbb string."""
-    a = tuple(int(colour[i : i + 2], 16) for i in (1, 3, 5))
-    b = tuple(int(toward[i : i + 2], 16) for i in (1, 3, 5))
-    mixed = (round(x + (y - x) * fraction) for x, y in zip(a, b))
-    return "#" + "".join(f"{value:02x}" for value in mixed)
+_blend = palette.blend
 
 
 def assumed_state_colours_for(theme_name: str) -> dict[str, str]:
