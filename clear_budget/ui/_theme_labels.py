@@ -10,32 +10,15 @@ time would keep its original colour.
 
 from __future__ import annotations
 
-from clear_budget.shared import palette
 from clear_budget.ui import ui_scale
-from clear_budget.ui.theme_tokens import (
-    STATE_AT_RISK,
-    STATE_CAUTION,
-    STATE_RED,
-    STATE_SAFE,
-)
+from clear_budget.ui._theme_labels_solvency import solvency_label_roles_qss
+from clear_budget.ui.theme_tokens import STATE_SAFE
 
-# The caution amber is a light fill in both themes, so its banner takes dark
-# text where the other states take the usual white.
-_BANNER_FG_ON_CAUTION = palette.GREY_05
 # Unscaled font sizes of the semantic label roles.
 _SMALL_LABEL_FONT_PX = 12
 _BODY_LABEL_FONT_PX = 16
 _VALUE_LABEL_FONT_PX = 20
 # Solvency view type scale: banner, section lines, headings, breakdown detail.
-# Measured, not chosen. At 22 the Account Position banner needed 1074px for a
-# routine Caution line and clipped inside a 1132px window; 20 brings that to
-# 977px and keeps the banner level with the value lines rather than dropping it
-# below them. It does NOT fit every variant: the Critical wordings run to
-# 1467px at this size and the worst of them would need 10px to fit the 860px
-# minimum window, which is smaller than a footnote. The banner is the one line
-# on this view built with wrap=False, so what closes the gap is letting it wrap
-# rather than shrinking it further.
-_BANNER_FONT_PX = 20
 _SECTION_FONT_PX = 18
 _HEADING_FONT_PX = 17
 _BREAKDOWN_FONT_PX = 15
@@ -64,6 +47,13 @@ def label_roles_qss(t: dict[str, str], s: dict[str, str]) -> str:
     small = ui_scale.px(_SMALL_LABEL_FONT_PX)
     body = ui_scale.px(_BODY_LABEL_FONT_PX)
     value = ui_scale.px(_VALUE_LABEL_FONT_PX)
+    solvency = solvency_label_roles_qss(
+        t,
+        s,
+        section_px=ui_scale.px(_SECTION_FONT_PX),
+        breakdown_px=ui_scale.px(_BREAKDOWN_FONT_PX),
+        heading_px=ui_scale.px(_HEADING_FONT_PX),
+    )
     return f"""
 QLabel#LabelHint {{
     font-size: {small}px;
@@ -204,108 +194,7 @@ QTextEdit#RecoveryCodeBox {{
     padding: 6px;
 }}
 
-/* Solvency view lines, each with its own weight in the reading order. The
-   banner carries its traffic-light state as a Qt property, so the fill comes
-   from the theme's state palette instead of an inline stylesheet and follows a
-   live theme switch. Caution is a light fill in both themes, so it alone takes
-   dark text. */
-QLabel#SolvencyBanner {{
-    font-size: {ui_scale.px(_BANNER_FONT_PX)}px;
-    font-weight: bold;
-    padding: 10px;
-    border-radius: 5px;
-    color: {t["primary_text"]};
-}}
-
-QLabel#SolvencyBanner[state="{STATE_RED}"] {{
-    background-color: {s[STATE_RED]};
-}}
-
-QLabel#SolvencyBanner[state="{STATE_AT_RISK}"] {{
-    background-color: {s[STATE_AT_RISK]};
-}}
-
-QLabel#SolvencyBanner[state="{STATE_CAUTION}"] {{
-    background-color: {s[STATE_CAUTION]};
-    color: {_BANNER_FG_ON_CAUTION};
-}}
-
-QLabel#SolvencyBanner[state="{STATE_SAFE}"] {{
-    background-color: {s[STATE_SAFE]};
-}}
-
-/* The mid-month dip line carries its state the same way the banner does, so
-   a dip that stays inside an arranged overdraft is not painted in the red
-   reserved for a bounced payment. The base rule keeps the strong danger fill
-   as the fallback: the line is hidden unless there IS a dip, so the worse
-   reading is the safer default if a state ever fails to resolve. */
-QLabel#SolvencyMidmonthAlert {{
-    font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
-    font-weight: bold;
-    padding: 8px;
-    border-radius: 5px;
-    background-color: {t["danger_strong"]};
-    color: {t["primary_text"]};
-}}
-
-QLabel#SolvencyMidmonthAlert[state="{STATE_RED}"] {{
-    background-color: {s[STATE_RED]};
-}}
-
-QLabel#SolvencyMidmonthAlert[state="{STATE_AT_RISK}"] {{
-    background-color: {s[STATE_AT_RISK]};
-}}
-
-QLabel#SolvencySectionHeading {{
-    font-size: {ui_scale.px(_HEADING_FONT_PX)}px;
-    font-weight: bold;
-}}
-
-QLabel#SolvencyCommitted {{
-    font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
-    padding: 5px;
-    color: {t["text_muted"]};
-}}
-
-/* A shortfall no amount of restraint can close is the one line on the view
-   that reports a fact rather than a caution, so it takes the traffic light's
-   own red rather than the muted body colour it used to share with the reach
-   sentence above it. */
-/* The projection page's gap specification: what has to arrive for the page to
-   come true. Italic because it is the one block there that is not yet a fact;
-   neutral in colour because a list of expectations has no traffic-light state
-   of its own, unlike the months below it. */
-QLabel#SolvencyAssumedNote {{
-    font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
-    padding: 5px;
-    font-style: italic;
-    color: {t["text_muted"]};
-}}
-
-QLabel#SolvencyShortfall {{
-    font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
-    padding: 5px;
-    color: {s[STATE_RED]};
-}}
-
-QLabel#SolvencyRemainingBank {{
-    font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
-    padding: 5px;
-    color: {t["warn"]};
-}}
-
-QLabel#SolvencyRemainingCard {{
-    font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
-    padding: 5px;
-    color: {t["warn_strong"]};
-}}
-
-QLabel#SolvencyBreakdown {{
-    font-size: {ui_scale.px(_BREAKDOWN_FONT_PX)}px;
-    padding: 5px;
-    color: {t["text_muted"]};
-}}
-
+{solvency}
 QPushButton#IconAction {{
     border: 2px solid transparent;
     background-color: transparent;

@@ -1053,8 +1053,15 @@ unrelated to what it had to hold.
   Today headline (rendered by
   `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` from
   `BudgetService.get_safe_to_spend`, which always repeats this month's
-  income forward, reusing the banner's traffic-light state
-  property; the secondary line names how far the promise reaches and the day
+  income forward. It wears `SafeToSpendHeadline`, a role of its OWN rather
+  than the banner's: it shares the banner's fill, padding and traffic-light
+  state property, so the two cannot drift apart; it keeps 22px where the
+  banner came down to 20px to fit its sentence. Sharing one role meant
+  shrinking a figure to solve a sentence's problem, which is two decisions
+  taken as one. Both WRAP, like every other line on the view; they were the
+  only two that did not, which is how a banner long enough to overrun the
+  window came to be clipped with nothing to say so.
+  The secondary line names how far the promise reaches and the day
   that constrains it, "Holds every day through October 2026 above your £20.00
   buffer; constrained by 14 Oct", with a second line naming any month beyond
   that cannot be saved and stating that spending the headline deepens it; the
@@ -2029,7 +2036,13 @@ renderings of the same figures to hold in step. Every month any page shows
 - The sheet is split by surface across `_theme_pane.py` (down to the pane, the
   card the view content sits on), `_theme_inputs.py` (the fields
   the user types in), `_theme_menus.py`, `_theme_controls.py` and
-  `_theme_labels.py`, each a pure string builder taking the token dict. The
+  `_theme_labels.py`, with the Solvency view's own roles a further split into
+  `_theme_labels_solvency.py`; each is a pure string builder taking the token
+  dict. That last split took `_theme_labels.py` back out of the size cap's
+  danger band and the three sizes the two halves share are PARAMETERS rather
+  than a second copy of the constants, on the same grounds as
+  `nav_glyph_size`: a number read from two modules that must never disagree
+  does not survive living in both. The
   split is what keeps every module under the LOC limit and it is also what
   makes the highlight rule testable: `build_qss` as a whole CANNOT run without
   a QApplication, since it resolves the system font and generates the spin-box

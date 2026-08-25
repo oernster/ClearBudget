@@ -51,10 +51,16 @@ def _heading(text: str) -> QLabel:
     return label
 
 
-def _line(object_name: str, text: str = "", *, wrap: bool = True) -> QLabel:
-    """A body line carrying a QSS role by object name."""
+def _line(object_name: str, text: str = "") -> QLabel:
+    """A body line carrying a QSS role by object name.
+
+    Every line on this view wraps. The helper used to take a `wrap` flag and
+    exactly two callers turned it off, the two banners, which is how a sentence
+    long enough to overrun the window came to be clipped with nothing to say so.
+    The flag went with them rather than being left as one more way back in.
+    """
     label = QLabel(text)
-    label.setWordWrap(wrap)
+    label.setWordWrap(True)
     label.setObjectName(object_name)
     return label
 
@@ -95,9 +101,13 @@ class SolvencyPanelLayoutMixin:
         # matches its four plain-spoken siblings on this view rather than
         # naming a product feature.
         layout.addWidget(_heading("Account Position"))
-        self.position_banner = _line(
-            "SolvencyBanner", f"Safe: {fmt(0)} buffer", wrap=False
-        )
+        # WRAPS, like every other line on this view. It was the exception and
+        # the exception was the bug: the banner states a sentence whose longest
+        # wording needs about 1470px at this size, so inside the 860px minimum
+        # window it simply ran off the right edge with no ellipsis to say so.
+        # No readable size fixes that (the worst variant would need 10px, below
+        # the footnote role), so the line is allowed a second row instead.
+        self.position_banner = _line("SolvencyBanner", f"Safe: {fmt(0)} buffer")
         layout.addWidget(self.position_banner)
         self.midmonth_alert = _line("SolvencyMidmonthAlert")
         self.midmonth_alert.hide()
@@ -173,7 +183,10 @@ class SolvencyPanelLayoutMixin:
         layout.setContentsMargins(0, 0, 0, 0)
 
         layout.addWidget(_heading("Safe to Spend If This Repeats"))
-        self.sts_banner = _line("SolvencyBanner", wrap=False)
+        # Its OWN role, so it keeps 22px while the banner above came down to
+        # 20px to fit its sentence. It wraps for the same reason the banner
+        # does: the "NOTHING SAFE TO SPEND" wording is a sentence too.
+        self.sts_banner = _line("SafeToSpendHeadline")
         layout.addWidget(self.sts_banner)
         self.sts_detail = _line("SolvencyCommitted")
         layout.addWidget(self.sts_detail)
