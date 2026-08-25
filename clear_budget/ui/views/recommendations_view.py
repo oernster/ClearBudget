@@ -8,6 +8,12 @@ auto-applied edits would leave the user digging out what changed and
 reconciling it with their actual bank, which is more work than making each
 change knowingly. The app follows reality; it does not lead it.
 
+Each suggestion carries a try-it-on checkbox instead: ticking SIMULATES that
+retiming across the horizon and recomputes the whole page (remaining moves,
+asks, outlook, headroom), nothing stored anywhere. The trial registry lives
+here on the view and survives data-driven refreshes, so a tick holds while
+the user edits elsewhere; the copy says plainly that nothing is applied.
+
 The page is anchored to TODAY, not to the month being viewed: the tray's
 arrows still step the shared month like every other tab; the advice is
 about the months ahead of now, which it says at the top. It recomputes on
@@ -26,7 +32,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from clear_budget.application.formatting import money_from_pence
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -37,8 +42,12 @@ from clear_budget.ui.utils.format_helpers import (
     build_centered_nav_header,
     nav_glyph_height,
 )
-from clear_budget.ui.utils.recommendation_text import moves_html, sooner_note_html
 from clear_budget.ui.utils.tab_icons import build_tab_buttons, ring_tab_stops
+from clear_budget.ui.views._recommendation_sections import (
+    build_sections,
+    trial_entry,
+    trial_key,
+)
 from clear_budget.ui.widgets._tray_buttons import (
     build_bank_button,
     build_budgets_button,
@@ -62,6 +71,11 @@ class RecommendationsView(QWidget):
         super().__init__()
         self.budget_service = budget_service
         self._current_month = current_month
+        # The try-it-on registry: (kind, name) -> (TrialDay, caption html).
+        # Held here rather than in the rebuilt rows so a tick survives every
+        # data-driven refresh; nothing in it is ever written anywhere.
+        self._tried: dict = {}
+        self._section_checks: list = []
         self._build_ui()
         self.refresh()
 
@@ -117,14 +131,21 @@ class RecommendationsView(QWidget):
         self.anchor_label.setWordWrap(True)
         layout.addWidget(self.anchor_label)
 
-        self.body_label = QLabel("")
-        self.body_label.setObjectName(label_roles.BODY)
-        self.body_label.setWordWrap(True)
-        self.body_label.setTextFormat(Qt.TextFormat.RichText)
-        self.body_label.setAlignment(
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        self.trial_label = QLabel(
+            "<p><b>Trying it on.</b> Nothing is applied: your bills and"
+            " incomes stay exactly as entered until you change them in their"
+            " own dialogs. Untick to put the picture back.</p>"
         )
-        layout.addWidget(self.body_label, 1)
+        self.trial_label.setObjectName(label_roles.BODY)
+        self.trial_label.setWordWrap(True)
+        self.trial_label.setTextFormat(Qt.TextFormat.RichText)
+        self.trial_label.hide()
+        layout.addWidget(self.trial_label)
+
+        # The suggestion sections are rebuilt wholesale on every recompute;
+        # this box is the slot they land in.
+        self._sections_box = QVBoxLayout()
+        layout.addLayout(self._sections_box, 1)
 
         self.setLayout(layout)
 
@@ -164,8 +185,10 @@ class RecommendationsView(QWidget):
         apply_nav_label_color(self.month_label, color)
 
     def refresh(self) -> None:
-        """Recompute the suggestions and render them as three plain sections."""
-        result, horizon = self.budget_service.get_recommendations()
+        """Recompute (trials included) and rebuild the suggestion sections."""
+        result, horizon = self.budget_service.get_recommendations(
+            trial=tuple(trial for trial, _caption in self._tried.values())
+        )
         first = _month_name(horizon[0].year, horizon[0].month)
         last = _month_name(horizon[-1].year, horizon[-1].month)
         self.anchor_label.setText(
@@ -173,39 +196,44 @@ class RecommendationsView(QWidget):
             " Nothing here is changed for you: make an edit in its own"
             " dialog and this page recomputes."
         )
-        self.body_label.setText(self._body_html(result, horizon))
+        self.trial_label.setVisible(bool(self._tried))
+        while self._sections_box.count():
+            item = self._sections_box.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                # Detach BEFORE deleteLater: the deferred delete waits for
+                # the event loop, so a still-parented widget would keep
+                # painting under the rebuilt sections until it fires.
+                widget.setParent(None)
+                widget.deleteLater()
+        sections, self._section_checks = build_sections(
+            result=result,
+            horizon=horizon,
+            tried=self._tried,
+            month_name=_month_name,
+            on_try=self._on_try,
+            on_untry=self._on_untry,
+        )
+        self._sections_box.addWidget(sections)
 
-    # ---- rendering ----------------------------------------------------------
-    def _body_html(self, result, horizon) -> str:
-        if result.healthy:
-            return (
-                "<h3>Nothing to recommend</h3>"
-                "<p>Every month in the window clears the target as entered.</p>"
-            )
-        parts = []
-        if result.moves:
-            parts.append("<h3>Retime what can move</h3>")
-            parts.extend(moves_html(result.moves, _month_name))
-            note = sooner_note_html(result.moves, horizon[0], _month_name)
-            if note is not None:
-                parts.append(note)
-        if result.asks:
-            parts.append("<h3>Extra income needed</h3>")
-            for ask in result.asks:
-                parts.append(
-                    f"<p>Find <b>{money_from_pence(ask.amount_pence)}</b> by day"
-                    f" {ask.by_day} of {_month_name(ask.year, ask.month)}."
-                    " Each ask assumes the earlier ones arrived, so together"
-                    " they are the whole plan.</p>"
-                )
-        parts.append("<h3>Where that leaves each month</h3>")
-        for month in result.outlook:
-            parts.append(
-                f"<p>{_month_name(month.year, month.month)}: low of"
-                f" {money_from_pence(month.low_pence)} on day {month.low_day},"
-                f" closing at {money_from_pence(month.close_pence)}.</p>"
-            )
-        return "".join(parts)
+    def _on_try(self, trial, _html) -> None:
+        """Add one suggestion to the trial and recompute; nothing is applied.
+
+        The caption remembers the day the item is entered as, read from the
+        CURRENT result before the trial absorbs it.
+        """
+        result, _ = self.budget_service.get_recommendations(
+            trial=tuple(t for t, _c in self._tried.values())
+        )
+        self._tried[trial_key(trial)] = trial_entry(
+            trial, list(result.moves) + list(result.extras)
+        )
+        self.refresh()
+
+    def _on_untry(self, key) -> None:
+        """Take one trial back out and recompute."""
+        self._tried.pop(key, None)
+        self.refresh()
 
     # ---- keyboard ring ------------------------------------------------------
     def nav_targets(self) -> list:
@@ -225,4 +253,5 @@ class RecommendationsView(QWidget):
             self.info_btn,
             self.buffer_check,
             self.buffer_edit,
+            *self._section_checks,
         ]

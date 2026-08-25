@@ -233,7 +233,11 @@ what is deliberately left and what only looks like debt.
   buffer set at the top of the page. Every figure is a re-run of the same
   day-by-day simulation the bank page uses. Suggestions only: there is no
   Apply button, by design; you make each change knowingly in its own dialog
-  and the page recomputes
+  and the page recomputes. Every suggestion carries a try-it-on checkbox
+  instead: tick it and the whole page recomputes with that change simulated,
+  nothing applied anywhere; untick to put the picture back. Below the
+  outlook, an optional headroom section names the few best retimings
+  solvency does not need, each buying measured slack against surprises
 - A "cannot be moved" tick in the bill and income dialogs for payment days
   fixed in the real world; Recommendations never proposes retiming anything
   so marked
@@ -280,7 +284,7 @@ the keyboard ring still stops on each tab in turn.
 - **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Graph** - The viewed month as a chart. A switch chooses what is plotted (the bank balance day by day or every card on one chart), a pilot button swaps bar and line renderings and the exports live here: a self-contained page for the month, plus a folder of months offered while the bank series is shown
-- **Recommendations** - Measured suggestions for surviving the months ahead: which bills or incomes could be retimed and how much extra each month still needs, against an optional emergency buffer. A reference set only; every change is yours to make in its own dialog and the page recomputes
+- **Recommendations** - Measured suggestions for surviving the months ahead: which bills or incomes could be retimed and how much extra each month still needs, against an optional emergency buffer, plus an optional headroom section for the few best retimings solvency does not need. A reference set only; every change is yours to make in its own dialog and the page recomputes. Each suggestion has a try-it-on checkbox that previews the change across the whole page without applying anything
 - **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
 ---

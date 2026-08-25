@@ -94,16 +94,67 @@ class MonthOutlook:
 
 @dataclass(frozen=True, slots=True)
 class Recommendations:
-    """The full answer: moves, asks and the resulting per-month picture."""
+    """The full answer: moves, asks, the per-month picture and the extras.
+
+    `extras` are OPTIONAL headroom moves: with every mandatory change applied,
+    each is a further retiming that measurably lifts some month's low. None of
+    them is needed to clear the target, which is why they are carried apart
+    from `moves` and why `healthy` ignores them: a plan can be perfectly sound
+    and still have cheap insurance on offer.
+    """
 
     moves: tuple[TimingMove, ...]
     asks: tuple[IncomeAsk, ...]
     outlook: tuple[MonthOutlook, ...]
+    extras: tuple[TimingMove, ...] = ()
 
     @property
     def healthy(self) -> bool:
         """Whether the plan as entered already clears the target everywhere."""
         return not self.moves and not self.asks
+
+
+@dataclass(frozen=True, slots=True)
+class TrialDay:
+    """One try-it-on retiming: this item on this day, nowhere written.
+
+    A trial is identified by what the user would actually change (the item
+    and its new day), not by a month: a payment day changed in the real
+    world changes every month at once, so the trial does too.
+    """
+
+    kind: str
+    name: str
+    to_day: int
+
+
+def retimed_months(
+    months: tuple[PlannedMonth, ...], trials: tuple[TrialDay, ...]
+) -> tuple[PlannedMonth, ...]:
+    """The months with each trial's item on its trial day, where present.
+
+    Pure and side-effect free: this is how the page previews a suggestion
+    without applying anything. Only a movable item follows its trial (an
+    immovable one has no business being tried; the guard makes a stale or
+    hand-built trial harmless) and the day is capped at each month's length.
+    """
+    by_item = {(t.kind, t.name): t.to_day for t in trials}
+    if not by_item:
+        return months
+    return tuple(
+        replace(
+            month,
+            items=tuple(
+                (
+                    replace(item, day=min(by_item[(item.kind, item.name)], month.days))
+                    if (item.kind, item.name) in by_item and item.movable
+                    else item
+                )
+                for item in month.items
+            ),
+        )
+        for month in months
+    )
 
 
 def _low(opening_pence: int, month: PlannedMonth) -> tuple[int, int]:
@@ -169,17 +220,17 @@ def _retime(month: PlannedMonth, item: PlannedItem, to_day: int) -> PlannedMonth
     return replace(month, items=moved)
 
 
-def _best_move(
+def _candidate_moves(
     opening_pence: int, month: PlannedMonth
-) -> tuple[PlannedMonth, TimingMove] | None:
-    """The single retiming that lifts the month's low the most, else None.
+) -> list[tuple[PlannedMonth, TimingMove]]:
+    """Every single retiming that measurably lifts the month's low.
 
-    Every candidate is evaluated by re-running the simulation, so the answer
-    is a measurement rather than a heuristic; ties resolve by name so the
-    result is stable run to run.
+    Each candidate is evaluated by re-running the simulation, so every entry
+    is a measurement rather than a heuristic. The survival loop picks the
+    best of these; the headroom pass reports all of them.
     """
     low_before, low_day = _low(opening_pence, month)
-    best: tuple[int, str, PlannedMonth, TimingMove] | None = None
+    found: list[tuple[PlannedMonth, TimingMove]] = []
     for item in month.items:
         to_day = _bill_move_candidate(month, item, low_day)
         if to_day is None:
@@ -200,12 +251,24 @@ def _best_move(
             low_before_pence=low_before,
             low_after_pence=low_after,
         )
-        key = (low_after, item.name)
-        if best is None or key > (best[0], best[1]):
-            best = (low_after, item.name, candidate, move)
-    if best is None:
+        found.append((candidate, move))
+    return found
+
+
+def _best_move(
+    opening_pence: int, month: PlannedMonth
+) -> tuple[PlannedMonth, TimingMove] | None:
+    """The single retiming that lifts the month's low the most, else None.
+
+    Ties resolve by name so the result is stable run to run.
+    """
+    candidates = _candidate_moves(opening_pence, month)
+    if not candidates:
         return None
-    return best[2], best[3]
+    return max(
+        candidates,
+        key=lambda pair: (pair[1].low_after_pence, pair[1].name),
+    )
 
 
 def recommend(
@@ -227,6 +290,7 @@ def recommend(
     moves: list[TimingMove] = []
     asks: list[IncomeAsk] = []
     outlook: list[MonthOutlook] = []
+    extras: list[TimingMove] = []
     balance = opening_balance_pence
     for month in months:
         current = month
@@ -250,6 +314,11 @@ def recommend(
             )
             balance += shortfall
             low += shortfall
+        # The headroom pass: with the month's mandatory work applied, what
+        # else would measurably lift its low. An item the survival loop
+        # already moved yields no further candidate (its target day is
+        # behind it), so an extra never duplicates a mandatory move.
+        extras.extend(move for _, move in _candidate_moves(balance, current))
         outlook.append(
             MonthOutlook(
                 year=current.year,
@@ -260,4 +329,9 @@ def recommend(
             )
         )
         balance = _close(balance, current)
-    return Recommendations(moves=tuple(moves), asks=tuple(asks), outlook=tuple(outlook))
+    return Recommendations(
+        moves=tuple(moves),
+        asks=tuple(asks),
+        outlook=tuple(outlook),
+        extras=tuple(extras),
+    )

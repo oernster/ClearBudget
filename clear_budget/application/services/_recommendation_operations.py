@@ -26,7 +26,9 @@ from clear_budget.domain.services.recommendations import (
     PlannedItem,
     PlannedMonth,
     Recommendations,
+    TrialDay,
     recommend,
+    retimed_months,
 )
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
@@ -98,7 +100,10 @@ class RecommendationOperationsMixin:
         set_recommendation_buffer_pence(self.bill_repo.conn, amount.pence)
 
     def get_recommendations(
-        self, *, today: date | None = None
+        self,
+        *,
+        today: date | None = None,
+        trial: tuple[TrialDay, ...] = (),
     ) -> tuple[Recommendations, tuple[YearMonth, ...]]:
         """The engine's answer plus the months it covers, in order.
 
@@ -106,6 +111,11 @@ class RecommendationOperationsMixin:
         buffer is enabled, against the floor alone while it is not. The
         horizon is the sustainable window, so this page and Safe to Spend
         agree about how far ahead "ahead" reaches.
+
+        `trial` is the try-it-on set: each entry's item is SIMULATED on its
+        trial day in every horizon month before the engine runs, nothing
+        stored. The result then reads as "were you to make these changes":
+        remaining moves, asks and outlook all reflect them.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
         current = YearMonth(today.year, today.month)
@@ -114,9 +124,12 @@ class RecommendationOperationsMixin:
         for _ in range(self.get_sustainable_window_months()):
             cursor = cursor.next_month()
             horizon.append(cursor)
-        months = tuple(
-            _planned_month(self.get_month_summary(year_month=ym), ym.year, ym.month)
-            for ym in horizon
+        months = retimed_months(
+            tuple(
+                _planned_month(self.get_month_summary(year_month=ym), ym.year, ym.month)
+                for ym in horizon
+            ),
+            trial,
         )
         enabled, buffer = self.get_recommendation_buffer()
         result = recommend(

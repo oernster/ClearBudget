@@ -12,7 +12,9 @@ from clear_budget.domain.services.recommendations import (
     KIND_INCOME,
     PlannedItem,
     PlannedMonth,
+    TrialDay,
     recommend,
+    retimed_months,
 )
 
 _DAYS = 30
@@ -53,10 +55,21 @@ class TestHealthyPlan:
         assert result.healthy
         assert result.moves == ()
         assert result.asks == ()
+        assert result.extras == ()
         assert [(m.low_pence, m.low_day, m.close_pence) for m in result.outlook] == [
             (0, 1, 50000),
             (50000, 1, 50000),
         ]
+
+    def test_a_healthy_plan_still_offers_headroom(self) -> None:
+        plan = _month(_income("Pay", 20, 100000), _bill("Rent", 5, 30000, True))
+        result = _recommend([plan], opening=50000)
+        # The month clears as entered (low 20000 on day 5), so nothing is
+        # needed; moving Rent past payday is still measured and offered.
+        assert result.healthy
+        (extra,) = result.extras
+        assert (extra.name, extra.from_day, extra.to_day) == ("Rent", 5, 21)
+        assert (extra.low_before_pence, extra.low_after_pence) == (20000, 50000)
 
     def test_close_chains_between_months(self) -> None:
         first = _month(_income("Pay", 1, 100000), _bill("Rent", 10, 40000))
@@ -171,6 +184,48 @@ class TestSkippedCandidates:
         assert (ask.amount_pence, ask.by_day) == (5000, 3)
 
 
+class TestRetimedMonths:
+    """The try-it-on transform: pure, item-keyed and movability-guarded."""
+
+    def test_no_trials_returns_the_months_unchanged(self) -> None:
+        months = (_month(_bill("Rent", 10, 50000, True)),)
+        assert retimed_months(months, ()) is months
+
+    def test_a_trial_moves_its_item_in_every_month(self) -> None:
+        months = (
+            _month(_bill("Rent", 10, 50000, True), _income("Pay", 20, 60000)),
+            _month(_bill("Rent", 10, 50000, True), month=10),
+        )
+        moved = retimed_months(months, (TrialDay(KIND_BILL, "Rent", 21),))
+        assert [i.day for m in moved for i in m.items if i.name == "Rent"] == [21, 21]
+        # Everything untried is untouched.
+        assert [i.day for i in moved[0].items if i.name == "Pay"] == [20]
+
+    def test_an_immovable_item_ignores_its_trial(self) -> None:
+        months = (_month(_bill("Rent", 10, 50000)),)
+        moved = retimed_months(months, (TrialDay(KIND_BILL, "Rent", 21),))
+        assert moved[0].items[0].day == 10
+
+    def test_the_trial_day_is_capped_at_the_month_length(self) -> None:
+        short = PlannedMonth(
+            year=2027,
+            month=2,
+            days=28,
+            items=(_bill("Rent", 10, 50000, True),),
+        )
+        moved = retimed_months((short,), (TrialDay(KIND_BILL, "Rent", 31),))
+        assert moved[0].items[0].day == 28
+
+    def test_a_trial_feeds_straight_into_the_engine(self) -> None:
+        plan = _month(_income("Pay", 20, 100000), _bill("Rent", 5, 80000, True))
+        tried = retimed_months((plan,), (TrialDay(KIND_BILL, "Rent", 21),))
+        result = _recommend(list(tried))
+        # The retiming is already in the months, so nothing is proposed and
+        # the outlook shows its effect.
+        assert result.healthy
+        assert [(m.low_pence, m.low_day) for m in result.outlook] == [(0, 1)]
+
+
 class TestAsks:
     def test_asks_are_incremental_across_months(self) -> None:
         first = _month(_bill("Rent", 10, 50000), _income("Pay", 20, 20000))
@@ -194,6 +249,31 @@ class TestAsks:
         with_buffer = _recommend([plan], overdraft=20000, buffer=10000)
         (ask,) = with_buffer.asks
         assert ask.amount_pence == 40000
+
+    def test_extras_never_duplicate_a_mandatory_move(self) -> None:
+        plan = _month(
+            _income("Pay", 20, 100000),
+            _bill("Rent", 5, 80000, True),
+            _bill("Sub", 12, 5000, True),
+        )
+        result = _recommend([plan], opening=10000)
+        # Moving Rent alone clears the month (low 5000 on day 12), so only
+        # Rent is mandatory; Sub's remaining lift is offered as the extra
+        # and Rent is not offered twice.
+        (move,) = result.moves
+        assert move.name == "Rent"
+        (extra,) = result.extras
+        assert (extra.name, extra.from_day, extra.to_day) == ("Sub", 12, 21)
+        assert (extra.low_before_pence, extra.low_after_pence) == (5000, 10000)
+
+    def test_an_ask_month_has_no_extras(self) -> None:
+        plan = _month(_income("Pay", 20, 30000), _bill("Rent", 10, 50000))
+        result = _recommend([plan])
+        # An ask changes every day's balance equally, so it changes no move
+        # candidate: any lifting move would already have been taken as
+        # mandatory before asking. A month that asks therefore offers none.
+        (ask,) = result.asks
+        assert result.extras == ()
 
     def test_moves_and_ask_chain_in_one_month(self) -> None:
         plan = _month(

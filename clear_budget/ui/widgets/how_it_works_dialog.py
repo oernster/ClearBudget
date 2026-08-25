@@ -117,7 +117,9 @@ def _body_html() -> str:
           "what would make the months ahead survivable: which bills or "
           "incomes could move and how much extra the months still need, "
           "with an optional emergency buffer set at the top of the page. "
-          "Suggestions only; nothing is changed for you.", px)}
+          "Suggestions only; nothing is changed for you. Tick any "
+          "suggestion to see it tried across the page, still changing "
+          "nothing.", px)}
 {_tab_row(ARCHIVE_ICON, "Archive",
           "months that have finished. They are filed automatically; there is "
           "no archive button. Its icon sits apart, at the right of the tray "

@@ -20,7 +20,11 @@ from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.entities.bill import Bill
 from clear_budget.domain.entities.income_source import IncomeSource
-from clear_budget.domain.services.recommendations import KIND_BILL, KIND_INCOME
+from clear_budget.domain.services.recommendations import (
+    KIND_BILL,
+    KIND_INCOME,
+    TrialDay,
+)
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
@@ -152,6 +156,42 @@ class TestGetRecommendations:
         result, horizon = budget_service.get_recommendations(today=_TODAY)
         assert horizon == (_AUGUST, _SEPTEMBER)
         assert [(m.year, m.month) for m in result.outlook] == [(2026, 8), (2026, 9)]
+
+    def test_a_trial_previews_without_writing_anything(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=0, iso="2026-07-26")
+        budget_service.set_sustainable_window_months(months=1)
+        rent = budget_service.add_bill(bill=_bill("Rent", 50000, 5))
+        budget_service.add_income(income=_income("Pay", 60000, 20))
+
+        plain, _ = budget_service.get_recommendations(today=_TODAY)
+        tried, _ = budget_service.get_recommendations(
+            today=_TODAY, trial=(TrialDay(KIND_BILL, "Rent", 21),)
+        )
+        # The trial absorbs the mandatory move: the plan needed a change and
+        # the tried months already carry it. (The outlooks match, since the
+        # plain outlook assumes its own plan applied.)
+        (move,) = plain.moves
+        assert move.name == "Rent"
+        assert not plain.healthy
+        assert tried.moves == ()
+        assert tried.healthy
+        assert tried.outlook[0].low_pence == plain.outlook[0].low_pence
+        # Nothing was written: the stored bill still says day 5.
+        assert budget_service.bill_repo.get_by_id(bill_id=rent.id).day_of_month == 5
+        # A fresh un-trialled read is unchanged.
+        again, _ = budget_service.get_recommendations(today=_TODAY)
+        assert again.moves == plain.moves
+
+    def test_extras_reach_the_caller(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=50000, iso="2026-07-26")
+        budget_service.set_sustainable_window_months(months=1)
+        budget_service.add_bill(bill=_bill("Rent", 30000, 5))
+        budget_service.add_income(income=_income("Pay", 60000, 20, day_fixed=True))
+
+        result, _ = budget_service.get_recommendations(today=_TODAY)
+        assert result.healthy
+        (extra,) = result.extras
+        assert (extra.name, extra.to_day) == ("Rent", 21)
 
     def test_enabled_buffer_raises_the_target(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=0, iso="2026-07-26")

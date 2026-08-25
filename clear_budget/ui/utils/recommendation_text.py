@@ -15,7 +15,11 @@ already survives is not harmed by it.
 from __future__ import annotations
 
 from clear_budget.application.formatting import money_from_pence
-from clear_budget.domain.services.recommendations import KIND_BILL
+from clear_budget.domain.services.recommendations import KIND_BILL, TrialDay
+
+# How many optional items are worth saying. Secondary and tertiary
+# suggestions plus one: below this the lifts are noise beside the plan.
+HEADROOM_ITEM_CAP = 3
 
 
 def join_clauses(parts: list[str]) -> str:
@@ -68,36 +72,97 @@ def _group_move_html(group, month_name) -> str:
     )
 
 
-def moves_html(moves, month_name) -> list[str]:
-    """The moves section's paragraphs, one per action rather than per month.
+def _group_html(group, month_name) -> str:
+    """One item's sentences: the compact form while every month agrees.
 
     A group collapses to one sentence only while every month agrees on the
     days; a bill whose target day differs by month (the last income lands
     elsewhere) falls back to one sentence per month, because "from October
     onward" would then name a day November does not use.
     """
-    parts: list[str] = []
-    for group in _grouped(moves):
-        uniform = all(
-            (m.from_day, m.to_day) == (group[0].from_day, group[0].to_day)
-            for m in group
-        )
-        if len(group) > 1 and uniform:
-            parts.append(_group_move_html(group, month_name))
-        else:
-            parts.extend(_single_move_html(m, month_name) for m in group)
-    return parts
+    uniform = all(
+        (m.from_day, m.to_day) == (group[0].from_day, group[0].to_day) for m in group
+    )
+    if len(group) > 1 and uniform:
+        return _group_move_html(group, month_name)
+    return "".join(_single_move_html(m, month_name) for m in group)
 
 
-def sooner_note_html(moves, horizon_start, month_name) -> str | None:
+def _row(group, month_name):
+    """(TrialDay, sentence html) for one item's suggestion row.
+
+    The trial day is the group's LATEST target day: a permanent change must
+    satisfy every month that needs it and later months can only need later
+    days (their last income lands later), so the latest is the one that
+    holds everywhere.
+    """
+    first = group[0]
+    to_day = max(m.to_day for m in group)
+    return TrialDay(kind=first.kind, name=first.name, to_day=to_day), _group_html(
+        group, month_name
+    )
+
+
+def move_rows(moves, month_name) -> list:
+    """The mandatory section's rows, one per item rather than per month."""
+    return [_row(group, month_name) for group in _grouped(moves)]
+
+
+def headroom_rows(extras, moves, month_name) -> list:
+    """The optional section's rows: the few best retimings nobody needs.
+
+    Items already in the mandatory list are excluded (their story is told
+    above, numbers included, by the sooner note); the rest rank by total
+    measured lift across the horizon and only the top few are said, because
+    on a healthy budget nearly everything movable helps a little and a page
+    that lists all of it is a page nobody reads.
+    """
+    primary = {(m.kind, m.name) for m in moves}
+    remaining = [m for m in extras if (m.kind, m.name) not in primary]
+    groups = _grouped(remaining)
+    groups.sort(key=lambda g: -sum(m.low_after_pence - m.low_before_pence for m in g))
+    return [_row(group, month_name) for group in groups[:HEADROOM_ITEM_CAP]]
+
+
+def ask_html(ask, month_name) -> str:
+    """One month's ask, with the incremental reading stated beside it."""
+    return (
+        f"<p>Find <b>{money_from_pence(ask.amount_pence)}</b> by day"
+        f" {ask.by_day} of {month_name(ask.year, ask.month)}."
+        " Each ask assumes the earlier ones arrived, so together"
+        " they are the whole plan.</p>"
+    )
+
+
+def outlook_html(month, month_name) -> str:
+    """One outlook line: where the month lands with everything above it."""
+    return (
+        f"<p>{month_name(month.year, month.month)}: low of"
+        f" {money_from_pence(month.low_pence)} on day {month.low_day},"
+        f" closing at {money_from_pence(month.close_pence)}.</p>"
+    )
+
+
+def tried_caption(kind: str, name: str, from_day: int, to_day: int) -> str:
+    """The checked row's sentence: what is being tried, nothing applied."""
+    what = "bill" if kind == KIND_BILL else "income"
+    return (
+        f"<p>Trying the {what} <b>{name}</b> on day {to_day}"
+        f" (entered as day {from_day}). Nothing is applied.</p>"
+    )
+
+
+def sooner_note_html(moves, extras, horizon_start, month_name) -> str | None:
     """The once-only note when no move is asked of the horizon's first month.
 
     Each move is listed in the month solvency first needs it, so a change
     that only becomes necessary in October reads as "leave September alone".
     It should not: a day changed for good changes every later month too and a
     month that already survives is not harmed, so making the change sooner is
-    pure upside. None while any move already starts at the horizon's first
-    month, where the note would state nothing.
+    pure upside. The engine's headroom pass has already measured what the
+    same retiming does in the earlier months, so the note carries numbers
+    where a matching measurement exists. None while any move already starts
+    at the horizon's first month, where the note would state nothing.
     """
     if not moves:
         return None
@@ -105,8 +170,25 @@ def sooner_note_html(moves, horizon_start, month_name) -> str | None:
     if earliest <= (horizon_start.year, horizon_start.month):
         return None
     first = month_name(horizon_start.year, horizon_start.month)
-    return (
+    note = (
         "<p>Each move is shown in the month solvency first needs it. A day"
         " changed for good changes every later month too, so if you can make"
-        f" the change sooner (in {first}, say) there is no reason not to.</p>"
+        f" the change sooner (in {first}, say) there is no reason not to."
     )
+    payoffs = []
+    for group in _grouped(moves):
+        starts = min((m.year, m.month) for m in group)
+        for extra in extras:
+            if (extra.kind, extra.name) != (group[0].kind, group[0].name):
+                continue
+            if (extra.year, extra.month) >= starts:
+                continue
+            payoffs.append(
+                f"moving <b>{extra.name}</b> in"
+                f" {month_name(extra.year, extra.month)} lifts that month's"
+                f" low from {money_from_pence(extra.low_before_pence)} to"
+                f" {money_from_pence(extra.low_after_pence)}"
+            )
+    if payoffs:
+        note += f" Measured, it pays straight away: {join_clauses(payoffs)}."
+    return note + "</p>"

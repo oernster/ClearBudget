@@ -176,7 +176,13 @@ Everything below this section explains how the code satisfies them.
 - `recommendations.py` - the Recommendations engine, pure over its inputs:
   `recommend(months, opening_balance_pence, overdraft_limit_pence,
   buffer_pence)` takes `PlannedMonth` tuples and returns
-  `Recommendations(moves, asks, outlook)`. A greedy best-move loop re-runs
+  `Recommendations(moves, asks, outlook, extras)`, where `extras` are the
+  headroom pass's optional retimings, measured after each month's mandatory
+  work (an ask month provably has none: an ask shifts every day equally, so
+  it changes no candidate). `TrialDay` plus `retimed_months` are the
+  try-it-on transform: months with a chosen item on a chosen day, pure and
+  movability-guarded, applied by the adapter before the engine runs. A
+  greedy best-move loop re-runs
   the day-by-day simulation for every candidate retiming and applies the
   single most lifting one until none improves the month's low; whatever
   shortfall survives becomes that month's incremental ask. Ties resolve by
@@ -1279,8 +1285,27 @@ renderings of the same figures to hold in step. Every month any page shows
     makes the change in the real world first, then in the bill or income
     dialog and the page recomputes. The app follows reality; it does not
     lead it
+  - Every suggestion row carries a try-it-on CHECKBOX: ticking simulates
+    that retiming across the horizon (`TrialDay` through
+    `retimed_months`, a pure month transform applied before the engine
+    runs) and rebuilds the whole page from the trial result; unticking puts
+    the picture back. Nothing is ever written: the trial registry lives on
+    the view, keyed by item, so it survives data-driven refreshes and the
+    banner plus each caption say plainly that nothing is applied. The
+    widget rows are built by `views/_recommendation_sections.py` (split for
+    the LOC limit); the checkboxes join the keyboard ring through
+    `nav_targets`, which the navigator re-reads on every step
+  - Below the outlook sits the optional headroom section: the engine's
+    extras pass measures every further retiming that would lift a month's
+    low once the mandatory work is applied, the wording layer excludes
+    items the mandatory list already names, ranks the rest by total
+    measured lift and says only the top few
+    (`recommendation_text.HEADROOM_ITEM_CAP`), because on a healthy budget
+    nearly everything movable helps a little and a page listing all of it
+    is a page nobody reads. A healthy plan keeps the section: "Nothing
+    needed" plus the cheap insurance on offer
   - The engine (`domain/services/recommendations.py`) is pure: PlannedMonth
-    tuples in, `Recommendations(moves, asks, outlook)` out. It re-runs the
+    tuples in, `Recommendations(moves, asks, outlook, extras)` out. It re-runs the
     same day-by-day simulation the bank page uses for every candidate, so a
     move is only ever proposed with its measured effect; a greedy best-move
     loop applies the single most lifting retiming until none improves the
