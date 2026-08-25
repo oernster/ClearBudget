@@ -1,4 +1,10 @@
-"""Archive view widget - displays historical month data and trends."""
+"""Archive view widget - displays historical month data and trends.
+
+A budget that sets money aside gets one more column, stating the reserve each
+completed month really carried at its own last day. It appears only when there
+is something to report, so an archive that has never had a commitment reads
+exactly as it always did.
+"""
 
 from PySide6.QtWidgets import (
     QHeaderView,
@@ -10,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.application.services.budget_service import BudgetService
+from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui.utils.format_helpers import (
     apply_nav_label_color,
@@ -28,6 +35,7 @@ from clear_budget.ui.widgets._tray_buttons import (
     build_bank_button,
 )
 from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
+from clear_budget.ui.utils import reserves_text
 from clear_budget.ui.utils.table_focus import keyboard_only_focus
 from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
@@ -79,10 +87,11 @@ class ArchiveView(QWidget):
         self.archive_table = QTableWidget()
         apply_comfortable_rows(self.archive_table)
         keyboard_only_focus(self.archive_table)
-        self.archive_table.setColumnCount(5)
-        self.archive_table.setHorizontalHeaderLabels(
-            ["Month", "Income", "Bills", "Balance", "Status"]
-        )
+        headings = ["Month", "Income", "Bills", "Balance", "Status"]
+        if self._shows_reserves():
+            headings.insert(-1, reserves_text.ARCHIVE_COLUMN)
+        self.archive_table.setColumnCount(len(headings))
+        self.archive_table.setHorizontalHeaderLabels(headings)
         self.archive_table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
@@ -106,7 +115,14 @@ class ArchiveView(QWidget):
         """Handle pencil icon click on row header to show details."""
         if row in self.months_by_row:
             month, summary = self.months_by_row[row]
-            dialog = ArchiveDetailDialog(self, month, summary)
+            reserved = (
+                Amount(
+                    pence=self.budget_service.get_reserve_held_pence(year_month=month)
+                )
+                if self._shows_reserves()
+                else None
+            )
+            dialog = ArchiveDetailDialog(self, month, summary, reserved)
             dialog.exec()
 
     def on_load_history(self) -> None:
@@ -187,6 +203,14 @@ class ArchiveView(QWidget):
         self.current_year = self.available_years[idx + 1]
         self._refresh_year_view()
 
+    def _shows_reserves(self) -> bool:
+        """Whether this budget sets anything aside at all.
+
+        Decided once for the whole table rather than per month, so the columns
+        do not change shape as the years are stepped through.
+        """
+        return bool(self.budget_service.list_commitments())
+
     def load_history(self, months: list[YearMonth]) -> None:
         """Load historical months into table."""
         self.archive_table.setRowCount(0)
@@ -209,5 +233,12 @@ class ArchiveView(QWidget):
             )
             self.archive_table.setItem(row, 3, QTableWidgetItem(str(summary.balance)))
 
+            column = 4
+            if self._shows_reserves():
+                held = self.budget_service.get_reserve_held_pence(year_month=month)
+                self.archive_table.setItem(
+                    row, column, QTableWidgetItem(str(Amount(pence=held)))
+                )
+                column += 1
             status = "✓ Solvent" if summary.balance.pence >= 0 else "✗ Deficit"
-            self.archive_table.setItem(row, 4, QTableWidgetItem(status))
+            self.archive_table.setItem(row, column, QTableWidgetItem(status))

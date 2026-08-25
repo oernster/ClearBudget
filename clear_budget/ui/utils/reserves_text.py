@@ -130,3 +130,15 @@ def month_row_tooltip(*, name: str) -> str:
         " It is not counted in this month's bills and cannot be edited from"
         " this table."
     )
+
+
+# ---- the Archive -------------------------------------------------------------
+# A completed month reports the reserve it really carried, read at its own last
+# day. The column appears only for a budget that sets something aside, so an
+# archive that has never had a commitment reads exactly as it always did.
+ARCHIVE_COLUMN = "Set aside"
+
+
+def archive_detail_line(*, amount: str) -> str:
+    """The reserve as the archived month's detail dialog states it."""
+    return f"Set aside at month end: {amount}"

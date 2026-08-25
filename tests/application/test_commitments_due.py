@@ -127,3 +127,105 @@ class TestWhatLeavesThisMonth:
         )
         due = service.get_commitments_due_in(year_month=NOVEMBER)
         assert [row.day for row in due] == [3, 14]
+
+
+class TestWhatAMonthActuallyHeld:
+    """The archive's own reading: what was held when that month closed.
+
+    Historical, never a projection. An archived month must report the reserve
+    it really carried, so the figure is evaluated at that month's last day and
+    a commitment that has since stopped still counts for the months it covered.
+    """
+
+    def test_a_budget_with_no_commitments_held_nothing(self, conn):
+        assert _service(conn).get_reserve_held_pence(year_month=AUGUST) == 0
+
+    def test_a_month_before_the_commitment_started_held_nothing(self, conn):
+        """History is never fabricated backwards."""
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        earlier = YearMonth(year=2026, month=6)
+        assert service.get_reserve_held_pence(year_month=earlier) == 0
+
+    def test_a_month_partway_through_holds_part_of_it(self, conn):
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        held = service.get_reserve_held_pence(year_month=AUGUST)
+        assert 0 < held < FULL_PENCE
+
+    def test_a_later_month_holds_more_than_an_earlier_one(self, conn):
+        """The ramp, read at two different closes."""
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        august = service.get_reserve_held_pence(year_month=AUGUST)
+        october = service.get_reserve_held_pence(
+            year_month=YearMonth(year=2026, month=10)
+        )
+        assert october > august
+
+    def test_the_due_month_drops_to_what_the_next_cycle_has_begun(self, conn):
+        """The money went; a repeat then starts saving again the same day.
+
+        So the archive shows a fall rather than a zero, which is what really
+        happened: by the close of the due month a fortnight of the NEXT year's
+        premium has already been put by.
+        """
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        october = service.get_reserve_held_pence(
+            year_month=YearMonth(year=2026, month=10)
+        )
+        november = service.get_reserve_held_pence(year_month=NOVEMBER)
+        assert november < october
+        assert november < FULL_PENCE // 10
+
+    def test_a_one_off_closes_its_due_month_holding_nothing(self, conn):
+        """Nothing repeats, so nothing starts again."""
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment(recurrence=Recurrence.once()))
+        assert service.get_reserve_held_pence(year_month=NOVEMBER) == 0
+
+    def test_the_reading_does_not_move_when_it_is_taken(self, conn):
+        """An archived figure that drifted would rewrite the past."""
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        first = service.get_reserve_held_pence(year_month=AUGUST)
+        assert service.get_reserve_held_pence(year_month=AUGUST) == first
+
+    def test_a_commitment_since_ended_still_counts_for_the_months_it_covered(
+        self, conn
+    ):
+        """Ending sets a final month rather than erasing what really happened."""
+        service = _service(conn)
+        stored = service.add_commitment(commitment=_commitment())
+        before = service.get_reserve_held_pence(year_month=AUGUST)
+        service.end_commitment(
+            commitment_id=stored.id, final_month=YearMonth(year=2026, month=9)
+        )
+        assert service.get_reserve_held_pence(year_month=AUGUST) == before
+
+    def test_a_month_after_it_ended_holds_nothing(self, conn):
+        service = _service(conn)
+        stored = service.add_commitment(commitment=_commitment())
+        service.end_commitment(
+            commitment_id=stored.id, final_month=YearMonth(year=2026, month=9)
+        )
+        assert (
+            service.get_reserve_held_pence(year_month=YearMonth(year=2026, month=10))
+            == 0
+        )
+
+    def test_two_commitments_are_added_together(self, conn):
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        one = service.get_reserve_held_pence(year_month=AUGUST)
+        service.add_commitment(commitment=_commitment(name="MOT"))
+        assert service.get_reserve_held_pence(year_month=AUGUST) == one * 2
+
+    def test_the_emergency_buffer_is_not_part_of_it(self, conn):
+        """The column reports what was set ASIDE, never the safety net."""
+        service = _service(conn)
+        service.add_commitment(commitment=_commitment())
+        without = service.get_reserve_held_pence(year_month=AUGUST)
+        service.set_recommendation_buffer(enabled=True, amount=Amount(pence=99999))
+        assert service.get_reserve_held_pence(year_month=AUGUST) == without

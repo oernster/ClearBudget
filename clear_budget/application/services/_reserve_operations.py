@@ -147,6 +147,24 @@ class ReserveOperationsMixin:
             for day in range(1, last + 1)
         ]
 
+    def get_reserve_held_pence(self, *, year_month: YearMonth) -> int:
+        """What the commitments were actually holding back when `year_month` ended.
+
+        A HISTORICAL reading, not a projection: the accrual is evaluated at
+        that month's last day, so an archived month reports the reserve it
+        really carried rather than the one today would give it. The month-end
+        reading matches the balance beside it, which is also a closing figure.
+
+        A commitment that has since stopped still counts for the months it
+        covered, because ending one sets a final month rather than erasing it.
+        One that fell due inside the month reads as nothing held at the close,
+        which is correct: the money had gone.
+        """
+        last = days_in_month(year_month.year, year_month.month)
+        return self.build_reserve_floor(buffer_pence=0).reserved_at(
+            date(year_month.year, year_month.month, last)
+        )
+
     def get_commitments_due_in(self, *, year_month: YearMonth) -> list[DueCommitment]:
         """Every commitment whose money leaves during `year_month`, by day.
 

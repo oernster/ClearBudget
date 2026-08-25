@@ -1,4 +1,10 @@
-"""Dialog for viewing archived month details."""
+"""Dialog for viewing archived month details.
+
+The summary line carries the reserve the month really held at its own last
+day, beside the income, bills and balance it already stated. It is passed in
+rather than computed here: the dialog reads a month that has already been
+read, so recomputing it would be a second answer to a settled question.
+"""
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -12,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import theme, ui_scale
+from clear_budget.ui.utils import reserves_text
 from clear_budget.ui.utils.table_focus import keyboard_only_focus
 from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
@@ -19,11 +26,23 @@ from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 class ArchiveDetailDialog(QDialog):
     """Dialog showing detailed view of an archived month."""
 
-    def __init__(self, parent=None, year_month: YearMonth = None, summary=None) -> None:
-        """Initialize archive detail dialog."""
+    def __init__(
+        self,
+        parent=None,
+        year_month: YearMonth = None,
+        summary=None,
+        reserved=None,
+    ) -> None:
+        """Initialize archive detail dialog.
+
+        `reserved` is what the month held back at its close, as an Amount;
+        None means this budget sets nothing aside and the line is left off
+        entirely rather than stated as zero.
+        """
         super().__init__(parent)
         self.year_month = year_month
         self.summary = summary
+        self.reserved = reserved
         self.setWindowTitle(f"Archive Details - {year_month}")
         # Size only, never position: see bill_dialog. A fixed virtual-desktop
         # point pins the dialog to one monitor; sized alone, Qt centres it on
@@ -46,11 +65,16 @@ class ArchiveDetailDialog(QDialog):
 
         # Summary info
         if self.summary:
-            summary_text = (
-                f"Income: {self.summary.total_income} | "
-                f"Bills: {self.summary.total_bills} | "
-                f"Balance: {self.summary.balance}"
-            )
+            parts = [
+                f"Income: {self.summary.total_income}",
+                f"Bills: {self.summary.total_bills}",
+                f"Balance: {self.summary.balance}",
+            ]
+            if self.reserved is not None:
+                parts.append(
+                    reserves_text.archive_detail_line(amount=str(self.reserved))
+                )
+            summary_text = " | ".join(parts)
             summary_label = QLabel(summary_text)
             # Was a hardcoded grey that ignored the theme, so it measured
             # 3.5:1 on the light theme's white. It follows the theme now.
