@@ -92,12 +92,18 @@ class SolvencyPanelAssumedMixin:
         for label in labels:
             month = month.next_month()
             summary = service.get_assumed_month_summary(year_month=month)
-            drain = self._bank_total(summary) - summary.total_income.pence
+            # Two figures, because two questions are being asked. The
+            # shortfall says what the month must find and drives both its
+            # sentence and its colour; the net says what actually leaves the
+            # account, so only that may carry the balance to the next month.
+            # Money set aside has not gone anywhere.
+            net = self._bank_total(summary) - summary.total_income.pence
+            shortfall = self._month_shortfall_pence(month, summary)
             text, _colour, clarion = self._build_month_cashflow_summary(
-                opening, summary, drain, overdraft_limit_pence
+                opening, summary, shortfall, overdraft_limit_pence
             )
             state = self._month_cashflow_state(
-                opening, summary, drain, overdraft_limit_pence
+                opening, summary, shortfall, overdraft_limit_pence
             )
             self._set_projection_label(
                 label,
@@ -106,7 +112,7 @@ class SolvencyPanelAssumedMixin:
                 colour=self._assumed_colour(state),
                 clarion=clarion,
             )
-            opening -= drain
+            opening -= net
 
     @staticmethod
     def _gap_specification(expected: list) -> str:

@@ -26,20 +26,23 @@ class SolvencyPanelForwardMixin:
         m2 = m1.next_month()
         m1_summary = service.get_month_summary(year_month=m1)
         m2_summary = service.get_month_summary(year_month=m2)
+        # The balance chain uses the BILLS alone: money set aside stays in the
+        # account, so it must not pull the projected opening down with it. What
+        # each month has to FIND is a different figure and a different question,
+        # which _month_shortfall_pence answers.
         m1_bank = self._bank_total(m1_summary)
-        m2_bank = self._bank_total(m2_summary)
         m1_end_pence = report.balance_pence + m1_summary.total_income.pence - m1_bank
 
         m1_text, m1_color, m1_clarion = self._build_month_cashflow_summary(
             report.balance_pence,
             m1_summary,
-            m1_bank - m1_summary.total_income.pence,
+            self._month_shortfall_pence(m1, m1_summary),
             overdraft_limit_pence,
         )
         m2_text, m2_color, m2_clarion = self._build_month_cashflow_summary(
             m1_end_pence,
             m2_summary,
-            m2_bank - m2_summary.total_income.pence,
+            self._month_shortfall_pence(m2, m2_summary),
             overdraft_limit_pence,
         )
 
@@ -76,11 +79,6 @@ class SolvencyPanelForwardMixin:
         # Solvency is the single source of truth for the nav label colour;
         # broadcast it so the other views' month/year labels match.
         self.month_label_color_changed.emit(current_month_color)
-
-    @staticmethod
-    def _bank_total(summary) -> int:
-        """Total pence of a month's bills paid from the bank account."""
-        return sum(b.amount.pence for b in summary.bills if b.payment_method_id == 1)
 
     @staticmethod
     def _set_projection_label(

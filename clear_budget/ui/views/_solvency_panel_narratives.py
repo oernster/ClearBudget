@@ -12,7 +12,8 @@ from clear_budget.ui.utils.format_helpers import fmt
 # Balance bands (in pence) separating the amber tiers from a safe close.
 _AT_RISK_BALANCE_PENCE = 20000
 _CAUTION_BALANCE_PENCE = 50000
-# Months of drain a balance must cover to count as comfortable rather than tight.
+# Months of shortfall a balance must cover to count as comfortable rather
+# than tight.
 _MONTHS_COVERAGE_FOR_SAFE = 2
 # Sentinel day for a low that sits at the opening balance, before any event.
 # Days of the month are 1-based, so 0 cannot collide with a real one.
@@ -81,14 +82,41 @@ class SolvencyPanelNarrativeMixin:
         return STATE_SAFE
 
     @staticmethod
-    def _health_state_key(balance_pence: int, monthly_drain_pence: int) -> str:
-        """The traffic-light STATE of a month, from balance against drain.
+    def _bank_total(summary) -> int:
+        """Total pence of a month's bills paid from the bank account."""
+        return sum(b.amount.pence for b in summary.bills if b.payment_method_id == 1)
+
+    def _month_shortfall_pence(self, year_month, summary) -> int:
+        """What a month has to find: its bank bills and its reserves, less income.
+
+        The ONE place this is worked out. It was derived separately at four
+        call sites, which is how the Forward Projection came to say a month
+        paid for itself while the Overall Health line above it said that same
+        month was short: one sentence, two different sums behind it.
+
+        Emphatically NOT the fall in the balance. Money set aside stays in the
+        account until the commitment is paid, so a projected balance must
+        never be reduced by it; the Account Position banner's savings-drain
+        note is a different figure for that reason and keeps the bills alone.
+        This answers what the month must FIND, which is the question the
+        health rule and the gap clause both ask.
+        """
+        reserve = self.view_model.budget_service.get_month_reserve_cost_pence(
+            year_month=year_month
+        )
+        return self._bank_total(summary) + reserve - summary.total_income.pence
+
+    @staticmethod
+    def _health_state_key(balance_pence: int, monthly_shortfall_pence: int) -> str:
+        """The traffic-light STATE of a month, balance against what it must find.
 
         Red only for actual overdraft (< 0).
         Amber for positive but less than 2 months coverage - tight but surviving.
         Green for 2+ months coverage.
-        monthly_drain_pence: bills minus income for a future month
-        (positive = deficit).
+        monthly_shortfall_pence: what the month has to find, its bank bills and
+        its reserves against its income (positive = short). A month that cannot
+        fund what it sets aside is genuinely tighter than the bills alone say,
+        so the reserve belongs in the figure the coverage is measured against.
 
         Kept separate from the colour for the same reason _state_key is: the
         projection page paints the same months in the muted assumed variant of
@@ -96,18 +124,18 @@ class SolvencyPanelNarrativeMixin:
         """
         if balance_pence < 0:
             return STATE_RED
-        if monthly_drain_pence <= 0:
+        if monthly_shortfall_pence <= 0:
             return STATE_SAFE
-        if balance_pence >= _MONTHS_COVERAGE_FOR_SAFE * monthly_drain_pence:
+        if balance_pence >= _MONTHS_COVERAGE_FOR_SAFE * monthly_shortfall_pence:
             return STATE_SAFE
         return STATE_CAUTION
 
     @staticmethod
-    def _health_color(balance_pence: int, monthly_drain_pence: int) -> str:
+    def _health_color(balance_pence: int, monthly_shortfall_pence: int) -> str:
         """_health_state_key resolved through the active theme's palette."""
         return theme.state_colours()[
             SolvencyPanelNarrativeMixin._health_state_key(
-                balance_pence, monthly_drain_pence
+                balance_pence, monthly_shortfall_pence
             )
         ]
 
@@ -160,7 +188,7 @@ class SolvencyPanelNarrativeMixin:
         self,
         opening_pence: int,
         summary,
-        monthly_drain_pence: int,
+        monthly_shortfall_pence: int,
         overdraft_limit_pence: int = 0,
     ) -> tuple[str, str, bool]:
         """Build cashflow risk narrative for one month.
@@ -168,9 +196,11 @@ class SolvencyPanelNarrativeMixin:
         Simulates events in day order. Returns (display_text, color, clarion).
         ``clarion`` is True when the month goes overdrawn with no facility or
         beyond it, so the caller can render it as a stark warning.
-        monthly_drain_pence is the month's bills minus its income: it picks the
-        amber/red thresholds AND is stated outright as what the month needs to
-        hold flat.
+        monthly_shortfall_pence is what the month has to find, its bills and
+        its reserves against its income: it picks the amber/red thresholds AND
+        is stated outright as what the month needs to hold flat. It is NOT the
+        fall in the balance, which the walk works out for itself; see
+        _month_shortfall_pence.
         """
         walk = self._walk_month(opening_pence, summary)
         min_balance = walk["min_balance"]
@@ -179,7 +209,7 @@ class SolvencyPanelNarrativeMixin:
         rescue_event = walk["rescue_event"]
         closing_pence = walk["closing"]
         lines = [f"Opens: {fmt(opening_pence)}"]
-        state = self._health_state_key(min_balance, monthly_drain_pence)
+        state = self._health_state_key(min_balance, monthly_shortfall_pence)
         clarion = False
 
         # Every month reports its low, whether or not it is alarming: a low
@@ -212,7 +242,7 @@ class SolvencyPanelNarrativeMixin:
         # Every month states its shape, on the same terms as the month on
         # screen. A month that closes positive can still run at a loss; that
         # is precisely the case a closing balance alone hides.
-        clause = self._gap_clause(monthly_drain_pence)
+        clause = self._gap_clause(monthly_shortfall_pence)
         lines.append(clause[0].upper() + clause[1:])
 
         return "\n".join(lines), theme.state_colours()[state], clarion
@@ -221,7 +251,7 @@ class SolvencyPanelNarrativeMixin:
         self,
         opening_pence: int,
         summary,
-        monthly_drain_pence: int,
+        monthly_shortfall_pence: int,
         overdraft_limit_pence: int = 0,
     ) -> str:
         """The state key behind _build_month_cashflow_summary's colour.
@@ -235,7 +265,7 @@ class SolvencyPanelNarrativeMixin:
             return self._overdraft_facility_outcome(
                 walk["min_balance"], overdraft_limit_pence
             )[1]
-        return self._health_state_key(walk["min_balance"], monthly_drain_pence)
+        return self._health_state_key(walk["min_balance"], monthly_shortfall_pence)
 
     @staticmethod
     def _overdraft_facility_outcome(

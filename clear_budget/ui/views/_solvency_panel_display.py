@@ -365,11 +365,10 @@ class SolvencyPanelDisplayMixin:
                 year_month=report.year_month
             )
         )
-        bank_bills_pence = sum(
-            b.amount.pence for b in summary.bills if b.payment_method_id == 1
-        )
-        drain_pence = bank_bills_pence - summary.total_income.pence
         _, color, _ = self._build_month_cashflow_summary(
-            opening_pence, summary, drain_pence, overdraft_limit_pence
+            opening_pence,
+            summary,
+            self._month_shortfall_pence(report.year_month, summary),
+            overdraft_limit_pence,
         )
         return color

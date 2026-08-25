@@ -147,7 +147,10 @@ class _TitleColour(SolvencyPanelNarrativeMixin, SolvencyPanelDisplayMixin):
 
     def __init__(self, *, current_summary=None, opening_pence: int = 0) -> None:
         budget_service = SimpleNamespace(
-            get_projected_starting_balance_pence=(lambda *, year_month: opening_pence)
+            get_projected_starting_balance_pence=(lambda *, year_month: opening_pence),
+            # These tests are about the colour rule itself, so nothing is set
+            # aside; the reserve's own effect on the rule is tested separately.
+            get_month_reserve_cost_pence=(lambda *, year_month: 0),
         )
         self.view_model = SimpleNamespace(
             current_summary=current_summary, budget_service=budget_service
