@@ -132,6 +132,11 @@
                     <p>Utilisation, interest and a six-month projection per card, coloured by the headroom left.</p>
                 </div>
                 <div class="card">
+                    <a href="screenshots.html#recommendations"><img class="thumb" src="screenshots/recommendations.png" alt="The Recommendations tab: an emergency buffer row, a verdict that nothing is needed, each month's low point, then measured retiming suggestions with the first ticked and its preview panel open." loading="lazy" decoding="async"></a>
+                    <h3>What would fix it</h3>
+                    <p>Measured suggestions: retime what can move, then what each month still needs to find. Tick one to preview its effect; nothing is ever applied for you.</p>
+                </div>
+                <div class="card">
                     <a href="screenshots.html#monthly"><img class="thumb" src="screenshots/monthlybudget.png" alt="The Monthly Budget tab: bills and income as two plain tables with a self-maintaining balance." loading="lazy" decoding="async"></a>
                     <h3>Private and offline</h3>
                     <p>Your months live on your machine, behind a sign-in, with no cloud and no account servers.</p>
@@ -170,6 +175,8 @@
         still stands on its own keeps standing, named with the day that constrains it, followed by
         what you could spend from each later day of the month as income lands. It models
         forward solvency for the next two months, detects mid-month overdrafts when bills cluster before income,
+        recommends measured changes when a month ahead cannot hold (retiming what can move, then pricing the
+        extra income each month still needs, with try-it-on previews and an optional emergency buffer),
         tracks credit card utilisation and interest with a six-month balance projection and supports multiple
         users with bcrypt sign-in and isolated per-user databases, each holding any number of named budgets.
         A Graph tab plots the month as the bank balance day by day or every card on one chart; a month exports
@@ -241,6 +248,10 @@
                 "Mid-month overdraft detection",
                 "Runway warning naming the first overdrawn month and the monthly drain",
                 "Facility-aware overdraft alerts",
+                "A Recommendations tab proposing measured changes for a difficult budget: retime bills until after the month's last income and incomes to the start of the month, then price the extra income each month still needs, each ask assuming the earlier ones arrived",
+                "Try-it-on previews: tick any suggestion to see its measured effect, alone or alongside others, with nothing applied for you",
+                "An optional emergency buffer raising the recommendations target above bare survival",
+                "Payment and arrival days markable as fixed in the real world, so no suggestion proposes moving them",
                 "Credit card utilisation, interest and six-month balance projection",
                 "Scheduled credit-limit changes",
                 "Per-month bill and income overrides, skips and one-off entries",

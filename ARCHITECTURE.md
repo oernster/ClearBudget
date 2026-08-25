@@ -335,7 +335,9 @@ Key methods:
   launch alongside `update_card_balances_for_elapsed_dates`
 - `skip_bill_for_month(bill_id, year_month)` / `unskip_bill_for_month(bill_id, year_month)`
 - `delete_bill_month_override(bill_id, year_month)`
-- `get_projected_month_end_balance_pence(year_month)` → `int` (signed)
+- `get_projected_month_end_balance_pence(year_month, summary)` → `int` (signed);
+  both arguments keyword-only, the summary passed in so callers that already
+  hold one never pay for a second computation
 - `get_bank_balance()` / `set_bank_balance(amount)` - the stored balance is
   stamped with the date it was set (`bank_balance_day` plus the full
   `bank_balance_date`), the baseline the elapsed fold advances from
@@ -374,7 +376,7 @@ Key methods:
 - `get_overdraft_limit()` / `set_overdraft_limit(amount)` - overdraft facility limit
 - `get_overdraft_apr_basis_points()` / `set_overdraft_apr_basis_points(basis_points)` -
   overdraft APR, stored as basis points (1bp = 0.01%)
-- `get_recommendations(today=None)` → `(Recommendations, horizon)` - the
+- `get_recommendations(today=None, trial=(), pinned=False)` → `(Recommendations, horizon)` - the
   recommendation engine's answer plus the months it covers, computed over the
   sustainable window starting the month after today and opening from the
   current month's projected end-of-month balance (see the RecommendationsView
@@ -1338,7 +1340,7 @@ renderings of the same figures to hold in step. Every month any page shows
   which you look at before you act in it, not to a dialog you opened deliberately
   to do one thing. Making a dialog wait for a Tab press costs a keystroke and
   tells the user nothing. Plain `QDialog` subclasses already behave this way
-  through Qt's own default, so the rule holds across all 20 dialog classes
+  through Qt's own default, so the rule holds across all 18 dialog classes
 - `auto_scroller.py` (`AutoScroller`) - gentle auto-scroll shared by the About
   credits and the How It Works text: the surface holds still on open, reads
   down slowly (one step every second tick), holds at the bottom, rewinds fast
@@ -1389,7 +1391,7 @@ renderings of the same figures to hold in step. Every month any page shows
   as wide again as itself (measured: `#0a0a0d` running eight pixels past the
   pill, against a `#242938` panel). Transparent lets the panel through and the
   zero spacing takes the widget down to the pill, so the ring hugs the switch
-  instead of trailing off to the right of it A ring that disagrees with the
+  instead of trailing off to the right of it. A ring that disagrees with the
   drawing does not present as a wrong order, it presents as a SKIPPED control,
   because the user tabs past where a button visibly is and lands somewhere
   else. Two of the four declarations were already one pair out (the graph
@@ -1973,8 +1975,8 @@ renderings of the same figures to hold in step. Every month any page shows
   colours follow the theme so they must be re-read per paint; the limit is
   data a caller set, so re-reading it there zeroed it on every repaint and
   painted every below-zero bar red however large the facility was. Caught by
-  a probe that counts painted pixels rather than by reading the branch back Light blue and amber carry no
-  such reading. The rule is keyed on series COUNT, not on which view opened the
+  a probe that counts painted pixels rather than by reading the branch back.
+  Light blue and amber carry no such reading. The rule is keyed on series COUNT, not on which view opened the
   chart, so the credit-card graph (one series per card) keeps the palette,
   because telling the cards apart is the whole job of colour there; its curve
   keeps the magenta that holds it outside the palette. Negative values are
@@ -2113,12 +2115,19 @@ platform differences are isolated to a few well-defined seams:
   modules had each grown their own copy of the same "first PNG in the
   candidate list" loop while a fourth (the sign-in dialog) had not, which is
   how its logo went missing on two platforms.
-- **What the app bundle carries**: ONE sized PNG (the 256), the `.ico`, the
-  three tab images and VERSION. It used to carry all seven sizes plus the
-  1024 master. Since every consumer takes the first PNG from one ordered list
-  and the 256 heads it, the smaller five could never be selected by any code
-  path; the master appears in no lookup table at all: they shipped and
-  were never read. The SETUP program keeps its own full set, which its own UI
+- **What the app bundle carries**: the 256 app PNG (staged under both the
+  lower-case name the runtime-icon and splash lookups read and the
+  capitalised name the Graph tab reads), the five tab images
+  (`monthlybudget.png`, `solvency.png`, `creditcards.png`,
+  `recommendations.png`, `archive.png`; the Graph tab wears the app icon),
+  the tray and toggle artwork (bank, load, save, switch-budget,
+  information, export and the light/dark faces) and VERSION. No `.ico` and
+  no other icon size: it used to carry all seven sizes plus the 1024
+  master; every consumer takes the first PNG from one ordered list and
+  the 256 heads it, so the smaller five could never be selected by any code
+  path and the master appears in no lookup table at all; nothing in the
+  application asks for an ICO either (`find_app_icon_path` is called only
+  by the setup program). The SETUP program keeps its own full set, which its own UI
   genuinely reads at several sizes. It also DEPLOYS that set (the seven sized
   PNGs plus the `.ico`) beside the installed executable
   (`ops/registration.py` over `APP_ICON_PNG_NAMES`), as a Qt runtime fallback

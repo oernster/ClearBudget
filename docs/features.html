@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>ClearBudget features: forward solvency, cards, budgets and backups</title>
-    <meta name="description" content="Everything ClearBudget does: Safe to Spend Today, forward solvency, mid-month overdraft alerts, credit card projections, several budgets per sign-in, full backups and more.">
+    <meta name="description" content="Everything ClearBudget does: Safe to Spend Today, forward solvency, mid-month overdraft alerts, measured recommendations, credit card projections, several budgets per sign-in, full backups and more.">
     <meta name="author" content="Oliver Ernster">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://ernster.dev/ClearBudget/features.html">
@@ -90,6 +90,11 @@
                     <p>Catches the dip when bills cluster before payday, even when the month still ends positive; it also names the first month you would go overdrawn.</p>
                 </div>
                 <div class="card">
+                    <h3>What would fix it</h3>
+                    <p>A Recommendations tab proposes measured changes for a difficult budget: retime what can move, then find the income no timing can replace, month by month, each ask assuming the earlier ones arrived. Every figure is a re-run of the same day-by-day projection, so nothing is suggested without its measured effect.</p>
+                    <p>Tick any suggestion to try it on: a panel shows what that change does beside the others you have ticked, with nothing applied anywhere. An optional emergency buffer raises the target above bare survival; a headroom section offers the few best retimings solvency does not strictly need.</p>
+                </div>
+                <div class="card">
                     <h3>Credit card pressure</h3>
                     <p>Per-card utilisation, interest and a six-month balance projection, colour-coded by available headroom. Credit-limit changes can be scheduled ahead so every projection honours them.</p>
                 </div>
@@ -97,6 +102,7 @@
                     <h3>Bill and income timing</h3>
                     <p>Per-month skips, amount and due-day overrides, paid and received flags and one-off entries.</p>
                     <p>Something that stops is ended, never erased: bills and income carry a final month, so the months they really ran in keep them. A rent increase changes a bill's amount from one month onward without rewriting what earlier months cost.</p>
+                    <p>A red tick marks a payment or arrival day fixed in the real world; Recommendations never proposes moving one.</p>
                 </div>
                 <div class="card">
                     <h3>Self-maintaining balance</h3>
@@ -147,9 +153,9 @@
             </div>
         </section>
 
-        <!-- The five tabs -->
+        <!-- The six tabs -->
         <section class="section" id="tabs" aria-labelledby="tabs-h">
-            <h2 id="tabs-h">Five views, one question</h2>
+            <h2 id="tabs-h">Six views, one question</h2>
             <p class="lead">Each tab is a different angle on the same question: whether this month holds together and whether the ones after it do. Each carries a picture rather than a name, sitting in the navigation tray beside the other controls and naming itself on hover.</p>
 
             <div class="grid">
@@ -168,6 +174,10 @@
                 <div class="card">
                     <h3>Graph</h3>
                     <p>The viewed month as a chart: the bank balance day by day or every card on one line chart, switched on the page itself, with the HTML exports beside it.</p>
+                </div>
+                <div class="card">
+                    <h3>Recommendations</h3>
+                    <p>What would make the months ahead survivable: measured retimings, the extra income each month still needs and a try-it-on preview of any change before you make it anywhere real.</p>
                 </div>
                 <div class="card">
                     <h3>Archive</h3>
