@@ -31,6 +31,9 @@ _BANNER_FONT_PX = 22
 _SECTION_FONT_PX = 18
 _HEADING_FONT_PX = 17
 _BREAKDOWN_FONT_PX = 15
+# Page-body label padding. Public because the Recommendations rows align a
+# checkbox to their label's first text line and must know where it starts.
+BODY_PADDING_PX = 5
 # Dialog type scale: inline note, strong warning, login heading, code box.
 _NOTE_FONT_PX = 11
 _STRONG_WARN_FONT_PX = 14
@@ -72,12 +75,12 @@ QLabel#LabelMuted {{
    beside the Solvency banner. */
 QLabel#LabelBody {{
     font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
-    padding: 5px;
+    padding: {ui_scale.px(BODY_PADDING_PX)}px;
 }}
 
 QLabel#LabelBodyDetail {{
     font-size: {ui_scale.px(_BREAKDOWN_FONT_PX)}px;
-    padding: 5px;
+    padding: {ui_scale.px(BODY_PADDING_PX)}px;
     color: {t["text_muted"]};
 }}
 

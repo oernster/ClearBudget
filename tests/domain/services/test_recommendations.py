@@ -143,6 +143,9 @@ class TestSkippedCandidates:
         assert [(m.low_pence, m.low_day, m.close_pence) for m in result.outlook] == [
             (0, 10, 30000)
         ]
+        # The clamped low assumes the ask found; the unaided low is where
+        # the month would bottom out on its own.
+        assert result.outlook[0].unaided_low_pence == -50000
 
     def test_movable_bill_after_the_low_day_is_skipped(self) -> None:
         plan = _month(

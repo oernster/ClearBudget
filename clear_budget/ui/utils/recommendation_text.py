@@ -144,14 +144,20 @@ def outlook_html(month, month_name) -> str:
 
 
 def _effect_clauses(before_result, after_result, lead, month_name) -> list[str]:
-    """The measured differences between two runs, as sentences; [] if none."""
+    """The measured differences between two runs, as sentences; [] if none.
+
+    Lows compare UNAIDED (no ask assumed), the same reading the suggestion
+    sentences above the panel use, so a figure here always matches one the
+    page already shows. The ask sentence names what the total is for: the
+    extra income the shown months would need on top of these changes.
+    """
     lifts = []
     for before, after in zip(before_result.outlook, after_result.outlook):
-        if after.low_pence != before.low_pence:
+        if after.unaided_low_pence != before.unaided_low_pence:
             lifts.append(
                 f"{month_name(after.year, after.month)}'s low goes from"
-                f" {money_from_pence(before.low_pence)} to"
-                f" {money_from_pence(after.low_pence)}"
+                f" {money_from_pence(before.unaided_low_pence)} to"
+                f" {money_from_pence(after.unaided_low_pence)}"
             )
     parts = []
     if lifts:
@@ -162,8 +168,8 @@ def _effect_clauses(before_result, after_result, lead, month_name) -> list[str]:
         falls_to = "nothing" if ask_after == 0 else money_from_pence(ask_after)
         verb = "falls" if ask_after < ask_before else "rises"
         parts.append(
-            f"The extra income needed {verb} from"
-            f" {money_from_pence(ask_before)} to {falls_to}."
+            f"The extra income these months would still need to find {verb}"
+            f" from {money_from_pence(ask_before)} to {falls_to}."
         )
     return parts
 

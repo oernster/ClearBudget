@@ -83,11 +83,18 @@ class IncomeAsk:
 
 @dataclass(frozen=True, slots=True)
 class MonthOutlook:
-    """Where one month lands once every suggestion above it is applied."""
+    """Where one month lands once every suggestion above it is applied.
+
+    `low_pence` assumes the month's ask was found, so an asking month shows
+    the target; `unaided_low_pence` is where the month would bottom out
+    WITHOUT that ask, the same reading the move sentences use. The try-it-on
+    panels compare unaided lows so their figures match the page above them.
+    """
 
     year: int
     month: int
     low_pence: int
+    unaided_low_pence: int
     low_day: int
     close_pence: int
 
@@ -320,6 +327,7 @@ def recommend(
             current, move = improved
             moves.append(move)
             low, low_day = _low(balance, current)
+        unaided_low = low
         if low < target:
             shortfall = target - low
             asks.append(
@@ -342,6 +350,7 @@ def recommend(
                 year=current.year,
                 month=current.month,
                 low_pence=low,
+                unaided_low_pence=unaided_low,
                 low_day=low_day,
                 close_pence=_close(balance, current),
             )

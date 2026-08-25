@@ -14,9 +14,17 @@ copy above them never moving.
 """
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QStyle,
+    QVBoxLayout,
+    QWidget,
+)
 
 from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui._theme_labels import BODY_PADDING_PX
 from clear_budget.ui.utils.recommendation_text import (
     ask_html,
     headroom_rows,
@@ -43,11 +51,27 @@ class SuggestionRow:
         self.check = QCheckBox()
         self.check.setToolTip(_TRY_TOOLTIP)
         self.check.toggled.connect(on_toggle)
-        # Both aligned to the top so the box sits beside the sentence's
-        # FIRST line; the sentences drop their <p> wrapper (its rich-text
-        # top margin is what pushed the text below the box).
-        row.addWidget(self.check, 0, Qt.AlignmentFlag.AlignTop)
-        row.addWidget(_label(_unwrapped(html)), 1)
+        text = _label(_unwrapped(html))
+        self.text_label = text
+        # Centre the box's indicator on the sentence's FIRST line, derived
+        # rather than eyeballed: the label's padding puts its first line
+        # down from the row top, then half the difference between the line
+        # and the indicator centres one on the other. The sentences drop
+        # their <p> wrapper too, whose rich-text margin defeats any offset.
+        text.ensurePolished()
+        self.check.ensurePolished()
+        indicator = self.check.style().pixelMetric(
+            QStyle.PixelMetric.PM_IndicatorHeight, None, self.check
+        )
+        drop = ui_scale.px(BODY_PADDING_PX) + max(
+            0, (text.fontMetrics().height() - indicator) // 2
+        )
+        check_col = QVBoxLayout()
+        check_col.setContentsMargins(0, drop, 0, 0)
+        check_col.addWidget(self.check)
+        check_col.addStretch(1)
+        row.addLayout(check_col)
+        row.addWidget(text, 1)
         layout.addLayout(row)
 
         self.panel = QWidget()
