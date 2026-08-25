@@ -143,35 +143,33 @@ def outlook_html(month, month_name) -> str:
     )
 
 
-def _effect_clauses(before_result, after_result, lead, month_name) -> list[str]:
-    """The measured differences between two runs, as sentences; [] if none.
+def _effect_items(before_result, after_result, month_name) -> list[str]:
+    """The measured differences between two runs, one bullet each; [] if none.
 
-    Lows compare UNAIDED (no ask assumed), the same reading the suggestion
-    sentences above the panel use, so a figure here always matches one the
-    page already shows. The ask sentence names what the total is for: the
-    extra income the shown months would need on top of these changes.
+    One line per month rather than a running sentence: a chain of months
+    and figures in prose is hard to scan, which is exactly the reading job
+    this panel exists for. Lows compare UNAIDED (no ask assumed), the same
+    reading the suggestion sentences above the panel use, so a figure here
+    always matches one the page already shows; the ask bullet names what
+    its total is for.
     """
-    lifts = []
+    items = []
     for before, after in zip(before_result.outlook, after_result.outlook):
         if after.unaided_low_pence != before.unaided_low_pence:
-            lifts.append(
-                f"{month_name(after.year, after.month)}'s low goes from"
+            items.append(
+                f"{month_name(after.year, after.month)}'s low: from"
                 f" {money_from_pence(before.unaided_low_pence)} to"
                 f" {money_from_pence(after.unaided_low_pence)}"
             )
-    parts = []
-    if lifts:
-        parts.append(f"{lead}, {join_clauses(lifts)}.")
     ask_before = sum(a.amount_pence for a in before_result.asks)
     ask_after = sum(a.amount_pence for a in after_result.asks)
     if ask_after != ask_before:
         falls_to = "nothing" if ask_after == 0 else money_from_pence(ask_after)
-        verb = "falls" if ask_after < ask_before else "rises"
-        parts.append(
-            f"The extra income these months would still need to find {verb}"
-            f" from {money_from_pence(ask_before)} to {falls_to}."
+        items.append(
+            "Extra income these months still need to find: from"
+            f" {money_from_pence(ask_before)} to {falls_to}"
         )
-    return parts
+    return items
 
 
 def panel_html(
@@ -189,18 +187,24 @@ def panel_html(
     it. The page copy above never moves; this panel is the only thing a
     tick paints.
     """
-    parts = _effect_clauses(without_result, with_result, "With this change", month_name)
-    if not parts and solo is not None and baseline is not None:
-        parts = _effect_clauses(baseline, solo, "On its own", month_name)
-        if parts:
-            parts.append(
-                "The other ticked changes already cover this, so together"
-                " it adds nothing further."
-            )
-    if not parts:
-        parts.append("With everything else ticked, this change adds nothing further.")
-    parts.append("Preview only; nothing is applied.")
-    return "<p>" + " ".join(parts) + "</p>"
+    items = _effect_items(without_result, with_result, month_name)
+    lead = "With this change:"
+    covered = ""
+    if not items and solo is not None and baseline is not None:
+        items = _effect_items(baseline, solo, month_name)
+        lead = "On its own:"
+        covered = (
+            "<p>The other ticked changes already cover this, so together"
+            " it adds nothing further.</p>"
+        )
+    footer = "<p>Preview only; nothing is applied.</p>"
+    if not items:
+        return (
+            "<p>With everything else ticked, this change adds nothing"
+            " further.</p>" + footer
+        )
+    bullets = "".join(f"<li>{item}</li>" for item in items)
+    return f"<p>{lead}</p><ul>{bullets}</ul>{covered}{footer}"
 
 
 def sooner_note_html(moves, extras, horizon_start, month_name) -> str | None:

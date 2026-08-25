@@ -147,19 +147,21 @@ def _result(lows, asks_pence=()):
 
 
 class TestPanelHtml:
-    def test_names_each_lifted_month_and_the_falling_ask(self) -> None:
+    def test_bullets_each_lifted_month_and_the_falling_ask(self) -> None:
         html = panel_html(
             _result([110000, 49792], asks_pence=[13895]),
             _result([-23408, 49792], asks_pence=[28895]),
             _month_name,
         )
-        # Unaided lows, so the panel's figures match the sentences above it
+        # One bullet per figure rather than a running sentence; unaided
+        # lows, so the panel's numbers match the sentences above it
         # (October's -£234.08 is the number the move sentence quotes).
-        assert "September 2026's low goes from -£234.08 to £1,100.00" in html
+        assert "<p>With this change:</p><ul>" in html
+        assert "<li>September 2026's low: from -£234.08 to £1,100.00</li>" in html
         assert "October" not in html  # unchanged months stay unsaid
         assert (
-            "The extra income these months would still need to find falls"
-            " from £288.95 to £138.95" in html
+            "<li>Extra income these months still need to find: from"
+            " £288.95 to £138.95</li>" in html
         )
         assert "Preview only; nothing is applied." in html
 
@@ -169,7 +171,7 @@ class TestPanelHtml:
             _result([10000], asks_pence=[5000]),
             _month_name,
         )
-        assert "falls from £50.00 to nothing" in html
+        assert "from £50.00 to nothing" in html
 
     def test_a_superseded_change_says_so(self) -> None:
         html = panel_html(_result([10000]), _result([10000]), _month_name)

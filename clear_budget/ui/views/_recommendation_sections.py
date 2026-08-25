@@ -88,7 +88,10 @@ class SuggestionRow:
         self.panel.hide()
 
     def show_panel(self, html: str) -> None:
-        self._panel_label.setText(_unwrapped(html))
+        # Raw, never through _unwrapped: the panel carries a bullet list
+        # whose structure the <p>-stripper would mangle and its alignment
+        # concern does not apply inside the padded tray.
+        self._panel_label.setText(html)
         self.panel.show()
 
     def hide_panel(self) -> None:
