@@ -107,7 +107,7 @@
         <section class="section" id="verdict" aria-label="The solvency verdict" style="margin-top:8px;">
             <figure class="hero-shot">
                 <a href="screenshots.html#bank">
-                    <img src="screenshots/solvency1.png" alt="The Solvency tab of a sample budget: a green banner reading safe, a health breakdown, then the next two months walked day by day with the second marked overdrawn in red and priced." fetchpriority="high" decoding="async">
+                    <img src="screenshots/solvency1.png" alt="The Solvency view of a sample budget: a green banner reading safe, a health breakdown, then the next two months walked day by day with the second marked overdrawn in red and priced." fetchpriority="high" decoding="async">
                 </a>
                 <figcaption>The verdict page, on an invented sample budget: this month is safe, the next survives and the one after goes overdrawn on day 28, priced at exactly what it needs. That is the product.</figcaption>
             </figure>
@@ -132,12 +132,12 @@
                     <p>Utilisation, interest and a six-month projection per card, coloured by the headroom left.</p>
                 </div>
                 <div class="card">
-                    <a href="screenshots.html#recommendations"><img class="thumb" src="screenshots/recommendations.png" alt="The Recommendations tab: an emergency buffer row, a verdict that nothing is needed, each month's low point, then measured retiming suggestions with the first ticked and its preview panel open." loading="lazy" decoding="async"></a>
+                    <a href="screenshots.html#recommendations"><img class="thumb" src="screenshots/recommendations.png" alt="The Recommendations view: an emergency buffer row, a verdict that nothing is needed, each month's low point, then measured retiming suggestions with the first ticked and its preview panel open." loading="lazy" decoding="async"></a>
                     <h3>What would fix it</h3>
                     <p>Measured suggestions: retime what can move, then what each month still needs to find. Tick one to preview its effect; nothing is ever applied for you.</p>
                 </div>
                 <div class="card">
-                    <a href="screenshots.html#monthly"><img class="thumb" src="screenshots/monthlybudget.png" alt="The Monthly Budget tab: bills and income as two plain tables with a self-maintaining balance." loading="lazy" decoding="async"></a>
+                    <a href="screenshots.html#monthly"><img class="thumb" src="screenshots/monthlybudget.png" alt="The Monthly Budget view: bills and income as two plain tables with a self-maintaining balance." loading="lazy" decoding="async"></a>
                     <h3>Private and offline</h3>
                     <p>Your months live on your machine, behind a sign-in, with no cloud and no account servers.</p>
                 </div>
@@ -179,7 +179,7 @@
         extra income each month still needs, with try-it-on previews and an optional emergency buffer),
         tracks credit card utilisation and interest with a six-month balance projection and supports multiple
         users with bcrypt sign-in and isolated per-user databases, each holding any number of named budgets.
-        A Graph tab plots the month as the bank balance day by day or every card on one chart; a month exports
+        A Graph view plots the month as the bank balance day by day or every card on one chart; a month exports
         as a self-contained web page and a range of months exports as a self-contained folder with an index.
         It has light and dark themes and a full keyboard path through every screen and dialog. Built with Python
         and PySide6, it runs offline with no cloud dependency (its only network request is a daily check of the
@@ -248,7 +248,7 @@
                 "Mid-month overdraft detection",
                 "Runway warning naming the first overdrawn month and the monthly drain",
                 "Facility-aware overdraft alerts",
-                "A Recommendations tab proposing measured changes for a difficult budget: retime bills until after the month's last income and incomes to the start of the month, then price the extra income each month still needs, each ask assuming the earlier ones arrived",
+                "A Recommendations view proposing measured changes for a difficult budget: retime bills until after the month's last income and incomes to the start of the month, then price the extra income each month still needs, each ask assuming the earlier ones arrived",
                 "Try-it-on previews: tick any suggestion to see its measured effect, alone or alongside others, with nothing applied for you",
                 "An optional emergency buffer raising the recommendations target above bare survival",
                 "Payment and arrival days markable as fixed in the real world, so no suggestion proposes moving them",
@@ -267,7 +267,7 @@
                 "Multiple users with bcrypt sign-in and isolated per-user databases",
                 "Several named budgets under one sign-in, each its own separate database",
                 "Back up every account and every budget to one zip, validated in staging before any restore replaces a live file",
-                "A Graph tab plotting the month as a page: bank balance day by day or every credit card on one chart, switched on the page, each day's bar read against the arranged overdraft (calm at or above zero, amber within the facility, red past it)",
+                "A Graph view plotting the month as a page: bank balance day by day or every credit card on one chart, switched on the page, each day's bar read against the arranged overdraft (calm at or above zero, amber within the facility, red past it)",
                 "HTML export of a month and of a range of months as a self-contained folder with an index whose table adds up",
                 "Light and dark themes, remembered between sessions",
                 "Full keyboard navigation across every screen and dialog",
@@ -292,7 +292,7 @@
             '#architecture': 'why.html#architecture',
             '#why': 'why.html',
             '#features': 'features.html',
-            '#tabs': 'features.html#tabs',
+            '#tabs': 'features.html#views',
             '#see': 'screenshots.html'
         };
         var target = moved[window.location.hash];
