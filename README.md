@@ -1,4 +1,4 @@
-<img width="64" height="64" alt="ClearBudget" src="https://github.com/user-attachments/assets/4e8c5620-7890-4527-9eb6-14adad1ebea8" /> [ClearBudget](https://ernster.dev/ClearBudget/)
+<img width="64" height="64" alt="ClearBudget" src="https://github.com/user-attachments/assets/4e8c5620-7890-4527-9eb6-14adad1ebea8" /> [ClearBudget](https://clearbudget.co.uk/)
 
 # ClearBudget
 

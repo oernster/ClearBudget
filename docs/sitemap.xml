@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The sitemap for this host. ClearBudget moved off ernster.dev onto its own
+     domain, so its pages left the hub's sitemap and live here instead; when
+     this site gains a page, add its URL here. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://clearbudget.co.uk/</loc></url>
+  <url><loc>https://clearbudget.co.uk/why.html</loc></url>
+  <url><loc>https://clearbudget.co.uk/features.html</loc></url>
+  <url><loc>https://clearbudget.co.uk/screenshots.html</loc></url>
+  <url><loc>https://clearbudget.co.uk/download.html</loc></url>
+</urlset>

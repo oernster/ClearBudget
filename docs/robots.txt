@@ -1,0 +1,7 @@
+# robots.txt for clearbudget.co.uk (host root).
+# ClearBudget serves from its own domain rather than under ernster.dev, so it
+# owns its host-root SEO: this file and sitemap.xml beside it.
+User-agent: *
+Allow: /
+
+Sitemap: https://clearbudget.co.uk/sitemap.xml
