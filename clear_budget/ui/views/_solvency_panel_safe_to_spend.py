@@ -141,9 +141,16 @@ class SolvencyPanelSafeToSpendMixin:
         one sentence on the page that spending cannot answer.
         """
         detail = f"Holds every day through {self._sts_month(result.covered_end)} above"
-        if result.floor_pence > 0:
-            detail += f" your {money_from_pence(result.floor_pence)} buffer"
-        else:
+        buffer_pence = result.floor_pence - result.reserved_pence
+        if buffer_pence > 0:
+            detail += f" your {money_from_pence(buffer_pence)} buffer"
+        if result.reserved_pence > 0:
+            # Naming the reserve separately matters: it is not buffer. A day
+            # can now be constrained by an obligation months away rather than
+            # by anything in the month being read.
+            joiner = " and" if buffer_pence > 0 else ""
+            detail += f"{joiner} {money_from_pence(result.reserved_pence)} set aside"
+        elif buffer_pence <= 0:
             detail += " zero"
         detail += f"; constrained by {self._sts_day(result.binding_day)}"
         if not result.has_shortfall:

@@ -28,6 +28,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 
+from clear_budget.domain.services.reserve_floor import ReserveFloor
 from clear_budget.shared.errors import BudgetError
 
 
@@ -76,7 +77,11 @@ class SustainableResult:
             figure.
         covered_end: The last day the figure makes a promise about: the end of
             the last month that clears the floor with no spending at all.
-        floor_pence: The buffer the figure was measured against.
+        floor_pence: The floor the figure was measured against, read on the
+            binding day. It is the buffer plus whatever was being set aside
+            that day, so it is a figure that varies rather than a constant.
+        reserved_pence: How much of that floor was commitments rather than the
+            buffer, so a caller can name what actually constrained the day.
         shortfall_pence: How far the worst day BEYOND the covered stretch
             falls under the floor. It is 0 when the whole window stands. It is
             never subtracted from the figure: it is a gap that exists whether
@@ -89,6 +94,7 @@ class SustainableResult:
     binding_day: date
     covered_end: date
     floor_pence: int
+    reserved_pence: int = 0
     shortfall_pence: int = 0
     shortfall_day: date | None = None
 
@@ -137,8 +143,18 @@ def _window_days(
     return within
 
 
+def _clearance_pence(day: DayProjection, floor: ReserveFloor) -> int:
+    """What `day` has spare once its own floor is honoured.
+
+    The quantity every answer here is built from. With a flat floor it is the
+    old balance-minus-buffer; with reserves it falls as an obligation gets
+    nearer, which is the whole point.
+    """
+    return day.balance_pence - floor.at(day.day)
+
+
 def _covered_and_beyond(
-    within: Sequence[DayProjection], floor_pence: int
+    within: Sequence[DayProjection], floor: ReserveFloor
 ) -> tuple[list[DayProjection], list[DayProjection]]:
     """Split the window at the first month that cannot clear the floor unaided.
 
@@ -160,7 +176,7 @@ def _covered_and_beyond(
         months.setdefault((day.day.year, day.day.month), []).append(day)
     for key in sorted(months):
         days = months[key]
-        if min(d.balance_pence for d in days) - floor_pence < 0:
+        if min(_clearance_pence(d, floor) for d in days) < 0:
             break
         covered += days
     beyond = within[len(covered) :]
@@ -171,7 +187,7 @@ def sustainable_spend(
     *,
     projection: Sequence[DayProjection],
     today: date,
-    floor_pence: int = 0,
+    floor: ReserveFloor,
     window_months: int = _DEFAULT_WINDOW_MONTHS,
 ) -> SustainableResult:
     """The most that can be spent today leaving every surviving month standing.
@@ -198,11 +214,15 @@ def sustainable_spend(
         SustainableError: If the floor is negative, the window is shorter
             than a month or the projection does not include today.
     """
-    if floor_pence < 0:
+    if floor.buffer_pence < 0:
         raise SustainableError("Safety floor cannot be negative")
     within = _window_days(projection, today, window_months)
-    covered, beyond = _covered_and_beyond(within, floor_pence)
-    worst_beyond = min(beyond, key=lambda d: d.balance_pence) if beyond else None
+    covered, beyond = _covered_and_beyond(within, floor)
+
+    def clearance(day: DayProjection) -> int:
+        return _clearance_pence(day, floor)
+
+    worst_beyond = min(beyond, key=clearance) if beyond else None
     if not covered:
         # Today's own month is already under, so there is no promise to make.
         # The figure is THIS month's shortfall rather than the window's
@@ -212,34 +232,32 @@ def sustainable_spend(
         this_month = [
             d for d in within if (d.day.year, d.day.month) == (today.year, today.month)
         ]
-        binding = min(this_month, key=lambda d: d.balance_pence)
+        binding = min(this_month, key=clearance)
         rest = within[len(this_month) :]
-        worst_rest = min(rest, key=lambda d: d.balance_pence) if rest else None
+        worst_rest = min(rest, key=clearance) if rest else None
         return SustainableResult(
-            amount_pence=binding.balance_pence - floor_pence,
+            amount_pence=clearance(binding),
             binding_day=binding.day,
             covered_end=this_month[-1].day,
-            floor_pence=floor_pence,
+            floor_pence=floor.at(binding.day),
+            reserved_pence=floor.reserved_at(binding.day),
             shortfall_pence=(
-                floor_pence - worst_rest.balance_pence
-                if worst_rest and worst_rest.balance_pence - floor_pence < 0
+                -clearance(worst_rest)
+                if worst_rest and clearance(worst_rest) < 0
                 else 0
             ),
             shortfall_day=(
-                worst_rest.day
-                if worst_rest and worst_rest.balance_pence - floor_pence < 0
-                else None
+                worst_rest.day if worst_rest and clearance(worst_rest) < 0 else None
             ),
         )
-    binding = min(covered, key=lambda d: d.balance_pence)
+    binding = min(covered, key=clearance)
     return SustainableResult(
-        amount_pence=binding.balance_pence - floor_pence,
+        amount_pence=clearance(binding),
         binding_day=binding.day,
         covered_end=covered[-1].day,
-        floor_pence=floor_pence,
-        shortfall_pence=(
-            floor_pence - worst_beyond.balance_pence if worst_beyond else 0
-        ),
+        floor_pence=floor.at(binding.day),
+        reserved_pence=floor.reserved_at(binding.day),
+        shortfall_pence=(-_clearance_pence(worst_beyond, floor) if worst_beyond else 0),
         shortfall_day=worst_beyond.day if worst_beyond else None,
     )
 
@@ -248,7 +266,7 @@ def sustainable_capacity(
     *,
     projection: Sequence[DayProjection],
     today: date,
-    floor_pence: int = 0,
+    floor: ReserveFloor,
     window_months: int = _DEFAULT_WINDOW_MONTHS,
 ) -> tuple[CapacityStep, ...]:
     """`sustainable_spend` from each remaining day of today's month onward.
@@ -257,18 +275,18 @@ def sustainable_capacity(
     first step always equals the headline and no row can offer more than the
     months it names will bear.
     """
-    if floor_pence < 0:
+    if floor.buffer_pence < 0:
         raise SustainableError("Safety floor cannot be negative")
     window = _window_days(projection, today, window_months)
-    covered, _ = _covered_and_beyond(window, floor_pence)
+    covered, _ = _covered_and_beyond(window, floor)
     within = covered or window
     steps: list[CapacityStep] = []
     for index, day in enumerate(within):
         if day.day.month != today.month or day.day.year != today.year:
             break
         rest = within[index:]
-        binding = min(rest, key=lambda d: d.balance_pence)
-        amount = binding.balance_pence - floor_pence
+        binding = min(rest, key=lambda d: _clearance_pence(d, floor))
+        amount = _clearance_pence(binding, floor)
         if steps and steps[-1].amount_pence == amount:
             continue
         steps.append(

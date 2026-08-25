@@ -84,14 +84,28 @@ class ReserveOperationsMixin:
         stored = get_variable_spend_monthly_pence(conn)
         return None if stored is None else Amount(pence=stored)
 
-    def get_reserve_floor(self) -> ReserveFloor:
-        """The floor these commitments and the buffer build together."""
-        enabled, buffer_amount = self.get_recommendation_buffer()
+    def build_reserve_floor(self, *, buffer_pence: int) -> ReserveFloor:
+        """The commitments as a floor, standing on the caller's own buffer.
+
+        The buffer is a parameter because this application has two of them
+        and they are not the same setting: Safe to Spend keeps its own, set
+        beside the overdraft, while the Reserves page carries the emergency
+        buffer the Recommendations target uses. Reserves are added to
+        whichever one the caller is answering for; merging the two would
+        restate a figure the user has already read.
+        """
         variable = self.get_variable_spend()
         return ReserveFloor(
-            buffer_pence=buffer_amount.pence if enabled else 0,
+            buffer_pence=buffer_pence,
             commitments=tuple(self.list_commitments()),
             variable_spend_monthly_pence=None if variable is None else variable.pence,
+        )
+
+    def get_reserve_floor(self) -> ReserveFloor:
+        """The Reserves page's own reading: commitments over the emergency buffer."""
+        enabled, buffer_amount = self.get_recommendation_buffer()
+        return self.build_reserve_floor(
+            buffer_pence=buffer_amount.pence if enabled else 0
         )
 
     def get_reserve_rows(self, *, today: date | None = None) -> list[ReserveRow]:
@@ -113,6 +127,18 @@ class ReserveOperationsMixin:
                 )
             )
         return rows
+
+    def get_reserve_cost_pence(self, *, today: date | None = None) -> int:
+        """How much lower Safe to Spend Today is because of the commitments.
+
+        The line that earns the page: it connects what is being held back to
+        the headline figure the user actually looks at. Never negative, since
+        setting money aside cannot raise what is safe to spend.
+        """
+        day = today if today is not None else date.today()  # noqa: DTZ011
+        with_reserves = self.get_safe_to_spend(today=day)
+        without = self.get_safe_to_spend_without_reserves(today=day)
+        return max(without.amount_pence - with_reserves.amount_pence, 0)
 
     def get_reserved_today_pence(self, *, today: date | None = None) -> int:
         """What every commitment holds back between them, right now."""

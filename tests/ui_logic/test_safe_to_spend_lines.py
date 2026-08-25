@@ -21,11 +21,18 @@ class _Lines(SolvencyPanelSafeToSpendMixin):
     """The mixin alone, which is all the builder needs."""
 
 
-def _result(*, shortfall_pence: int = 0, shortfall_day=None, floor_pence: int = 2000):
+def _result(
+    *,
+    shortfall_pence: int = 0,
+    shortfall_day=None,
+    floor_pence: int = 2000,
+    reserved_pence: int = 0,
+):
     return SimpleNamespace(
         covered_end=date(2026, 10, 31),
         binding_day=date(2026, 10, 14),
         floor_pence=floor_pence,
+        reserved_pence=reserved_pence,
         shortfall_pence=shortfall_pence,
         shortfall_day=shortfall_day,
         has_shortfall=shortfall_day is not None,
@@ -41,6 +48,20 @@ class TestTheReachSentence:
     def test_a_buffer_is_named_so_the_promise_can_be_checked(self):
         reach, _ = _Lines()._sts_detail_lines(_result(floor_pence=2000))
         assert "above your £20.00 buffer" in reach
+
+    def test_a_reserve_is_named_apart_from_the_buffer(self):
+        """It is not buffer, so calling it buffer would be a plain untruth."""
+        reach, _ = _Lines()._sts_detail_lines(
+            _result(floor_pence=36167, reserved_pence=21167)
+        )
+        assert "above your £150.00 buffer and £211.67 set aside" in reach
+
+    def test_a_reserve_with_no_buffer_stands_on_its_own(self):
+        reach, _ = _Lines()._sts_detail_lines(
+            _result(floor_pence=21167, reserved_pence=21167)
+        )
+        assert "above £211.67 set aside" in reach
+        assert "buffer" not in reach
 
     def test_a_zero_buffer_says_zero_rather_than_naming_an_amount(self):
         reach, _ = _Lines()._sts_detail_lines(_result(floor_pence=0))

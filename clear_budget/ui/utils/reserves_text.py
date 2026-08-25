@@ -66,6 +66,11 @@ def verdict_line(*, total: str, count: int) -> str:
     return f"{total} set aside across {count} commitments."
 
 
+def cost_line(*, amount: str) -> str:
+    """What the reserves cost the headline figure today."""
+    return f"Safe to Spend Today is {amount} lower than it would be without them."
+
+
 def steep_note(*, monthly: str, natural: str, month_name: str) -> str:
     """Why the first cycle costs more a month than the years after it."""
     return (

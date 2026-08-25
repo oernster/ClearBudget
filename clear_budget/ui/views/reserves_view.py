@@ -120,6 +120,11 @@ class ReservesView(QWidget):
         self.verdict_label.setWordWrap(True)
         layout.addWidget(self.verdict_label)
 
+        self.cost_label = QLabel("")
+        self.cost_label.setObjectName(label_roles.BODY)
+        self.cost_label.setWordWrap(True)
+        layout.addWidget(self.cost_label)
+
         self.empty_label = QLabel("")
         self.empty_label.setObjectName(label_roles.BODY_DETAIL)
         self.empty_label.setWordWrap(True)
@@ -197,6 +202,7 @@ class ReservesView(QWidget):
         count = len(self._rows)
         if count == 0:
             self.verdict_label.setText(copy.EMPTY_HEADING)
+            self.cost_label.setText("")
             self.empty_label.setText(f"{copy.EMPTY_BODY}\n\n{copy.EMPTY_PROMPT}")
             self.empty_label.setVisible(True)
             self.table.setVisible(False)
@@ -207,6 +213,11 @@ class ReservesView(QWidget):
         total = self.budget_service.get_reserved_today_pence()
         self.verdict_label.setText(
             copy.verdict_line(total=money_from_pence(total), count=count)
+        )
+        self.cost_label.setText(
+            copy.cost_line(
+                amount=money_from_pence(self.budget_service.get_reserve_cost_pence())
+            )
         )
         self.empty_label.setVisible(False)
         self.table.setVisible(True)

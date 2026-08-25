@@ -122,12 +122,36 @@ class SafeToSpendOperationsMixin:
         returns a negative amount: the sum to be found, not spent.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
-        projection = self._build_safe_to_spend_inputs(today)
-        return sustainable_spend(
-            projection=projection,
+        return self._spend_against(
             today=today,
-            floor_pence=self.get_safe_to_spend_floor().pence,
+            floor=self.build_reserve_floor(
+                buffer_pence=self.get_safe_to_spend_floor().pence
+            ),
+        )
+
+    def _spend_against(self, *, today: date, floor) -> SustainableResult:
+        """The headline measured against one particular floor."""
+        return sustainable_spend(
+            projection=self._build_safe_to_spend_inputs(today),
+            today=today,
+            floor=floor,
             window_months=self.get_sustainable_window_months(),
+        )
+
+    def get_safe_to_spend_without_reserves(
+        self, *, today: date | None = None
+    ) -> SustainableResult:
+        """The same figure as if nothing were being set aside.
+
+        Only ever used to price the difference the reserves make, which is
+        the one line that tells a reader what this costs them today.
+        """
+        today = today or date.today()  # noqa: DTZ011 (naive local dates)
+        from clear_budget.domain.services.reserve_floor import ReserveFloor
+
+        return self._spend_against(
+            today=today,
+            floor=ReserveFloor.flat(self.get_safe_to_spend_floor().pence),
         )
 
     def get_spending_capacity(
@@ -143,7 +167,9 @@ class SafeToSpendOperationsMixin:
         return sustainable_capacity(
             projection=projection,
             today=today,
-            floor_pence=self.get_safe_to_spend_floor().pence,
+            floor=self.build_reserve_floor(
+                buffer_pence=self.get_safe_to_spend_floor().pence
+            ),
             window_months=self.get_sustainable_window_months(),
         )
 

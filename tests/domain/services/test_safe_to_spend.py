@@ -16,6 +16,7 @@ from datetime import date, timedelta
 
 import pytest
 
+from clear_budget.domain.services.reserve_floor import ReserveFloor
 from clear_budget.domain.services.safe_to_spend import (
     DayProjection,
     SustainableError,
@@ -28,6 +29,7 @@ _TODAY = date(2026, 8, 19)
 
 def _run(balances: dict[date, int], **kwargs):
     projection = [DayProjection(day=d, balance_pence=p) for d, p in balances.items()]
+    kwargs.setdefault("floor", ReserveFloor.flat(0))
     return sustainable_spend(projection=projection, today=_TODAY, **kwargs)
 
 
@@ -83,7 +85,7 @@ class TestAMonthThatCannotBeSavedDoesNotSetTheFigure:
         balances = _august(
             50000,
         ) | _month(2026, 9, 30, -20000)
-        result = _run(balances, window_months=2, floor_pence=1000)
+        result = _run(balances, window_months=2, floor=ReserveFloor.flat(1000))
         assert result.amount_pence == 49000
         assert result.shortfall_pence == 21000
 
@@ -126,12 +128,12 @@ class TestAMonthThatCannotBeSavedDoesNotSetTheFigure:
 
 class TestTheFloor:
     def test_the_floor_comes_off_the_top(self):
-        result = _run(_august(50000), floor_pence=2000, window_months=1)
+        result = _run(_august(50000), floor=ReserveFloor.flat(2000), window_months=1)
         assert result.amount_pence == 48000
         assert result.floor_pence == 2000
 
     def test_a_balance_above_zero_but_under_the_floor_is_a_shortfall(self):
-        result = _run(_august(500), floor_pence=2000, window_months=1)
+        result = _run(_august(500), floor=ReserveFloor.flat(2000), window_months=1)
         assert not result.is_sustainable
         assert result.amount_pence == -1500
 
@@ -139,7 +141,7 @@ class TestTheFloor:
 class TestRejectedInputs:
     def test_a_negative_floor_is_refused(self):
         with pytest.raises(SustainableError, match="floor"):
-            _run(_august(50000), floor_pence=-1)
+            _run(_august(50000), floor=ReserveFloor.flat(-1))
 
     def test_a_window_shorter_than_a_month_is_refused(self):
         with pytest.raises(SustainableError, match="at least one month"):
@@ -159,6 +161,7 @@ class TestSustainableCapacity:
         projection = [
             DayProjection(day=d, balance_pence=p) for d, p in balances.items()
         ]
+        kwargs.setdefault("floor", ReserveFloor.flat(0))
         return sustainable_capacity(projection=projection, today=_TODAY, **kwargs)
 
     def test_the_first_step_equals_the_headline(self):
@@ -203,7 +206,7 @@ class TestSustainableCapacity:
 
     def test_a_negative_floor_is_refused(self):
         with pytest.raises(SustainableError, match="floor"):
-            self._steps(_august(50000), floor_pence=-1)
+            self._steps(_august(50000), floor=ReserveFloor.flat(-1))
 
 
 def test_the_window_counts_calendar_months_not_thirty_day_blocks():

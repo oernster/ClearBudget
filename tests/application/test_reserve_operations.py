@@ -158,6 +158,49 @@ class TestWhatIsHeldBack:
         assert service.get_reserved_today_pence() >= 0
 
 
+class TestWhatItCostsTheHeadline:
+    """The line that connects this page to the figure the user looks at."""
+
+    def _funded(self, conn):
+        from clear_budget.application.services._settings_operations import (
+            set_bank_balance_pence,
+        )
+
+        set_bank_balance_pence(conn, 300000, TODAY)
+        return _service(conn)
+
+    def test_nothing_set_aside_costs_nothing(self, conn):
+        assert self._funded(conn).get_reserve_cost_pence(today=TODAY) == 0
+
+    def test_a_commitment_lowers_the_headline_by_what_it_holds(self, conn):
+        service = self._funded(conn)
+        before = service.get_safe_to_spend(today=TODAY).amount_pence
+        service.add_commitment(commitment=_commitment())
+        after = service.get_safe_to_spend(today=TODAY)
+        cost = service.get_reserve_cost_pence(today=TODAY)
+        assert cost == before - after.amount_pence
+        assert cost > 0
+
+    def test_the_reserve_shows_in_the_result_beside_the_buffer(self, conn):
+        service = self._funded(conn)
+        service.add_commitment(commitment=_commitment())
+        result = service.get_safe_to_spend(today=TODAY)
+        assert result.reserved_pence > 0
+        assert result.floor_pence > result.reserved_pence
+
+    def test_the_bare_reading_ignores_every_commitment(self, conn):
+        service = self._funded(conn)
+        service.add_commitment(commitment=_commitment())
+        assert (
+            service.get_safe_to_spend_without_reserves(today=TODAY).reserved_pence == 0
+        )
+
+    def test_both_readings_default_to_today(self, conn):
+        service = self._funded(conn)
+        assert service.get_safe_to_spend_without_reserves() is not None
+        assert service.get_reserve_cost_pence() >= 0
+
+
 class TestTheFloor:
     def test_it_carries_the_buffer_when_one_is_set(self, conn):
         service = _service(conn)
