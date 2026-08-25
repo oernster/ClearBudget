@@ -1,7 +1,7 @@
 """YearMonth value object  -  YYYY-MM string with validation and arithmetic."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 from clear_budget.shared.errors import InvalidYearMonthError
 
@@ -48,6 +48,10 @@ class YearMonth:
 
     def __repr__(self) -> str:
         return f"YearMonth({self})"
+
+    def first_day(self) -> date:
+        """The first calendar day of this month."""
+        return date(self.year, self.month, 1)
 
     def next_month(self) -> "YearMonth":
         """Return next month."""

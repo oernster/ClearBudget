@@ -27,3 +27,7 @@ class BillNotFoundError(BudgetError):
 
 class MonthNotFoundError(BudgetError):
     """Raised when a month is not found."""
+
+
+class InvalidCommitmentError(BudgetError):
+    """Raised when a commitment's fields cannot describe a real obligation."""
