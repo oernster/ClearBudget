@@ -27,7 +27,15 @@ _SMALL_LABEL_FONT_PX = 12
 _BODY_LABEL_FONT_PX = 16
 _VALUE_LABEL_FONT_PX = 20
 # Solvency view type scale: banner, section lines, headings, breakdown detail.
-_BANNER_FONT_PX = 22
+# Measured, not chosen. At 22 the Account Position banner needed 1074px for a
+# routine Caution line and clipped inside a 1132px window; 20 brings that to
+# 977px and keeps the banner level with the value lines rather than dropping it
+# below them. It does NOT fit every variant: the Critical wordings run to
+# 1467px at this size and the worst of them would need 10px to fit the 860px
+# minimum window, which is smaller than a footnote. The banner is the one line
+# on this view built with wrap=False, so what closes the gap is letting it wrap
+# rather than shrinking it further.
+_BANNER_FONT_PX = 20
 _SECTION_FONT_PX = 18
 _HEADING_FONT_PX = 17
 _BREAKDOWN_FONT_PX = 15
