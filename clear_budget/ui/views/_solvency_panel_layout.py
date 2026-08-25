@@ -1,6 +1,6 @@
-"""The Solvency tab's three pages, built here to keep the panel module small.
+"""The Solvency view's three pages, built here to keep the panel module small.
 
-The tab carries three distinct readings of the same month and they had grown
+The view carries three distinct readings of the same month and they had grown
 into one column: the bank account's position (what is safe to spend, whether
 the month holds together, how the next two months look), the credit cards'
 position (utilisation, interest, per-card movement) and the projection, which
@@ -30,7 +30,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 from clear_budget.ui import label_roles, ui_scale
 from clear_budget.ui.utils.format_helpers import fmt
 
-# Section headings on this tab share one QSS role (see _theme_controls).
+# Section headings on this view share one QSS role (see _theme_controls).
 _HEADING_ROLE = "SolvencySectionHeading"
 # Unscaled type size of a forward-projection line, matching the card block's.
 _PROJECTION_FONT_PX = 17
@@ -44,7 +44,7 @@ _ASSUMPTION_TEXT = (
 
 
 def _heading(text: str) -> QLabel:
-    """A section heading in the tab's shared heading role."""
+    """A section heading in the view's shared heading role."""
     label = QLabel(text)
     label.setObjectName(_HEADING_ROLE)
     return label
@@ -69,7 +69,7 @@ def _projection_label() -> QLabel:
 
 
 class SolvencyPanelLayoutMixin:
-    """Builds the tab's three pages: bank, projection and cards."""
+    """Builds the view's three pages: bank, projection and cards."""
 
     def _build_bank_page(self) -> QWidget:
         """The bank account's position, built only from what was entered.
@@ -91,7 +91,7 @@ class SolvencyPanelLayoutMixin:
         # made a healthy account look as though it were being measured against
         # borrowing. "Account Position" is true in both cases, so the heading
         # does not change under the reader when a facility is set later; it
-        # matches its four plain-spoken siblings on this tab rather than
+        # matches its four plain-spoken siblings on this view rather than
         # naming a product feature.
         layout.addWidget(_heading("Account Position"))
         self.position_banner = _line(

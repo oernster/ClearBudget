@@ -1,4 +1,4 @@
-"""The Graph tab: the month plotted, as a PAGE rather than a dialog.
+"""The Graph view: the month plotted, as a PAGE rather than a dialog.
 
 This used to be a modal dialog opened from an icon in the tray; it was the
 one control in the application that behaved that way. Every other icon in
@@ -12,9 +12,9 @@ it simply uses the real tray, so that duplicate pair goes, along with the
 Close button a page has no need of.
 
 WHAT IS PLOTTED IS CHOSEN HERE, not inherited from wherever you came from.
-The dialog took its series from the tab that opened it: the bank balance from
+The dialog took its series from the view that opened it: the bank balance from
 Monthly Budget and Solvency, one series per card from Credit Cards. Folding
-those into one page could have kept that by remembering which tab you arrived
+those into one page could have kept that by remembering which view you arrived
 from; that would have been the same invisible state in a new place. The
 page carries a switch instead and names what it is showing in a heading above
 the chart, so it answers the question rather than depending on how it was
@@ -69,12 +69,12 @@ from clear_budget.ui.widgets._tray_buttons import (
 #
 # The source switch says it in a PICTURE, with the words as its hover. It
 # shows what a press will give you: the bank, else the cards. The card picture
-# is the Credit Cards tab's own, so the switch names its destination in the
+# is the Credit Cards view's own, so the switch names its destination in the
 # same artwork the destination wears everywhere else.
 _TO_CARDS_LABEL = "Show card balances"
 _TO_BANK_LABEL = "Show bank balance"
 # The switch's two faces. Deliberately NOT the pictures the tray and the
-# Credit Cards tab wear: those two open an account's settings and a tab, while
+# Credit Cards button wear: those two open an account's settings and a view, while
 # these plot a balance; a control that repeats another control's picture
 # reads as the same control in a second place.
 _BANK_ICON = "bank-icon2.png"
@@ -127,8 +127,8 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         self.budgets_btn = build_budgets_button(_glyph_h)
         _sep, self.bank_btn = build_bank_button(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
-        # Every view builds its own set of the five tabs; MainWindow wires
-        # them and keeps the current-tab mark in step across all of them.
+        # Every view builds its own set of the buttons; MainWindow wires
+        # them and keeps the current-view mark in step across all of them.
         self.tab_btns = build_tab_buttons(_glyph_h)
         (
             self.nav_header,
@@ -216,7 +216,7 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         """Return (title, series) for the viewed month under the switch.
 
         Derived fresh on every call rather than cached, so stepping the month
-        or editing a bill on another tab always plots what is true now.
+        or editing a bill on another view always plots what is true now.
         """
         month = self._month_label_text()
         if self._showing_bank():
@@ -281,18 +281,18 @@ class GraphView(QWidget, GraphExportsMixin, GraphPackageExportMixin):
         self.replot()
 
     def on_month_summary_updated(self, _summary) -> None:
-        """Redraw when the month's data changes on another tab."""
+        """Redraw when the month's data changes on another view."""
         self.replot()
 
     def _refresh_month_label(self) -> None:
         self.month_label.setText(self._month_label_text())
 
     def set_nav_label_color(self, color: str) -> None:
-        """Recolour the nav month label to match the Solvency tab."""
+        """Recolour the nav month label to match the Solvency view."""
         apply_nav_label_color(self.month_label, color)
 
     def nav_targets(self) -> list:
-        """Ordered keyboard-ring stops for this tab.
+        """Ordered keyboard-ring stops for this view.
 
         READING order: the top tray first, then the lower one left to right as
         drawn, then the page's own controls. The chart itself is not a stop;

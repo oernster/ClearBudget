@@ -1,12 +1,12 @@
-"""Qt-free tests for the ring-order helpers behind the tab run.
+"""Qt-free tests for the ring-order helpers behind the button run.
 
-The Solvency tab has to put its page-turn buttons INTO the tab run rather than
-before or after it, because the pilot sits just ahead of the Credit Cards tab
+The Solvency view has to put its page-turn buttons INTO the button run rather than
+before or after it, because the pilot sits just ahead of the Credit Cards button
 by decision. It did that by slicing the run into pieces and reassembling them:
-`[:2]` for the tabs before the pilots, `[2:3]` for Credit Cards and `[-1:]`
-for Archive. Five tabs, four positions covered, with nothing anywhere
+`[:2]` for the buttons before the pilots, `[2:3]` for Credit Cards and `[-1:]`
+for Archive. Five view buttons, four positions covered, with nothing anywhere
 saying so.
-The Graph tab was simply not in that tab's ring, which is not a wrong order but
+The Graph button was simply not in that view's ring, which is not a wrong order but
 a SKIPPED control: the ring jumps a button plainly on screen.
 
 `stops_before` exists so the run is never cut up. It takes the whole run and
@@ -29,7 +29,7 @@ class TestNothingIsEverDropped:
         assert len(result) == len(_RUN) + len(_PILOTS)
 
     def test_that_holds_when_the_marker_is_absent(self):
-        """The marker is the CURRENT tab on that page, filtered out already."""
+        """The marker is the CURRENT view on that page, filtered out already."""
         result = stops_before(_RUN, "archive", _PILOTS)
         assert set(_RUN) <= set(result)
         assert result == _RUN + _PILOTS

@@ -56,8 +56,8 @@ class ArchiveView(QWidget):
         self.budgets_btn = build_budgets_button(_glyph_h)
         _sep, self.bank_btn = build_bank_button(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
-        # The four primary tabs live in this tray, so every view builds its
-        # own set; MainWindow wires them and keeps the current-tab mark in
+        # The primary view buttons live in this tray, so every view builds its
+        # own set; MainWindow wires them and keeps the current-view mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
         self.nav_header, self.year_label, self.theme_btn = build_centered_nav_header(
@@ -141,7 +141,7 @@ class ArchiveView(QWidget):
         self.load_history(year_months)
 
     def nav_targets(self) -> list:
-        """Ordered keyboard-ring stops for this tab.
+        """Ordered keyboard-ring stops for this view.
 
         READING order, which with two stacked trays means the TOP tray first
         and the lower one after it, each left to right as drawn. A ring that
@@ -149,12 +149,12 @@ class ArchiveView(QWidget):
         presents as a SKIPPED control: the user tabs past where a button
         visibly is and lands somewhere else entirely.
 
-        The tab being shown is not in the list. It is a stop that could do
+        The button for the view being shown is not in the list. It is a stop that could do
         nothing, dropped here rather than disabled, because a
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """
-        # Archive was moved out of the tab run to the right-hand group,
+        # Archive was moved out of the button run to the right-hand group,
         # so the ring has to walk it there. A ring that disagrees with the
         # drawing reads as a SKIPPED control, not as a wrong order.
         others = ring_tab_stops(self.tab_btns[:-1])
@@ -174,7 +174,7 @@ class ArchiveView(QWidget):
         ]
 
     def set_nav_label_color(self, color: str) -> None:
-        """Recolour the nav year label to match the Solvency tab."""
+        """Recolour the nav year label to match the Solvency view."""
         apply_nav_label_color(self.year_label, color)
 
     def _on_prev_year(self) -> None:

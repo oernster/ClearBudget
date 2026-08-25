@@ -127,7 +127,7 @@ what is deliberately left and what only looks like debt.
   month rather than being deleted, so every month it really did arrive in
   keeps it. Deleting income offers the same two scopes bills have, stop from
   the viewed month or delete entirely
-- Safe to Spend Today: the headline of the Solvency tab's Safe to Spend page
+- Safe to Spend Today: the headline of the Solvency view's Safe to Spend page
   is the single number you could spend today while every month that still stands
   on its own keeps standing. It lives there rather than beside your entered
   figures because it is a promise about months that have not happened: it
@@ -164,7 +164,7 @@ what is deliberately left and what only looks like debt.
   of it. An income you have marked as ended is never filled forward: its final
   month is respected, so a job that stopped in July does not reappear in
   August merely because August has no entry of that name
-- What a month needs to hold flat: every month on the Solvency tab states the
+- What a month needs to hold flat: every month on the Solvency view states the
   difference between its full bills and its full income ("October needs
   £666.87 more to hold flat" or "September pays for itself, £120.00 to
   spare"). Whole-month arithmetic on both sides, so the answer describes the
@@ -198,15 +198,15 @@ what is deliberately left and what only looks like debt.
 - Dynamic payment methods: assign bills to bank account or specific credit cards
 - Several named budgets per account, each its own separate database: create one
   from File > New Budget, then switch between them from the arrows button in
-  every tab's navigation tray. Creating, switching and renaming never touch
+  every view's navigation tray. Creating, switching and renaming never touch
   another budget's contents
 - Database save to a remembered location and validated load (File menu and the
-  folder/diskette buttons at the far left of every tab's navigation tray, with
+  folder/diskette buttons at the far left of every view's navigation tray, with
   the switch-budget button beside them, then a separator and the bank button;
   the theme toggle and a blue information button sit at its far right)
 - Display currency selection - 25 currencies covering English-speaking countries (Settings > Bank Account)
-- A Graph tab: the viewed month plotted as a page of its own, stepped between
-  months by the same Previous/Next arrows every tab shares. A switch on the
+- A Graph view: the viewed month plotted as a page of its own, stepped between
+  months by the same Previous/Next arrows every view shares. A switch on the
   page chooses what is plotted, the bank balance day by day or every credit
   card on one chart, with a heading naming the current reading; a pilot
   button swaps bar and line renderings; hovering a bar or a marked point
@@ -225,7 +225,7 @@ what is deliberately left and what only looks like debt.
   anywhere: styles and charts are inline, in the dark theme, so a single file
   can be emailed and a folder can be copied to a stick and opened offline.
   Both default to your Downloads folder
-- A Recommendations tab: measured suggestions for the months ahead. It
+- A Recommendations view: measured suggestions for the months ahead. It
   retimes what can move (bills until after the month's last income, incomes
   to the start of the month), then states whatever shortfall survives the
   best timing as per-month income asks, each assuming the earlier ones
@@ -250,16 +250,16 @@ what is deliberately left and what only looks like debt.
   not a table, not the panel around it. Clicking still does what it always did,
   including selecting the row you clicked; a text field, a spin box and a
   dropdown still take a click, because that is how you say where to type
-- The tabs are walked one at a time in the order shown and stepping onto a tab
-  never switches to it: Enter or Space does that. The tab you are already
-  reading is skipped
-- The page itself is the last stop on each tab whenever it has more content
+- The view buttons are walked one at a time in the order shown and stepping
+  onto one never switches to it: Enter or Space does that. The view you are
+  already reading is skipped
+- The page itself is the last stop on each view whenever it has more content
   than fits, so Up/Down, Page Up/Down and Home/End scroll it from the keyboard
 - Dark and light themes: a sun/moon button at the far right of the navigation
-  tray on every tab switches between them, the whole app restyles immediately
+  tray on every view switches between them, the whole app restyles immediately
   (the sign-in screen included) and the choice is remembered between sessions
-- Scrollable tabs with scroll position indicators; the same two-row navigation
-  tray on every tab, the month or year centred in its upper row with the date
+- Scrollable views with scroll position indicators; the same two-row navigation
+  tray on every view, the month or year centred in its upper row with the date
   colour-coded by financial health (safe, caution, danger)
 - Opens on the monitor you started it from, centred, rather than on whichever
   display the system calls primary; dialogs open over the window that raised
@@ -272,14 +272,14 @@ what is deliberately left and what only looks like debt.
 
 ---
 
-## Application Tabs
+## Application Views
 
-The six primary tabs carry a picture rather than a name: a calendar and cash
+The six primary view buttons carry a picture rather than a name: a calendar and cash
 for Monthly Budget, a shield over coins for Solvency, a pair of cards for
 Credit Cards, the app's own icon for Graph, a ticked clipboard under a lit
 bulb for Recommendations and a filing box for Archive. They sit in the
 navigation tray rather than in a strip of their own. Hovering one names it;
-the keyboard ring still stops on each tab in turn.
+the keyboard ring still stops on each button in turn.
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning
 - **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday
@@ -308,16 +308,16 @@ the keyboard ring still stops on each tab in turn.
 | Users | Manage Users... (admin only) | Add and remove accounts (see User Accounts below) |
 
 Load, Save, Switch Budget and Bank Account are also one click away in every
-tab's navigation tray, which is two rows. The upper row carries only the
+view's navigation tray, which is two rows. The upper row carries only the
 month or year: Previous, the date and Next, centred. The lower row carries
 everything that acts on the application: the folder and diskette, the
 switch-budget arrows, a separator, the bank, then the Monthly Budget,
-Solvency, Credit Cards, Graph and Recommendations tabs. A second separator
+Solvency, Credit Cards, Graph and Recommendations view buttons. A second separator
 sets Archive apart at the far right, beside the sun/moon theme toggle and
 the blue information button opening How It Works.
 
 The account you are signed in as is shown at the left of the month row on every
-tab, in the same size as the month itself, rather than in the title bar. A name
+view, in the same size as the month itself, rather than in the title bar. A name
 too long for the space is shortened with an ellipsis and shown in full when
 hovered.
 
@@ -355,7 +355,7 @@ absent or refused.
   needing an admin
 
 A completed sign-in does not leave you looking at nothing. The screen stays up
-and turns into a progress bar naming what is being prepared, tab by tab, then
+and turns into a progress bar naming what is being prepared, view by view, then
 closes at the moment the window is ready to be looked at. It is inert while it
 does so: the form is still there and still readable, it simply no longer takes
 input.
@@ -524,7 +524,7 @@ For each card:
 - Card expiry date
 - Active/inactive status
 
-The Credit Cards tab shows each card as its own panel: active checkbox, name, status
+The Credit Cards view shows each card as its own panel: active checkbox, name, status
 badge, an overview row (limit/used/available/utilisation/due day/interest/minimum
 payment/expiry) and a this-month row (charges/payment received/interest/minimum
 payment due). Edits go through the Edit Card dialog; cards are deleted individually
@@ -580,7 +580,7 @@ entered before these existed continues to do.
 
 ## Database Save / Load
 
-- **Save** (File > Save or the diskette button in every tab's nav tray): copies
+- **Save** (File > Save or the diskette button in every view's nav tray): copies
   the active database to the save file THIS ACCOUNT last used, asking before
   overwriting it. The first ever save for an account prompts for a filename,
   defaulting to the app's own data folder (`%LOCALAPPDATA%\ClearBudget` on
@@ -664,7 +664,7 @@ entered before these existed continues to do.
 Settings > Bank Account (or the bank button in the navigation tray) opens a
 dialog to choose the display currency and record an overdraft facility: a
 limit (in the active currency) and an APR. With a facility recorded, the
-Monthly Budget tab shows:
+Monthly Budget view shows:
 - An amber warning if the projected balance dips below zero but stays within the
   facility, including an estimated daily interest cost
 - A red warning if the dip would exceed the facility or if no facility is set at all
@@ -682,7 +682,7 @@ standing (one to twelve, four by default).
   into what is bundled with the application and what is only used to build it
 - **Check for Updates** - queries this project's GitHub releases and reports
   whether a newer version exists, offering the download for your platform
-- **How It Works** - names the tabs, the Graph page's switches and exports and
+- **How It Works** - names the views, the Graph page's switches and exports and
   the tray, each entry led by the icon itself, then the three rules the
   numbers rest on: pro-rating, the self-maintaining balance and what Safe to
   Spend Today promises. One page, kept in sync with the calculation logic

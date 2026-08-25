@@ -1,8 +1,8 @@
 """The tab strip's icons: six bundled images, matched in size.
 
-The primary tabs carry pictures rather than words. The words are not
+The primary view buttons carry pictures rather than words. The words are not
 gone, they moved into the tooltips, so the strip still names itself to anyone
-who pauses on a tab; what went is a row of text labels wide enough to push
+who pauses on a button; what went is a row of text labels wide enough to push
 the strip most of the way across the window.
 
 Four were PNGs and the archive was an emoji, which was the whole difficulty
@@ -28,22 +28,22 @@ every theme switch and rebuild.
 
 from __future__ import annotations
 
-# Painted size of a tab icon, before UI scaling, as the side of the square box
+# Painted size of a view-button icon, before UI scaling, as the side of the square box
 # each one is fitted into.
 TAB_ICON_PX = 26
-# A tab icon paints this multiple of the box it is given. 1.0 because the box
+# A view-button icon paints this multiple of the box it is given. 1.0 because the box
 # ALREADY carries the scale: `nav_glyph_size.NAV_GLYPH_SCALE` used to live here
-# and lift the tabs alone, which is exactly what left every other icon in the
-# tray a third smaller than the tabs sitting beside them. Scaling here again
+# and lift the view buttons alone, which is exactly what left every other icon in the
+# tray a third smaller than the buttons sitting beside them. Scaling here again
 # would restore that gap in the other direction.
 TAB_IMAGE_SCALE = 1.0
-# The tabs, in strip order. Each entry is a bundled image filename, so adding
-# a tab means adding one line here and nothing else.
+# The views, in strip order. Each entry is a bundled image filename, so adding
+# a view means adding one line here and nothing else.
 MONTHLY_BUDGET_ICON = "monthlybudget.png"
 SOLVENCY_ICON = "solvency.png"
 CREDIT_CARDS_ICON = "creditcards.png"
-# The app icon. This tab was an icon button wearing exactly this picture
-# before it became a tab, so becoming a tab changed where it sits and what it
+# The app icon. This view was an icon button wearing exactly this picture
+# before it joined the run, so the move changed where it sits and what it
 # does, never what it looks like.
 GRAPH_ICON = "ClearBudget_256.png"
 # What would make the months ahead survivable; sits right of the graph.
@@ -52,7 +52,7 @@ RECOMMENDATIONS_ICON = "recommendations.png"
 # line work with space in it and read light beside the dense pictograms.
 ARCHIVE_ICON = "archive.png"
 
-# Tab names, so a view that needs to name one does not spell it again.
+# View names, so a view that needs to name one does not spell it again.
 CREDIT_CARDS_TAB = "Credit Cards"
 # The strip, in order, as (icon spec, the name that becomes the tooltip).
 TAB_SPECS = (
@@ -64,7 +64,7 @@ TAB_SPECS = (
     (ARCHIVE_ICON, "Archive"),
 )
 # QSS hooks: the object name carrying the three-state ring rules, plus the
-# dynamic property the stylesheet reads to mark the tab being shown.
+# dynamic property the stylesheet reads to mark the view being shown.
 TAB_BUTTON_ROLE = "NavTabButton"
 TAB_CURRENT_PROPERTY = "currentTab"
 
@@ -103,9 +103,9 @@ def _image_pixmap(spec: str, box_px: int):
 
 
 def tab_icon_pixmap(spec: str, box_px: int):
-    """Return the pixmap for one tab; None when its source is unavailable.
+    """Return the pixmap for one view; None when its source is unavailable.
 
-    None rather than a placeholder: a missing asset must leave the tab usable
+    None rather than a placeholder: a missing asset must leave the view usable
     (it keeps its tooltip and its place on the ring) rather than stop the
     window being built, which is the rule every other asset lookup follows.
     """
@@ -118,7 +118,7 @@ def tab_icon_pixmap(spec: str, box_px: int):
 
 
 def tab_icon(spec: str, box_px: int):
-    """Return the QIcon for one tab; None when its source is unavailable."""
+    """Return the QIcon for one view; None when its source is unavailable."""
     from PySide6.QtGui import QIcon
 
     pixmap = tab_icon_pixmap(spec, box_px)
@@ -126,14 +126,14 @@ def tab_icon(spec: str, box_px: int):
 
 
 def tab_icon_box_px() -> int:
-    """The square box every tab icon is fitted into, at the current UI scale."""
+    """The square box every view-button icon is fitted into, at the current UI scale."""
     from clear_budget.ui import ui_scale
 
     return max(1, ui_scale.px(TAB_ICON_PX))
 
 
 def build_tab_buttons(box_px: int) -> list:
-    """Return the primary tabs as icon buttons, in strip order.
+    """Return the primary view buttons, in strip order.
 
     Buttons rather than a `QTabBar` because the tabs live in the navigation
     tray now, beside the database and settings shortcuts, rather than in a
@@ -162,9 +162,9 @@ def build_tab_buttons(box_px: int) -> list:
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         pixmap = tab_icon_pixmap(spec, box_px)
         if pixmap is None:
-            # No artwork: the tab keeps its NAME rather than becoming a blank
+            # No artwork: the button keeps its NAME rather than becoming a blank
             # square. A missing asset costs the tray its looks, never a route
-            # into the tab.
+            # into the view.
             button.setText(label)
         else:
             button.setIcon(QIcon(pixmap))
@@ -178,10 +178,10 @@ def build_tab_buttons(box_px: int) -> list:
 
 
 def tab_button(buttons, label: str):
-    """The button for the tab called `label`; None when there is none.
+    """The button for the view called `label`; None when there is none.
 
     By NAME rather than by position, so a view that needs to put a stop
-    beside a particular tab says which tab it means.
+    beside a particular view says which view it means.
     """
     for position, (_spec, name) in enumerate(TAB_SPECS):
         if name == label and position < len(buttons):
@@ -193,8 +193,8 @@ def stops_before(run: list, marker, extras: list) -> list:
     """`run` with `extras` inserted before `marker`; appended without it.
 
     Pure list work, deliberately: it is what lets a view insert its own
-    controls into the tab run WITHOUT slicing the run by hand. Slicing is
-    what dropped the Graph tab out of the Solvency ring entirely, since
+    controls into the button run WITHOUT slicing the run by hand. Slicing is
+    what dropped the Graph button out of the Solvency ring entirely, since
     `[:2] + [2:3] + [-1:]` covers four of five positions and nothing says so.
     Everything in `run` is in the result, which is the property that matters
     and the one the hand-sliced version could not state.
@@ -206,13 +206,13 @@ def stops_before(run: list, marker, extras: list) -> list:
 
 
 def mark_current_tab(buttons, index: int) -> None:
-    """Mark button `index` as the tab being shown, clearing the others.
+    """Mark button `index` as the view being shown, clearing the others.
 
     Through a dynamic property and a repolish rather than an inline
     stylesheet, so a live theme switch restyles it: an inline colour would
     survive the switch and leave the mark painted in the outgoing theme.
 
-    The current tab is deliberately NOT disabled to make it inert. A disabled
+    The current view's button is deliberately NOT disabled to make it inert. A disabled
     control paints the permanent red ring of the three-state model, which
     reads as broken rather than as current; it is dropped from the ring
     declaration instead, which is where "not a stop" belongs.
@@ -224,9 +224,9 @@ def mark_current_tab(buttons, index: int) -> None:
 
 
 def ring_tab_stops(buttons) -> list:
-    """The tab buttons that are keyboard-ring stops: every one but the current.
+    """The view buttons that are keyboard-ring stops: every one but the current.
 
-    The tab already showing is not a stop. Landing on it would spend a
+    The button already showing is not a stop. Landing on it would spend a
     keypress to highlight the page the user is looking at, which is precisely
     the dead stop `NavTabBar`'s separate cursor was built to avoid back when
     these were a `QTabBar`. The rule survived the widget it was written for.

@@ -44,7 +44,7 @@ class SolvencyPanelForwardMixin:
         )
 
         # The card readings that used to render here moved out with the cards
-        # page: the Credit Cards tab is where a card's position is read now.
+        # page: the Credit Cards view is where a card's position is read now.
         m1_heading = f"{MONTH_NAMES[m1.month]} {m1.year}"
         m2_heading = f"{MONTH_NAMES[m2.month]} {m2.year}"
         self._set_projection_label(
@@ -74,7 +74,7 @@ class SolvencyPanelForwardMixin:
         )
         apply_nav_label_color(self.month_label, current_month_color)
         # Solvency is the single source of truth for the nav label colour;
-        # broadcast it so the other tabs' month/year labels match.
+        # broadcast it so the other views' month/year labels match.
         self.month_label_color_changed.emit(current_month_color)
 
     @staticmethod

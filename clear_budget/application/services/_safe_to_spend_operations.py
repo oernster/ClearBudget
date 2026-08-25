@@ -231,7 +231,7 @@ class SafeToSpendOperationsMixin:
         month keeps its own bills and its own entries untouched: the
         assumption only fills gaps, so it can never reduce a month below what
         was actually entered for it. That assumption is not optional here.
-        The one figure this projection feeds lives on the Solvency tab's
+        The one figure this projection feeds lives on the Solvency view's
         Projection page, beneath the words that state it. A reading that
         counted only what has been typed would report a shortfall the user
         does not have, because months ahead are thin on screen long before

@@ -12,7 +12,7 @@ is refused its focus, so the outline never marks a control the keyboard is not
 on. Text inputs are exempt, since clicking into one is how a mouse says where
 to type.
 
-There is no tab-bar case here any more. The four tabs are ordinary buttons in
+There is no tab-bar case here any more. The view buttons are ordinary buttons in
 each view's navigation tray, so each is a stop like any other: walking the
 ring moves focus and switches nothing, Enter or Space commits. That used to
 need a QTabBar subclass carrying its own cursor, because Qt ties a tab bar's
@@ -64,10 +64,10 @@ class KeyboardNavigator(QObject):
     """Single explicit focus ring for the main window plus dialog arrow keys."""
 
     def __init__(self, *, window, menubar, current_stops, entry_stop=None) -> None:
-        """current_stops is a callable returning the active tab's widgets.
+        """current_stops is a callable returning the active view's widgets.
 
         entry_stop, when given, is a callable naming the widget the ring is
-        entered AT from a neutral start (launch or a tab switch): a view may
+        entered AT from a neutral start (launch or a view switch): a view may
         put the first Tab on the control its tab is opened for rather than on
         the File menu. A None or a widget not currently on the ring falls
         back to the ring's first stop.

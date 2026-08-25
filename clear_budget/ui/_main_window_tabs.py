@@ -1,8 +1,8 @@
-"""The main window's tab pages and the wiring that keeps them in step.
+"""The main window's view pages and the wiring that keeps them in step.
 
 Split out of `main_window` as one cohesive concern: building the six pages,
 connecting the signals that keep their month and their data together, then
-mapping every tray's copy of the tab buttons onto the pages. Together they
+mapping every tray's copy of the view buttons onto the pages. Together they
 were what pushed that module into the LOC danger band
 (`tests/structural/test_loc_limits.py`).
 
@@ -29,25 +29,25 @@ from clear_budget.ui.widgets.scrollable_tab import ScrollableTab
 
 
 class MainWindowTabsMixin:
-    """Builds the tab pages and keeps every tray's tab buttons in step."""
+    """Builds the view pages and keeps every tray's view buttons in step."""
 
     def _report_tab(self, index: int, name: str) -> None:
-        """Say which tab is being built, so the sign-in screen can show it.
+        """Say which view is being built, so the sign-in screen can show it.
 
-        Reported BEFORE the tab is constructed rather than after: the label
+        Reported BEFORE the view is constructed rather than after: the label
         names what is happening now; the bar's position is what says how
         much is done.
         """
         self._progress(self._first_stage + index, self._total_stages, name)
 
     def init_ui(self) -> None:
-        """Build main window with tabs."""
+        """Build main window with its views."""
         central_widget = QWidget()
         layout = QVBoxLayout(central_widget)
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.tabs = QTabWidget()
-        # The bar is HIDDEN and stays that way. The tabs are icon buttons
+        # The bar is HIDDEN and stays that way. The views are reached by icon buttons
         # in each view's navigation tray, so a strip above them would be a
         # second, empty copy of the same control. The QTabWidget is kept for
         # what it is actually good at, owning the pages and switching between
@@ -129,13 +129,13 @@ class MainWindowTabsMixin:
             self.solvency_view_model.update_month_summary
         )
         # The card panels and the six-month strip are driven by the month's
-        # bills, which are edited on a DIFFERENT tab, so they need the same
+        # bills, which are edited on a DIFFERENT view, so they need the same
         # summary signal Solvency already takes. Without it the Credit Cards
-        # tab showed whatever was true when the window was built.
+        # view showed whatever was true when the window was built.
         self.month_view_model.month_summary_updated.connect(
             credit_card_view.on_month_summary_updated
         )
-        # The graph plots the same bills, edited on a different tab, so it
+        # The graph plots the same bills, edited on a different view, so it
         # needs the same signal for the same reason.
         self.month_view_model.month_summary_updated.connect(
             graph_view.on_month_summary_updated
@@ -177,7 +177,7 @@ class MainWindowTabsMixin:
         graph_view.prev_btn.setEnabled(not at_base)
         recommendations_view.prev_btn.setEnabled(not at_base)
 
-        # Solvency owns the nav-label health colour; mirror it onto every tab.
+        # Solvency owns the nav-label health colour; mirror it onto every view.
         for _view in (
             month_view,
             credit_card_view,
@@ -208,11 +208,11 @@ class MainWindowTabsMixin:
         return ScrollableTab(widget)
 
     def _wire_tab_buttons(self, views: list) -> None:
-        """Point every view's tab buttons at the pages and keep them in step.
+        """Point every view's buttons at the pages and keep them in step.
 
         Every view carries its OWN four buttons, because every view builds its
         own tray. They all drive the one QTabWidget; every set is marked
-        together on each switch, so the tab you are on is marked whichever
+        together on each switch, so the view you are on is marked whichever
         tray you happen to be looking at.
         """
         for view in views:
@@ -227,6 +227,6 @@ class MainWindowTabsMixin:
         self._mark_current_tab(self.tabs.currentIndex())
 
     def _mark_current_tab(self, index: int) -> None:
-        """Mark `index` as current on every view's copy of the tab buttons."""
+        """Mark `index` as current on every view's copy of the view buttons."""
         for buttons in self._tab_button_sets:
             mark_current_tab(buttons, index)

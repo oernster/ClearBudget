@@ -8,8 +8,8 @@ the sixty-odd call sites did not move.
 from clear_budget.shared import palette
 
 # Neutral colour for a nav month/year label before any solvency-driven colour
-# is applied. The Solvency tab overrides this with a health colour and
-# broadcasts it so every tab's nav label stays consistent.
+# is applied. The Solvency view overrides this with a health colour and
+# broadcasts it so every view's nav label stays consistent.
 NAV_LABEL_DEFAULT_COLOR = palette.GREY_65
 
 # Breathing room around the month/year text, applied as a real QLabel margin,

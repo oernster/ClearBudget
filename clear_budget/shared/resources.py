@@ -49,7 +49,7 @@ _QT_ICON_NAMES = ("clearbudget.ico", "ClearBudget.ico") + tuple(
 
 _SPLASH_NAMES = _both_cases("256")
 
-# The tab-strip artwork, one file per tab that carries a picture rather than a
+# The view-button artwork, one file per view that carries a picture rather than a
 # glyph. Looked up by filename through the same roots as every other asset, so
 # a frozen build finds them wherever the packaging step staged them.
 _TAB_ICON_NAMES = frozenset(
@@ -57,7 +57,7 @@ _TAB_ICON_NAMES = frozenset(
         "monthlybudget.png",
         "solvency.png",
         "creditcards.png",
-        # The Graph tab wears the app icon, which is the picture that tab
+        # The Graph button wears the app icon, which is the picture that button
         # has always carried, from back when it was an icon button.
         "ClearBudget_256.png",
         # The tray's Bank Account button.
@@ -77,9 +77,9 @@ _TAB_ICON_NAMES = frozenset(
         "opendb.png",
         "savedb.png",
         "information.png",
-        # The Recommendations tab: what would make the months ahead survivable.
+        # The Recommendations view: what would make the months ahead survivable.
         "recommendations.png",
-        # The Archive tab, which was the last emoji on the strip.
+        # The Archive button, which was the last emoji on the strip.
         "archive.png",
         # The theme toggle's two faces, showing the mode a press switches to.
         "lightmode.png",
@@ -243,7 +243,7 @@ def iter_qt_window_icon_candidates(*, project_root: Path | None = None) -> list[
 
 
 def find_tab_icon_path(name: str, *, project_root: Path | None = None) -> Path | None:
-    """Locate one of the tab-strip images; None if it is not bundled.
+    """Locate one of the view-button images; None if it is not bundled.
 
     Restricted to the names this application ships: the caller passes a
     filename and a filename is not something a resource lookup should take on

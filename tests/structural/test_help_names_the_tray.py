@@ -3,7 +3,7 @@
 The help screen's first job is naming the furniture, so a tray button it
 does not mention is a picture with no caption anywhere in the application.
 That is exactly how it went stale: the switch-user button was added to the
-tray on every tab and the help screen carried on listing the row without it,
+tray on every view and the help screen carried on listing the row without it,
 which read as the button being undocumented rather than as the guide being
 behind.
 

@@ -1,4 +1,4 @@
-"""The signed-in account must be shown, on every tab.
+"""The signed-in account must be shown, on every view.
 
 Three pieces make it: the header builds the label AND its mirror, MainWindow
 fills it in for every tray, the title bar no longer duplicates it. Each
@@ -91,7 +91,7 @@ def test_a_long_account_name_is_shortened_rather_than_left_to_grow() -> None:
 
 
 def test_the_window_fills_the_label_in_on_every_tray() -> None:
-    """Every tab builds its own tray, so every tab needs the name set."""
+    """Every view builds its own tray, so every view needs the name set."""
     tree = ast.parse(_source(_WINDOW))
     called = {
         node.func.id

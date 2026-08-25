@@ -1,7 +1,7 @@
 """Keeping the sign-in screen up while the main window is built behind it.
 
 Signing in used to leave the screen empty. The dialog closed the moment the
-password was accepted and the main window appeared only once every tab had
+password was accepted and the main window appeared only once every view had
 been constructed, which on this machine is under three seconds and on a slower
 one is longer. Nothing was on screen in between, so the application looked
 like it had not started.

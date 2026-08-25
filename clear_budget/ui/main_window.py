@@ -1,4 +1,4 @@
-"""Main application window with tab-based interface."""
+"""Main application window with view-based interface."""
 
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -63,7 +63,7 @@ class MainWindow(
         first_stage: int = 0,
         total_stages: int = 0,
     ) -> None:
-        """Initialize main window and tabs."""
+        """Initialize main window and views."""
         super().__init__()
         self.month_view_model = month_view_model
         self.solvency_view_model = solvency_view_model
@@ -73,10 +73,10 @@ class MainWindow(
         # The account is NOT in the title any more. It was a few pixels of
         # system chrome naming whose budget was on screen, which is the one
         # thing a shared machine most needs to be sure of; it is now shown at
-        # the left of every tab's month tray, in the size the month is.
+        # the left of every view's month tray, in the size the month is.
         self.setWindowTitle("ClearBudget")
         self.setMinimumSize(ui_scale.px(900), ui_scale.px(580))
-        # Reported through rather than held: the tabs are the slow half of a
+        # Reported through rather than held: the views are the slow half of a
         # build and the sign-in screen is showing how far along it is.
         self._progress = progress or (lambda *_args, **_kw: None)
         self._first_stage = first_stage

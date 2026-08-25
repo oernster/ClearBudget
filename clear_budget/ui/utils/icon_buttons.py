@@ -1,7 +1,7 @@
 """Icon buttons for the trays: bundled PICTURES and emoji, matched in size.
 
 `tab_icons` does this for the tab strip, at the tab run's own scale. This is
-the same idea for the controls that are not tabs: the tray's Bank Account
+the same idea for the controls that are not view buttons: the tray's Bank Account
 button and the Graph page's bank/cards switch, both of which sit beside
 emoji buttons and have to agree with them on height.
 
@@ -21,7 +21,7 @@ from __future__ import annotations
 
 # Built pixmaps, keyed by (spec, height, bottom padding). The sources are
 # full-size masters (over a megapixel each), so decoding and scaling one is
-# worth about a tenth of a second and EVERY TAB BUILDS THE SAME TRAY: without
+# worth about a tenth of a second and EVERY VIEW BUILDS THE SAME TRAY: without
 # this, ten pictures were decoded five times over and the main window took
 # eight seconds to appear, six of them here. Measured, not estimated.
 #

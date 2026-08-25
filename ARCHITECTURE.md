@@ -21,7 +21,7 @@ Everything below this section explains how the code satisfies them.
 | 100% line AND branch coverage over `clear_budget`, `main` and the Qt-free half of the setup program | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
 | An exported report adds up: `opening + net == close` for every month whose Paid/Received flags agree with the calendar. In the anchored month an item actioned early (or missed) moves the close off the totals by exactly that amount, because the series never charges twice what the recorded balance already contains | `tests/application/test_projection_series.py::test_opening_plus_net_equals_the_close` and `::test_a_bill_paid_early_moves_the_anchored_close` |
 | The exported report and the on-screen month graph can never disagree about a month they both cover, because both run the same day-by-day projection | `tests/application/test_projection_series.py::test_the_projection_agrees_with_the_month_graph` |
-| The card graph and the Credit Cards tab open a future month from the SAME chained figure (`card_openings_at`), never from the stored balance and each month closes where the next one opens, its interest landing on its last day | `tests/application/test_month_graph_series.py::TestCardGraphChaining` |
+| The card graph and the Credit Cards view open a future month from the SAME chained figure (`card_openings_at`), never from the stored balance and each month closes where the next one opens, its interest landing on its last day | `tests/application/test_month_graph_series.py::TestCardGraphChaining` |
 | With ONE deliberate exception: the month in progress opens from the recorded bank balance, not the previous month's projected close. The recorded balance is the only figure in the report that is a fact; the gap is the drift the report exists to expose | `tests/application/test_projection_series.py::test_the_current_month_is_anchored_on_the_recorded_balance` and `::test_months_outside_the_current_one_still_chain_when_today_is_inside` |
 | A single exported HTML file references nothing outside itself, so it survives being emailed and opens offline | `tests/application/reporting/test_reports.py::test_a_report_references_nothing_outside_itself` |
 | An exported PACKAGE is self-contained as a folder: every link is a bare sibling filename and nothing is fetched | `tests/application/reporting/test_package_report.py::TestThePackageIsSelfContained` |
@@ -282,7 +282,7 @@ focused mixins to stay under the 400-LOC-per-file limit:
   `get_card_graph_series` (one day-end balance series per active card),
   reusing the same projection day conventions as the rest of the app. A card
   month AFTER the current one opens from `card_openings_at`
-  (`_card_projection.py`), the same chained openings the Credit Cards tab's
+  (`_card_projection.py`), the same chained openings the Credit Cards view's
   panels and projection strip read, never from the stored balance: the stored
   figure is as-of the day it was entered, so a distant month opened from it
   drew a balance untouched by every intervening payment and every month's
@@ -400,7 +400,7 @@ Key methods:
   why this exists and why the income dialog offers no way to turn a recurring
   income into a one-off
 - `get_recorded_months()` → `list[YearMonth]` - months already snapshotted into the
-  archive (drives the Archive tab)
+  archive (drives the Archive view)
 - `archive_month(year_month)` - snapshot one month's generated bills and income into
   `months` / `month_bills` / `month_income` (idempotent; the internal archiving
   primitive)
@@ -761,11 +761,11 @@ holding each budget's slug and display name plus which one is active.
 - `fmt(pounds: float)` → `"{symbol}{pounds:.2f}"`
 - Used throughout UI for all inline currency formatting not going through `Amount.__str__`
 - `build_centered_nav_header(...)` - the shared navigation tray used by all
-  six tabs, built as TWO bordered rows and hoisted above the scroll area by
+  six views, built as TWO bordered rows and hoisted above the scroll area by
   `ScrollableTab`: the month or year cluster centred in the upper row, every
-  icon button plus the six tabs in the lower one. Its lower-row order is
+  icon button plus the six view buttons in the lower one. Its lower-row order is
   load, save, switch-budget, a separator, the bank, the Monthly Budget to
-  Recommendations tabs, then a second separator setting Archive apart at the
+  Recommendations view buttons, then a second separator setting Archive apart at the
   right beside the theme toggle and the information button. The tray machinery itself
   (this builder, the theme toggle and the glyph sizing) lives in
   `ui/utils/nav_header.py`, with the month/year label machinery in
@@ -785,8 +785,8 @@ holding each budget's slug and display name plus which one is active.
   `apply_nav_label_color` / `_nav_label_style` recolour the
   label; the colour is each month's OWN within-month solvency health (current
   month from its live balance, a future month from its next-two-months block),
-  computed once by the Solvency panel and broadcast to every tab via
-  `SolvencyPanel.month_label_color_changed` so no tab can disagree. A month is
+  computed once by the Solvency panel and broadcast to every view via
+  `SolvencyPanel.month_label_color_changed` so no view can disagree. A month is
   red only when its own balance breaches the overdraft floor (below zero with no
   facility or beyond an agreed facility); dipping into an agreed facility but
   staying within it is amber. A looming overdraft in a later month stays a
@@ -821,7 +821,7 @@ holding each budget's slug and display name plus which one is active.
 
 **`resources`** (`clear_budget/shared/resources.py`):
 - Runtime asset discovery for packaged builds: locates the app icon, the Qt
-  window/taskbar icon, the splash image and the tab artwork across
+  window/taskbar icon, the splash image and the view-button artwork across
   PyInstaller onefile (`sys._MEIPASS`), onedir (`_internal/`),
   beside-the-executable, dev repo layout and the working directory, with `.ico`
   preferred and `.png` fallbacks. Keeps every asset lookup robust however the
@@ -851,16 +851,16 @@ holding each budget's slug and display name plus which one is active.
   - `set_month()` fetches new month summary before refreshing
   - `update_month_summary()` called after balance edits via `month_summary_updated`
 
-**A tab is refreshed by the data it shows, not by the tab it sits on.**
+**A view is refreshed by the data it shows, not by the view it sits on.**
 `month_summary_updated` fires on EVERY change to the month's bills and income; it
 drives both `SolvencyViewModel.update_month_summary` and
-`CreditCardView.on_month_summary_updated`. The card tab needs it because its
-figures are owned by another tab's data: a card's Payment Received, its closing
+`CreditCardView.on_month_summary_updated`. The card view needs it because its
+figures are owned by another view's data: a card's Payment Received, its closing
 balance and the six-month strip are all computed from the `credit_payment` bill
 that pays it; that bill is created and edited on Monthly Budget. Nothing on
-the Credit Cards tab moves when that happens; switching tabs does not
-recompute anything (`tabs.currentChanged` only marks the current tab), so
-without this connection the tab showed figures calculated when the window was
+the Credit Cards view moves when that happens; switching views does not
+recompute anything (`tabs.currentChanged` only marks the current view), so
+without this connection the view showed figures calculated when the window was
 built: a card paid off monthly projected a balance climbing past its own limit,
 with Payment Received reading zero beside the bill paying it. Neither number was
 wrong when calculated; neither was calculated again.
@@ -957,7 +957,7 @@ unrelated to what it had to hold.
   render into separate labels, because a QLabel carries one colour and the two
   are not the same kind of statement: the reach sentence keeps the muted body
   role while the shortfall takes `SolvencyShortfall`, the traffic light's own
-  red. A gap no restraint closes is the one line on the tab reporting a fact
+  red. A gap no restraint closes is the one line on the view reporting a fact
   rather than a caution; in one shared muted line it read as more small
   print under the sentence above it), the capacity schedule beneath
   it ("If you wait:" and one line per change, from `get_spending_capacity`,
@@ -966,8 +966,8 @@ unrelated to what it had to hold.
   months that follow from it. The BANK page's own contents are the overdraft
 alert, the mid-month alert and its two forward-projection blocks. A third
 page once carried per-card utilisation bars and the same two months per card.
-It was removed: the Credit Cards TAB answers a card's position in full, so the
-page restated another tab's job in a smaller space; keeping both meant two
+It was removed: the Credit Cards VIEW answers a card's position in full, so the
+page restated another view's job in a smaller space; keeping both meant two
 renderings of the same figures to hold in step. Every month any page shows
   states its low
   point on a line of its own, plus what that month needs to hold flat, in one
@@ -1064,7 +1064,7 @@ renderings of the same figures to hold in step. Every month any page shows
   behind a tray cog; one setting did not justify a second settings surface,
   so it was folded in here and the cog retired. The flow returns True when
   the currency changed and `MainWindow` then emits `database_replaced`, so
-  every figure on every tab restyles at once
+  every figure on every view restyles at once
 - `BillDialog` - add/edit bill; "This month only" on Add creates a one-off
   scoped to exactly the viewed month (start == end), on Edit it stores a
   per-month override; optional end-month control (greyed while one-off is
@@ -1089,9 +1089,9 @@ renderings of the same figures to hold in step. Every month any page shows
   and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
 - `HowItWorksDialog` - two jobs in one page. It NAMES the furniture in four
-  runs (the six tabs, the Graph page's own controls, the tray, then the
+  runs (the six views, the Graph page's own controls, the tray, then the
   keyboard), each entry led by the real icon that control draws, which the
-  tabs need because their text labels became pictures. Then it states the
+  view buttons need because their text labels became pictures. Then it states the
   three rules the numbers rest on and that no screen can say for itself: how
   an undated bill accrues, how the balance maintains itself, what Safe to
   Spend Today promises. Every icon is a BUNDLED IMAGE inlined through the
@@ -1117,11 +1117,11 @@ renderings of the same figures to hold in step. Every month any page shows
 - `ScrollableTab` - wraps any view in `QScrollArea` with scroll indicator
   buttons; also hoists the view's `nav_header` (the shared, centred month/year
   navigation tray) above the scroll area and zeroes the content's top margin so
-  the tray stays full-width and centred on every tab. The indicators sit in a
+  the tray stays full-width and centred on every view. The indicators sit in a
   COLUMN of their own beside the page, laid out rather than positioned. They
   used to float on top of the content, placed by hand and a hand-placed
   overlay lands on whatever happens to be beneath it: measuring from the top of
-  the whole tab put the up indicator inside the hoisted tray over the theme
+  the whole view put the up indicator inside the hoisted tray over the theme
   toggle and on a 900x580 window the down indicator sat on Monthly Budget's
   Delete Income button, where a click scrolled instead of reaching the button.
   A column cannot overlap anything. It is ALWAYS present, even while both
@@ -1130,7 +1130,7 @@ renderings of the same figures to hold in step. Every month any page shows
   show, a loop that flickers on content sitting near the boundary. This was the
   only hand-placed child widget in the app; everything else is laid out and a
   layout cannot overlap its own children (verified by an overlap sweep over all
-  four tabs at three window sizes and nine dialogs at two: zero)
+  four views at three window sizes and nine dialogs at two: zero)
 - `_bank_account_settings_flow.py` - dialog-orchestration helper extracted
   from `MainWindow` to stay under the LOC limit; returns whether the display
   currency changed
@@ -1204,7 +1204,7 @@ renderings of the same figures to hold in step. Every month any page shows
   label (stored balance for the month the user is in, projected month-end
   for any other) and the overdraft warning strip under the nav row
 - `GraphView` (`views/graph_view.py`) / `_line_bar_chart.py` (`LineBarChart`) -
-  the Graph tab: the viewed month plotted as a PAGE, stepped between months by
+  the Graph view: the viewed month plotted as a PAGE, stepped between months by
   the tray's own arrows. It was a modal dialog opened from a tray icon, the
   one control in the application that behaved that way; it even built its own
   ← Previous / Next → pair stepping months "exactly as the tray's arrows
@@ -1245,7 +1245,7 @@ renderings of the same figures to hold in step. Every month any page shows
     the cards alike
   - "Export a folder of months" opens `MonthRangeDialog` for a first and last
     month, then writes the BANK balance across that range as a package
-    (`package_report`). It follows the SWITCH rather than the tab: offered
+    (`package_report`). It follows the SWITCH rather than the view: offered
     while the bank series is on screen and withdrawn while the cards are,
     because a bank-balance projection beside a graph of card balances would
     claim to project what is shown and would not. A card-balance projection
@@ -1263,7 +1263,7 @@ renderings of the same figures to hold in step. Every month any page shows
     testing uses the chart's own `_geometry()`, so a readout can only land on a
     point that was drawn
 - `RecommendationsView` (`views/recommendations_view.py`) - the
-  Recommendations tab: what would make the months ahead survivable, rendered
+  Recommendations view: what would make the months ahead survivable, rendered
   as three plain sections (retime what can move, extra income needed, where
   that leaves each month). The moves wording lives in the Qt-free
   `ui/utils/recommendation_text.py`: the engine proposes per month while the
@@ -1272,7 +1272,7 @@ renderings of the same figures to hold in step. Every month any page shows
   good may change sooner than the first month that needs it, tested in
   `tests/ui_logic/test_recommendation_text.py`. The page is anchored to TODAY rather than to the
   month being viewed; the tray's arrows still step the shared month label
-  like every other tab and the anchor line above the body says which months
+  like every other view and the anchor line above the body says which months
   the advice covers. It recomputes on every `month_summary_updated`, so an
   edit made on Monthly Budget lands here the moment it is saved. At the top
   sits the emergency-buffer row: a checkbox ("Keep an emergency buffer of")
@@ -1351,23 +1351,23 @@ renderings of the same figures to hold in step. Every month any page shows
   class, never per dialog
 
 **Keyboard navigation** (`keyboard_nav.py` + `_main_window_nav.py`):
-- Each view's `nav_targets()` is the DECLARED ring order for its tab and it is
+- Each view's `nav_targets()` is the DECLARED ring order for its view and it is
   READING order, which with two stacked trays means the UPPER tray first and
   the lower one after it, each left to right as drawn, then the page's own
   controls. Two views override that with TASK-FLOW order by decision
   (2026-08-24): Solvency places its visible pilot button just before the
-  Credit Cards tab (page turn, then next tab) and Credit Cards runs its card
+  Credit Cards button (page turn, then next view) and Credit Cards runs its card
   panels (Active toggle, Edit, Delete per card) then Add Card between the
-  tab run and the graph icon, because the cards are what the tab is opened
+  view-button run and the graph icon, because the cards are what the view is opened
   for. Both overrides are deliberate and documented at the declaration.
 - A view may declare `nav_entry_stop()`: the control the FIRST Tab lands on
-  when the ring is entered from neutral (launch or a tab switch). Solvency
+  when the ring is entered from neutral (launch or a view switch). Solvency
   names its visible pilot; Credit Cards names the first card's Active toggle
   (Add Card when there are no cards); Monthly Budget and Archive keep the
   default menu-first entry. `MainWindow._current_nav_entry` hands the
   navigator a callable and `KeyboardNavigator._entry` prefers the declared
   stop on forward entry only; backward entry and every fallback keep the
-  ring's ends. The tab switch still restores the NEUTRAL sink (nothing is
+  ring's ends. The view switch still restores the NEUTRAL sink (nothing is
   highlighted); the entry stop decides only where the first press lands. The
   switch handler also clears the menu-bar highlight, because a title left
   active outlives the focus move (the bar even reclaims focus for it) and the
@@ -1397,20 +1397,20 @@ renderings of the same figures to hold in step. Every month any page shows
   else. Two of the four declarations were already one pair out (the graph
   button was offered before Previous while it is drawn after it) and the tray
   rearrangement would have made all four wrong. Verified by mapping every
-  tray stop's centre to (row, x) and requiring ascending on all four tabs, plus
+  tray stop's centre to (row, x) and requiring ascending on all four views, plus
   a check that no enabled, visible tray button is missing from its declaration
-  bar the current tab, which is correctly not a stop. That measurement is a PROBE rather than a test, because the
+  bar the current view's button, which is correctly not a stop. That measurement is a PROBE rather than a test, because the
   suite is Qt-free by design and ring order is geometry
 - One application-level `KeyboardNavigator` event filter drives an explicit
-  focus ring: menu-bar titles, then the active tab's stops (each
+  focus ring: menu-bar titles, then the active view's stops (each
   view's `nav_targets()`), recomputed live so disabled or hidden stops are
   skipped (a disabled Previous at the base month simply drops out)
-- A VIEW TAKES THE TAB RUN WHOLE. `tab_btns[:-1]` is the run as drawn and
+- A VIEW TAKES THE BUTTON RUN WHOLE. `tab_btns[:-1]` is the run as drawn and
   `tab_btns[-1:]` is Archive in the right-hand group; no other slice is
   allowed in a `nav_targets` body. Solvency needed its pilots INSIDE the run,
   so it cut the run up and reassembled it (`[:2]`, `[2:3]`, `[-1:]`): five
-  tabs, four positions covered, with no arithmetic anywhere saying the fifth
-  had gone. The Graph tab was absent from that tab's ring entirely, which
+  view buttons, four positions covered, with no arithmetic anywhere saying the fifth
+  had gone. The Graph button was absent from that view's ring entirely, which
   presents as the ring jumping a button plainly on screen. `stops_before`
   inserts into the whole run instead, so everything handed in comes back out.
   Held by `tests/structural/test_tab_run_slices.py` and
@@ -1418,7 +1418,7 @@ renderings of the same figures to hold in step. Every month any page shows
 - Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
   ends; tables keep Up/Down for their rows, text inputs keep their arrows for
   the caret
-- THE PAGE BODY IS THE LAST STOP on every tab, when it has something to
+- THE PAGE BODY IS THE LAST STOP on every view, when it has something to
   scroll. `ScrollableTab.nav_scroll_stop()` returns its `QScrollArea` only
   while the content overflows, so a page that fits is skipped (a stop must be
   actionable: landing on a page that scrolls nowhere spends a keypress and does
@@ -1438,10 +1438,10 @@ renderings of the same figures to hold in step. Every month any page shows
   focus being trapped. The stop paints the same ring on focus and none at
   rest (measured: 0 pixels at rest, ~2980 focused, both themes), with no hover
   rule, since the pointer sits over the page most of the time the app is open
-- EVERY TAB IS A STOP on the ring, which now costs nothing to say: the
-  tabs are ordinary buttons in the navigation tray, so each is a stop like any
+- EVERY VIEW BUTTON IS A STOP on the ring, which now costs nothing to say: the
+  view buttons are ordinary buttons in the navigation tray, so each is a stop like any
   other. Walking the ring moves focus and switches nothing; Enter or Space
-  commits. The tab already showing is dropped from the declaration
+  commits. The button for the view already showing is dropped from the declaration
   (`ring_tab_stops`) rather than disabled, since a disabled control paints the
   permanent red ring and would read as broken rather than as current
 - This used to need a `QTabBar` subclass, `NavTabBar`, carrying a keyboard
@@ -1451,7 +1451,7 @@ renderings of the same figures to hold in step. Every month any page shows
   pill geometry the stylesheet drew. All of it existed to work around one Qt
   behaviour: a `QTabBar` ties its focus to its CURRENT tab, so a focused bar
   can only ring the tab the user is already on, which is a dead stop. A button
-  carries no such tie. When the tabs moved into the tray the whole mechanism
+  carries no such tie. When the view buttons moved into the tray the whole mechanism
   became unreachable and was deleted rather than left as a hidden bar nobody
   drives
 - Submenus keep Qt's native horizontal arrows: inside an open menu, Right on
@@ -1483,10 +1483,10 @@ renderings of the same figures to hold in step. Every month any page shows
   is highlighted on launch and no menu drops open. Dialogs do the opposite and
   open on their first stop (`FirstStopDialog`); a window is looked at before it is
   acted in, a dialog was opened to do one specific thing
-- A TAB SWITCH returns to that same sink. Switching hides the control that was
+- A VIEW SWITCH returns to that same sink. Switching hides the control that was
   clicked, so Qt hands its focus to whatever the newly shown page offers next
-  in its chain; that control then wore the ring beside the current tab's
-  accent border and the tray read as two tabs being current at once. Qt has
+  in its chain; that control then wore the ring beside the current view button's
+  accent border and the tray read as two view buttons being current at once. Qt has
   already moved the focus by the time `currentChanged` arrives (measured, not
   assumed), so the handler sets the sink last and nothing overwrites it. A new
   page starts neutral for the same reason the window does. Guarded by
@@ -1528,12 +1528,12 @@ renderings of the same figures to hold in step. Every month any page shows
   while the same colour as a filled block saying "this is on" is glare. That
   collision is what made a ticked box the loudest thing on the login screen
 - `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
-  for the Credit Cards tab
+  for the Credit Cards view
 
 **Every built pixmap is cached** (`ui/utils/icon_buttons.py`, matching
 `tab_icons`):
 - The sources are full-size masters over a megapixel each, so decoding and
-  scaling one costs about a tenth of a second; EVERY TAB BUILDS THE SAME
+  scaling one costs about a tenth of a second; EVERY VIEW BUILDS THE SAME
   TRAY. Uncached, `image_icon_pixmap` was called 53 times for roughly a dozen
   distinct pictures and the window took 8.04s to build, 6.83s of it here.
   Keying built pixmaps on `(spec, height, bottom padding)` took the same build
@@ -1545,22 +1545,22 @@ renderings of the same figures to hold in step. Every month any page shows
 - What is left is one decode per distinct picture. Going below it means
   SMALLER SHIPPED ASSETS rather than more caching
 
-**Tab icons** (`ui/utils/tab_icons.py`):
-- The six primary tabs carry a picture and no text; the text moved to the
+**View-button icons** (`ui/utils/tab_icons.py`):
+- The six primary view buttons carry a picture and no text; the text moved to the
   tooltip, so the row still names itself on hover and nothing was lost but
-  a run of labels wide enough to push the tabs across the window
+  a run of labels wide enough to push the buttons across the window
 - All six are bundled images (`monthlybudget.png`, `solvency.png`,
   `creditcards.png`, the app icon for Graph, `recommendations.png`,
   `archive.png`, resolved by
   `shared.resources.find_tab_icon_path` through the same candidate roots as
   every other asset). The archive was an emoji once and the graph an icon
-  button; both are pictures in `TAB_SPECS` now, so adding a tab is one line
+  button; both are pictures in `TAB_SPECS` now, so adding a view is one line
   there and nothing else. Sizing is one question, how tall the thing
   actually PAINTS, answered by measuring opaque pixels (`glyph_metrics`)
 - An image is cropped to its opaque content, then fitted by its HEIGHT. The
   scale that lifts it lives in `nav_glyph_size.NAV_GLYPH_SCALE` now, applied to
   the measured box before anything reads it, so the tray's own icons take it
-  too; `TAB_IMAGE_SCALE` is 1.0 because scaling again here would put the tabs
+  too; `TAB_IMAGE_SCALE` is 1.0 because scaling again here would put the buttons
   back above their neighbours. Fitting to a square box by the LONGER side
   was tried first and is what a picture-and-glyph row must not do: the
   calendar came out 42 tall and the cards 35 against the emoji's 46, so the
@@ -1570,19 +1570,19 @@ renderings of the same figures to hold in step. Every month any page shows
   the landscape card artwork running wider than its neighbours is the accepted
   cost, since a shared bottom edge is what the eye checks along a row
 - EVERY icon in the tray paints at the same height; every button holding one
-  is the same size. The scale used to be the tabs' alone, which left the
+  is the same size. The scale used to be the view buttons' alone, which left the
   load, save, switch, bank and help icons painting 47
-  against the tabs' 63 in the same band, a third smaller. Moving the scale to
+  against the buttons' 63 in the same band, a third smaller. Moving the scale to
   the base fixed all of them at once. `NAV_ICON_BTN_PADDING_PX` went to zero in
   the same pass, since a tray button carrying that padding was 8px taller than
-  a tab holding an icon of exactly the same height
-- A tab whose icon cannot be built keeps its label as visible text. A missing
-  asset costs the tray its looks, never a route into the tab
-- The tabs are BUTTONS in the navigation tray (`build_tab_buttons`), not a
+  a view button holding an icon of exactly the same height
+- A view button whose icon cannot be built keeps its label as visible text. A missing
+  asset costs the tray its looks, never a route into the view
+- The view buttons are plain BUTTONS in the navigation tray (`build_tab_buttons`), not a
   `QTabBar`. The `QTabWidget` is kept for what it is good at, owning the pages
   and switching between them; its bar is hidden. Every view builds its own
-  five buttons because every view builds its own tray; `MainWindow` wires them
-  all to the one tab widget and marks the current tab on every set at once, so
+  six buttons because every view builds its own tray; `MainWindow` wires them
+  all to the one tab widget and marks the current view on every set at once, so
   the mark is right whichever tray is on screen
 - That SIMPLIFIES the keyboard model rather than complicating it. `NavTabBar`
   existed because Qt ties a tab bar's focus to its CURRENT tab, so a focused
@@ -1590,18 +1590,18 @@ renderings of the same figures to hold in step. Every month any page shows
   carried a separate cursor to work around that. A button has no such tie, so
   walking the ring moves focus and changes nothing while Enter or Space
   activates and switches, which is exactly what the cursor was built to fake.
-  The current tab is dropped from the ring declaration (`ring_tab_stops`)
+  The button for the current view is dropped from the ring declaration (`ring_tab_stops`)
   rather than disabled, because a disabled control paints the permanent red
   ring and would read as broken rather than as current
-- The current tab is marked with a panel FILL and nothing else, through a
+- The current view's button is marked with a panel FILL and nothing else, through a
   dynamic property plus a repolish (`mark_current_tab`), never an inline
   stylesheet: an inline colour survives a theme switch and leaves the mark
   painted in the outgoing theme. It was a full accent rectangle once; at 2px
-  the accent was indistinguishable from the ring, so on launch the current tab
+  the accent was indistinguishable from the ring, so on launch the current button
   read as though it were hover-focused. It then carried a fill plus an accent
   underline, which was one mark too many. Rectangles stay the ring's own
   vocabulary (the ring colour on hover or focus, red when disabled) and the
-  current tab's border is fully transparent, so the two can never be confused
+  current button's border is fully transparent, so the two can never be confused
 
 **Sign-in and remembered accounts**:
 - `auth/remembered_login.RememberedLogin` - remembers sign-in details PER ACCOUNT,
@@ -1676,16 +1676,16 @@ renderings of the same figures to hold in step. Every month any page shows
   replaces another
 - The stage count (`SERVICE_STAGES`, `TAB_STAGES`, `BUILD_STAGES`) lives here
   because this is the only place that knows both halves of the build, the
-  services counted here and the tabs counted by the window; the window is
+  services counted here and the views counted by the window; the window is
   handed the offset it starts at rather than counting for itself
 - `progress=None` builds silently, which is what a rebuild behind an
   already-visible window wants (Load, Save As, a restore)
 
 **Who is signed in**:
-- The account name sits at the left of every tab's month tray, built by
+- The account name sits at the left of every view's month tray, built by
   `ui/utils/nav_header._build_nav_user_pair` and filled by `MainWindow` through
   `set_nav_user`. It is set on the HEADER, never the view: `ScrollableTab`
-  lifts the header out of its view so it spans the full tab width, which
+  lifts the header out of its view so it spans the full view width, which
   leaves the label no longer a descendant of that view
 - An empty MIRROR of the label sits at the far right of the same row, kept the
   same width, so the month cluster stays centred on the WINDOW rather than on
@@ -1699,7 +1699,7 @@ renderings of the same figures to hold in step. Every month any page shows
   title bar no longer names the account
 
 **Main Application**:
-- `MainWindow` - all tabs in `ScrollableTab`; signals: `switch_user_requested`,
+- `MainWindow` - all views in `ScrollableTab`; signals: `switch_user_requested`,
   `sign_out_requested`, `database_replaced`
   - File menu: New Budget and Switch Budget, then Load / Save / Save As (Save
     goes to the remembered save file, kept in `ui_settings.json`), then the
@@ -1737,9 +1737,9 @@ renderings of the same figures to hold in step. Every month any page shows
     month and year, then Next. The LOWER tray carries everything that acts on
     the application, built by `_tray_buttons.build_save_load_buttons` /
     `build_budgets_button` / `build_bank_button` / `build_info_button` and
-    sized against the tab buttons: folder (Load), diskette (Save), arrows
+    sized against the view buttons: folder (Load), diskette (Save), arrows
     (Switch Budget), a themed separator, bank (Bank Account), then the
-    Monthly Budget, Solvency, Credit Cards, Graph and Recommendations tabs.
+    Monthly Budget, Solvency, Credit Cards, Graph and Recommendations view buttons.
     A second separator sets Archive apart, pinned to the RIGHT of the
     stretch beside the sun/moon toggle and the blue information button (How
     It Works). The first separator divides the controls that DO something
@@ -1748,14 +1748,14 @@ renderings of the same figures to hold in step. Every month any page shows
     went with the folded Preferences dialog
   - Every view builds its OWN tray, so a view that never calls a builder
     loses that control silently: the tray still draws and the app still runs,
-    with the shortcut simply gone from that tab. Solvency lost the graph
+    with the shortcut simply gone from that view. Solvency lost the graph
     button exactly that way while the graph was still a dialog. The graph is
-    a TAB now, so what guards it is the tab wiring rather than a per-view
+    a VIEW now, so what guards it is the view-button wiring rather than a per-view
     button: `tests/structural/test_tray_switch_invariants.py` asserts every
     tray view builds the shared controls AND lists them as keyboard stops,
-    plus that the tab buttons map onto the pages BY POSITION, each index
+    plus that the view buttons map onto the pages BY POSITION, each index
     handed straight to `setCurrentIndex`, because a page inserted in the
-    wrong slot silently points every tab button at the wrong page while the
+    wrong slot silently points every view button at the wrong page while the
     tray looks unchanged
   - `build_centered_nav_header` SKIPS a None entry rather than passing it to
     `addWidget`. A builder that cannot resolve its artwork returns None, so
@@ -1771,9 +1771,9 @@ renderings of the same figures to hold in step. Every month any page shows
     the cluster a row of its own and the arithmetic disappears rather than
     being balanced
   - Tray glyphs are drawn at the Previous button's height, UNSCALED. A 0.75
-    factor lived in `nav_glyph_height` briefly, while the tabs were still a
+    factor lived in `nav_glyph_height` briefly, while the view buttons were still a
     strip of their own and the tray was the heaviest band on the window. With
-    the tabs now IN the tray, the tray is the band, so the icons are back at
+    the buttons now IN the tray, the tray is the band, so the icons are back at
     the height they started at
   - Help menu: About, Check for Updates (runs the real update check via
     `UpdateCheckController` and reports the outcome, Up to date and unreachable
@@ -1860,19 +1860,17 @@ renderings of the same figures to hold in step. Every month any page shows
   make the row reflow under the pointer. Measure this on the real
   platform: under `QT_QPA_PLATFORM=offscreen` Qt substitutes its own font
   database, where both glyphs measure 38px and the discrepancy is invisible
-- HIGHLIGHT TEXT IS TEAL, NEVER GREEN, everywhere: the hovered tab, the
-  selected tab, a menu-bar title and a menu item. Green is the RING, the border
+- HIGHLIGHT TEXT IS TEAL, NEVER GREEN, everywhere: the hovered view button, the
+  selected one, a menu-bar title and a menu item. Green is the RING, the border
   saying where the pointer or the keyboard is; the words inside it take the
-  accent, the same colour that marks the selected tab. Text in the ring's own
-  colour made a hovered tab read as a second, slightly different selection, two
+  accent, the same colour that marks the selected button. Text in the ring's own
+  colour made a hovered button read as a second, slightly different selection, two
   near-identical shades on one strip. `tests/ui_logic/test_highlight_text_colour.py`
-  holds every one of those surfaces to it. The keyboard cursor's tab is the one
-  exception and keeps muted text under its ring, because the cursor marks
-  where the keyboard is rather than what is live; Qt gives no way to say
-  otherwise anyway (measured: with a stylesheet active, `setTabTextColor` is
-  ignored entirely)
+  holds every one of those surfaces to it. (The deleted `NavTabBar` era left
+  one measured Qt fact worth keeping: with a stylesheet active,
+  `setTabTextColor` is ignored entirely)
 - The sheet is split by surface across `_theme_tabs.py` (down to the pane, the
-  card the tab content sits on), `_theme_inputs.py` (the fields
+  card the view content sits on), `_theme_inputs.py` (the fields
   the user types in), `_theme_menus.py`, `_theme_controls.py` and
   `_theme_labels.py`, each a pure string builder taking the token dict. The
   split is what keeps every module under the LOC limit and it is also what
@@ -1898,9 +1896,9 @@ renderings of the same figures to hold in step. Every month any page shows
   object name instead of an inline stylesheet, which is what lets a live
   theme switch restyle it: `label_roles.set_role` repolishes when a severity
   role changes at runtime (a balance turning from good to danger)
-- The tab strip carries no rules at all: the bar is hidden and the tabs are
+- The tab strip carries no rules at all: the bar is hidden and the view buttons are
   `QPushButton#NavTabButton` in the tray, styled in `_theme_controls` with the
-  rest of the tray. `_theme_tabs` is down to the pane, the card the tab
+  rest of the tray. `_theme_tabs` is down to the pane, the card the view
   CONTENT sits on. One Qt fact is worth keeping from what was deleted, because
   it costs an afternoon to rediscover: in a subcontrol focus rule the
   subcontrol must come FIRST (`QTabBar::tab:selected:focus` works, while the
@@ -1953,7 +1951,7 @@ renderings of the same figures to hold in step. Every month any page shows
   glared once it filled a bar the height of the canvas. `CHART_BAR_DARK` and
   `STATES_DARK[STATE_SAFE]` are therefore expected to differ; making them match
   again would undo two separate decisions
-- The accent is IDENTITY (section titles, the current-tab underline, the
+- The accent is IDENTITY (section titles, the
   progress bar) so it keeps a hue of its own, violet in dark and purple in
   light, distinct from both the ring and the safe state. `primary_text` is the one white
   that did not collapse into `text`, because a button label on a saturated blue
@@ -2110,16 +2108,16 @@ platform differences are isolated to a few well-defined seams:
 - **File-dialog defaults**: `ui_paths` uses Qt `QStandardPaths`, so dialogs open
   in the correct per-OS location.
 - **Runtime assets**: `shared/resources.py` discovers icons, the splash image
-  and the tab artwork across frozen (PyInstaller) and source layouts. Every
+  and the view-button artwork across frozen (PyInstaller) and source layouts. Every
   caller that paints the app icon goes through `find_logo_png_path`; three
   modules had each grown their own copy of the same "first PNG in the
   candidate list" loop while a fourth (the sign-in dialog) had not, which is
   how its logo went missing on two platforms.
 - **What the app bundle carries**: the 256 app PNG (staged under both the
   lower-case name the runtime-icon and splash lookups read and the
-  capitalised name the Graph tab reads), the five tab images
+  capitalised name the Graph view reads), the five view-button images
   (`monthlybudget.png`, `solvency.png`, `creditcards.png`,
-  `recommendations.png`, `archive.png`; the Graph tab wears the app icon),
+  `recommendations.png`, `archive.png`; the Graph button wears the app icon),
   the tray and toggle artwork (bank, load, save, switch-budget,
   information, export and the light/dark faces) and VERSION. No `.ico` and
   no other icon size: it used to carry all seven sizes plus the 1024
@@ -2310,7 +2308,7 @@ an option that read as "remove my data" removed nothing.
   it again on the next edit
 - `test_auth_structure.py` - Auth layer structure validation
 - `test_tab_run_slices.py` - a `nav_targets` body may slice `tab_btns`
-  only as the whole run or as Archive, so a tab cannot be left out of a
+  only as the whole run or as Archive, so a view cannot be left out of a
   ring by arithmetic nobody can see
 - `test_table_focus_invariants.py` - every table built in the UI passes
   through `keyboard_only_focus`, none setting its own focus policy, so a

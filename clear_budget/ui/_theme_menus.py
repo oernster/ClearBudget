@@ -3,7 +3,7 @@
 Split from theme_qss to keep each module under the 400-LOC limit.
 
 Both surfaces follow the app-wide highlight rule: the ring is GREEN and the
-text inside it is TEAL, the same accent the selected tab shows. Green text in a
+text inside it is TEAL, the same accent the selected view button shows. Green text in a
 green ring made a highlighted item read as a second kind of selection.
 """
 

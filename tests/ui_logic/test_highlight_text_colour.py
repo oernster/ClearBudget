@@ -3,7 +3,7 @@ the ring colour.
 
 The ring is the border that says where the pointer or the keyboard is. The
 words inside it take the accent instead. Painting the text in the ring's own
-colour made a hovered tab read as a second, slightly different selection
+colour made a hovered button read as a second, slightly different selection
 sitting beside the real one, two near-identical shades on the same strip.
 
 Stated in roles rather than in hues on purpose. The rule was written when the
@@ -11,11 +11,11 @@ ring was green and the accent teal; both colours have since been retired and
 the rule did not move, because it was never about which colours they were.
 
 The rule was never about the tab bar, which is exactly why it outlived it. The
-strip that provoked it is gone, the tabs being icon buttons in the navigation
+strip that provoked it is gone, the views being icon buttons in the navigation
 tray now, yet the rule still binds every surface where a ring goes round
 TEXT: the menu bar and the menu items, which is what is asserted below. The
-tab buttons carry no text, so there is nothing there for this rule to govern;
-their ring and their current-tab mark are held by `_theme_controls` instead.
+view buttons carry no text, so there is nothing there for this rule to govern;
+their ring and their current-view mark are held by `_theme_controls` instead.
 
 Asserted against the stylesheet these surfaces generate rather than a rendered
 widget, for two measured reasons: a hover state cannot be forced through

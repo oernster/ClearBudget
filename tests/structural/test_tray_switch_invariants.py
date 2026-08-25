@@ -1,11 +1,11 @@
-"""Switching tabs must not cost the tray a control or leave a stray ring.
+"""Switching views must not cost the tray a control or leave a stray ring.
 
 Two invariants, both broken at once when the graph icon moved down into the
 lower tray.
 
-The first is the TAB RUN. Every view builds its own tray, so a view that
+The first is the BUTTON RUN. Every view builds its own tray, so a view that
 simply never calls a builder loses that control silently: the tray still
-draws, the app still runs and the capability is just gone from that tab.
+draws, the app still runs and the capability is just gone from that view.
 Solvency lost the graph exactly that way and Archive never had it, which
 changed the row's shape on the way in. Every view that draws a tray must
 build the shared controls AND list them as keyboard stops, since a control
@@ -13,18 +13,18 @@ the ring skips is one the keyboard cannot reach.
 
 The graph itself is no longer one of those controls. It was an icon button
 that opened a modal dialog, which is what made it the odd one out; it is a
-PAGE now, so what guards it is the tab wiring below rather than a per-view
+PAGE now, so what guards it is the view-button wiring below rather than a per-view
 button. What replaced those assertions is stronger than what they said: the
-tab buttons are mapped onto the pages BY POSITION, each button index handed
+view buttons are mapped onto the pages BY POSITION, each button index handed
 straight to `setCurrentIndex`, so the strip and the pages agreeing is not a
 tidiness question. A page inserted in the wrong slot silently points every
-tab button in the application at the wrong page, while nothing about the tray
+view button in the application at the wrong page, while nothing about the tray
 looks any different.
 
-The second is the NEUTRAL START on a switch. Switching tabs hides the control
+The second is the NEUTRAL START on a switch. Switching views hides the control
 that was clicked; Qt then hands its focus to whatever comes next in the newly
 shown page's chain. That control then paints the green focus ring, which sits
-beside the current tab's accent border and reads as two tabs being current at
+beside the current view button's accent border and reads as two buttons current at
 once. `MainWindow` already owns a 0x0 focus sink for the neutral start on
 launch; the switch has to return to it.
 
@@ -43,7 +43,7 @@ _MAIN_WINDOW = _UI / "_main_window_tabs.py"
 _TAB_ICONS = _UI / "utils" / "tab_icons.py"
 
 # Every view that draws a nav tray. All of them draw the SAME shortcuts, so a
-# view that skips one loses that shortcut on that tab alone and nowhere else,
+# view that skips one loses that shortcut on that view alone and nowhere else,
 # which reads as the button having moved rather than as a defect.
 _TRAY_VIEWS = (
     _UI / "views" / "_month_view_builders.py",
@@ -115,12 +115,12 @@ def _string_constants(tree: ast.Module) -> dict[str, str]:
 
 
 def _tab_spec_labels() -> list[str]:
-    """The tab names declared in `TAB_SPECS`, in strip order.
+    """The view names declared in `TAB_SPECS`, in strip order.
 
     A label may be a literal or a module constant naming one, since a view
-    that has to name a tab should not spell it a second time. An entry that
+    that has to name a view should not spell it a second time. An entry that
     is NEITHER is returned as a marker rather than skipped: skipping made a
-    label the reader could not parse look like a tab that had disappeared
+    label the reader could not parse look like a view that had disappeared
     from the strip, which is the failure this guard exists to report
     truthfully.
     """
@@ -165,7 +165,7 @@ def _added_page_labels() -> list[str]:
 
 
 def test_the_tab_strip_and_the_pages_are_the_same_list() -> None:
-    """A tab button's index IS the page index, so the two lists must match.
+    """A view button's index IS the page index, so the two lists must match.
 
     `_wire_tab_buttons` connects button `i` to `setCurrentIndex(i)`. A page
     added in a different order from `TAB_SPECS` therefore sends every tray in
@@ -178,28 +178,28 @@ def test_the_tab_strip_and_the_pages_are_the_same_list() -> None:
         "the tab strip and the pages have drifted apart:\n"
         f"  TAB_SPECS: {specs}\n"
         f"  addTab   : {pages}\n"
-        "every tab button is wired to its page BY POSITION, so a mismatch "
+        "every view button is wired to its page BY POSITION, so a mismatch "
         "points the tray at the wrong page rather than showing an error"
     )
 
 
 def test_every_tray_view_builds_the_tab_buttons() -> None:
-    """A tray without the tab run is a page with no way out of itself."""
+    """A tray without the button run is a page with no way out of itself."""
     for path in _TRAY_VIEWS:
         assert _assigns_from_call(_tree(path), _TABS_ATTR, _TABS_BUILDER), (
             f"{path.name} never assigns self.{_TABS_ATTR} from "
-            f"{_TABS_BUILDER}(), so that tab cannot reach the others"
+            f"{_TABS_BUILDER}(), so that view cannot reach the others"
         )
 
 
 def test_every_tray_view_rings_the_tab_buttons() -> None:
-    """The keyboard must reach the tabs from every page, not just the mouse."""
+    """The keyboard must reach the view buttons from every page, not just the mouse."""
     for path in _TRAY_VIEWS:
         ring_path = _RING_DECLARATIONS.get(path.name, path)
         stops = _self_attrs_returned_by(_tree(ring_path), "nav_targets")
         assert _TABS_ATTR in stops, (
             f"{ring_path.name}'s nav_targets() omits self.{_TABS_ATTR}, so the "
-            "keyboard cannot reach the tabs that page draws"
+            "keyboard cannot reach the view buttons that page draws"
         )
 
 

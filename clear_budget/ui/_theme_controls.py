@@ -188,10 +188,10 @@ QPushButton#ThemeToggleButton:disabled {{
     border: 2px solid {t["danger"]};
 }}
 
-/* The four primary tabs, which are buttons in the navigation tray rather than
+/* The primary view buttons, which live in the navigation tray rather than
    a QTabBar. Same three-state ring as every other tray control, plus one
-   extra state a plain button does not have: the tab being SHOWN carries the
-   accent border, exactly as the selected pill did when these were a strip.
+   extra state a plain button does not have: the view being SHOWN carries the
+   current fill below, where the selected pill once carried an accent.
    The accent is a selection colour and never a ring, so the green still means
    only "the pointer or the keyboard is here".
 
@@ -206,11 +206,11 @@ QPushButton#NavTabButton {{
     padding: 2px;
 }}
 
-/* The current tab is marked by its FILL alone: a raised panel behind the icon
+/* The current view's button is marked by its FILL alone: a raised panel behind the icon
    and nothing else. It carried an accent underline as well, which was one mark
    too many. The border stays fully transparent here, so rectangles remain the
    ring's own vocabulary (hover and focus, red when disabled) and the current
-   tab can never be mistaken for a focused one. Only the background changes, so
+   button can never be mistaken for a focused one. Only the background changes, so
    nothing reflows. */
 QPushButton#NavTabButton[currentTab="true"] {{
     background-color: {t["panel_bg"]};

@@ -46,14 +46,14 @@ class ScrollableTab(QWidget):
 
         # A content view may expose a `nav_header` widget (the month/year
         # navigation row). Hoist it ABOVE the scroll area so it spans the full
-        # tab width and centres identically on every tab, unaffected by this
-        # tab's vertical/horizontal scrollbar gutter or content overflow.
+        # view width and centres identically on every view, unaffected by this
+        # view's vertical/horizontal scrollbar gutter or content overflow.
         nav_header = getattr(content, "nav_header", None)
         if nav_header is not None:
             outer.addWidget(nav_header)
             # The nav header owns the vertical gap above the content: zero the
             # content layout's TOP margin so the nav header's symmetric padding
-            # is the ONLY space between the line below the tabs and the first
+            # is the ONLY space between the line below the buttons and the first
             # content line. That leaves the nav cluster vertically centred in
             # that tray (region = vpad + cluster + vpad, so the cluster centre
             # sits at half the region regardless of the padding value).
@@ -157,9 +157,9 @@ class ScrollableTab(QWidget):
     def nav_scroll_stop(self) -> QScrollArea | None:
         """The page body as a ring stop; None when there is nothing to scroll.
 
-        A stop has to be ACTIONABLE. A page that fits its tab scrolls nowhere,
+        A stop has to be ACTIONABLE. A page that fits its view scrolls nowhere,
         so landing on it would spend a keypress and do nothing; a page that
-        overflows is the one thing on the tab the keyboard otherwise cannot
+        overflows is the one thing on the view the keyboard otherwise cannot
         reach. The ring is rebuilt on every move, so the same page counts as a
         stop or not according to the window size at that moment.
         """

@@ -19,7 +19,7 @@ class TestArchiveMonth:
     """Test archiving months to database."""
 
     def test_archive_month_records_month(self, db) -> None:
-        """Archiving a month records it so the Archive tab can list it."""
+        """Archiving a month records it so the Archive view can list it."""
         bill_repo = SQLiteBillRepository(db.conn)
         income_repo = SQLiteIncomeSourceRepository(db.conn)
         payment_method_repo = SQLitePaymentMethodRepository(db.conn)

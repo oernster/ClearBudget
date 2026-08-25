@@ -52,7 +52,7 @@ class CreditCardProjectionStripMixin:
         if not month_states_list or not month_states_list[0]:
             # Nothing to project, so the whole box goes rather than being left
             # standing empty. Emptying the table alone left its heading and a
-            # tall blank rectangle holding the bottom half of the tab, because
+            # tall blank rectangle holding the bottom half of the view, because
             # the strip's height is LOCKED to its rows once built and clearing
             # the rows does not release it.
             self.projection_table.setRowCount(0)

@@ -5,7 +5,7 @@ module-level state) and persisted to an app-level JSON settings file in the
 ClearBudget data directory, so the choice applies from the login screen
 onward and survives restarts. Applying a theme restyles the whole app at
 runtime; the sun/moon toggle buttons in every nav tray are refreshed by
-object name so each tab's button always shows the mode a press switches to.
+object name so each view's button always shows the mode a press switches to.
 """
 
 from __future__ import annotations

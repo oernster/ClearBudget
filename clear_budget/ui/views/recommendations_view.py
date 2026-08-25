@@ -1,4 +1,4 @@
-"""The Recommendations tab: what would make the months ahead survivable.
+"""The Recommendations view: what would make the months ahead survivable.
 
 A reference set, never an actor. Every line names an exact edit (move this
 bill to that day; find this much by then) with its measured effect; the user
@@ -16,7 +16,7 @@ tried together. Simulation only, nothing stored; every panel says so. The
 tick state lives here on the view and survives data-driven rebuilds.
 
 The page is anchored to TODAY, not to the month being viewed: the tray's
-arrows still step the shared month like every other tab; the advice is
+arrows still step the shared month like every other view; the advice is
 about the months ahead of now, which it says at the top. It recomputes on
 every month-summary change, so an edit made on Monthly Budget lands here the
 moment it is saved.

@@ -3,7 +3,7 @@
 Installs the application-wide KeyboardNavigator and gives the main window a
 neutral start: a 0x0 focus sink absorbs the initial focus on first show, so
 nothing is highlighted and no menu opens until the first Tab or Right enters
-the ring. Switching tabs returns to the same neutral start, because hiding
+the ring. Switching views returns to the same neutral start, because hiding
 the clicked control makes Qt hand its focus to whatever the new page happens
 to offer next.
 """
@@ -18,7 +18,7 @@ class MainWindowNavMixin:
     """Neutral start and keyboard-ring setup for MainWindow."""
 
     def _setup_keyboard_nav(self, tab_views: list) -> None:
-        """Install the navigator over the menu bar and the tab views."""
+        """Install the navigator over the menu bar and the views."""
         self._tab_views = tab_views
         self._focus_sink = QWidget(self)
         self._focus_sink.setFixedSize(0, 0)
@@ -33,13 +33,13 @@ class MainWindowNavMixin:
         self.tabs.currentChanged.connect(self._restore_neutral_focus)
 
     def _restore_neutral_focus(self, _index: int) -> None:
-        """Send focus back to the sink whenever the shown tab changes.
+        """Send focus back to the sink whenever the shown view changes.
 
-        Switching tabs hides the control that was clicked, so Qt hands its
+        Switching views hides the control that was clicked, so Qt hands its
         focus to whatever happens to come next in the newly shown page's
         chain. That painted the green ring on a tray control the user never
-        aimed at; beside the accent border on the current tab it read as two
-        tabs being current at once.
+        aimed at; beside the accent border on the current view it read as two
+        view buttons being current at once.
 
         The sink is used rather than a chosen control because a new page
         starts neutral for the same reason the window does on launch: nothing
@@ -60,7 +60,7 @@ class MainWindowNavMixin:
 
         The neutral start is untouched: nothing is highlighted on a switch.
         This only decides where the FIRST Tab lands, so a view whose page is
-        what the tab is opened for (Solvency's page turn, a card's toggle)
+        what the view is opened for (Solvency's page turn, a card's toggle)
         puts the first press there rather than on the File menu.
         """
         index = self.tabs.currentIndex()
@@ -81,7 +81,7 @@ class MainWindowNavMixin:
         # back to the File menu, so a long page (Solvency) could be read only
         # with the mouse: there was no way to put the keyboard on the thing the
         # arrows would have scrolled. It appears only while the page actually
-        # overflows, so a short tab still wraps at the toggle.
+        # overflows, so a short view still wraps at the toggle.
         page = self.tabs.widget(index)
         scroll = page.nav_scroll_stop() if hasattr(page, "nav_scroll_stop") else None
         if scroll is not None:

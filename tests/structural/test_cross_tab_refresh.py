@@ -1,12 +1,12 @@
-"""A tab must be refreshed by the data it displays, not by the tab it lives on.
+"""A view must be refreshed by the data it displays, not by the view it lives on.
 
-The Credit Cards tab shows figures derived from the month's BILLS: a card's
+The Credit Cards view shows figures derived from the month's BILLS: a card's
 Payment Received, its closing balance and the whole six-month projection are
 all driven by a `credit_payment` bill. Those bills are created and edited on
-the Monthly Budget tab; nothing on the Credit Cards tab moves when that
+the Monthly Budget view; nothing on the Credit Cards view moves when that
 happens.
 
-That is how the tab came to show figures computed when the window was built. A
+That is how the view came to show figures computed when the window was built. A
 card paid off every month projected a balance climbing past its own limit;
 Payment Received sat at zero next to the bill that was paying it. Neither
 number was wrong when it was calculated; both were simply never calculated

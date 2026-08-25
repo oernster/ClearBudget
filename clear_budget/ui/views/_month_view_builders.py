@@ -45,8 +45,8 @@ class MonthViewBuilderMixin:
         self.budgets_btn = build_budgets_button(_glyph_h)
         _sep, self.bank_btn = build_bank_button(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
-        # The four primary tabs live in this tray, so every view builds its
-        # own set; MainWindow wires them and keeps the current-tab mark in
+        # The primary view buttons live in this tray, so every view builds its
+        # own set; MainWindow wires them and keeps the current-view mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
         _ym = self.view_model.current_month
@@ -70,7 +70,7 @@ class MonthViewBuilderMixin:
             trailing=(self.info_btn,),
         )
 
-        # No line pointing at "the Solvency tab" any more. The tabs are
+        # No line pointing at "the Solvency view" any more. The buttons are
         # pictures in the tray, so a sentence naming one by a word that is
         # nowhere on screen sends the reader looking for something that does
         # not exist. The shield icon carries its own tooltip; nothing is left

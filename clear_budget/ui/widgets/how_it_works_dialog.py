@@ -1,7 +1,7 @@
 """How It Works dialog - what the screens cannot say for themselves.
 
 Two jobs, in this order. It NAMES the furniture, each entry carrying the real
-icon or glyph the tray and the tab row actually draw, so the pictures that
+icon or glyph the tray and the view-button row actually draw, so the pictures that
 replaced the old text labels can be identified by someone who has just met
 them. Then it explains the three rules the numbers depend on and that no
 screen can state on its own: how an undated bill accrues, how the balance
@@ -14,7 +14,7 @@ finishes explains nothing, so anything a control says for itself is left to
 the control.
 
 Every entry carries the REAL icon the app draws, pulled through the same
-resource lookup the tray and the tab row use. Never a description in words;
+resource lookup the tray and the view-button row use. Never a description in words;
 never a similar-looking emoji standing in for a picture; never a decorative
 glyph that corresponds to no control. An icon guide showing something other
 than the icon is worse than no guide. The whole screen is pictures now, so
@@ -71,7 +71,7 @@ def _img(path, px: int) -> str:
 
 
 def _tab_row(spec: str, name: str, text: str, px: int) -> str:
-    """One tab's line, led by the picture that tab actually draws."""
+    """One view's line, led by the picture its button actually draws."""
     from clear_budget.shared.resources import find_tab_icon_path
 
     return f"<p>{_img(find_tab_icon_path(spec), px)}<b>{name}</b>: {text}</p>"
@@ -101,7 +101,7 @@ def _body_html() -> str:
     return f"""\
 <h2>How ClearBudget Works</h2>
 
-<h3>The six tabs</h3>
+<h3>The six views</h3>
 {_tab_row(MONTHLY_BUDGET_ICON, "Monthly Budget",
           "this month's bills and income, plus what the balance does.", px)}
 {_tab_row(SOLVENCY_ICON, "Solvency",
@@ -124,7 +124,7 @@ def _body_html() -> str:
           "months that have finished. They are filed automatically; there is "
           "no archive button. Its icon sits apart, at the right of the tray "
           "beside the light or dark toggle.", px)}
-<p>Hover any tab to see its name.</p>
+<p>Hover any view button to see its name.</p>
 
 <hr>
 <h3>On the Graph page</h3>
@@ -145,7 +145,7 @@ Spend buffer and window &nbsp;&middot;&nbsp; {light_icon}/{dark_icon}light or da
 &nbsp;&middot;&nbsp; {info_icon}this screen</p>
 <p>Load and save open in the app's own data folder, where the live budgets
 already are. Your signed-in name sits at the left of the row above, beside
-the month; the arrows there step every tab together.</p>
+the month; the arrows there step every view together.</p>
 
 <hr>
 <h3>Three rules behind the numbers</h3>

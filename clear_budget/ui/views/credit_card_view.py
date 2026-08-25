@@ -84,8 +84,8 @@ class CreditCardView(
         self.budgets_btn = build_budgets_button(_glyph_h)
         _sep, self.bank_btn = build_bank_button(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
-        # The four primary tabs live in this tray, so every view builds its
-        # own set; MainWindow wires them and keeps the current-tab mark in
+        # The primary view buttons live in this tray, so every view builds its
+        # own set; MainWindow wires them and keeps the current-view mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
         (
@@ -112,7 +112,7 @@ class CreditCardView(
         cards_group = QGroupBox("Credit Cards")
         cards_outer_layout = QVBoxLayout()
 
-        # Cards stack directly in the group. The whole tab already lives inside a
+        # Cards stack directly in the group. The whole view already lives inside a
         # ScrollableTab, so a second inner scroll only stole height and left an
         # empty gap above the Add Card button whenever few cards were present.
         self.cards_container = QWidget()
@@ -155,7 +155,7 @@ class CreditCardView(
         )
         self.projection_group = proj_group
         layout.addWidget(proj_group, 0)
-        # With few cards the content is shorter than the tab: let the slack fall
+        # With few cards the content is shorter than the view: let the slack fall
         # to the bottom so the card list and projection stay compact at the top,
         # rather than the card list stretching and pushing the projection off.
         layout.addStretch(1)
@@ -180,7 +180,7 @@ class CreditCardView(
 
         A card's Payment Received and its whole projection are driven by a
         `credit_payment` bill, which is created and edited on the Monthly
-        Budget tab. Nothing on THIS tab changes when that happens, so without
+        Budget view. Nothing on THIS view changes when that happens, so without
         this the panels kept whatever was true when the window was built: a
         card paid off every month still projected a balance climbing past its
         limit; Payment Received sat at zero beside the bill paying it.
@@ -199,7 +199,7 @@ class CreditCardView(
         )
 
     def set_nav_label_color(self, color: str) -> None:
-        """Recolour the nav month label to match the Solvency tab."""
+        """Recolour the nav month label to match the Solvency view."""
         apply_nav_label_color(self.month_label, color)
 
     def restyle(self) -> None:
@@ -207,7 +207,7 @@ class CreditCardView(
         self.load_cards()
 
     def nav_targets(self) -> list:
-        """Ordered keyboard-ring stops for this tab.
+        """Ordered keyboard-ring stops for this view.
 
         READING order, which with two stacked trays means the TOP tray first
         and the lower one after it, each left to right as drawn. A ring that
@@ -215,17 +215,17 @@ class CreditCardView(
         presents as a SKIPPED control: the user tabs past where a button
         visibly is and lands somewhere else entirely.
 
-        The tab being shown is not in the list. It is a stop that could do
+        The button for the view being shown is not in the list. It is a stop that could do
         nothing, dropped here rather than disabled, because a
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """
-        # Archive was moved out of the tab run to the right-hand group,
+        # Archive was moved out of the button run to the right-hand group,
         # so the ring has to walk it there. A ring that disagrees with the
         # drawing reads as a SKIPPED control, not as a wrong order.
         #
         # The card panels sit BEFORE the graph icon by decision (2026-08-24):
-        # the work of this tab is its cards, so the ring runs toggle, Edit,
+        # the work of this view is its cards, so the ring runs toggle, Edit,
         # Delete per panel, then Add Card, then continues into the graph icon
         # and the right-hand tray group. A task-flow override of the strict
         # reading order, chosen deliberately.
@@ -249,12 +249,12 @@ class CreditCardView(
         ]
 
     def nav_entry_stop(self):
-        """Where the ring is entered from neutral on this tab.
+        """Where the ring is entered from neutral on this view.
 
         The first card's Active toggle: arriving on Credit Cards, the first
         Tab lands on the first card rather than on the File menu, because the
-        cards are what the tab is opened for. With no cards yet, Add Card is
-        the one action the tab offers.
+        cards are what the view is opened for. With no cards yet, Add Card is
+        the one action the view offers.
         """
         stops = getattr(self, "card_nav_stops", [])
         return stops[0] if stops else self.add_btn

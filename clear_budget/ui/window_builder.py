@@ -13,7 +13,7 @@ database connection and the order in which one replaces another.
 
 The stage count lives here for the same reason it lived in the composition
 root before: this is now the only place that knows both halves of the build,
-the services counted here and the tabs counted by the window, so the window is
+the services counted here and the views counted by the window, so the window is
 handed the offset it starts at rather than counting for itself.
 """
 
@@ -47,7 +47,7 @@ from clear_budget.ui.view_models.solvency_view_model import SolvencyViewModel
 from clear_budget.version import __version__
 
 # Stages the sign-in screen's bar is divided into: the services, then one per
-# tab, then the window's chrome.
+# view, then the window's chrome.
 SERVICE_STAGES = 2
 TAB_STAGES = 6
 BUILD_STAGES = SERVICE_STAGES + TAB_STAGES + 1

@@ -2,12 +2,12 @@
 
 This module used to carry the tab strip itself: pill geometry, a hover rule, a
 selected rule and a long note about the keyboard cursor painted on exactly
-that pill. All of it went when the four tabs moved into the navigation tray as
+that pill. All of it went when the view buttons moved into the navigation tray as
 ordinary icon buttons and Qt's own bar was hidden. A stylesheet for a widget
 nobody can see is not styling, it is a description of a former design.
 
 What survives is the one rule that is still drawn: the pane, which is the card
-the tab CONTENT sits on. The three-state ring and the current-tab mark for the
+the view CONTENT sits on. The three-state ring and the current-view mark for the
 buttons that replaced the strip live in `_theme_controls` with the rest of the
 tray, under `QPushButton#NavTabButton`.
 
@@ -25,10 +25,10 @@ TAB_BAR_LEFT_INSET_PX = 4
 
 
 def tab_qss(t: dict[str, str]) -> str:
-    """Return the stylesheet for the card the tab content sits on."""
+    """Return the stylesheet for the card the view content sits on."""
     return f"""
-/* The content below the tabs is one card. The bar itself is hidden (the tabs
-   are buttons in the navigation tray), so it carries no rules of its own
+/* The content below the buttons is one card. The bar itself is hidden (the
+   views are reached by buttons in the navigation tray), so it carries no rules of its own
    beyond suppressing the chrome Qt would otherwise draw for it. */
 QTabWidget::pane {{
     border: 1px solid {t["border"]};

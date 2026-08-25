@@ -131,7 +131,7 @@ class GraphSeriesMixin:
         """One day-end balance series per active card for year_month.
 
         A month after the current one opens from the CHAINED projection the
-        Credit Cards tab shows (card_openings_at), never from the stored
+        Credit Cards view shows (card_openings_at), never from the stored
         balance: the stored figure is as-of the day it was entered, so a
         distant month opened from it drew a balance untouched by every
         intervening payment and every month's interest. The viewed month's

@@ -43,7 +43,7 @@ from clear_budget.ui.views._solvency_panel_safe_to_spend import (
 )
 
 # Stack order. The bank page opens first: it answers "does the account hold",
-# which is the question the tab exists for.
+# which is the question the view exists for.
 _PAGE_BANK = 0
 _PAGE_PROJECTION = 1
 
@@ -80,7 +80,7 @@ class SolvencyPanel(
 ):
     """Displays account solvency status with two critical sections."""
 
-    # Broadcasts the health colour applied to the month label so the other tabs'
+    # Broadcasts the health colour applied to the month label so the other views'
     # nav labels can match it (Solvency is the single source of truth).
     month_label_color_changed = Signal(str)
 
@@ -112,8 +112,8 @@ class SolvencyPanel(
         self.budgets_btn = build_budgets_button(_glyph_h)
         _sep, self.bank_btn = build_bank_button(_glyph_h)
         self.info_btn = build_info_button(_glyph_h)
-        # The four primary tabs live in this tray, so every view builds its
-        # own set; MainWindow wires them and keeps the current-tab mark in
+        # The primary view buttons live in this tray, so every view builds its
+        # own set; MainWindow wires them and keeps the current-view mark in
         # step across all four.
         self.tab_btns = build_tab_buttons(_glyph_h)
         self.nav_header, self.month_label, self.theme_btn = build_centered_nav_header(
@@ -176,7 +176,7 @@ class SolvencyPanel(
             revert.setFocus(Qt.FocusReason.TabFocusReason)
 
     def nav_targets(self) -> list:
-        """Ordered keyboard-ring stops for this tab.
+        """Ordered keyboard-ring stops for this view.
 
         READING order, which with two stacked trays means the TOP tray first
         and the lower one after it, each left to right as drawn. A ring that
@@ -184,25 +184,25 @@ class SolvencyPanel(
         presents as a SKIPPED control: the user tabs past where a button
         visibly is and lands somewhere else entirely.
 
-        The tab being shown is not in the list. It is a stop that could do
+        The button for the view being shown is not in the list. It is a stop that could do
         nothing, dropped here rather than disabled, because a
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """
-        # Archive was moved out of the tab run to the right-hand group,
+        # Archive was moved out of the button run to the right-hand group,
         # so the ring has to walk it there. A ring that disagrees with the
         # drawing reads as a SKIPPED control, not as a wrong order.
         #
-        # The visible pilot button sits just BEFORE the Credit Cards tab by
+        # The visible pilot button sits just BEFORE the Credit Cards button by
         # decision (2026-08-24): entering this tab, the first Tab lands on
         # the pilot (see nav_entry_stop) and the next press continues to
-        # Credit Cards, so the tab's own page turn and the next tab are the
+        # Credit Cards, so the view's own page turn and the next view are the
         # first two stops. A task-flow override of the strict reading order,
         # chosen deliberately; the hidden pilot is skipped by the ring's own
         # visibility filter.
-        # The WHOLE tab run, with the pilots inserted into it, never the run
+        # The WHOLE button run, with the pilots inserted into it, never the run
         # cut into pieces: hand slices (`[:2]`, `[2:3]`, `[-1:]`) covered four
-        # of the five positions and dropped the Graph tab out of this tab's
+        # of the five positions and dropped the Graph button out of this view's
         # ring completely, which presents as the ring jumping a button that is
         # plainly on screen.
         tab_run = stops_before(
@@ -225,11 +225,11 @@ class SolvencyPanel(
         ]
 
     def nav_entry_stop(self):
-        """Where the ring is entered from neutral on this tab.
+        """Where the ring is entered from neutral on this view.
 
         The visible pilot button: arriving on Solvency, the first Tab lands
         on the page turn (usually "Switch to safe to spend"), because the
-        other reading is what this tab is most often opened for.
+        other reading is what this view is most often opened for.
         """
         for button in self.pilot_btns.values():
             if not button.isHidden():

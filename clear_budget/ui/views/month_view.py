@@ -98,7 +98,7 @@ class MonthView(
         self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def set_nav_label_color(self, color: str) -> None:
-        """Recolour the nav month label to match the Solvency tab."""
+        """Recolour the nav month label to match the Solvency view."""
         apply_nav_label_color(self.month_label, color)
 
     def restyle(self) -> None:
@@ -141,7 +141,7 @@ class MonthView(
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")
 
     def nav_targets(self) -> list:
-        """Ordered keyboard-ring stops for this tab.
+        """Ordered keyboard-ring stops for this view.
 
         READING order, which with two stacked trays means the TOP tray first
         and the lower one after it, each left to right as drawn. A ring that
@@ -149,12 +149,12 @@ class MonthView(
         presents as a SKIPPED control: the user tabs past where a button
         visibly is and lands somewhere else entirely.
 
-        The tab being shown is not in the list. It is a stop that could do
+        The button for the view being shown is not in the list. It is a stop that could do
         nothing, dropped here rather than disabled, because a
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """
-        # Archive was moved out of the tab run to the right-hand group,
+        # Archive was moved out of the button run to the right-hand group,
         # so the ring has to walk it there. A ring that disagrees with the
         # drawing reads as a SKIPPED control, not as a wrong order.
         others = ring_tab_stops(self.tab_btns[:-1])

@@ -2,7 +2,7 @@
 
 Everything the tray is made of lives here or in nav_label.py (the month/year
 label): the app-icon graph button, the sun/moon theme toggle, the glyph
-sizing rules and the two builders every tab calls. The public names are
+sizing rules and the two builders every view calls. The public names are
 re-exported by format_helpers, where the sixty-odd call sites already import
 them.
 """
@@ -52,9 +52,9 @@ def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
 
     The app icon is NOT here any more. It opened the month graph, which acts
     on the application, while this row only says which month is being read.
-    It moved to the lower tray with the tabs it was sized against, then
-    stopped being an icon button at all: the graph is a TAB now, so what
-    stands there is the Graph tab itself. Nothing decorative replaced it in
+    It moved to the lower tray with the view buttons it was sized against, then
+    stopped being an icon button at all: the graph is a VIEW now, so what
+    stands there is the Graph button itself. Nothing decorative replaced it in
     this row: a second copy of the window icon said nothing the title bar had
     not; a dead icon in a row of live buttons reads as a broken one.
     """
@@ -82,15 +82,15 @@ def build_nav_month_widget(initial_text: str, prev_btn=None, next_btn=None):
 
 # Symmetric vertical padding (unscaled px) above and below the nav row, so the
 # prev/next buttons and the month/year label sit vertically centred in the tray
-# rather than jammed against the top edge of each tab.
+# rather than jammed against the top edge of each view.
 NAV_HEADER_V_PADDING = 14
 # Left/right inset so an optional trailing button (e.g. Archive Month) does not
-# sit flush against the tab edge. Applied symmetrically to keep centring intact.
+# sit flush against the view's edge. Applied symmetrically to keep centring intact.
 NAV_HEADER_EDGE_PADDING = 10
 
-# Inset the tray from the tab edges so its sides line up with the content margin.
+# Inset the tray from the view edges so its sides line up with the content margin.
 NAV_TRAY_EDGE_INSET = 11
-# Gap above and below the tray so it floats between the tabs and the content.
+# Gap above and below the tray so it floats between the buttons and the content.
 NAV_TRAY_FLOAT_MARGIN = 8
 
 
@@ -131,7 +131,7 @@ def build_centered_nav_header(
     pre_theme=(),
     trailing=(),
 ):
-    """Return (QWidget, QLabel, theme_btn): the tab's two nav trays.
+    """Return (QWidget, QLabel, theme_btn): the view's two nav trays.
 
     TWO trays, stacked, because they answer different questions and one row
     could not hold both without the month being pushed off the middle:
@@ -141,13 +141,13 @@ def build_centered_nav_header(
       own emptiness rather than by balancing anything.
     * TRAY 2 carries everything that acts on the application: the `leading`
       widgets (load, save, Preferences, Bank Account and a separator), then
-      the `tabs` (the four primary tabs, which live here rather than in a strip
+      the `tabs` (the primary view buttons, which live here rather than in a strip
       of their own), then at the FAR RIGHT the sun/moon toggle (`theme_btn`)
       followed by the `trailing` widgets (How It Works).
 
     The returned widget is meant to be placed OUTSIDE the scroll area (see
-    ScrollableTab), so it spans the full tab width and reads identically on
-    every tab, unaffected by that tab's scrollbar gutter or content overflow.
+    ScrollableTab), so it spans the full view width and reads identically on
+    every view, unaffected by that view's scrollbar gutter or content overflow.
     """
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
@@ -173,7 +173,7 @@ def build_centered_nav_header(
     # The signed-in account sits at the far left, with an empty MIRROR of it
     # at the far right. Without that mirror the cluster is no longer centred on
     # the window but on what is left of the row, so it drifts right by half
-    # the name's width and every tab drifts by a different amount as soon as
+    # the name's width and every view drifts by a different amount as soon as
     # the names differ in length. The mirror costs a widget and keeps the
     # arithmetic at zero.
     user_lbl, user_mirror = _build_nav_user_pair()
@@ -207,7 +207,7 @@ def build_centered_nav_header(
     action_row.addStretch(1)
     # `pre_theme` is the RIGHT-hand group: everything here sits after the
     # stretch, so it is pinned to the right edge beside the toggle rather than
-    # running on from the tabs.
+    # running on from the buttons.
     _place(pre_theme)
     theme_btn = _build_theme_toggle_button(nav_glyph_height(prev_btn))
     action_row.addWidget(theme_btn, 0, align_v)
@@ -248,19 +248,19 @@ def _build_nav_user_pair():
 
 
 def set_nav_user(header, text: str) -> None:
-    """Show `text` as the signed-in account on a tab's month tray.
+    """Show `text` as the signed-in account on a view's month tray.
 
     Set from MainWindow rather than passed into each view's constructor,
     because the views are built from a budget and know nothing about who is
     signed in; this keeps that knowledge in the one place that has it.
 
     Takes the HEADER, never the view that built it. `ScrollableTab` lifts the
-    header out of its view so it spans the full tab width outside the scroll
+    header out of its view so it spans the full view width outside the scroll
     area, which leaves the label no longer a descendant of that view: looking
     for it there finds nothing and silently sets no name at all.
 
     Does nothing when the header has no such slot, which is what makes it
-    safe to call across every tab in one loop.
+    safe to call across every view in one loop.
     """
     from PySide6.QtWidgets import QLabel, QWidget
 

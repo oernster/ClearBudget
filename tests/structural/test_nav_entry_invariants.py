@@ -43,7 +43,7 @@ def test_the_entry_views_declare_their_entry_stop() -> None:
     for path in _ENTRY_VIEWS:
         assert _ENTRY_METHOD in _methods(_tree(path)), (
             f"{path.name} defines no {_ENTRY_METHOD}(), so the first Tab on "
-            "that tab falls back to the File menu"
+            "that view falls back to the File menu"
         )
 
 

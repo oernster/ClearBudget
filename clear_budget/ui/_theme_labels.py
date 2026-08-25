@@ -26,7 +26,7 @@ _BANNER_FG_ON_CAUTION = palette.GREY_05
 _SMALL_LABEL_FONT_PX = 12
 _BODY_LABEL_FONT_PX = 16
 _VALUE_LABEL_FONT_PX = 20
-# Solvency tab type scale: banner, section lines, headings, breakdown detail.
+# Solvency view type scale: banner, section lines, headings, breakdown detail.
 _BANNER_FONT_PX = 22
 _SECTION_FONT_PX = 18
 _HEADING_FONT_PX = 17
@@ -196,7 +196,7 @@ QTextEdit#RecoveryCodeBox {{
     padding: 6px;
 }}
 
-/* Solvency tab lines, each with its own weight in the reading order. The
+/* Solvency view lines, each with its own weight in the reading order. The
    banner carries its traffic-light state as a Qt property, so the fill comes
    from the theme's state palette instead of an inline stylesheet and follows a
    live theme switch. Caution is a light fill in both themes, so it alone takes
@@ -259,7 +259,7 @@ QLabel#SolvencyCommitted {{
     color: {t["text_muted"]};
 }}
 
-/* A shortfall no amount of restraint can close is the one line on the tab
+/* A shortfall no amount of restraint can close is the one line on the view
    that reports a fact rather than a caution, so it takes the traffic light's
    own red rather than the muted body colour it used to share with the reach
    sentence above it. */
