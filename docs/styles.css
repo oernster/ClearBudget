@@ -122,6 +122,7 @@ h1 {
 
 .section { margin-top: 42px; }
 
+.section h1,
 .section h2 {
     font-size: 24px;
     margin: 0 0 10px;
