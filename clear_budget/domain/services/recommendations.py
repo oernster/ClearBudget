@@ -157,6 +157,24 @@ def retimed_months(
     )
 
 
+def immovable_months(months: tuple[PlannedMonth, ...]) -> tuple[PlannedMonth, ...]:
+    """The months with every item pinned to its day.
+
+    Fed to `recommend`, this yields the plan-free reading: no moves are
+    proposed, the asks state what the months as given still need and the
+    outlook shows where they land. The try-it-on panels are its caller:
+    comparing two pinned runs isolates what the USER'S ticked changes do,
+    where the normal run would hide them under the engine's own plan.
+    """
+    return tuple(
+        replace(
+            month,
+            items=tuple(replace(item, movable=False) for item in month.items),
+        )
+        for month in months
+    )
+
+
 def _low(opening_pence: int, month: PlannedMonth) -> tuple[int, int]:
     """The month's lowest balance and the day it lands on.
 

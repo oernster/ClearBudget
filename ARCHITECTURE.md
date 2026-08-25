@@ -1285,16 +1285,21 @@ renderings of the same figures to hold in step. Every month any page shows
     makes the change in the real world first, then in the bill or income
     dialog and the page recomputes. The app follows reality; it does not
     lead it
-  - Every suggestion row carries a try-it-on CHECKBOX: ticking simulates
-    that retiming across the horizon (`TrialDay` through
-    `retimed_months`, a pure month transform applied before the engine
-    runs) and rebuilds the whole page from the trial result; unticking puts
-    the picture back. Nothing is ever written: the trial registry lives on
-    the view, keyed by item, so it survives data-driven refreshes and the
-    banner plus each caption say plainly that nothing is applied. The
-    widget rows are built by `views/_recommendation_sections.py` (split for
-    the LOC limit); the checkboxes join the keyboard ring through
-    `nav_targets`, which the navigator re-reads on every step
+  - Every suggestion row carries a try-it-on CHECKBOX. A tick never
+    rewrites the page (a body reshuffling under a click is jarring): it
+    opens an inset tray panel under its own row (`QWidget#TrialPanel`,
+    inset tokens) stating that change's measured effect, so several
+    changes multi-select naturally as several open panels. The panels
+    compare PINNED runs (`TrialDay` through `retimed_months`, then
+    `immovable_months`, both pure transforms ahead of the engine): the
+    normal outlook assumes the engine's own plan, which would hide a tick
+    that does what the plan proposed anyway. Each panel shows its change's
+    marginal effect beside the other ticks; two mutually redundant ticks
+    fall back to the solo story plus "the others cover this". Nothing is
+    ever written; every panel says so. Tick state lives on the view, keyed
+    by item, surviving data-driven rebuilds; the widget rows are built by
+    `views/_recommendation_sections.py` (split for the LOC limit) and the
+    checkboxes join the keyboard ring through `nav_targets`
   - Below the outlook sits the optional headroom section: the engine's
     extras pass measures every further retiming that would lift a month's
     low once the mandatory work is applied, the wording layer excludes

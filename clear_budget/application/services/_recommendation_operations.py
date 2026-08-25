@@ -27,6 +27,7 @@ from clear_budget.domain.services.recommendations import (
     PlannedMonth,
     Recommendations,
     TrialDay,
+    immovable_months,
     recommend,
     retimed_months,
 )
@@ -104,6 +105,7 @@ class RecommendationOperationsMixin:
         *,
         today: date | None = None,
         trial: tuple[TrialDay, ...] = (),
+        pinned: bool = False,
     ) -> tuple[Recommendations, tuple[YearMonth, ...]]:
         """The engine's answer plus the months it covers, in order.
 
@@ -116,6 +118,12 @@ class RecommendationOperationsMixin:
         trial day in every horizon month before the engine runs, nothing
         stored. The result then reads as "were you to make these changes":
         remaining moves, asks and outlook all reflect them.
+
+        `pinned` additionally pins every item to its (possibly tried) day,
+        so the engine proposes nothing of its own. The try-it-on panels
+        compare two pinned runs: the normal run's outlook assumes the
+        engine's plan applied, which would hide a tick that merely does
+        what the plan proposed anyway.
         """
         today = today or date.today()  # noqa: DTZ011 (naive local dates)
         current = YearMonth(today.year, today.month)
@@ -131,6 +139,8 @@ class RecommendationOperationsMixin:
             ),
             trial,
         )
+        if pinned:
+            months = immovable_months(months)
         enabled, buffer = self.get_recommendation_buffer()
         result = recommend(
             months=months,

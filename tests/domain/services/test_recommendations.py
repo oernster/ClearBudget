@@ -13,6 +13,7 @@ from clear_budget.domain.services.recommendations import (
     PlannedItem,
     PlannedMonth,
     TrialDay,
+    immovable_months,
     recommend,
     retimed_months,
 )
@@ -215,6 +216,16 @@ class TestRetimedMonths:
         )
         moved = retimed_months((short,), (TrialDay(KIND_BILL, "Rent", 31),))
         assert moved[0].items[0].day == 28
+
+    def test_pinned_months_yield_the_plan_free_reading(self) -> None:
+        plan = _month(_income("Pay", 20, 100000), _bill("Rent", 5, 80000, True))
+        result = _recommend(list(immovable_months((plan,))))
+        # Rent could move; pinned, the engine may not say so: the shortfall
+        # becomes the ask and no move or extra is proposed.
+        assert result.moves == ()
+        assert result.extras == ()
+        (ask,) = result.asks
+        assert (ask.amount_pence, ask.by_day) == (80000, 5)
 
     def test_a_trial_feeds_straight_into_the_engine(self) -> None:
         plan = _month(_income("Pay", 20, 100000), _bill("Rent", 5, 80000, True))

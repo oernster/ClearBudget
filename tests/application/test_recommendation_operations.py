@@ -182,6 +182,24 @@ class TestGetRecommendations:
         again, _ = budget_service.get_recommendations(today=_TODAY)
         assert again.moves == plain.moves
 
+    def test_pinned_isolates_the_ticked_change(self, budget_service):
+        _seed_balance(budget_service.bill_repo.conn, pence=0, iso="2026-07-26")
+        budget_service.set_sustainable_window_months(months=1)
+        budget_service.add_bill(bill=_bill("Rent", 50000, 5))
+        budget_service.add_income(income=_income("Pay", 60000, 20))
+
+        base, _ = budget_service.get_recommendations(today=_TODAY, pinned=True)
+        tried, _ = budget_service.get_recommendations(
+            today=_TODAY, trial=(TrialDay(KIND_BILL, "Rent", 21),), pinned=True
+        )
+        # The unpinned outlook assumes the engine's own plan, so a tick that
+        # does what the plan proposed shows no delta there; pinned runs show
+        # exactly the user's change.
+        assert base.moves == () and tried.moves == ()
+        assert sum(a.amount_pence for a in tried.asks) < sum(
+            a.amount_pence for a in base.asks
+        )
+
     def test_extras_reach_the_caller(self, budget_service):
         _seed_balance(budget_service.bill_repo.conn, pence=50000, iso="2026-07-26")
         budget_service.set_sustainable_window_months(months=1)

@@ -7,13 +7,18 @@ from clear_budget.domain.services.recommendations import (
     TrialDay,
 )
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.domain.services.recommendations import (
+    IncomeAsk,
+    MonthOutlook,
+    Recommendations,
+)
 from clear_budget.ui.utils.recommendation_text import (
     HEADROOM_ITEM_CAP,
     headroom_rows,
     join_clauses,
     move_rows,
+    panel_html,
     sooner_note_html,
-    tried_caption,
 )
 
 _NAMES = {9: "September", 10: "October", 11: "November"}
@@ -122,9 +127,38 @@ class TestSoonerNote:
         assert sooner_note_html([], [], YearMonth(2026, 9), _month_name) is None
 
 
-class TestTriedCaption:
-    def test_names_the_trial_and_the_entered_day(self) -> None:
-        caption = tried_caption(KIND_BILL, "Rent", 14, 21)
-        assert "Trying the bill <b>Rent</b> on day 21" in caption
-        assert "entered as day 14" in caption
-        assert "Nothing is applied" in caption
+def _result(lows, asks_pence=()):
+    outlook = tuple(
+        MonthOutlook(year=2026, month=9 + i, low_pence=low, low_day=14, close_pence=low)
+        for i, low in enumerate(lows)
+    )
+    asks = tuple(
+        IncomeAsk(year=2026, month=11, amount_pence=p, by_day=28) for p in asks_pence
+    )
+    return Recommendations(moves=(), asks=asks, outlook=outlook)
+
+
+class TestPanelHtml:
+    def test_names_each_lifted_month_and_the_falling_ask(self) -> None:
+        html = panel_html(
+            _result([110000, 49792], asks_pence=[13895]),
+            _result([40279, 49792], asks_pence=[28895]),
+            _month_name,
+        )
+        assert "September 2026's low goes from £402.79 to £1,100.00" in html
+        assert "October" not in html  # unchanged months stay unsaid
+        assert "falls from £288.95 to £138.95" in html
+        assert "Preview only; nothing is applied." in html
+
+    def test_an_ask_cleared_entirely_reads_as_nothing(self) -> None:
+        html = panel_html(
+            _result([10000]),
+            _result([10000], asks_pence=[5000]),
+            _month_name,
+        )
+        assert "falls from £50.00 to nothing" in html
+
+    def test_a_superseded_change_says_so(self) -> None:
+        html = panel_html(_result([10000]), _result([10000]), _month_name)
+        assert "adds nothing further" in html
+        assert "Preview only; nothing is applied." in html

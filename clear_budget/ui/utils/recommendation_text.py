@@ -143,13 +143,58 @@ def outlook_html(month, month_name) -> str:
     )
 
 
-def tried_caption(kind: str, name: str, from_day: int, to_day: int) -> str:
-    """The checked row's sentence: what is being tried, nothing applied."""
-    what = "bill" if kind == KIND_BILL else "income"
-    return (
-        f"<p>Trying the {what} <b>{name}</b> on day {to_day}"
-        f" (entered as day {from_day}). Nothing is applied.</p>"
-    )
+def _effect_clauses(before_result, after_result, lead, month_name) -> list[str]:
+    """The measured differences between two runs, as sentences; [] if none."""
+    lifts = []
+    for before, after in zip(before_result.outlook, after_result.outlook):
+        if after.low_pence != before.low_pence:
+            lifts.append(
+                f"{month_name(after.year, after.month)}'s low goes from"
+                f" {money_from_pence(before.low_pence)} to"
+                f" {money_from_pence(after.low_pence)}"
+            )
+    parts = []
+    if lifts:
+        parts.append(f"{lead}, {join_clauses(lifts)}.")
+    ask_before = sum(a.amount_pence for a in before_result.asks)
+    ask_after = sum(a.amount_pence for a in after_result.asks)
+    if ask_after != ask_before:
+        falls_to = "nothing" if ask_after == 0 else money_from_pence(ask_after)
+        verb = "falls" if ask_after < ask_before else "rises"
+        parts.append(
+            f"The extra income needed {verb} from"
+            f" {money_from_pence(ask_before)} to {falls_to}."
+        )
+    return parts
+
+
+def panel_html(
+    with_result, without_result, month_name, *, solo=None, baseline=None
+) -> str:
+    """A ticked row's tray panel: what this change contributes, measured.
+
+    `with_result` is the pinned answer with every ticked change tried;
+    `without_result` is the same set minus this row's change, so the panel
+    states this change's MARGINAL effect however many boxes are ticked and
+    in whatever order they were ticked. Two ticked changes can each make
+    the other redundant (either alone parks the binding low at the month's
+    end), so when the marginal is nil the panel falls back to the change's
+    SOLO story against the as-entered baseline, then says the others cover
+    it. The page copy above never moves; this panel is the only thing a
+    tick paints.
+    """
+    parts = _effect_clauses(without_result, with_result, "With this change", month_name)
+    if not parts and solo is not None and baseline is not None:
+        parts = _effect_clauses(baseline, solo, "On its own", month_name)
+        if parts:
+            parts.append(
+                "The other ticked changes already cover this, so together"
+                " it adds nothing further."
+            )
+    if not parts:
+        parts.append("With everything else ticked, this change adds nothing further.")
+    parts.append("Preview only; nothing is applied.")
+    return "<p>" + " ".join(parts) + "</p>"
 
 
 def sooner_note_html(moves, extras, horizon_start, month_name) -> str | None:

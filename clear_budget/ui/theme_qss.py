@@ -280,6 +280,15 @@ QLabel#SolvencyWarn {{
 {widget_extras_qss(t, s)}
 {combo_qss(t)}
 
+/* The Recommendations page's try-it-on panel: an inset tray under a ticked
+   suggestion carrying that change's measured effect. Inset colours so it
+   reads as an annotation on the row above, never as new page copy. */
+QWidget#TrialPanel {{
+    background-color: {t["inset_bg"]};
+    border: 1px solid {t["border"]};
+    border-radius: 5px;
+}}
+
 QProgressBar {{
     background-color: {t["inset_bg"]};
     border: 1px solid {t["border"]};
