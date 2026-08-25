@@ -210,10 +210,16 @@ class MainWindowViewsMixin:
                 self.month_view_model.month_summary
             )
 
+        # POSITIONAL, matching the addTab order above and VIEW_SPECS. It feeds
+        # both the view-button wiring and the keyboard ring, which are indexed
+        # by page position, so a view missing here is a page whose buttons do
+        # nothing and whose ring belongs to another view. Reserves was missing
+        # exactly that way.
         _views = [
             month_view,
             solvency_panel,
             credit_card_view,
+            reserves_view,
             graph_view,
             recommendations_view,
             archive_view,
