@@ -165,3 +165,30 @@ def set_overdraft_apr_basis_points(conn, basis_points: int) -> None:  # pragma: 
         ("overdraft_apr_bp", str(basis_points)),
     )
     conn.commit()
+
+
+def get_variable_spend_monthly_pence(conn) -> int | None:  # pragma: no cover
+    """Expected everyday spending a month; None = never set.
+
+    None and zero are different answers and are kept apart. Zero is a claim
+    that nothing leaves the account outside the entered bills; None is the
+    absence of a claim, which the page reports in words rather than treating
+    as a figure.
+    """
+    if conn is None:
+        return None
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT value FROM settings WHERE key = ?", ("variable_spend_monthly",)
+    )
+    row = cursor.fetchone()
+    return int(row["value"]) if row else None
+
+
+def set_variable_spend_monthly_pence(conn, pence: int) -> None:  # pragma: no cover
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+        ("variable_spend_monthly", str(pence)),
+    )
+    conn.commit()

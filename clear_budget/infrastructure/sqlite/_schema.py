@@ -137,6 +137,30 @@ def create_schema(conn) -> None:
         """)
 
     # Settings table (for app configuration)
+    # Commitments: money owed later that this month's table cannot see. A
+    # date is three integers here, matching credit_limit_changes, because the
+    # rest of the schema stores a calendar day that way. There is no budget
+    # column: a budget IS a database file, so a foreign key to one would name
+    # the file it already lives in.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS commitments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            amount_pence INTEGER NOT NULL,
+            due_year INTEGER NOT NULL,
+            due_month INTEGER NOT NULL,
+            due_day INTEGER NOT NULL,
+            recurrence TEXT NOT NULL,
+            already_held_pence INTEGER NOT NULL DEFAULT 0,
+            category TEXT,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_year INTEGER NOT NULL,
+            created_month INTEGER NOT NULL,
+            final_year INTEGER,
+            final_month INTEGER
+        )
+    """)
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,

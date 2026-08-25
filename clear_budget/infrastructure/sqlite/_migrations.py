@@ -200,6 +200,39 @@ def _m10_day_fixed_flags(cursor: sqlite3.Cursor) -> None:
     )
 
 
+def _m11_commitments(cursor: sqlite3.Cursor) -> None:
+    """Money owed later that a month's own table cannot see.
+
+    An annual premium is invisible to a two-month projection until the month
+    it lands in, so the figure above it counts money that is already spoken
+    for. A commitment is held back across the months BEFORE its due day
+    instead, which makes the distant bill honest without lengthening the
+    projection.
+
+    A database that predates this gets the empty table and nothing else: with
+    no rows, the floor is the emergency buffer on every day, so every figure
+    an existing budget already showed is unchanged.
+    """
+    cursor.execute(
+        "CREATE TABLE IF NOT EXISTS commitments ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " name TEXT NOT NULL,"
+        " amount_pence INTEGER NOT NULL,"
+        " due_year INTEGER NOT NULL,"
+        " due_month INTEGER NOT NULL,"
+        " due_day INTEGER NOT NULL,"
+        " recurrence TEXT NOT NULL,"
+        " already_held_pence INTEGER NOT NULL DEFAULT 0,"
+        " category TEXT,"
+        " active INTEGER NOT NULL DEFAULT 1,"
+        " created_year INTEGER NOT NULL,"
+        " created_month INTEGER NOT NULL,"
+        " final_year INTEGER,"
+        " final_month INTEGER"
+        ")"
+    )
+
+
 _MIGRATIONS: tuple[Migration, ...] = (
     _m01_credit_card_detail_columns,
     _m02_bill_target_card,
@@ -211,6 +244,7 @@ _MIGRATIONS: tuple[Migration, ...] = (
     _m08_bill_amount_changes,
     _m09_income_start_and_end_month,
     _m10_day_fixed_flags,
+    _m11_commitments,
 )
 
 # Derived from the list so the two cannot drift apart.
