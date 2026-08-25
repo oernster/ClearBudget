@@ -46,6 +46,10 @@ CREDIT_CARDS_ICON = "creditcards.png"
 # before it joined the run, so the move changed where it sits and what it
 # does, never what it looks like.
 GRAPH_ICON = "ClearBudget_256.png"
+# A strongbox with a coin: money held back for a bill that has not arrived
+# yet. Deliberately not a piggy bank, which reads as savings; this is money
+# spoken for rather than money saved.
+RESERVES_ICON = "reserves.png"
 # What would make the months ahead survivable; sits right of the graph.
 RECOMMENDATIONS_ICON = "recommendations.png"
 # The last of the originals to stop being an emoji. A filing cabinet glyph was
@@ -54,11 +58,13 @@ ARCHIVE_ICON = "archive.png"
 
 # View names, so a view that needs to name one does not spell it again.
 CREDIT_CARDS_VIEW = "Credit Cards"
+RESERVES_VIEW = "Reserves"
 # The strip, in order, as (icon spec, the name that becomes the tooltip).
 VIEW_SPECS = (
     (MONTHLY_BUDGET_ICON, "Monthly Budget"),
     (SOLVENCY_ICON, "Solvency"),
     (CREDIT_CARDS_ICON, CREDIT_CARDS_VIEW),
+    (RESERVES_ICON, RESERVES_VIEW),
     (GRAPH_ICON, "Graph"),
     (RECOMMENDATIONS_ICON, "Recommendations"),
     (ARCHIVE_ICON, "Archive"),

@@ -89,6 +89,7 @@ BUNDLED_ICONS = [
     "information.png",
     "archive.png",
     "recommendations.png",
+    "reserves.png",
     "exportpackage.png",
     "lightmode.png",
     "darkmode.png",

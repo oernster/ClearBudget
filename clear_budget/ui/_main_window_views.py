@@ -24,6 +24,7 @@ from clear_budget.ui.views.credit_card_view import CreditCardView
 from clear_budget.ui.views.graph_view import GraphView
 from clear_budget.ui.views.month_view import MonthView
 from clear_budget.ui.views.recommendations_view import RecommendationsView
+from clear_budget.ui.views.reserves_view import ReservesView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
 from clear_budget.ui.widgets.scrollable_view import ScrollableView
 
@@ -73,11 +74,21 @@ class MainWindowViewsMixin:
         )
         self.views.addTab(self._scrollable(credit_card_view), "Credit Cards")
 
-        # Between Credit Cards and Archive, which is where the graph icon has
+        # Right of Credit Cards, matching VIEW_SPECS: what is held back for a
+        # bill that has not asked yet, which is the money the pages either
+        # side of it would otherwise call spendable.
+        self._report_view(3, "Reserves")
+        reserves_view = ReservesView(
+            self.month_view_model.budget_service,
+            self.month_view_model.current_month,
+        )
+        self.views.addTab(self._scrollable(reserves_view), "Reserves")
+
+        # Between Reserves and Archive, which is where the graph icon has
         # always been drawn. It was an icon button opening a modal dialog; it
         # is a page now, so the tray looks the same and behaves like the rest
         # of it.
-        self._report_view(3, "Graph")
+        self._report_view(4, "Graph")
         graph_view = GraphView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
@@ -86,14 +97,14 @@ class MainWindowViewsMixin:
 
         # Right of Graph, left of Archive, matching VIEW_SPECS. The advice is
         # anchored to today whatever month the tray shows.
-        self._report_view(4, "Recommendations")
+        self._report_view(5, "Recommendations")
         recommendations_view = RecommendationsView(
             self.month_view_model.budget_service,
             self.month_view_model.current_month,
         )
         self.views.addTab(self._scrollable(recommendations_view), "Recommendations")
 
-        self._report_view(5, "Archive")
+        self._report_view(6, "Archive")
         archive_view = ArchiveView(self.month_view_model.budget_service)
         self.views.addTab(self._scrollable(archive_view), "Archive")
 
@@ -103,6 +114,7 @@ class MainWindowViewsMixin:
             month_view,
             solvency_panel,
             credit_card_view,
+            reserves_view,
             graph_view,
             recommendations_view,
             archive_view,
@@ -123,6 +135,7 @@ class MainWindowViewsMixin:
 
         self.month_view_model.month_changed.connect(self.solvency_view_model.set_month)
         self.month_view_model.month_changed.connect(credit_card_view.set_month)
+        self.month_view_model.month_changed.connect(reserves_view.set_month)
         self.month_view_model.month_changed.connect(graph_view.set_month)
         self.month_view_model.month_changed.connect(recommendations_view.set_month)
         self.month_view_model.month_summary_updated.connect(
@@ -139,6 +152,11 @@ class MainWindowViewsMixin:
         # needs the same signal for the same reason.
         self.month_view_model.month_summary_updated.connect(
             graph_view.on_month_summary_updated
+        )
+        # A reserve is measured against the same months, so an edit that
+        # changes a summary changes what is being held back.
+        self.month_view_model.month_summary_updated.connect(
+            reserves_view.on_month_summary_updated
         )
         # The advice is computed from the months as entered, so any edit that
         # changes a summary re-answers the question this page asks.

@@ -31,6 +31,9 @@ from clear_budget.auth.models import User
 from clear_budget.auth.user_store import UserStore
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
+from clear_budget.infrastructure.sqlite.commitment_repository import (
+    SQLiteCommitmentRepository,
+)
 from clear_budget.infrastructure.sqlite.database import Database
 from clear_budget.infrastructure.sqlite.income_source_repository import (
     SQLiteIncomeSourceRepository,
@@ -49,7 +52,7 @@ from clear_budget.version import __version__
 # Stages the sign-in screen's bar is divided into: the services, then one per
 # view, then the window's chrome.
 SERVICE_STAGES = 2
-VIEW_STAGES = 6
+VIEW_STAGES = 7
 BUILD_STAGES = SERVICE_STAGES + VIEW_STAGES + 1
 
 
@@ -70,12 +73,14 @@ def build_main_window(
     bill_repo = SQLiteBillRepository(database.conn)
     income_repo = SQLiteIncomeSourceRepository(database.conn)
     payment_method_repo = SQLitePaymentMethodRepository(database.conn)
+    commitment_repo = SQLiteCommitmentRepository(database.conn)
     month_generator = MonthGenerator(bill_repo, income_repo)
     budget_service = BudgetService(
         bill_repo=bill_repo,
         income_repo=income_repo,
         payment_method_repo=payment_method_repo,
         month_generator=month_generator,
+        commitment_repo=commitment_repo,
     )
     budget_service.update_card_balances_for_elapsed_dates()
     budget_service.apply_elapsed_limit_changes()

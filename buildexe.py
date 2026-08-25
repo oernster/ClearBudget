@@ -76,6 +76,7 @@ def build_exe() -> int:
         "--add-data=information.png:.",
         "--add-data=archive.png:.",
         "--add-data=recommendations.png:.",
+        "--add-data=reserves.png:.",
         "--add-data=exportpackage.png:.",
         "--add-data=lightmode.png:.",
         "--add-data=darkmode.png:.",

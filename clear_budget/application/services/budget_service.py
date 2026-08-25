@@ -32,11 +32,15 @@ from clear_budget.application.services._projection_series import (
 from clear_budget.application.services._recommendation_operations import (
     RecommendationOperationsMixin,
 )
+from clear_budget.application.services._reserve_operations import (
+    ReserveOperationsMixin,
+)
 from clear_budget.application.services._safe_to_spend_operations import (
     SafeToSpendOperationsMixin,
 )
 from clear_budget.application.services.month_generator import MonthGenerator
 from clear_budget.domain.interfaces.bill_repository import BillRepository
+from clear_budget.domain.interfaces.commitment_repository import CommitmentRepository
 from clear_budget.domain.interfaces.income_source_repository import (
     IncomeSourceRepository,
 )
@@ -66,11 +70,16 @@ class BudgetService(
     ProjectionSeriesMixin,
     SafeToSpendOperationsMixin,
     RecommendationOperationsMixin,
+    ReserveOperationsMixin,
 ):
     bill_repo: BillRepository
     income_repo: IncomeSourceRepository
     payment_method_repo: PaymentMethodRepository
     month_generator: MonthGenerator
+    # Optional so every existing construction site keeps working: a budget
+    # with no reserves store simply reserves nothing, which is exactly what a
+    # database written before the feature contains.
+    commitment_repo: CommitmentRepository | None = None
 
     def calculate_solvency_from_summary(
         self,

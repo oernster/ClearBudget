@@ -79,6 +79,8 @@ _VIEW_ICON_NAMES = frozenset(
         "information.png",
         # The Recommendations view: what would make the months ahead survivable.
         "recommendations.png",
+        # The Reserves view: what is being held back for a bill not yet due.
+        "reserves.png",
         # The Archive button, which was the last emoji on the strip.
         "archive.png",
         # The theme toggle's two faces, showing the mode a press switches to.
