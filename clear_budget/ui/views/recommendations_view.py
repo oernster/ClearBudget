@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
 
 from clear_budget.application.formatting import money_from_pence
 from clear_budget.application.services.budget_service import BudgetService
-from clear_budget.domain.services.recommendations import KIND_BILL
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import label_roles, ui_scale
@@ -38,6 +37,7 @@ from clear_budget.ui.utils.format_helpers import (
     build_centered_nav_header,
     nav_glyph_height,
 )
+from clear_budget.ui.utils.recommendation_text import moves_html, sooner_note_html
 from clear_budget.ui.utils.tab_icons import build_tab_buttons, ring_tab_stops
 from clear_budget.ui.widgets._tray_buttons import (
     build_bank_button,
@@ -173,10 +173,10 @@ class RecommendationsView(QWidget):
             " Nothing here is changed for you: make an edit in its own"
             " dialog and this page recomputes."
         )
-        self.body_label.setText(self._body_html(result))
+        self.body_label.setText(self._body_html(result, horizon))
 
     # ---- rendering ----------------------------------------------------------
-    def _body_html(self, result) -> str:
+    def _body_html(self, result, horizon) -> str:
         if result.healthy:
             return (
                 "<h3>Nothing to recommend</h3>"
@@ -185,15 +185,10 @@ class RecommendationsView(QWidget):
         parts = []
         if result.moves:
             parts.append("<h3>Retime what can move</h3>")
-            for move in result.moves:
-                what = "bill" if move.kind == KIND_BILL else "income"
-                parts.append(
-                    f"<p>Move the {what} <b>{move.name}</b> from day"
-                    f" {move.from_day} to day {move.to_day} in"
-                    f" {_month_name(move.year, move.month)}: lifts that"
-                    f" month's low from {money_from_pence(move.low_before_pence)}"
-                    f" to {money_from_pence(move.low_after_pence)}.</p>"
-                )
+            parts.extend(moves_html(result.moves, _month_name))
+            note = sooner_note_html(result.moves, horizon[0], _month_name)
+            if note is not None:
+                parts.append(note)
         if result.asks:
             parts.append("<h3>Extra income needed</h3>")
             for ask in result.asks:

@@ -1257,7 +1257,12 @@ renderings of the same figures to hold in step. Every month any page shows
 - `RecommendationsView` (`views/recommendations_view.py`) - the
   Recommendations tab: what would make the months ahead survivable, rendered
   as three plain sections (retime what can move, extra income needed, where
-  that leaves each month). The page is anchored to TODAY rather than to the
+  that leaves each month). The moves wording lives in the Qt-free
+  `ui/utils/recommendation_text.py`: the engine proposes per month while the
+  user acts per bill, so the same retiming needed in several months is said
+  once ("from October onward") and a closing note says a day changed for
+  good may change sooner than the first month that needs it, tested in
+  `tests/ui_logic/test_recommendation_text.py`. The page is anchored to TODAY rather than to the
   month being viewed; the tray's arrows still step the shared month label
   like every other tab and the anchor line above the body says which months
   the advice covers. It recomputes on every `month_summary_updated`, so an
