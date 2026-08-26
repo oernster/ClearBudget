@@ -33,6 +33,16 @@ from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 # make the field harder to type into.
 _DROPDOWN_FROM = 2
 
+# Breathing room above and below each of the two ticks. They are the only
+# adjacent pair of checkboxes in the application, so they are the only place
+# this shows: the indicator is a fixed 15px in the global stylesheet while the
+# layout's spacing and every font here scale with the display, so the shorter
+# the screen the tighter the pair reads against boxes that never shrink. On a
+# 13in Mac (a 0.65 factor) the gap came to 6px between two 19px rows and the
+# two ticks ran together as one block. Padding rather than a spacer between
+# them, because it also holds each label centred against its own box.
+_CHECK_ROW_VPAD_PT = 5
+
 
 class LoginDialog(HandoverProgressMixin, QDialog):
     """Username/password login screen.
@@ -120,8 +130,16 @@ class LoginDialog(HandoverProgressMixin, QDialog):
         # since a password has nowhere to be filed without a name.
         self.remember_user_check = QCheckBox("Remember my username")
         self.remember_password_check = QCheckBox("Remember my password")
+        # Carries a SELECTOR rather than the bare declarations the other
+        # controls here use: a bare rule cascades to the whole subtree and a
+        # tooltip counts as one, which is how hover text once came to be
+        # rendered at a button's own font size.
+        vpad = f"{ui_scale.px(_CHECK_ROW_VPAD_PT)}px 0px"
+        check_style = ui_scale.style(
+            "QCheckBox { font-size: 13px; padding: " + vpad + "; }"
+        )
         for check in (self.remember_user_check, self.remember_password_check):
-            check.setStyleSheet(ui_scale.style("font-size: 13px;"))
+            check.setStyleSheet(check_style)
             check.setVisible(self.remembered_login is not None)
             layout.addWidget(check)
         self.remember_user_check.toggled.connect(self._on_remember_user_toggled)
