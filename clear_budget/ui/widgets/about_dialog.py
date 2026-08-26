@@ -177,7 +177,7 @@ _LGPL3_NOTICE_HEAD = (
     "Version 3, 29 June 2007\n"
     "\n"
     "ClearBudget - Personal Budget Planner\n"
-    "Copyright (C) 2025 Oliver Ernster\n"
+    "Copyright (C) 2025 to 2026 Oliver Ernster\n"
     "\n"
     # The two paragraphs below are the FSF's own notice, reproduced as the
     # licence requires. Their punctuation is part of the quotation, so the

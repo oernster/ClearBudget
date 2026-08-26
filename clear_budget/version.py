@@ -19,7 +19,7 @@ APP_NAME: str = "ClearBudget"
 # spelling only so an install that took it carries its settings forward.
 LEGACY_APP_NAME: str = "Clear Budget"
 APP_AUTHOR: str = "Oliver Ernster"
-APP_COPYRIGHT: str = "© 2026 Oliver Ernster"
+APP_COPYRIGHT: str = "© 2025 to 2026 Oliver Ernster"
 
 # Windows taskbar grouping / pinned icon identity.
 #
