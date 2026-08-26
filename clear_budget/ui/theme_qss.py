@@ -189,9 +189,12 @@ QTableWidget {{
     border: 2px solid transparent;
 }}
 
-QTableWidget:enabled:focus {{
-    border: 2px solid {t["ring"]};
-}}
+/* A table draws NO ring, in any state. Its current row already says where
+   the keyboard is: focusing one paints that row with no stylesheet rule at
+   all. A rectangle round the whole pane adds nothing on top of that; it
+   is also the wrong shape of feedback for a region the pointer sits inside. The
+   transparent border above stays, so the geometry does not shift and the
+   toolkit's own sunken frame stays suppressed. */
 
 QHeaderView::section {{
     background-color: {t["window_bg"]};

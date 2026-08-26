@@ -18,6 +18,7 @@ the behaviour on both policies was measured with an offscreen probe.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -105,3 +106,113 @@ class TestEveryTableTakesFocusFromTheRingOnly:
             f"A table's focus policy belongs in {_HELPER_MODULE.name}, where "
             "the reasoning lives, not at the table:\n" + "\n".join(offenders)
         )
+
+
+_QSS_SOURCES = (_UI,)
+
+# Every item-view class. None of them may be given a border on hover or on
+# focus: the current row is the indicator; a rectangle round the whole
+# pane says something about a region the pointer sits inside rather than
+# about anything the user is acting on.
+_ITEM_VIEW_SELECTORS = frozenset(
+    {
+        "QAbstractItemView",
+        "QListView",
+        "QListWidget",
+        "QTableView",
+        "QTableWidget",
+        "QTreeView",
+        "QTreeWidget",
+    }
+)
+
+_RING_PROPERTIES = ("border", "outline")
+_INVISIBLE = ("none", "0", "0px", "transparent", "initial", "unset")
+
+_BLOCK = re.compile(r"([^{}]+)\{([^{}]*)\}", re.DOTALL)
+_DECLARATION = re.compile(r"([a-z-]+)\s*:\s*([^;]+)")
+
+
+def _plain_qss(text: str) -> str:
+    """Turn an f-string stylesheet into plain QSS without moving an offset.
+
+    Every substitution keeps its original length, so a match offset still
+    maps to the right source line. A stylesheet string either doubles its
+    braces throughout or uses none, so one test settles which.
+    """
+    if "{{" not in text:
+        return text
+    marked = text.replace("{{", "{\x00").replace("}}", "}\x00")
+    marked = re.sub(r"\{(?![\x00])[^{}]*\}", lambda m: "V" * len(m.group(0)), marked)
+    return marked.replace("\x00", " ")
+
+
+def _paints_a_ring(body: str) -> bool:
+    for prop, value in _DECLARATION.findall(body):
+        if not prop.startswith(_RING_PROPERTIES):
+            continue
+        cleaned = value.strip().strip(";").lower()
+        if cleaned and not any(cleaned.startswith(dead) for dead in _INVISIBLE):
+            return True
+    return False
+
+
+def item_view_ring_offences(text: str, where: str) -> list[str]:
+    """Every rule giving an item view a visible border on hover or focus."""
+    offences: list[str] = []
+    plain = _plain_qss(text)
+    for match in _BLOCK.finditer(plain):
+        if not _paints_a_ring(match.group(2)):
+            continue
+        line = plain.count("\n", 0, match.start(2)) + 1
+        for raw in match.group(1).split(","):
+            part = " ".join(raw.strip().splitlines()[-1].split()) if raw.strip() else ""
+            if ":hover" not in part and ":focus" not in part:
+                continue
+            for token in re.split(r"[\s>]+", part):
+                token = token.strip()
+                if "::" in token:
+                    # A subcontrol is a control drawn inside the view, not the
+                    # view itself, so it is styled like any other control.
+                    continue
+                if re.split(r"[:#\[]", token)[0] in _ITEM_VIEW_SELECTORS:
+                    offences.append(f"{where}:{line}: {part}")
+    return offences
+
+
+class TestNoTableDrawsARingRoundItself:
+    """The ring belongs to controls; a table shows the keyboard by its row."""
+
+    def test_no_item_view_is_given_a_ring_in_any_state(self):
+        offenders = []
+        for root in _QSS_SOURCES:
+            for path in sorted(root.rglob("*.py")):
+                offenders.extend(
+                    item_view_ring_offences(
+                        path.read_text(encoding="utf-8"), str(path.relative_to(_ROOT))
+                    )
+                )
+
+        assert not offenders, (
+            "These rules outline a whole table. Its current row already shows "
+            "where the keyboard is, so delete the rule and leave the "
+            "transparent border in place:\n" + "\n".join(offenders)
+        )
+
+    def test_the_scan_reports_a_planted_ring(self):
+        """A guard nobody has seen fail is not yet a guard."""
+        hovered = (
+            'S = f"""\nQTableWidget:enabled:hover {{ border: 2px solid {r}; }}\n"""'
+        )
+        focused = (
+            'S = f"""\nQTableWidget:enabled:focus {{ border: 2px solid {r}; }}\n"""'
+        )
+        assert item_view_ring_offences(hovered, "planted")
+        assert item_view_ring_offences(focused, "planted")
+
+    def test_the_scan_leaves_controls_and_subcontrols_alone(self):
+        """A button's ring and a table's own items are not the pane."""
+        button = 'S = f"""\nQPushButton:enabled:focus {{ border: 2px solid {r}; }}\n"""'
+        item = 'S = f"""\nQTableWidget::item:selected {{ border: 1px solid {r}; }}\n"""'
+        assert not item_view_ring_offences(button, "button")
+        assert not item_view_ring_offences(item, "item")
