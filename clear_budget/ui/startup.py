@@ -68,6 +68,13 @@ def begin() -> Startup | None:
 
     app = QApplication([])
 
+    # Before any widget exists, so nothing is built against the bare style:
+    # tooltips on the icon buttons appear promptly rather than after Qt's
+    # 700ms default (clear_budget/ui/tooltip_style.py has the numbers).
+    from clear_budget.ui import tooltip_style
+
+    tooltip_style.install(app)
+
     diagnostics.install(Config.app_dir() / "logs")
     diagnostics.log(
         "session starting, version %s, data dir %s", __version__, Config.app_dir()
