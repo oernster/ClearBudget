@@ -125,6 +125,12 @@ def main() -> int:
         "--clean",
         "--onefile",
         "--windowed",
+        # The embedded PE icon, what Explorer shows for ClearBudgetSetup.exe.
+        # The --add-data ICO below is a separate concern: it is the RUNTIME
+        # copy the setup program reads for its window and deploys beside the
+        # installed app. Without this flag PyInstaller embeds its own
+        # default, a diskette.
+        f"--icon={icon}",
         "--name",
         "ClearBudgetSetup",
         "--distpath",

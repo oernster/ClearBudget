@@ -42,6 +42,10 @@ def build_exe() -> int:
         "--name=ClearBudget",
         "--onedir",
         "--windowed",
+        # The embedded PE icon, what Explorer and the taskbar show for the
+        # bare exe. Without it PyInstaller embeds its own default, a diskette.
+        # Unrelated to the staged PNGs below, which are runtime lookups.
+        f"--icon={root / 'ClearBudget.ico'}",
         "--add-data=clear_budget:clear_budget",
         # ONE sized PNG, not the seven this used to carry. Every consumer of
         # the app icon takes the FIRST png from one ordered list
