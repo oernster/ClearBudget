@@ -304,8 +304,8 @@ for Monthly Budget, a shield over coins for Solvency, a pair of cards for
 Credit Cards, a strongbox with a coin for Reserves, the app's own icon for
 Graph, a ticked clipboard under a lit bulb for Recommendations and a filing
 box for Archive. They sit in the navigation tray rather than in a strip of
-their own. Hovering one names it; the keyboard ring still stops on each
-button in turn.
+their own. Hovering one names it, promptly rather than after the platform's
+usual tooltip delay; the keyboard ring still stops on each button in turn.
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning. A commitment falling due this month appears among the bills as a reminder, marked "(from Reserves)", so the same obligation is not entered a second time by hand; it carries no total and cannot be edited there
 - **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, plus what it needs to hold flat, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday

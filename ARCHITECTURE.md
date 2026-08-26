@@ -2052,6 +2052,12 @@ renderings of the same figures to hold in step. Every month any page shows
   rule, tooltips take the platform default and are the one surface that escapes
   the theme entirely, as well as being open to inheriting whatever font-size a
   widget's own stylesheet sets
+- Tooltips also APPEAR promptly app-wide: `ui/tooltip_style.py` wraps the
+  platform style in a `QProxyStyle` overriding `SH_ToolTip_WakeUpDelay`
+  (Qt's default is 700ms and any mouse movement restarts the timer, so the
+  icon buttons' hover text took a second or two to show). Installed at both
+  composition roots, `startup.begin` and the installer's `main`, before any
+  widget exists; every other style hint passes through untouched
 - Dark: background near-black `#0a0a0d`, panels/trays `#242938`, borders
   `#3a4156`, table selection deep blue `#1e3a5f`; light: grey `#f3f4f6`
   background, white panels, slate borders, blue selection
