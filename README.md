@@ -274,6 +274,9 @@ what is deliberately left and what only looks like debt.
   not a table, not the panel around it. Clicking still does what it always did,
   including selecting the row you clicked; a text field, a spin box and a
   dropdown still take a click, because that is how you say where to type
+- A table is never outlined at all, by the mouse or by the keyboard. The row
+  the keyboard lands on is highlighted, which says where you are without
+  drawing a rectangle round a whole page of figures
 - The view buttons are walked one at a time in the order shown and stepping
   onto one never switches to it: Enter or Space does that. The view you are
   already reading is skipped

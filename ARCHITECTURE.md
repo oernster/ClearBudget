@@ -33,7 +33,8 @@ Everything below this section explains how the code satisfies them.
 | Two accounts can never share one budget file. Every account's budget is `budget_<safe username>.db` and the safe form maps anything outside `[A-Za-z0-9_-]` to an underscore, so "john doe" and "john_doe" are two accounts resolving to ONE file: shared bills, shared income, shared balance, either able to delete the other's figures (measured). The `UNIQUE` constraint cannot see it, since as typed the names differ, so `UserStore.create_user` refuses it. A case-only difference is left to that constraint, which answers it in the right words | `tests/auth/test_user_store.py::TestUsernamesThatWouldShareOneBudgetFile` |
 | A budget belonging to another account cannot be opened without that account's password; it cannot be SAVED OVER at all: loading one is recoverable and is offered behind their password, while a save replaces their figures and leaves nothing to recover from. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
 | One Return press runs a dialog's submit ONCE. A `QLineEdit` emits `returnPressed` and then ignores the key so it reaches the dialog's default button, so connecting both gives one press two routes. No slot may answer both `returnPressed` and `clicked` in the same module | `tests/structural/test_return_key_invariants.py` |
-| Focus follows the KEYBOARD, never the pointer, wherever a click has nothing to act on: a button refuses mouse-reason focus outright and every table is `TabFocus` rather than Qt's default `StrongFocus`, so no pane is ever ringed by a click. Selection is untouched, since selection is not focus | `tests/structural/test_table_focus_invariants.py` (both halves), plus `KeyboardNavigator._focus_arriving` for buttons |
+| Focus follows the KEYBOARD, never the pointer, wherever a click has nothing to act on: a button refuses mouse-reason focus outright and every table is `TabFocus` rather than Qt's default `StrongFocus`, so no pane is ever ringed by a click. Selection is untouched, since selection is not focus | `tests/structural/test_table_focus_invariants.py`, plus `KeyboardNavigator._focus_arriving` for buttons |
+| A table draws no ring in ANY state. The row the keyboard lands on already shows where it is, so a rectangle round the whole pane says nothing the table was not saying better; it is also the wrong shape of feedback for a region the eye looks into | `tests/structural/test_table_focus_invariants.py::TestNoTableDrawsARingRoundItself` |
 | A destructive confirmation is never raised over a file that will be refused, in either direction. Load asks the accounts store, the schema and the owner challenge FIRST; Save asks whose file it is FIRST; in both the overwrite question is the last gate before anything is written | `tests/structural/test_refusal_order.py` |
 | A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
 | The Solvency bank page and the Reserves page can never disagree about a month's low or the day it falls on, because both read ONE simulation: `application/services/_month_walk.walk_month`. Two correct-looking walks that differ about the same month is exactly the failure this forbids | `tests/application/test_month_walk.py`, plus `tests/application/test_commitments_due.py` |
@@ -1679,8 +1680,18 @@ renderings of the same figures to hold in step. Every month any page shows
   arrives from Tab the table still keeps Up and Down for its rows. The helper
   is the only place that names the policy and every table passes through it,
   because doing nothing here is the wrong state and a table added later
-  inherits it silently. Held by
-  `tests/structural/test_table_focus_invariants.py`, both halves
+  inherits it silently.
+- A TABLE ALSO DRAWS NO RING, from the keyboard or otherwise. The policy above
+  settled where focus may come FROM; this settles what focus then paints. The
+  ring says the keyboard is here, on this one control, which reads correctly
+  round a button and wrongly round a region the eye looks INTO: the table was
+  already saying it better by highlighting the row the ring landed on
+  (measured: with no stylesheet rule at all, focusing a table still paints
+  1916 pixels, for a row-selecting table and a non-selecting one alike). So
+  the `QTableWidget` focus rule is gone and only the transparent base border
+  remains, which holds the geometry and suppresses the toolkit's own sunken
+  frame. Held by
+  `tests/structural/test_table_focus_invariants.py`, all three parts
 - A CLICK LEAVES NO RING. The ring means one thing, the keyboard is here, so
   focus a mouse brought to a BUTTON is refused: `KeyboardNavigator` handles
   `FocusIn` then clears the focus when the reason is `MouseFocusReason` and the
@@ -1694,7 +1705,9 @@ renderings of the same figures to hold in step. Every month any page shows
   in this filter
 - Ring colours are three-state, enforced in the QSS: no ring at rest, the ring
   colour while an enabled control is hovered or focused, a permanent red ring
-  while disabled (hover/focus rules are gated on `:enabled`)
+  while disabled (hover/focus rules are gated on `:enabled`). An ITEM VIEW is
+  outside that model entirely and takes no ring in any state, because its
+  current row is the indicator
 - `ring` is a BORDER colour and nothing else. Every solid fill it used to
   double as has its own `checked_fill` token: the checked state of a checkbox,
   the same on a table indicator, the on position of a switch track. One value could
@@ -2075,7 +2088,8 @@ renderings of the same figures to hold in step. Every month any page shows
 - Buttons royal blue `#3b5bdb` (hover `#4a68d6`, pressed `#2f4bb8`) in both
 - Ring colours per theme follow the three-state model (the ring colour on hover or focus when
   enabled, permanent red on disabled, none at rest); `outline: none` on the
-  base rule keeps the ring as the only focus indicator
+  base rule keeps the ring as the only focus indicator. A table is the one
+  exception and wears no ring at all, its current row saying the same thing
 - Object-name rules for the nav tray, nav graph button, theme toggle and the
   status-bar date label live in `_theme_controls.widget_extras_qss`; the
   semantic label roles (`_theme_labels.label_roles_qss`, named in
@@ -2516,7 +2530,10 @@ an option that read as "remove my data" removed nothing.
   ring by arithmetic nobody can see
 - `test_table_focus_invariants.py` - every table built in the UI passes
   through `keyboard_only_focus`, none setting its own focus policy, so a
-  click can never put the ring round a pane
+  click can never put the ring round a pane; and no stylesheet rule gives an
+  item view a border on hover or on focus, so nothing can put one there from
+  the other direction either. Two of its checks plant such a rule, so the
+  guard is known to bite rather than assumed to
 - `test_refusal_order.py` - in BOTH the Load and the Save flows every
   refusal precedes the overwrite confirmation, so the threat is never made
   over a write that cannot happen; Save refuses another account's budget
