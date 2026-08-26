@@ -62,6 +62,13 @@ multi-resolution `.ico`; it reproduces all eight tracked files byte for
 byte, so running it on a clean tree leaves `git status` empty. Change the
 artwork by replacing the master and re-running it.
 
+That root `.ico` is also what `buildexe.py` and `buildinstaller.py` embed as
+each executable's own icon, through PyInstaller's `--icon`. That is a
+different mechanism from the `--add-data` staging beside it: `--icon` writes
+into the executable's resources, where Explorer and the taskbar read it,
+while `--add-data` ships a file the running code opens. Omit it and
+PyInstaller embeds its own default, which is a picture of a diskette.
+
 **The sized PNGs are `ClearBudget_<size>.png`, capitalised.** That is what
 `generate_icons.py` writes, what git tracks and what `build_flatpak.sh` and
 `builddmg.py` reference. It matters because Windows sets `core.ignorecase`

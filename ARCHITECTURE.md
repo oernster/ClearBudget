@@ -1176,12 +1176,23 @@ renderings of the same figures to hold in step. Every month any page shows
 **Widgets**:
 - `LoginDialog` - username/password form, its logo resolved through
   `resources.find_logo_png_path` rather than a path built from this module's
-  own location; a Remember me checkbox under the
-  password field (prefills both fields and ticks itself when `RememberedLogin`
-  recalls credentials; unticking forgets them immediately; a successful sign-in
-  stores or forgets according to the box); grid layout with "Forgot password?"
-  (opens `ResetPasswordDialog`) and Sign In on one row, "Create Account..."
-  (opens `CreateUserDialog`, non-admin) on the row below
+  own location; TWO independent Remember me ticks under the password field,
+  username and password, the password one live only while the username one
+  is (see Sign-in and remembered accounts below for why). Each ticks itself
+  from what `RememberedLogin` recalls and both are applied by
+  `_record_choices` on a COMPLETED sign-in, never the moment a box is
+  clicked, so a tick cleared and restored while thinking about it costs
+  nothing. They are the only ADJACENT pair of checkboxes in the application,
+  which is why they alone carry vertical padding: the indicator is a fixed
+  15px in the global stylesheet while the layout's spacing and fonts scale
+  with the display, so the shorter the screen the tighter the pair reads
+  against boxes that never shrink (measured at a 0.65 factor: 6px between two
+  19px rows). Padding rather than a spacer between them, because it also
+  holds each label centred against its own box; the nav label's warning that
+  stylesheet padding is unreliable in size hints was checked here and does
+  not apply, the widget growing from 19px to 25px as asked. Grid layout with
+  "Forgot password?" (opens `ResetPasswordDialog`) and Sign In on one row,
+  "Create Account..." (opens `CreateUserDialog`, non-admin) on the row below
 - `ResetPasswordDialog` - username + recovery code + new password; distinct error for unknown username vs wrong code
 - `CreateUserDialog` - new user form (first-run wizard, login screen or admin
   "Add User"); `is_first_user=True` is the only path that creates an admin account;
@@ -2310,6 +2321,15 @@ platform differences are isolated to a few well-defined seams:
   for the window and taskbar icon where the ICO plugin is unavailable. So an
   installed directory holds all seven while the PyInstaller bundle inside it
   carries one; the two counts differ on purpose and neither is a leftover.
+- **The embedded PE icon is a separate thing again**; the distinction is
+  what makes the counts above make sense: `--icon` writes the icon into the
+  executable's own resources, where Explorer and the taskbar read it, while
+  `--add-data` stages a file the running code opens. Both `buildexe.py` and
+  `buildinstaller.py` pass `--icon` at the root `ClearBudget.ico`; neither did
+  once, so both binaries carried PyInstaller's default, a diskette. It was
+  invisible from inside the app and invisible on the shortcuts too, since
+  those point at the deployed `.ico` rather than at the executable, which is
+  exactly why it survived so long.
 - **Display scaling**: `ui_scale` adapts the UI to the screen, scaling down on
   small laptops and capping growth on 4K.
 - **Conditional dependencies**: Windows-only packages (`pywin32`) are guarded by
