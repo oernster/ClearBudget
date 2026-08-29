@@ -280,8 +280,10 @@ what is deliberately left and what only looks like debt.
 - The view buttons are walked one at a time in the order shown and stepping
   onto one never switches to it: Enter or Space does that. The view you are
   already reading is skipped
-- The page itself is the last stop on each view whenever it has more content
-  than fits, so Up/Down, Page Up/Down and Home/End scroll it from the keyboard
+- The page itself is a stop on each view whenever it has more content than
+  fits, so Up/Down, Page Up/Down and Home/End scroll it from the keyboard. The
+  donate button in the strip at the foot comes after it, last on every view,
+  since it belongs to the window rather than to any one page
 - Dark and light themes: a sun/moon button at the far right of the navigation
   tray on every view switches between them, the whole app restyles immediately
   (the sign-in screen included) and the choice is remembered between sessions

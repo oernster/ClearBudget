@@ -99,6 +99,10 @@ def _body_html() -> str:
     plot_cards_icon = _img(find_nav_icon_path("creditcards2.png"), px)
     export_icon = _img(find_nav_icon_path("exporttohtml.png"), px)
     package_icon = _img(find_nav_icon_path("exportpackage.png"), px)
+    # The footer's own button, which sits in no tray and which no other line
+    # here names. A picture of a beer and a coffee says nothing on its own
+    # about leaving the application, so this line says it.
+    donate_icon = _img(find_nav_icon_path("donate.png"), px)
     return f"""\
 <h2>How ClearBudget Works</h2>
 
@@ -154,6 +158,13 @@ Spend buffer and window &nbsp;&middot;&nbsp; {light_icon}/{dark_icon}light or da
 <p>Load and save open in the app's own data folder, where the live budgets
 already are. Your signed-in name sits at the left of the row above, beside
 the month; the arrows there step every view together.</p>
+
+<hr>
+<h3>The strip along the foot</h3>
+<p>{donate_icon}buy the author a drink</p>
+<p>A lighter strip under the page, holding one button at its left. It opens a
+donation page in your browser; ClearBudget itself sends nothing, so it stays
+as offline as the rest of the app. Nothing here is held back behind it.</p>
 
 <hr>
 <h3>Three rules behind the numbers</h3>

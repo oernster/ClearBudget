@@ -38,7 +38,7 @@ Everything below this section explains how the code satisfies them.
 | A destructive confirmation is never raised over a file that will be refused, in either direction. Load asks the accounts store, the schema and the owner challenge FIRST; Save asks whose file it is FIRST; in both the overwrite question is the last gate before anything is written | `tests/structural/test_refusal_order.py` |
 | A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
 | The Solvency bank page and the Reserves page can never disagree about a month's low or the day it falls on, because both read ONE simulation: `application/services/_month_walk.walk_month`. Two correct-looking walks that differ about the same month is exactly the failure this forbids | `tests/application/test_month_walk.py`, plus `tests/application/test_commitments_due.py` |
-| Every view button is named on the How It Works screen and the heading counts the strip it lists. The tray had this guard and the view strip did not, which is how the screen came to announce six views while seven were drawn | `tests/structural/test_help_names_the_views.py` (the tray's own half is `test_help_names_the_tray.py`) |
+| Every picture button the user can press is named on the How It Works screen and the heading counts the strip it lists. The tray had this guard and the view strip did not, which is how the screen came to announce six views while seven were drawn; the footer's donate button was the same shape of gap, a picture in no tray at all, so the button scan reads `bottom_tray.py` alongside `_tray_buttons.py` | `tests/structural/test_help_names_the_views.py` (the tray and footer half is `test_help_names_the_tray.py`) |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
 
 ## Overview
@@ -890,6 +890,16 @@ holding each budget's slug and display name plus which one is active.
   a tray squeezed at the window's width floor sheds pixels from the stretch
   space and the flanking buttons, never from the date (a 13in flatpak
   install used to clip the year's last digit).
+  `apply_nav_label_color` / `_nav_label_style` recolour the
+  label; the colour is each month's OWN within-month solvency health (current
+  month from its live balance, a future month from its next-two-months block),
+  computed once by the Solvency panel and broadcast to every view via
+  `SolvencyPanel.month_label_color_changed` so no view can disagree. A month is
+  red only when its own balance breaches the overdraft floor (below zero with no
+  facility or beyond an agreed facility); dipping into an agreed facility but
+  staying within it is amber. A looming overdraft in a later month stays a
+  banner warning and never colours the earlier month's title
+
 - `BottomTray` (`clear_budget/ui/widgets/bottom_tray.py`) is the strip along the
   FOOT of the window; it holds the donate button alone. There is ONE for the
   window, added under the stacked views in `_main_window_views.init_ui`, rather
@@ -919,15 +929,6 @@ holding each budget's slug and display name plus which one is active.
   `tests/structural/test_donation_address.py`, which also asserts it literally:
   a typo there fails nothing at runtime and simply sends a supporter's money
   somewhere else.
-  `apply_nav_label_color` / `_nav_label_style` recolour the
-  label; the colour is each month's OWN within-month solvency health (current
-  month from its live balance, a future month from its next-two-months block),
-  computed once by the Solvency panel and broadcast to every view via
-  `SolvencyPanel.month_label_color_changed` so no view can disagree. A month is
-  red only when its own balance breaches the overdraft floor (below zero with no
-  facility or beyond an agreed facility); dipping into an agreed facility but
-  staying within it is amber. A looming overdraft in a later month stays a
-  banner warning and never colours the earlier month's title
 
 **`glyph_metrics`** (`clear_budget/ui/utils/glyph_metrics.py`):
 - Painted-pixel measurement for both images and text. `opaque_bounding_rect`
@@ -1267,9 +1268,10 @@ renderings of the same figures to hold in step. Every month any page shows
 - `BalanceDialog` - edit current bank balance; opens with the figure focused
   and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
-- `HowItWorksDialog` - two jobs in one page. It NAMES the furniture in four
-  runs (the seven views, the Graph page's own controls, the tray, then the
-  keyboard), each entry led by the real icon that control draws, which the
+- `HowItWorksDialog` - two jobs in one page. It NAMES the furniture in five
+  runs (the seven views, the Graph page's own controls, the tray, the strip
+  along the foot, then the keyboard), each entry led by the real icon that
+  control draws, which the
   view buttons need because their text labels became pictures. Then it states the
   three rules the numbers rest on and that no screen can say for itself: how
   an undated bill accrues, how the balance maintains itself, what Safe to
@@ -1281,7 +1283,9 @@ renderings of the same figures to hold in step. Every month any page shows
   first shipped at: the artwork is detailed and at 20px two icons a reader
   was trying to tell apart closed up into the same smudge, which defeats the
   screen's one job. Two structural guards keep it honest rather than a
-  habit: `test_help_names_the_tray.py` for the tray's buttons and
+  habit: `test_help_names_the_tray.py` for the tray's buttons and the footer's,
+  with `_BUTTON_SOURCES` reading `bottom_tray.py` alongside `_tray_buttons.py`
+  so a picture sitting in no tray at all is caught the same way; then
   `test_help_names_the_views.py` for the view strip, the second added after
   Reserves shipped with a picture, a tooltip and no caption anywhere in the
   application while the screen went on announcing six views. It also asserts
@@ -1622,8 +1626,13 @@ renderings of the same figures to hold in step. Every month any page shows
 - Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
   ends; tables keep Up/Down for their rows, text inputs keep their arrows for
   the caret
-- THE PAGE BODY IS THE LAST STOP on every view, when it has something to
-  scroll. `ScrollableView.nav_scroll_stop()` returns its `QScrollArea` only
+- THE PAGE BODY IS THE LAST STOP THE VIEW ITSELF OFFERS, when it has something
+  to scroll. The window's footer comes after it: `_main_window_nav` appends the
+  scroll stop, then extends the run with `bottom_tray.ring_stops()`, so the
+  donate button is the last stop on every view. The footer belongs to the
+  window rather than to any view, which is why it is added once at the end
+  rather than seven times inside.
+  `ScrollableView.nav_scroll_stop()` returns its `QScrollArea` only
   while the content overflows, so a page that fits is skipped (a stop must be
   actionable: landing on a page that scrolls nowhere spends a keypress and does
   nothing). Without it the ring ran out at the theme toggle and wrapped
@@ -1987,11 +1996,16 @@ renderings of the same figures to hold in step. Every month any page shows
     must never shed (`nav_label` pins its own width for the same reason). Give
     the cluster a row of its own and the arithmetic disappears rather than
     being balanced
-  - Tray glyphs are drawn at the Previous button's height, UNSCALED. A 0.75
-    factor lived in `nav_glyph_height` briefly, while the view buttons were still a
-    strip of their own and the tray was the heaviest band on the window. With
-    the buttons now IN the tray, the tray is the band, so the icons are back at
-    the height they started at
+  - Tray glyphs are drawn at `NAV_GLYPH_SCALE` times the Previous button's
+    measured height, 1.35 today, so they scale UP rather than sitting at the
+    height they measure. The scale was the view buttons' own once, which left
+    the tray's icons a third smaller than the buttons beside them in the same
+    band; it is the base now, so every icon in the tray is sized through it and
+    they come out equal. A 0.75 factor lived in `nav_glyph_height` briefly,
+    while the view buttons were still a strip of their own and the tray was the
+    heaviest band on the window. With the buttons now IN the tray, the tray is
+    the band, so the one number scales up instead. The footer's glyph is two
+    thirds of this, through `footer_glyph_height`
   - Help menu: About, Check for Updates (runs the real update check via
     `UpdateCheckController` and reports the outcome, Up to date and unreachable
     included), How It Works, View Licence

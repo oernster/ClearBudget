@@ -1,4 +1,4 @@
-"""Every tray button must be named on the How It Works screen.
+"""Every picture button must be named on the How It Works screen.
 
 The help screen's first job is naming the furniture, so a tray button it
 does not mention is a picture with no caption anywhere in the application.
@@ -6,6 +6,11 @@ That is exactly how it went stale: the switch-user button was added to the
 tray on every view and the help screen carried on listing the row without it,
 which read as the button being undocumented rather than as the guide being
 behind.
+
+The window's FOOTER is scanned alongside the tray. It holds a button of its
+own, in no tray at all, which is exactly the shape of thing this guard exists
+to catch: a picture the user meets with no caption anywhere in the application.
+Reading only `_tray_buttons.py` would have let it through.
 
 The tray's buttons used to be emoji and are now bundled pictures, so the scan
 follows both: a glyph is matched as the HTML numeric entities the help body
@@ -23,6 +28,10 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[2]
 _UI = _ROOT / "clear_budget" / "ui"
 _TRAY = _UI / "widgets" / "_tray_buttons.py"
+_FOOTER = _UI / "widgets" / "bottom_tray.py"
+# Every source that builds a picture button the user can press. A new one goes
+# here, which is the whole cost of keeping the guide honest about it.
+_BUTTON_SOURCES = (_TRAY, _FOOTER)
 _HELP = _UI / "widgets" / "how_it_works_dialog.py"
 
 # The two factories a tray button is built through. The first argument of
@@ -52,11 +61,17 @@ def _module_constants(tree: ast.Module) -> dict[str, str]:
 
 
 def _tray_faces() -> tuple[list[str], list[str]]:
-    """Return (glyphs, picture filenames) every tray button is built with."""
-    tree = ast.parse(_TRAY.read_text(encoding="utf-8"))
-    constants = _module_constants(tree)
+    """Return (glyphs, picture filenames) every scanned button is built with."""
     glyphs: list[str] = []
     pictures: list[str] = []
+    for source in _BUTTON_SOURCES:
+        _faces_in(ast.parse(source.read_text(encoding="utf-8")), glyphs, pictures)
+    return glyphs, pictures
+
+
+def _faces_in(tree: ast.Module, glyphs: list[str], pictures: list[str]) -> None:
+    """Collect one module's button faces into the running lists."""
+    constants = _module_constants(tree)
     for node in ast.walk(tree):
         if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)):
             continue
@@ -71,7 +86,6 @@ def _tray_faces() -> tuple[list[str], list[str]]:
                 pictures.append(constants[first.id])
             elif isinstance(first, ast.Constant) and isinstance(first.value, str):
                 pictures.append(first.value)
-    return glyphs, pictures
 
 
 def _entities(glyph: str) -> str:
@@ -83,14 +97,14 @@ def test_the_factories_are_still_the_only_way_in() -> None:
     """The scan is worthless if buttons stop coming through a factory."""
     glyphs, pictures = _tray_faces()
     assert glyphs or pictures, (
-        f"{_TRAY.name} builds no button through {_GLYPH_FACTORY}() or "
+        f"no scanned source builds a button through {_GLYPH_FACTORY}() or "
         f"{_IMAGE_FACTORY}(), so this guard is scanning nothing and every "
         "other assertion here is vacuous"
     )
 
 
 def test_the_help_screen_names_every_tray_glyph() -> None:
-    """A glyph drawn in the tray must appear on the How It Works screen."""
+    """A glyph drawn in a scanned source must appear on How It Works."""
     body = _HELP.read_text(encoding="utf-8")
     for glyph in _tray_faces()[0]:
         entities = _entities(glyph)
@@ -102,7 +116,7 @@ def test_the_help_screen_names_every_tray_glyph() -> None:
 
 
 def test_the_help_screen_draws_every_tray_picture() -> None:
-    """A picture in the tray must be the picture the help screen shows."""
+    """A picture on a button must be the picture the help screen shows."""
     body = _HELP.read_text(encoding="utf-8")
     for filename in _tray_faces()[1]:
         assert f'"{filename}"' in body, (
