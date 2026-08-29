@@ -890,6 +890,35 @@ holding each budget's slug and display name plus which one is active.
   a tray squeezed at the window's width floor sheds pixels from the stretch
   space and the flanking buttons, never from the date (a 13in flatpak
   install used to clip the year's last digit).
+- `BottomTray` (`clear_budget/ui/widgets/bottom_tray.py`) is the strip along the
+  FOOT of the window; it holds the donate button alone. There is ONE for the
+  window, added under the stacked views in `_main_window_views.init_ui`, rather
+  than a copy inside each view's own navigation tray: every control in that tray
+  acts on the budget, the account or the view being looked at, while this one
+  leaves the application entirely, so it belongs to none of them and has no
+  business being duplicated seven times and held in agreement by
+  `test_tray_switch_invariants`. Its glyph is TWO THIRDS of the tray's, through
+  `footer_glyph_height` in `nav_glyph_size`, taken from the tray's own measured
+  Previous button rather than written again as a pixel number: the tray is
+  deliberately the heaviest band on the window (`NAV_GLYPH_SCALE` is above 1.0
+  for that reason), so a footer sized to match would weigh the layout down at
+  both ends. Measured on a built window, 27px in the tray and 18px in the
+  footer. The ratio is pinned Qt-free by
+  `tests/ui_logic/test_footer_glyph_height.py`. The strip takes the tray's
+  own border and radius from the same two theme values, so head and foot are
+  told apart by height alone. The button is built by `build_tray_image_button`
+  like every other picture button, so it inherits the three-state ring without a
+  rule of its own; the window appends it LAST to every view's ring stops in
+  `_main_window_nav._current_nav_stops`, once, instead of it being named in
+  seven separate `nav_targets`. Pressing it calls `MainWindow.open_donation`,
+  which hands `version.DONATE_URL` to the desktop through the `ui/links.py`
+  seam. ClearBudget opens no connection of its own for it, so the local-first
+  guarantee is untouched; a desktop that declines to open a browser says so in
+  the status bar, because silence would leave a button that appears to do
+  nothing. The address has one home, enforced by
+  `tests/structural/test_donation_address.py`, which also asserts it literally:
+  a typo there fails nothing at runtime and simply sends a supporter's money
+  somewhere else.
   `apply_nav_label_color` / `_nav_label_style` recolour the
   label; the colour is each month's OWN within-month solvency health (current
   month from its live balance, a future month from its next-two-months block),

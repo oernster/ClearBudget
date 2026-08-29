@@ -62,6 +62,15 @@ multi-resolution `.ico`; it reproduces all eight tracked files byte for
 byte, so running it on a clean tree leaves `git status` empty. Change the
 artwork by replacing the master and re-running it.
 
+`donate.png` is a SECOND master, for the footer's donate button. It is
+handled separately because it is not an icon: it is a wide picture drawn at a
+button's height, so squaring it would spend half the height on empty canvas.
+The application derives nothing from it, since `image_icon_pixmap` crops and
+scales the full-size master at runtime exactly as it does for every other tray
+picture. The landing page cannot do that, so the one derived copy
+`generate_icons.py` writes is `docs/donate.png`, cropped to its artwork and
+scaled by height alone. It is idempotent there too.
+
 That root `.ico` is also what `buildexe.py` and `buildinstaller.py` embed as
 each executable's own icon, through PyInstaller's `--icon`. That is a
 different mechanism from the `--add-data` staging beside it: `--icon` writes

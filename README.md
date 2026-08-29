@@ -797,6 +797,18 @@ To set up a development environment or build an installable package on Linux
 
 ---
 
+## Supporting the project
+
+A strip along the foot of the window carries a donate button at its left. It
+opens a PayPal page in your browser; ClearBudget itself sends nothing and asks
+for nothing, so the offline guarantee above is unchanged by the button existing.
+
+Donations support maintenance and continued development. Nothing is withheld
+behind one: there is no paid tier, no licence key and no feature a donation
+unlocks.
+
+---
+
 ## Licence
 
 Distributed under the GNU Lesser General Public Licence v3.0.  
