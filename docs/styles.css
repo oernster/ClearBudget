@@ -107,12 +107,12 @@ h1 {
 .actions a.donate img {
     display: block;
     width: auto;
-    /* One LINE BOX tall, so this button is exactly the height of a text-only
-       one beside it rather than two pixels over. The em fallback comes first
-       for a browser without the lh unit, where the button is a shade taller
-       and nothing else suffers. */
-    height: 1.5em;
-    height: 1lh;
+    /* Sized in em against the button's own type, so the two stay in proportion
+       if that type ever changes. This was one line box tall once, which made
+       the button exactly the height of a text-only one beside it; at that size
+       the artwork was too small to read, so the mark now takes 1.8 times that
+       and the button is deliberately the taller of the two. */
+    height: 2.7em;
 }
 .secondary:hover { border-color: var(--accent); transform: translateY(-1px); }
 
