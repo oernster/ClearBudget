@@ -84,6 +84,7 @@ def build_exe() -> int:
         "--add-data=exportpackage.png:.",
         "--add-data=lightmode.png:.",
         "--add-data=darkmode.png:.",
+        "--add-data=donate.png:.",
         "--add-data=VERSION:.",
         # keyring discovers its OS backends via entry points, which PyInstaller
         # cannot see statically; collect them all so Remember me works frozen.

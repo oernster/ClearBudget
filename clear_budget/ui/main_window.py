@@ -24,6 +24,12 @@ if TYPE_CHECKING:
 # has definitely advanced when the handler runs.
 _MIDNIGHT_FOLD_BUFFER_MS = 2000
 
+# What the status bar says when the desktop will not open a browser, plus how
+# long it stays. Long enough to be read on the way past, short enough that it
+# does not outlive the press that caused it.
+_DONATION_FAILED_MESSAGE = "Could not open a browser for the donation page"
+_DONATION_FAILED_TIMEOUT_MS = 8000
+
 
 class MainWindow(
     MainWindowAccountMixin,
@@ -225,6 +231,24 @@ class MainWindow(
         from clear_budget.ui.widgets._full_backup_flow import restore_everything
 
         restore_everything(self)
+
+    def open_donation(self) -> None:
+        """Hand the donation page to whatever the desktop opens links with.
+
+        ClearBudget opens no connection of its own here. The address goes
+        outward and the browser does the asking, which is why the local-first
+        guarantee is unchanged by this button existing.
+
+        A desktop that declines to open it says so in the status bar. Silence
+        would leave the user pressing a button that appears to do nothing.
+        """
+        from clear_budget.ui.links import open_externally
+        from clear_budget.version import DONATE_URL
+
+        if not open_externally(DONATE_URL):
+            self.statusBar().showMessage(
+                _DONATION_FAILED_MESSAGE, _DONATION_FAILED_TIMEOUT_MS
+            )
 
     def _build_window_chrome(self) -> None:
         """Build the status bar and menus.

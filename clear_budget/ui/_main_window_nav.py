@@ -86,6 +86,12 @@ class MainWindowNavMixin:
         scroll = page.nav_scroll_stop() if hasattr(page, "nav_scroll_stop") else None
         if scroll is not None:
             stops.append(scroll)
+        # The window's footer comes after everything the view itself offers. It
+        # belongs to the window rather than to any view, so it is appended here
+        # once instead of being named in seven separate nav_targets.
+        footer = getattr(self, "bottom_tray", None)
+        if footer is not None:
+            stops.extend(footer.ring_stops())
         return stops
 
     def showEvent(self, event) -> None:

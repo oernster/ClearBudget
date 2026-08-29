@@ -21,6 +21,12 @@ LEGACY_APP_NAME: str = "Clear Budget"
 APP_AUTHOR: str = "Oliver Ernster"
 APP_COPYRIGHT: str = "© 2025 to 2026 Oliver Ernster"
 
+# Where the donate button sends a browser. The only address the application
+# knows; it is handed to the desktop rather than fetched, so nothing here ever
+# opens a connection of its own and the local-first guarantee is unchanged by
+# the button existing.
+DONATE_URL: str = "https://www.paypal.com/ncp/payment/M874QPXXJPY84"
+
 # Windows taskbar grouping / pinned icon identity.
 #
 # This should be stable over time; changing it can cause Windows to treat newer

@@ -31,6 +31,14 @@ NAV_ICON_BTN_PADDING_PX = 0
 # every icon in the tray is sized through it and they end up equal.
 NAV_GLYPH_SCALE = 1.35
 
+# The footer's glyph as a fraction of the tray's. The strip at the foot is
+# subordinate to the band above it, which is the heaviest thing on the window,
+# so two matching bands would weigh the layout down at both ends. Expressed
+# against the tray's own measured height rather than as a second pixel number,
+# so retuning the tray carries the footer with it and the two cannot drift.
+FOOTER_GLYPH_NUMERATOR = 2
+FOOTER_GLYPH_DENOMINATOR = 3
+
 
 def nav_glyph_height(prev_btn) -> int:
     """The height every glyph in the nav tray is sized to.
@@ -50,6 +58,18 @@ def nav_glyph_height(prev_btn) -> int:
         prev_btn.sizeHint().height() if prev_btn is not None else FALLBACK_ICON_PX
     )
     return max(1, round(measured * NAV_GLYPH_SCALE))
+
+
+def footer_glyph_height(tray_glyph_px: int) -> int:
+    """The footer's glyph height: two thirds of the tray's, from its measurement.
+
+    Takes the measured tray height rather than measuring again, for the same
+    reason `nav_glyph_height` exists at all: deriving one number twice is how
+    the tray and the toggle drifted apart. It is plain arithmetic on an int, so
+    the ratio is pinned without a QApplication (see tests/conftest.py).
+    """
+    scaled = tray_glyph_px * FOOTER_GLYPH_NUMERATOR // FOOTER_GLYPH_DENOMINATOR
+    return max(1, scaled)
 
 
 def nav_icon_button_size(

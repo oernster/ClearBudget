@@ -91,6 +91,29 @@ h1 {
 .primary:hover { background: var(--blue-hover); transform: translateY(-1px); }
 
 .secondary { border: 1px solid var(--border); color: var(--text); }
+
+/* The donate button carries artwork before its label. Scoped to itself rather
+   than made the rule for every action link: the shared rule is inline-block and
+   changing that would restyle buttons this has nothing to do with. The mark is
+   sized in em against the button's own type, so the two stay in proportion if
+   that type ever changes; display: block drops the inline descender space
+   that would otherwise make this button taller than its siblings. */
+.actions a.donate {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.actions a.donate img {
+    display: block;
+    width: auto;
+    /* One LINE BOX tall, so this button is exactly the height of a text-only
+       one beside it rather than two pixels over. The em fallback comes first
+       for a browser without the lh unit, where the button is a shade taller
+       and nothing else suffers. */
+    height: 1.5em;
+    height: 1lh;
+}
 .secondary:hover { border-color: var(--accent); transform: translateY(-1px); }
 
 .minor-detail {

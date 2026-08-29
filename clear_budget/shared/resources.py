@@ -86,6 +86,9 @@ _VIEW_ICON_NAMES = frozenset(
         # The theme toggle's two faces, showing the mode a press switches to.
         "lightmode.png",
         "darkmode.png",
+        # The footer's donate button. A full-size master like the rest, cropped
+        # and scaled at runtime by `image_icon_pixmap`.
+        "donate.png",
     )
 )
 

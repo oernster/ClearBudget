@@ -26,6 +26,8 @@ from clear_budget.ui.views.month_view import MonthView
 from clear_budget.ui.views.recommendations_view import RecommendationsView
 from clear_budget.ui.views.reserves_view import ReservesView
 from clear_budget.ui.views.solvency_panel import SolvencyPanel
+from clear_budget.ui.utils.nav_glyph_size import footer_glyph_height, nav_glyph_height
+from clear_budget.ui.widgets.bottom_tray import BottomTray
 from clear_budget.ui.widgets.scrollable_view import ScrollableView
 
 
@@ -130,6 +132,16 @@ class MainWindowViewsMixin:
             )
 
         layout.addWidget(self.views)
+        # One footer for the WINDOW, under the stacked views rather than inside
+        # each of them. Its glyph is two thirds of the tray's, measured from the
+        # tray's own Previous button rather than from a second control built to
+        # look like it, so the two can never report different heights.
+        self.bottom_tray = BottomTray(
+            central_widget,
+            footer_glyph_height(nav_glyph_height(month_view.prev_btn)),
+            open_donation=self.open_donation,
+        )
+        layout.addWidget(self.bottom_tray)
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 

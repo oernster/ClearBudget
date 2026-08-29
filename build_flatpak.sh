@@ -246,7 +246,7 @@ modules:
       # looks for; this one is what the tab lookup asks for. A single
       # lowercase copy works on Windows by luck and nowhere else.
       - cp ClearBudget_256.png /app/share/clearbudget/ClearBudget_256.png
-      - cp bank-icon.png bank-icon2.png creditcards2.png exporttohtml.png switchbudget.png opendb.png savedb.png information.png archive.png recommendations.png reserves.png exportpackage.png lightmode.png darkmode.png /app/share/clearbudget/
+      - cp bank-icon.png bank-icon2.png creditcards2.png exporttohtml.png switchbudget.png opendb.png savedb.png information.png archive.png recommendations.png reserves.png exportpackage.png lightmode.png darkmode.png donate.png /app/share/clearbudget/
       - install -Dm644 ClearBudget_16.png  /app/share/icons/hicolor/16x16/apps/${APP_ID}.png
       - install -Dm644 ClearBudget_32.png  /app/share/icons/hicolor/32x32/apps/${APP_ID}.png
       - install -Dm644 ClearBudget_48.png  /app/share/icons/hicolor/48x48/apps/${APP_ID}.png
@@ -313,6 +313,8 @@ modules:
         path: lightmode.png
       - type: file
         path: darkmode.png
+      - type: file
+        path: donate.png
       - type: dir
         path: clear_budget
         dest: clear_budget

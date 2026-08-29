@@ -93,6 +93,7 @@ BUNDLED_ICONS = [
     "exportpackage.png",
     "lightmode.png",
     "darkmode.png",
+    "donate.png",
 ]
 
 DEVELOPER_ID = os.environ.get(

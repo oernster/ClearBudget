@@ -165,6 +165,14 @@ def widget_extras_qss(t: dict[str, str], s: dict[str, str]) -> str:
     border-radius: {_NAV_TRAY_RADIUS_PX}px;
 }}
 
+/* The window's footer wears the tray's own border and radius, from the same
+   two values, so the strips at the head and the foot are told apart by their
+   HEIGHT alone rather than by two sets of chrome drifting apart. */
+#bottomTray {{
+    border: 1px solid {t["border"]};
+    border-radius: {_NAV_TRAY_RADIUS_PX}px;
+}}
+
 QPushButton#NavGraphButton, QPushButton#ThemeToggleButton {{
     background: transparent;
     border: 2px solid transparent;
