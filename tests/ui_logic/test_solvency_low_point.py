@@ -160,7 +160,7 @@ class TestGapClause:
         )
         assert "hold flat" not in text
         assert f"Stays afloat, {fmt(50_000)} clear at its lowest" in text
-        assert "Closes:" in text
+        assert "closes" in text
         assert SolvencyPanelNarrativeMixin._gap_clause(16_687) == (
             f"needs {fmt(16_687)} more to hold flat"
         )

@@ -105,3 +105,68 @@ class TestGoingUnder:
             incomes=[_income(200000, 20), _income(200000, 25)],
         )
         assert walk["rescue_event"][0] == 20
+
+
+class TestTheDeadline:
+    """`first_breach_day` is the day any rescue has to beat.
+
+    The Solvency forward blocks print an amount ("needs 268.13") and an amount
+    with no deadline is not actionable: money that lands after the payment was
+    refused did not keep the month afloat. This is the day it has to land by.
+    """
+
+    def test_it_is_the_first_day_the_balance_goes_under(self):
+        assert _walk(bills=[_bill(150000, 4)])["first_breach_day"] == 4
+
+    def test_a_month_that_never_goes_under_has_no_deadline(self):
+        assert _walk(bills=[_bill(1000, 4)])["first_breach_day"] is None
+
+    def test_it_is_the_first_breach_not_the_lowest_day(self):
+        """A month can dip on one day and reach its worst on a later one.
+
+        The money has to get in front of the FIRST refusal; clearing the low
+        clears every day after it anyway.
+        """
+        walk = _walk(bills=[_bill(150000, 4), _bill(50000, 20)])
+        assert walk["first_breach_day"] == 4
+        assert walk["min_day"] == 20
+
+    def test_a_month_that_opens_under_has_already_breached(self):
+        """Reported as the start sentinel: the money is late before day one."""
+        assert _walk(opening=-50000)["first_breach_day"] == LOW_AT_START
+
+
+class TestTheFloor:
+    """Borrowing the bank has agreed to is not a breach.
+
+    The floor moves which day counts; it moves no balance, so every other
+    figure the walk reports is untouched by it.
+    """
+
+    def test_a_dip_inside_an_arranged_facility_is_no_breach_at_all(self):
+        walk = walk_month(
+            _OPENING_PENCE, _summary([_bill(150000, 4)]), floor_pence=-100000
+        )
+        assert walk["first_breach_day"] is None
+        assert walk["first_negative_day"] == 4
+
+    def test_the_deadline_moves_out_to_the_day_the_facility_is_passed(self):
+        walk = walk_month(
+            _OPENING_PENCE,
+            _summary([_bill(150000, 4), _bill(100000, 20)]),
+            floor_pence=-100000,
+        )
+        assert walk["first_breach_day"] == 20
+
+    def test_the_default_floor_makes_the_two_days_agree(self):
+        walk = _walk(bills=[_bill(150000, 4)])
+        assert walk["first_breach_day"] == walk["first_negative_day"]
+
+    def test_the_floor_moves_no_balance(self):
+        without = _walk(bills=[_bill(150000, 4)])
+        with_floor = walk_month(
+            _OPENING_PENCE, _summary([_bill(150000, 4)]), floor_pence=-100000
+        )
+        assert without["closing"] == with_floor["closing"]
+        assert without["min_balance"] == with_floor["min_balance"]
+        assert without["min_day"] == with_floor["min_day"]

@@ -28,12 +28,20 @@ _UNDATED_INCOME_DAY = 1
 _UNDATED_BILL_DAY = 28
 
 
-def walk_month(opening_pence: int, summary) -> dict:
+def walk_month(opening_pence: int, summary, floor_pence: int = 0) -> dict:
     """Simulate one month day by day and report what it did.
 
     Returns the low and the day it fell on, the first day the balance went
-    below zero, the income that rescued it if one did, then where the month
-    closed.
+    below zero, the first day it went below ``floor_pence`` (the deadline any
+    rescue has to beat), the income that rescued it if one did, then where the
+    month closed.
+
+    ``floor_pence`` is the balance the account may not go under: zero, the
+    default, for a budget with no overdraft arranged, otherwise the negative
+    of the agreed facility. It is a parameter rather than a second walk
+    because the Solvency and Reserves pages must go on reading ONE simulation;
+    at the default it changes nothing, so ``first_breach_day`` and
+    ``first_negative_day`` then agree.
 
     Income is applied before bills on a shared day, which is the same
     optimistic ordering the bank projection uses: money is received before
@@ -60,6 +68,11 @@ def walk_month(opening_pence: int, summary) -> dict:
     min_balance = opening_pence
     min_day = LOW_AT_START
     first_negative_day = None
+    # The deadline: the first moment the balance is below the floor, which is
+    # when a payment is actually refused. A month that OPENS below it has
+    # already breached before any event, reported as LOW_AT_START for the same
+    # reason the low is: day zero means "before anything happened".
+    first_breach_day = LOW_AT_START if opening_pence < floor_pence else None
     rescue_event = None
     for day, delta, name in events:
         balance += delta
@@ -68,6 +81,8 @@ def walk_month(opening_pence: int, summary) -> dict:
             min_day = day
         if balance < 0 and first_negative_day is None:
             first_negative_day = day
+        if balance < floor_pence and first_breach_day is None:
+            first_breach_day = day
         if (
             first_negative_day is not None
             and rescue_event is None
@@ -79,6 +94,7 @@ def walk_month(opening_pence: int, summary) -> dict:
         "min_balance": min_balance,
         "min_day": min_day,
         "first_negative_day": first_negative_day,
+        "first_breach_day": first_breach_day,
         "rescue_event": rescue_event,
         "closing": balance,
     }

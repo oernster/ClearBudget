@@ -92,9 +92,12 @@ def test_overdrawn_midmonth_is_red_even_when_closing_positive() -> None:
     )
 
     assert color == RED
-    assert "OVERDRAWN" in text
     assert clarion is True
-    assert "Closes: £500.00" in text
+    # The block no longer shouts OVERDRAWN. It prices the dip and dates it,
+    # which is the same warning with something a reader can act on in it. The
+    # positive close goes on the line beneath, so neither fact hides the other.
+    assert "Needs £1,200.00 by day 1 to stay afloat" in text
+    assert "closes £500.00" in text
 
 
 def test_dips_low_but_stays_positive_is_amber() -> None:

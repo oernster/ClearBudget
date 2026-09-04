@@ -187,6 +187,11 @@ Everything below this section explains how the code satisfies them.
   other way and `stays_afloat` reads the sign. `floor_pence` is the agreed
   overdraft rather than zero, so borrowing the bank has agreed to is not
   counted as a shortfall.
+  It carries the AMOUNT alone. The deadline that goes with it is the walk's
+  `first_breach_day`, kept separate because the two come from different days:
+  the amount is set by the month's LOW while the deadline is its FIRST breach;
+  a month can dip under on the 21st while reaching its worst on the 28th.
+  An amount with no deadline is not actionable, so the clause states both.
   It exists because MonthGap cannot answer this and was being read as though
   it could: the gap knows nothing about the balance a month opens with, so a
   month can need hundreds to hold flat while needing nothing at all to stay
@@ -423,8 +428,14 @@ focused mixins to stay under the 400-LOC-per-file limit:
     buffer) is what the Reserves page and the Recommendations target use. They
     are stored separately and merging them is an open product question, not a
     tidy-up
-- `walk_month(opening_pence, summary)` (`_month_walk.py`) - one month simulated
-  day by day, returning its low, the day the low lands on and its close. It was
+- `walk_month(opening_pence, summary, floor_pence=0)` (`_month_walk.py`) - one
+  month simulated day by day, returning its low, the day the low lands on, its
+  close, the first day it went below zero and `first_breach_day`, the first day
+  it went below `floor_pence`. That last one is the deadline the Solvency
+  forward blocks date their rescue figure to. `floor_pence` is a PARAMETER
+  rather than a second walk precisely so the invariant below survives: at its
+  default of zero it changes nothing and the two days agree, so a caller that
+  ignores it reads exactly what it always did. It moves no balance. It was
   lifted out of `_solvency_panel_narratives`, where it had grown up as UI code
   although nothing about it is UI. Two pages need it now: the bank page tells a
   month's story from it and the Reserves page reads the same months against
@@ -1140,15 +1151,24 @@ renderings of the same figures to hold in step. Every month any page shows
   not the month is in trouble: a figure printed only for a
   month in difficulty makes the healthy months look as though they have none
   and leaves nothing to compare a worsening month against.
-- THE TWO CLOSING FIGURES ARE NOT THE SAME QUESTION and each surface takes the
+- A FORWARD MONTH IS TWO LINES AND THE FIRST ONE IS THE ANSWER
+  (`_solvency_panel_month_lines.py`): `_afloat_clause()` states what has to
+  arrive and the day it has to beat, then `_shape_line()` gives one line of
+  context (opens, lowest day, closes). It was SEVEN lines and five of them
+  said the month went overdrawn: the day it went under, that nothing rescued
+  it, that payments would be refused, that it closed overdrawn, then finally
+  the sum that would have prevented all four. That is a blanket warning with
+  the actionable figure buried at the bottom of it, in the same shouting red
+  as the warning, which is no use to a reader who already knows the month is
+  in trouble. The alarm is carried by the COLOUR now (the state key and the
+  clarion are unchanged); the words carry the number.
+- THE TWO FIGURES ARE NOT THE SAME QUESTION and each surface takes the
   one it can answer. The month on screen closes on `_gap_clause()`, the
   hold-flat gap from `MonthGap`: a month can close in credit while running at
   a loss, which is precisely what a closing balance alone hides. Every
-  next-two-months block closes on `_afloat_clause()` instead, the money that
+  next-two-months block leads on `_afloat_clause()` instead, the money that
   would keep that month above the overdraft floor, from `MonthAfloat` over the
-  low the walk already found. Both helpers live in
-  `_solvency_panel_narratives.py`, each the single place its wording and sign
-  convention are decided. The forward blocks carried the gap once and it was
+  low the walk already found. The forward blocks carried the gap once and it was
   the wrong number in that position: it ignores the opening balance by design,
   so it told a reader a month needed hundreds when a fraction of that would
   have kept the account out of the red and said nothing whatever about the sum

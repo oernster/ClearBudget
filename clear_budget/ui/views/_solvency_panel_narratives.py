@@ -4,8 +4,10 @@ from clear_budget.application.services._month_walk import (
     LOW_AT_START,
     walk_month,
 )
-from clear_budget.domain.value_objects.month_afloat import MonthAfloat
 from clear_budget.ui import theme
+from clear_budget.ui.views._solvency_panel_month_lines import (
+    SolvencyPanelMonthLinesMixin,
+)
 from clear_budget.ui.theme_tokens import (
     STATE_AT_RISK,
     STATE_CAUTION,
@@ -26,7 +28,7 @@ _MONTHS_COVERAGE_FOR_SAFE = 2
 _LOW_AT_START = LOW_AT_START
 
 
-class SolvencyPanelNarrativeMixin:
+class SolvencyPanelNarrativeMixin(SolvencyPanelMonthLinesMixin):
     """Pure(ish) narrative-building helpers used by SolvencyPanel.update_display."""
 
     @staticmethod
@@ -146,15 +148,19 @@ class SolvencyPanelNarrativeMixin:
         ]
 
     @staticmethod
-    def _walk_month(opening_pence: int, summary) -> dict:
+    def _walk_month(opening_pence: int, summary, floor_pence: int = 0) -> dict:
         """The month's simulation, now owned by the application layer.
 
         Kept as a method because every caller here reads it through `self`;
         also because the Reserves page must read the SAME walk: two pages
         agreeing about a month is a property of there being one simulation,
         never of two being written carefully.
+
+        ``floor_pence`` only decides which day counts as the breach; it moves
+        no balance, so a caller that does not pass one reads exactly what it
+        always did.
         """
-        return walk_month(opening_pence, summary)
+        return walk_month(opening_pence, summary, floor_pence)
 
     def _build_month_cashflow_summary(
         self,
@@ -163,63 +169,48 @@ class SolvencyPanelNarrativeMixin:
         monthly_shortfall_pence: int,
         overdraft_limit_pence: int = 0,
     ) -> tuple[str, str, bool]:
-        """Build cashflow risk narrative for one month.
+        """One month as TWO lines: the money it needs, then its shape.
 
-        Simulates events in day order. Returns (display_text, color, clarion).
-        ``clarion`` is True when the month goes overdrawn with no facility or
-        beyond it, so the caller can render it as a stark warning.
+        Returns (display_text, color, clarion). ``clarion`` is True when the
+        month goes overdrawn with no facility or beyond it, so the caller can
+        render it as a stark warning.
+
+        The FIRST line is the answer and the only line carrying a decision:
+        what has to arrive for this month to survive. Everything else is
+        context for it.
+
+        It was seven lines and five of them said the month went overdrawn:
+        the day it went under, that nothing rescued it, that payments would be
+        refused, that it closed overdrawn, then finally the sum that would
+        have prevented all four. That is a blanket warning with the actionable
+        figure buried at the bottom of it, in the same shouting red as the
+        warning, which is no use to a reader who already knows the month is in
+        trouble and wants to know what to do about it. The alarm is carried by
+        the COLOUR now (the state and the clarion are unchanged); the words
+        carry the number.
+
         monthly_shortfall_pence is what the month has to find, its bills and
-        its reserves against its income: it picks the amber/red thresholds AND
-        is stated outright as what the month needs to hold flat. It is NOT the
-        fall in the balance, which the walk works out for itself; see
-        _month_shortfall_pence.
+        its reserves against its income. It no longer appears in the text at
+        all: it picks the amber/green threshold for a month that stays afloat
+        and nothing else. It is NOT the fall in the balance, which the walk
+        works out for itself; see _month_shortfall_pence.
         """
-        walk = self._walk_month(opening_pence, summary)
+        walk = self._walk_month(opening_pence, summary, -overdraft_limit_pence)
         min_balance = walk["min_balance"]
-        min_day = walk["min_day"]
-        first_negative_day = walk["first_negative_day"]
-        rescue_event = walk["rescue_event"]
-        closing_pence = walk["closing"]
-        lines = [f"Opens: {fmt(opening_pence)}"]
         state = self._health_state_key(min_balance, monthly_shortfall_pence)
         clarion = False
-
-        # Every month reports its low, whether or not it is alarming: a low
-        # shown only when a month is in trouble makes the healthy months look
-        # as though they have no low at all; it also leaves nothing to compare
-        # a worsening month against.
-        when = f"on day {min_day}" if min_day != _LOW_AT_START else "at the start"
-        if min_balance < 0:
-            lines.append(f"Low point: -{fmt(abs(min_balance))} {when}")
-        else:
-            lines.append(f"Low point: {fmt(min_balance)} {when}")
-
-        if first_negative_day is not None:
-            lines.append(f"OVERDRAWN by day {first_negative_day}")
-            if rescue_event:
-                rday, ramt, rname = rescue_event
-                lines.append(f"Rescued day {rday}: {rname} +{fmt(ramt)}")
-            else:
-                lines.append("No rescue income - remains overdrawn")
-            note, state, clarion = self._overdraft_facility_outcome(
+        if walk["first_negative_day"] is not None:
+            _, state, clarion = self._overdraft_facility_outcome(
                 min_balance, overdraft_limit_pence
             )
-            lines.append(note)
 
-        if closing_pence >= 0:
-            lines.append(f"Closes: {fmt(closing_pence)}")
-        else:
-            lines.append(f"Closes: -{fmt(abs(closing_pence))}  (still overdrawn)")
-
-        # Every month ends by naming the money that would rescue it, measured
-        # from the low point printed above. This used to be the hold-flat gap,
-        # which is a structural figure that ignores the opening balance
-        # entirely: it told a reader a month needed hundreds when a fraction
-        # of that would have kept the account out of the red; it told them
-        # nothing at all about the sum that actually would. See MonthAfloat.
-        clause = self._afloat_clause(min_balance, overdraft_limit_pence)
-        lines.append(clause[0].upper() + clause[1:])
-
+        clause = self._afloat_clause(
+            min_balance, overdraft_limit_pence, walk["first_breach_day"]
+        )
+        lines = [
+            clause[0].upper() + clause[1:],
+            self._shape_line(opening_pence, walk),
+        ]
         return "\n".join(lines), theme.state_colours()[state], clarion
 
     def _month_cashflow_state(
@@ -243,32 +234,6 @@ class SolvencyPanelNarrativeMixin:
         return self._health_state_key(walk["min_balance"], monthly_shortfall_pence)
 
     @staticmethod
-    def _overdraft_facility_outcome(
-        min_balance_pence: int, overdraft_limit_pence: int
-    ) -> tuple[str, str, bool]:
-        """Classify a month's overdraft dip against the agreed facility.
-
-        Returns (note, state_key, clarion). Within an agreed facility is amber
-        and manageable; going overdrawn with no facility or beyond it is a red
-        clarion: refused payments and fees. The state is a palette key rather
-        than a colour so both themes and both readings resolve it themselves.
-        """
-        if overdraft_limit_pence > 0 and min_balance_pence >= -overdraft_limit_pence:
-            return (
-                f"Within your {fmt(overdraft_limit_pence)} overdraft facility",
-                STATE_CAUTION,
-                False,
-            )
-        if overdraft_limit_pence > 0:
-            over = abs(min_balance_pence) - overdraft_limit_pence
-            return (
-                f"EXCEEDS your {fmt(overdraft_limit_pence)} overdraft by {fmt(over)}",
-                STATE_RED,
-                True,
-            )
-        return "NO OVERDRAFT FACILITY - payments would be refused", STATE_RED, True
-
-    @staticmethod
     def _gap_clause(needed_pence: int) -> str:
         """One month's shape as a clause: what it needs or what it spares.
 
@@ -282,31 +247,6 @@ class SolvencyPanelNarrativeMixin:
         if needed_pence < 0:
             return f"pays for itself, {fmt(abs(needed_pence))} to spare"
         return "pays for itself exactly"
-
-    @staticmethod
-    def _afloat_clause(low_point_pence: int, overdraft_limit_pence: int) -> str:
-        """One month's rescue figure as a clause: what it needs or what it spares.
-
-        Deliberately built from the low point rather than from the close: a
-        month that dips under mid-month and recovers by payday has still had
-        payments refused, so the close cannot be the measure.
-
-        A month with a facility is told what keeps it inside the facility,
-        naming the limit, because "afloat" and "not overdrawn" stop meaning
-        the same thing the moment borrowing is arranged.
-        """
-        afloat = MonthAfloat(
-            low_point_pence=low_point_pence,
-            overdraft_limit_pence=overdraft_limit_pence,
-        )
-        if afloat.stays_afloat:
-            return f"stays afloat, {fmt(afloat.headroom_pence)} clear at its lowest"
-        if overdraft_limit_pence > 0:
-            return (
-                f"needs {fmt(afloat.needed_pence)} to stay within your "
-                f"{fmt(overdraft_limit_pence)} overdraft"
-            )
-        return f"needs {fmt(afloat.needed_pence)} to stay afloat"
 
     @staticmethod
     def _build_income_timeline(opening_pence: int, income_sources, bills) -> list[str]:

@@ -123,9 +123,11 @@ class _Panel(
         )
         self.view_model = SimpleNamespace(budget_service=service)
 
-    def _walk_month(self, opening_pence, summary):
+    def _walk_month(self, opening_pence, summary, floor_pence=0):
         self.openings.append(opening_pence)
-        return SolvencyPanelNarrativeMixin._walk_month(opening_pence, summary)
+        return SolvencyPanelNarrativeMixin._walk_month(
+            opening_pence, summary, floor_pence
+        )
 
     @staticmethod
     def _set_projection_label(label, *, heading, body, colour, clarion) -> None:

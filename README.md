@@ -169,17 +169,26 @@ what is deliberately left and what only looks like debt.
   of it. An income you have marked as ended is never filled forward: its final
   month is respected, so a job that stopped in July does not reappear in
   August merely because August has no entry of that name
-- What would keep a forecast month afloat: each of the two months ahead on the
-  Solvency view ends by naming the money that would actually rescue it ("Needs
-  £268.13 to stay afloat"). A month never in danger states its margin instead
-  ("Stays afloat, £554.16 clear at its lowest"). It is read off that month's lowest
-  point, printed two lines above, so the two can be checked against each other
-  by eye. The low rather than the close, because a month that dips under
+- What would keep a forecast month afloat, with the day it must arrive by: each
+  of the two months ahead on the Solvency view is two lines; the first is the
+  answer. "Needs
+  £268.13 by day 21 to stay afloat" names both the sum and the day it has to
+  land by, because an amount with no deadline cannot be acted on: money that
+  arrives after the payment was refused did not keep the month afloat. A month
+  that opens already under reads "needs £1,090.42 now". A month never in danger
+  states its margin instead ("Stays afloat, £554.16 clear at its lowest").
+  Beneath it one line of context: where the month opens, the day it is lowest
+  and where it closes
+- The amount comes from the month's lowest point while the deadline comes from
+  its FIRST breach, which are usually different days: a month can dip under on
+  the 21st and reach its worst on the 28th. The money has to get in front of
+  the first refusal; clearing the lowest point clears every day after it
+  anyway. The low rather than the close, because a month that dips under
   mid-month and recovers by payday has still had payments refused. Where an
-  overdraft is arranged the figure is what keeps the month inside the facility,
-  since borrowing the bank has agreed to is not a shortfall. Each month is
-  measured on the projection as it stands, so the second one carries the
-  first one's damage
+  overdraft is arranged both figures are measured against the facility rather
+  than against zero, since borrowing the bank has agreed to is not a shortfall.
+  Each month is measured on the projection as it stands, so the second one
+  carries the first one's damage
 - What a month needs to hold flat: the month you are looking at states the
   difference between its full bills and its full income ("October needs
   £666.87 more to hold flat" or "September pays for itself, £120.00 to
@@ -327,7 +336,7 @@ their own. Hovering one names it, promptly rather than after the platform's
 usual tooltip delay; the keyboard ring still stops on each button in turn.
 
 - **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning. A commitment falling due this month appears among the bills as a reminder, marked "(from Reserves)", so the same obligation is not entered a second time by hand; it carries no total and cannot be edited there
-- **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Every month on the page states its low point and the day it falls on, in one shape, whether or not that month is in trouble, including when the low lands on a bill day rather than a payday; each of the two months ahead then names what would keep it afloat, while the month you are looking at names what it needs to hold flat
+- **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Each of the two months ahead leads with what would keep it afloat and by when, over one line of context; the month you are looking at states its own balance breakdown, its low point and what it needs to hold flat
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Reserves** - What is being held back for a bill that has not arrived
   yet: a table of commitments with what each has accrued and what is still to
@@ -697,22 +706,24 @@ entered before these existed continues to do.
   bank bills plus whatever it is setting aside and its full income. Credit card
   interest is reported on its own line beneath it and is never added in,
   because it accrues on the cards rather than leaving the bank account
-- **What would keep a month afloat**: for each of the two months ahead, the
-  money that would hold its lowest point at or above the overdraft floor; its
-  margin above that floor where it never breaches. The two figures answer
-  different questions and are never the same number: the gap above ignores the
-  opening balance by design, so a month can need hundreds to hold flat while
-  needing nothing to stay afloat
+- **What would keep a month afloat, by when**: for each of the two months
+  ahead, the money that would hold its lowest point at or above the overdraft
+  floor, dated to the first day it goes under; its margin above that floor
+  where it never breaches. The two figures answer different questions and are
+  never the same number: the gap above ignores the opening balance by design,
+  so a month can need hundreds to hold flat while needing nothing to stay
+  afloat
 - **Overdraft alert**: SAFE / AT RISK / CAUTION / CRITICAL based on projected
   balance; a deficit month names how fast savings are falling per month and the
   first month you would go overdrawn; it also flags "no overdraft facility" when
   you have none
 - **Mid-month alert**: detects temporary overdraft when bills cluster before the last income payment of the month
-- **Next Two Months As Entered**: day-by-day cashflow narrative for the next two months,
-  each stating that month's low point and the day it
-  falls on, then closing on what would keep it afloat; a dip within an agreed
-  overdraft reads calmly, while going
-  overdrawn with no facility (or beyond it) is rendered as a stark clarion
+- **Next Two Months As Entered**: each of the next two months as two lines. The
+  first is what would keep it afloat and the day that has to beat; the second
+  says where it opens, the day it is lowest and where it closes. A dip within
+  an agreed overdraft reads calmly, while going overdrawn with no facility (or
+  beyond it) is rendered as a stark clarion. The alarm is carried by the
+  colour, so the words can carry the number
 
 ---
 

@@ -61,9 +61,20 @@ def _summary(bills, incomes) -> SimpleNamespace:
 class TestTheClause:
     """The wording, in isolation from the block it closes."""
 
-    def test_a_breaching_month_names_the_sum_that_rescues_it(self):
+    def test_a_breaching_month_names_the_sum_and_the_day_it_must_beat(self):
+        """An amount with no deadline is not actionable: money that arrives
+        after the payment was refused did not keep the month afloat."""
         mix = SolvencyPanelNarrativeMixin()
-        assert mix._afloat_clause(-26813, 0) == f"needs {fmt(26813)} to stay afloat"
+        assert mix._afloat_clause(-26813, 0, 21) == (
+            f"needs {fmt(26813)} by day 21 to stay afloat"
+        )
+
+    def test_a_month_already_under_at_its_opening_is_told_the_money_is_late(self):
+        """It breached before any event, so there is no day left to beat."""
+        mix = SolvencyPanelNarrativeMixin()
+        assert mix._afloat_clause(-109042, 0, 0) == (
+            f"needs {fmt(109042)} now to stay afloat"
+        )
 
     def test_a_safe_month_names_its_margin_instead(self):
         mix = SolvencyPanelNarrativeMixin()
@@ -73,15 +84,16 @@ class TestTheClause:
     def test_a_month_inside_its_facility_is_reported_as_safe(self):
         """Borrowing the bank agreed to is not a shortfall."""
         mix = SolvencyPanelNarrativeMixin()
-        assert "stays afloat" in mix._afloat_clause(-26813, 50000)
+        assert "stays afloat" in mix._afloat_clause(-26813, 50000, None)
 
     def test_a_month_past_its_facility_names_the_facility(self):
         """Staying afloat and staying out of the red differ once borrowing
         is arranged, so the limit is named."""
         mix = SolvencyPanelNarrativeMixin()
-        clause = mix._afloat_clause(-109042, 50000)
+        clause = mix._afloat_clause(-109042, 50000, 28)
         assert clause == (
-            f"needs {fmt(59042)} to stay within your {fmt(50000)} overdraft"
+            f"needs {fmt(59042)} by day 28 to stay within your "
+            f"{fmt(50000)} overdraft"
         )
 
 
@@ -103,7 +115,7 @@ class TestTheForecastBlock:
             55416, summary, monthly_shortfall, overdraft_limit_pence=0
         )
 
-        assert f"Needs {fmt(26813)} to stay afloat" in text
+        assert f"Needs {fmt(26813)} by day 28 to stay afloat" in text
         assert "hold flat" not in text
         assert fmt(monthly_shortfall) not in text
 
@@ -116,8 +128,8 @@ class TestTheForecastBlock:
             55416, summary, 82229, overdraft_limit_pence=0
         )
 
-        assert f"Low point: -{fmt(26813)} on day 28" in text
-        assert f"Needs {fmt(26813)} to stay afloat" in text
+        assert f"Needs {fmt(26813)} by day 28 to stay afloat" in text
+        assert "lowest day 28" in text
 
     def test_a_month_that_never_goes_under_reports_its_margin(self):
         mix = SolvencyPanelNarrativeMixin()
@@ -140,8 +152,8 @@ class TestTheForecastBlock:
             50000, summary, 0, overdraft_limit_pence=0
         )
 
-        assert "Closes: £500.00" in text
-        assert f"Needs {fmt(120000)} to stay afloat" in text
+        assert "closes £500.00" in text
+        assert f"Needs {fmt(120000)} by day 1 to stay afloat" in text
 
     def test_card_bills_never_move_the_figure(self):
         """Card spending does not leave the bank account, so it cannot sink it."""
@@ -163,7 +175,7 @@ class TestTheForecastBlock:
             55416, summary, 82229, overdraft_limit_pence=0
         )
 
-        assert f"Needs {fmt(26813)} to stay afloat" in text
+        assert f"Needs {fmt(26813)} by day 28 to stay afloat" in text
 
 
 class TestEachMonthIsMeasuredAsProjected:
@@ -185,6 +197,6 @@ class TestEachMonthIsMeasuredAsProjected:
             -26813, summary, 82229, overdraft_limit_pence=0
         )
 
-        assert f"Opens: -{fmt(26813)}" in second
-        assert f"Needs {fmt(26813)} to stay afloat" in first
-        assert f"Needs {fmt(109042)} to stay afloat" in second
+        assert f"Opens -{fmt(26813)}" in second
+        assert f"Needs {fmt(26813)} by day 28 to stay afloat" in first
+        assert f"Needs {fmt(109042)} now to stay afloat" in second
