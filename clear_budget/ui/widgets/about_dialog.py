@@ -182,11 +182,20 @@ _LGPL3_NOTICE_HEAD = (
     # The two paragraphs below are the FSF's own notice, reproduced as the
     # licence requires. Their punctuation is part of the quotation, so the
     # house comma rule does not reach them; rewriting it would misquote.
-    "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public Licence as published by the Free Software Foundation, either version 3 of the Licence, or (at your option) any later version.\n"  # prose-sweep: allow
+    "This program is free software: you can redistribute it "  # prose-sweep: allow
+    "and/or modify it under the terms of the GNU Lesser General "  # prose-sweep: allow
+    "Public Licence as published by the Free Software "  # prose-sweep: allow
+    "Foundation, either version 3 of the Licence, or (at your "  # prose-sweep: allow
+    "option) any later version.\n"  # prose-sweep: allow
     "\n"
-    "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public Licence for more details.\n"  # prose-sweep: allow
+    "This program is distributed in the hope that it will be "  # prose-sweep: allow
+    "useful, but WITHOUT ANY WARRANTY; without even the implied "  # prose-sweep: allow
+    "warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR "  # prose-sweep: allow
+    "PURPOSE. See the GNU Lesser General Public Licence for more "  # prose-sweep: allow
+    "details.\n"  # prose-sweep: allow
     "\n"
-    "You should have received a copy of the GNU Lesser General Public Licence along with this program. If not, see <https://www.gnu.org/licenses/>.\n"
+    "You should have received a copy of the GNU Lesser General Public Licence along "
+    "with this program. If not, see <https://www.gnu.org/licenses/>.\n"
     "\n"
     "----------------------------------------\n"
     "\n"
@@ -196,8 +205,10 @@ _LGPL3_NOTICE_HEAD = (
     "\n"
     "Key terms summary:\n"
     "  • You may use, copy, modify and distribute this software under LGPL-3.0.\n"
-    "  • If you distribute modified versions of this software, you must make the modified source available under the same licence.\n"
-    "  • You must allow end users to replace or relink the LGPL-licensed libraries (PySide6 / Qt) used by this application.\n"
+    "  • If you distribute modified versions of this software, you must make the "
+    "modified source available under the same licence.\n"
+    "  • You must allow end users to replace or relink the LGPL-licensed libraries "
+    "(PySide6 / Qt) used by this application.\n"
     "  • There is NO WARRANTY for this program, to the extent permitted by law.\n"
     "\n"
     "----------------------------------------\n"

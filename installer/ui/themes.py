@@ -22,7 +22,8 @@ Measured after the swap, foreground against background (WCAG AA wants 4.5:1 for
 body text): dark theme, body text 15.97:1, muted text 7.79:1, heading 11.17:1,
 button label on its fill 5.67:1 and 4.95:1 hovered, Uninstall label 10.02:1;
 light theme, body text 16.12:1, heading 5.39:1, button label 5.67:1, Uninstall
-label 10.24:1 on the muted red it keeps (see `_LIGHT_OVERRIDES`). One pair sits under the bar: light-theme muted text at 4.39:1,
+label 10.24:1 on the muted red it keeps (see `_LIGHT_OVERRIDES`). One pair
+sits under the bar: light-theme muted text at 4.39:1,
 which is the value it already had here (`#6b7280` on `#f4f4f4` before, on
 `#f3f4f6` now) and the pairing the app itself uses for every muted line it
 draws. It moves when the app's token moves, which is the point.

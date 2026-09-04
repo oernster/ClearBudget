@@ -9,7 +9,10 @@ def days_in_month(year: int, month: int) -> int:
 
 
 def prorate_elapsed_pence(amount_pence: int, today_day: int, days_total: int) -> int:
-    """Portion of amount_pence accrued so far this month (days 1..today_day), rounded up."""
+    """Portion of amount_pence accrued so far this month, rounded up.
+
+    "So far" is days 1 to today_day inclusive.
+    """
     numerator = amount_pence * today_day
     return -(-numerator // days_total)
 

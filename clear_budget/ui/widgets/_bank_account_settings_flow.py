@@ -1,4 +1,7 @@
-"""Flow helper for the Bank Account Settings dialog - keeps main_window under LOC limit."""
+"""Flow helper for the Bank Account Settings dialog.
+
+Split out to keep main_window under the module size limit.
+"""
 
 from clear_budget.ui.widgets.bank_account_settings_dialog import (
     BankAccountSettingsDialog,

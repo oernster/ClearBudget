@@ -113,7 +113,8 @@ class CreditCardDialog(QDialog):
 
         layout.addWidget(
             QLabel(
-                f"Min Payment % of balance [optional, e.g. 4.43 - overrides fixed {_sym}]:"
+                f"Min Payment % of balance "
+                f"[optional, e.g. 4.43 - overrides fixed {_sym}]:"
             )
         )
         self.min_pct_spin = QDoubleSpinBox()

@@ -3,8 +3,8 @@
 Split out of `_save_load_flow`, which held two unrelated concerns: WHAT the
 tray's buttons look like, then WHAT the save and load flows do when one is
 pressed. Adding the owner challenge to the load flow pushed that module into
-the 381 to 399 danger band `tests/structural/test_loc_limits.py` enforces; the two halves had
-nothing to say to each other anyway.
+the 381 to 399 danger band `tests/structural/test_loc_limits.py` enforces;
+the two halves had nothing to say to each other anyway.
 
 Every view builds the same tray, so these builders are the single definition of
 its buttons; the ORDER they are placed in is the views' own business and is

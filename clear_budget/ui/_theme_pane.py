@@ -28,7 +28,8 @@ def pane_qss(t: dict[str, str]) -> str:
     """Return the stylesheet for the card the view content sits on."""
     return f"""
 /* The content below the buttons is one card. The bar itself is hidden (the
-   views are reached by buttons in the navigation tray), so it carries no rules of its own
+   views are reached by buttons in the navigation tray), so it carries no
+   rules of its own
    beyond suppressing the chrome Qt would otherwise draw for it. */
 QTabWidget::pane {{
     border: 1px solid {t["border"]};

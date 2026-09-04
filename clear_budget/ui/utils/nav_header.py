@@ -137,8 +137,9 @@ def build_centered_nav_header(
     could not hold both without the month being pushed off the middle:
 
     * TRAY 1, topmost, carries ONLY what is about the month being viewed:
-      Previous, the month and year, then Next. Nothing else is in it, so it is centred on the window by its
-      own emptiness rather than by balancing anything.
+      Previous, the month and year, then Next. Nothing else is in it, so it
+      is centred on the window by its own emptiness rather than by balancing
+      anything.
     * TRAY 2 carries everything that acts on the application: the `leading`
       widgets (load, save, Preferences, Bank Account and a separator), then
       the `views` (the primary view buttons, which live here rather than in a strip

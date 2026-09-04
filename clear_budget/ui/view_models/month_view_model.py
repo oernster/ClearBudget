@@ -204,7 +204,7 @@ class MonthViewModel(QObject):
         self.refresh_month_summary()
 
     def delete_income_month_override(self, *, income_id: int) -> None:
-        """Remove the month-only override for an income source, reverting to template."""
+        """Remove an income source's month-only override, back to template."""
         self.budget_service.delete_income_month_override(
             income_id=income_id, year_month=self.current_month
         )

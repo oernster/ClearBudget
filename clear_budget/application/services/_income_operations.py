@@ -1,4 +1,7 @@
-"""Income CRUD/override/skip/received pass-throughs for BudgetService - LOC limit split."""
+"""Income CRUD, override, skip and received pass-throughs for BudgetService.
+
+Split from the service to keep both modules under the size limit.
+"""
 
 from dataclasses import replace
 

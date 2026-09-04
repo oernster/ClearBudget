@@ -320,7 +320,10 @@ what is deliberately left and what only looks like debt.
   draws, every view button included, each entry led by the picture it is
   describing, then states the three
   rules behind the numbers (how an undated bill accrues, how the balance
-  maintains itself, what Safe to Spend Today promises)
+  maintains itself, what Safe to Spend Today promises) and closes on the
+  handful of behaviours that are neither an icon nor a rule: the per-month
+  machinery on a bill or income, the two delete scopes, what the sign-in
+  screen remembers and how Switch User differs from Log Out
 - SQLite storage: per-user budget database + shared users database
 
 ---
@@ -751,9 +754,11 @@ standing (one to twelve, four by default).
 - **Check for Updates** - queries this project's GitHub releases and reports
   whether a newer version exists, offering the download for your platform
 - **How It Works** - names all seven views, the Graph page's switches and
-  exports and the tray, each entry led by the icon itself, then the three rules
+  exports, the tray, the strip along the foot and the keyboard, each entry led
+  by the icon itself, then the three rules
   the numbers rest on: pro-rating, the self-maintaining balance and what Safe
-  to Spend Today promises. One page, kept in sync with the calculation logic;
+  to Spend Today promises, then a closing run of behaviours that are neither.
+  One page, kept in sync with the calculation logic;
   a structural test fails the build if a view button is missing from it or the
   heading miscounts the strip
 - **View Licence (LGPL-3.0)**

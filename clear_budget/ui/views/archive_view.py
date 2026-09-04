@@ -165,8 +165,8 @@ class ArchiveView(QWidget):
         presents as a SKIPPED control: the user views past where a button
         visibly is and lands somewhere else entirely.
 
-        The button for the view being shown is not in the list. It is a stop that could do
-        nothing, dropped here rather than disabled, because a
+        The button for the view being shown is not in the list. It is a stop
+        that could do nothing, dropped here rather than disabled, because a
         disabled control paints the permanent red ring and would read as
         broken rather than as current.
         """

@@ -1,9 +1,33 @@
 [flake8]
 max-line-length = 88
+# E203 and W503 are the two rules black deliberately violates; black wins.
 extend-ignore = E203,W503
+
+# Tests are held to the same rules bar three. E501 because a test name and a
+# fixture chain are allowed to be long; F401 and F841 because an import or a
+# binding kept only to prove a thing exists is the point of some tests.
+#
+# how_it_works_dialog builds its page as one f-string with the row factory
+# called inside the `{...}` expressions. pycodestyle reads the whole f-string
+# as ONE logical line starting at the `return`, so it scores those calls'
+# continuations against the wrong anchor and there is no indentation that
+# satisfies it while leaving the HTML correct: reindenting to clear E128
+# simply turns all 22 into E122. It cannot be answered with `# noqa` either,
+# since a comment inside the string would be rendered to the user. Two codes,
+# one file, rather than turning the continuation checks off everywhere.
 per-file-ignores =
     tests/*.py: E501,F401,F841
     tests/**/*.py: E501,F401,F841
+    clear_budget/ui/widgets/how_it_works_dialog.py: E122,E128
+
+# ONLY what is genuinely not ours to lint. This list once carried `ui`,
+# `services`, `models` and `installer`, which flake8 matches as a directory
+# NAME anywhere in the tree: that hid 230 files, the whole UI layer, BOTH
+# services packages (the application and domain cores) and the entire setup
+# program, none of which had ever been linted. `models`, `test_add_bill.py`
+# and `create_icons.py` matched nothing at all. Nothing is excluded by layer
+# now; a rule that does not fit a file is a per-file-ignore above, where it
+# has to be named and justified.
 exclude =
     .git,
     __pycache__,
@@ -12,11 +36,4 @@ exclude =
     build,
     dist,
     dist-pyinstaller,
-    dist-installer,
-    installer,
-    models,
-    services,
-    ui,
-    test_add_bill.py,
-    buildexe.py,
-    create_icons.py
+    dist-installer

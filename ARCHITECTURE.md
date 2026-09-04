@@ -1318,15 +1318,24 @@ renderings of the same figures to hold in step. Every month any page shows
 - `BalanceDialog` - edit current bank balance; opens with the figure focused
   and selected for immediate overtype
 - `ArchiveDetailDialog` - drill-down for a single archived month
-- `HowItWorksDialog` - two jobs in one page. It NAMES the furniture in five
-  runs (the seven views, the Graph page's own controls, the tray, the strip
-  along the foot, then the keyboard), each entry led by the real icon that
+- `HowItWorksDialog` - three jobs in one page, across seven `<h3>` runs
+  (measured from the built page, not counted from this list). It NAMES the
+  furniture in five of them (the seven views, the Graph page's own controls,
+  the tray, the strip along the foot, then the keyboard), each entry led by
+  the real icon that
   control draws, which the
   view buttons need because their text labels became pictures. Then it states the
   three rules the numbers rest on and that no screen can say for itself: how
   an undated bill accrues, how the balance maintains itself, what Safe to
-  Spend Today promises. Every icon is a BUNDLED IMAGE inlined through the
-  same `find_nav_icon_path` the tray uses, never described in words, never
+  Spend Today promises. A final "Also worth knowing" run carries the handful
+  of behaviours that are neither furniture nor arithmetic: the per-month
+  machinery on a bill or income, the two delete scopes, the immovable-day
+  tick, what the sign-in screen remembers and how Switch User differs from
+  Log Out. Every icon is a BUNDLED IMAGE referenced by an absolute
+  `file:///` URL that Qt's rich text resolves when the page is drawn, through
+  the same `find_nav_icon_path` the tray uses (measured on the built page: 19
+  image references, every one resolving to a file on disk, no data URI). It
+  is never described in words, never described in words, never
   approximated with a similar-looking emoji and never a decorative glyph
   corresponding to no control; an icon guide showing something other than the
   icon is worse than none. `_INLINE_ICON_PX` is 30, half again the 20 it
@@ -2685,7 +2694,17 @@ an option that read as "remove my data" removed nothing.
 ## Code Quality Standards
 
 - **Black** 88-char line length
-- **Flake8** no violations
+- **Flake8** no violations, over the WHOLE tree. That was worth nothing until
+  recently: `.flake8` excluded `ui`, `services`, `models` and `installer`,
+  which flake8 matches as a directory NAME anywhere it appears, so 230 files
+  went unchecked, the entire UI layer, BOTH services packages and the whole
+  setup program among them, while the repo reported clean. Nothing is
+  excluded by layer now; only build output and the virtualenv are. One
+  per-file-ignore remains and is justified in the config: pycodestyle reads
+  `how_it_works_dialog`'s page-building f-string as one logical line, so it
+  scores the row-factory calls inside its `{...}` expressions against the
+  wrong anchor; a `# noqa` cannot be placed there either, because a comment
+  inside the string would be rendered to the user
 - **Ruff** clean (`ruff check .`) under its default rules plus the three
   blind-handler rules (`BLE001`, `S110`, `S112`) enabled repo-wide in
   `pyproject.toml`, so a new blind exception handler fails the lint rather
