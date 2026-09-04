@@ -167,16 +167,37 @@ Everything below this section explains how the code satisfies them.
 - `Amount(pence: int)` - Non-negative currency; `__str__` uses `get_symbol()` from `shared.currency`
 - `YearMonth(year, month)` - Date validation with arithmetic
 - `SolvencyResult` - Outcome of solvency calculation
-- `MonthGap(income_pence, bank_bills_pence, card_interest_pence)` - what one
+- `MonthGap(income_pence, bank_bills_pence, card_interest_pence, reserve_pence=0)` -
+  what one
   month costs against what it brings in. `needed_pence` derives the shortfall
   (positive) or the headroom (negative) and `holds_flat` reads it. Whole-month
   arithmetic on both sides deliberately, so it describes the SHAPE of the month
   rather than how far through it we are: "what does a month like this need" is
   a structural question, so the answer must not move simply because time
-  passed. Card interest is carried alongside and never folded into
+  passed. The reserve is IN the figure, because money set aside leaves the same
+  account the bills do and a month that cannot fund it is borrowing from a
+  later one. Card interest is carried alongside and never folded into
   `needed_pence`, because it accrues on the cards and never leaves the bank
   account, so adding it would overstate the gap by money that was never going
   to move (`tests/domain/value_objects/test_month_gap.py` asserts exactly that)
+- `MonthAfloat(low_point_pence, overdraft_limit_pence=0)` - how far a month's
+  lowest point sits from the balance it may not go below. `needed_pence` is
+  what must arrive to lift that low up to the floor (zero for a month that
+  already clears it, never a negative), `headroom_pence` is the margin the
+  other way and `stays_afloat` reads the sign. `floor_pence` is the agreed
+  overdraft rather than zero, so borrowing the bank has agreed to is not
+  counted as a shortfall.
+  It exists because MonthGap cannot answer this and was being read as though
+  it could: the gap knows nothing about the balance a month opens with, so a
+  month can need hundreds to hold flat while needing nothing at all to stay
+  afloat; a month going under is told a number unrelated to how far under
+  it goes. The two are asserted against each other in
+  `tests/domain/value_objects/test_month_afloat.py`. Measured at the month's
+  LOW rather than its close, since a month that dips under and recovers by
+  payday has still had payments refused. Pointedly not cumulative across
+  months: each forecast month is measured on the projection as it stands, so
+  its figure agrees with the opening balance printed at the top of its own
+  block
 - `Recurrence(months: int | None)` - how often a commitment comes round again;
   `None` means it falls due once and never again. `once()`, `annual()` and
   `every_months(n)` construct it and `parse()` reads the stored label. `annual`
@@ -1115,19 +1136,28 @@ It was removed: the Credit Cards VIEW answers a card's position in full, so the
 page restated another view's job in a smaller space; keeping both meant two
 renderings of the same figures to hold in step. Every month any page shows
   states its low
-  point on a line of its own, plus what that month needs to hold flat, in one
-  shape, whether or not the month is in trouble: a figure printed only for a
+  point on a line of its own, then closes on a figure of its own, whether or
+  not the month is in trouble: a figure printed only for a
   month in difficulty makes the healthy months look as though they have none
-  and leaves nothing to compare a worsening month against. A month can close
-  in credit while running at a loss, which is precisely what a closing balance
-  alone hides. The Overall Health line and every next-two-months block
-  render that figure through ONE shared `_gap_clause()` helper
-  (`_solvency_panel_narratives.py`), so the wording and the sign convention
-  cannot drift apart between the two surfaces; each caller supplies its own
-  subject, since one sits under a month heading already and the other does
-  not. The forward blocks already had the number in hand as
-  `monthly_drain_pence`, which until then only ever chose a traffic-light
-  colour
+  and leaves nothing to compare a worsening month against.
+- THE TWO CLOSING FIGURES ARE NOT THE SAME QUESTION and each surface takes the
+  one it can answer. The month on screen closes on `_gap_clause()`, the
+  hold-flat gap from `MonthGap`: a month can close in credit while running at
+  a loss, which is precisely what a closing balance alone hides. Every
+  next-two-months block closes on `_afloat_clause()` instead, the money that
+  would keep that month above the overdraft floor, from `MonthAfloat` over the
+  low the walk already found. Both helpers live in
+  `_solvency_panel_narratives.py`, each the single place its wording and sign
+  convention are decided. The forward blocks carried the gap once and it was
+  the wrong number in that position: it ignores the opening balance by design,
+  so it told a reader a month needed hundreds when a fraction of that would
+  have kept the account out of the red and said nothing whatever about the sum
+  that actually would. The gap still reaches those blocks, through
+  `monthly_shortfall_pence`, which chooses their traffic-light colour; it is
+  simply no longer what they SAY. That is also why the reserve still colours a
+  forward month amber while never moving its afloat figure: money set aside has
+  not left the account, so it cannot sink the month
+  (`tests/ui_logic/test_solvency_reserve_health.py` holds both halves)
 - The projection page (`_solvency_panel_assumed.SolvencyPanelAssumedMixin`)
   runs the same month calculations on the repeat-forward assumption, painted
   in muted variants of the same traffic-light hues so it reads as provisional,
