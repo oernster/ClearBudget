@@ -171,7 +171,7 @@ as offline as the rest of the app. Nothing here is held back behind it.</p>
 
 <p><b>A bill with no due day spreads across the month.</b> Only the part
 ahead of you counts as still due, so &pound;200 of food on the 11th of a
-30-day month leaves &pound;126. A bill WITH a due day counts in full until
+30-day month leaves &pound;126.66. A bill WITH a due day counts in full until
 that day, then drops to zero.</p>
 
 <p><b>The balance keeps itself up to date.</b> Set it once. After
@@ -181,7 +181,9 @@ caught up at the next launch. Typing a balance yourself overrides everything
 applied before it. Card bills never touch it.</p>
 
 <p><b>Safe to Spend Today is a promise, not a balance.</b> It is the most you
-could spend today with every month in your window still clearing its buffer.
+could spend today with every month in your window still clearing its floor:
+your buffer on every day, plus whatever the Reserves page is holding back on
+that day, so the bar rises as a distant bill gets closer.
 It assumes the income you entered for this month arrives again in each later
 month that has none of that name, which is why it lives on its own Solvency
 page with that assumption written under it. Months ahead look thin only
@@ -207,7 +209,8 @@ cancelling costs nothing; Log Out ends it there and then.</p>
 <p>Tab or Right goes forward, Shift+Tab or Left goes back, wrapping at both
 ends. Up and Down walk table rows. Enter does what Space does. A green
 outline means focused or hovered; a red one means disabled. Nothing is
-highlighted until your first keypress.</p>
+highlighted on the main window until your first keypress; a dialog you open
+starts on its own first control, because you opened it to do one thing.</p>
 """
 
 

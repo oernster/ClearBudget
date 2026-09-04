@@ -1341,14 +1341,14 @@ renderings of the same figures to hold in step. Every month any page shows
   icon is worse than none. `_INLINE_ICON_PX` is 30, half again the 20 it
   first shipped at: the artwork is detailed and at 20px two icons a reader
   was trying to tell apart closed up into the same smudge, which defeats the
-  screen's one job. Two structural guards keep it honest rather than a
+  screen's one job. Three structural guards keep it honest rather than a
   habit: `test_help_names_the_tray.py` for the tray's buttons and the footer's,
   with `_BUTTON_SOURCES` reading `bottom_tray.py` alongside `_tray_buttons.py`
   so a picture sitting in no tray at all is caught the same way; then
   `test_help_names_the_views.py` for the view strip, the second added after
   Reserves shipped with a picture, a tooltip and no caption anywhere in the
   application while the screen went on announcing six views. It also asserts
-  the heading counts what it lists. They are centred on the line rather than
+  the heading counts what it lists. The third is `test_help_example_is_arithmetic.py`, which pins the pro-rating example to the function it teaches; the rest of the three-rules prose is still held by nothing but a reading, which is how it drifted. They are centred on the line rather than
   sitting on its baseline, since at this size a baseline-aligned picture hangs below the
   words it leads. Length is the recurring failure here. A button-by-button
   inventory was tried and read as a wall of text; the essay that replaced it
@@ -2657,6 +2657,13 @@ an option that read as "remove my data" removed nothing.
   `VIEW_SPECS` has a row on the screen carrying its own icon and its own
   tooltip name, no row survives a button that is gone and the heading counts
   what it lists
+- `test_help_example_is_arithmetic.py` - the pro-rating example on the How It
+  Works page is what `prorate_remaining_pence` actually returns, to the penny,
+  with the figures read OUT of the sentence rather than restated in the test.
+  The tray and the view strip each had a guard while the three rules beneath
+  them had none, which is why that is the half of the page that went stale:
+  it stated 126 where the function returns 126.66. Verified by planting the
+  old figure back and watching it fail
 - `test_view_page_lists_agree.py` - the three lists of views in
   `_main_window_views.py` (the `addTab` calls, the tray-shortcut loop, the
   positional `_views` literal) agree with each other and with `VIEW_SPECS`,
