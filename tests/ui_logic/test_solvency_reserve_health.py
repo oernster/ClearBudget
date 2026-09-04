@@ -94,22 +94,31 @@ class TestWhatTheMonthMustFind:
 
 
 class TestTheSentence:
-    def test_a_month_that_cannot_fund_its_reserve_says_so(self):
-        mix = _mix(_RESERVE_PENCE)
-        summary = _summary(_BILLS, _INCOMES)
-        text, _colour, _clarion = mix._build_month_cashflow_summary(
-            _OPENING_PENCE, summary, mix._month_shortfall_pence(_MONTH, summary)
-        )
-        assert "Needs £200.00 more to hold flat" in text
+    """The block's closing line names the rescue figure, not the reserve.
 
-    def test_the_same_month_without_a_reserve_pays_for_itself(self):
-        """The reading before this existed, kept as the contrast."""
-        mix = _mix(0)
+    It used to close on the hold-flat gap, which the reserve is part of. It
+    now closes on the money that would keep the month out of the red. A
+    reserve is money still sitting in the account, so it correctly makes no
+    difference to that figure. The reserve reaches the reader through the
+    traffic light instead; TestTheColour below is what holds that.
+    """
+
+    def _sentence(self, reserve_pence: int) -> str:
+        mix = _mix(reserve_pence)
         summary = _summary(_BILLS, _INCOMES)
         text, _colour, _clarion = mix._build_month_cashflow_summary(
             _OPENING_PENCE, summary, mix._month_shortfall_pence(_MONTH, summary)
         )
-        assert "Pays for itself" in text
+        return text
+
+    def test_the_month_names_what_would_keep_it_afloat(self):
+        assert "Stays afloat, £100.00 clear at its lowest" in self._sentence(
+            _RESERVE_PENCE
+        )
+
+    def test_a_reserve_cannot_move_the_rescue_figure(self):
+        """Money set aside has not left the account, so it cannot sink it."""
+        assert self._sentence(_RESERVE_PENCE) == self._sentence(0)
 
 
 class TestTheColour:

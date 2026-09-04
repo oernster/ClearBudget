@@ -125,22 +125,31 @@ class TestGapClause:
     def test_a_month_that_breaks_even_says_so_without_a_figure(self) -> None:
         assert SolvencyPanelNarrativeMixin._gap_clause(0) == "pays for itself exactly"
 
-    def test_a_healthy_forward_month_still_states_its_shape(self) -> None:
+    def test_a_healthy_forward_month_still_states_its_margin(self) -> None:
         """The complaint this answers.
 
         A figure shown only for months in trouble makes the healthy ones look
         as though they have none, which is what made the low point read
-        inconsistently before it was given to every month.
+        inconsistently before it was given to every month. The clause the
+        block closes on has since changed from the hold-flat gap to the money
+        that would keep the month afloat; the invariant it was written to
+        protect has not, so a healthy month still ends on a figure.
         """
         mix = SolvencyPanelNarrativeMixin()
         summary = _summary([_bill(name="Rent", pence=50_000, day=5)], [])
         text, _, _ = mix._build_month_cashflow_summary(
             _OPENING_PENCE, summary, -50_000, overdraft_limit_pence=0
         )
-        assert f"Pays for itself, {fmt(50_000)} to spare" in text
+        assert f"Stays afloat, {fmt(50_000)} clear at its lowest" in text
 
-    def test_a_month_closing_positive_can_still_report_a_loss(self) -> None:
-        """The case a closing balance alone hides."""
+    def test_the_forward_block_no_longer_reports_the_hold_flat_gap(self) -> None:
+        """A month running at a loss that never goes near the red.
+
+        The gap is a true statement about the month's shape and a useless one
+        as a rescue figure, so it left the forward blocks. It is still the
+        clause the displayed month's own gap label is built from, which is why
+        _gap_clause is asserted here rather than deleted with the line.
+        """
         mix = SolvencyPanelNarrativeMixin()
         summary = _summary(
             [_bill(name="Rent", pence=50_000, day=5)],
@@ -149,5 +158,9 @@ class TestGapClause:
         text, _, _ = mix._build_month_cashflow_summary(
             _OPENING_PENCE, summary, 16_687, overdraft_limit_pence=0
         )
-        assert f"Needs {fmt(16_687)} more to hold flat" in text
+        assert "hold flat" not in text
+        assert f"Stays afloat, {fmt(50_000)} clear at its lowest" in text
         assert "Closes:" in text
+        assert SolvencyPanelNarrativeMixin._gap_clause(16_687) == (
+            f"needs {fmt(16_687)} more to hold flat"
+        )

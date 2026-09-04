@@ -4,6 +4,7 @@ from clear_budget.application.services._month_walk import (
     LOW_AT_START,
     walk_month,
 )
+from clear_budget.domain.value_objects.month_afloat import MonthAfloat
 from clear_budget.ui import theme
 from clear_budget.ui.theme_tokens import (
     STATE_AT_RISK,
@@ -210,10 +211,13 @@ class SolvencyPanelNarrativeMixin:
         else:
             lines.append(f"Closes: -{fmt(abs(closing_pence))}  (still overdrawn)")
 
-        # Every month states its shape, on the same terms as the month on
-        # screen. A month that closes positive can still run at a loss; that
-        # is precisely the case a closing balance alone hides.
-        clause = self._gap_clause(monthly_shortfall_pence)
+        # Every month ends by naming the money that would rescue it, measured
+        # from the low point printed above. This used to be the hold-flat gap,
+        # which is a structural figure that ignores the opening balance
+        # entirely: it told a reader a month needed hundreds when a fraction
+        # of that would have kept the account out of the red; it told them
+        # nothing at all about the sum that actually would. See MonthAfloat.
+        clause = self._afloat_clause(min_balance, overdraft_limit_pence)
         lines.append(clause[0].upper() + clause[1:])
 
         return "\n".join(lines), theme.state_colours()[state], clarion
@@ -278,6 +282,31 @@ class SolvencyPanelNarrativeMixin:
         if needed_pence < 0:
             return f"pays for itself, {fmt(abs(needed_pence))} to spare"
         return "pays for itself exactly"
+
+    @staticmethod
+    def _afloat_clause(low_point_pence: int, overdraft_limit_pence: int) -> str:
+        """One month's rescue figure as a clause: what it needs or what it spares.
+
+        Deliberately built from the low point rather than from the close: a
+        month that dips under mid-month and recovers by payday has still had
+        payments refused, so the close cannot be the measure.
+
+        A month with a facility is told what keeps it inside the facility,
+        naming the limit, because "afloat" and "not overdrawn" stop meaning
+        the same thing the moment borrowing is arranged.
+        """
+        afloat = MonthAfloat(
+            low_point_pence=low_point_pence,
+            overdraft_limit_pence=overdraft_limit_pence,
+        )
+        if afloat.stays_afloat:
+            return f"stays afloat, {fmt(afloat.headroom_pence)} clear at its lowest"
+        if overdraft_limit_pence > 0:
+            return (
+                f"needs {fmt(afloat.needed_pence)} to stay within your "
+                f"{fmt(overdraft_limit_pence)} overdraft"
+            )
+        return f"needs {fmt(afloat.needed_pence)} to stay afloat"
 
     @staticmethod
     def _build_income_timeline(opening_pence: int, income_sources, bills) -> list[str]:

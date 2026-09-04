@@ -33,7 +33,11 @@ _MONTH = YearMonth(year=2026, month=9)
 _OPENING_PENCE = 500000
 _BILLS_PENCE = 150000
 _INCOME_PENCE = 160000
-_RESERVE_PENCE = 30000
+# Large enough to flip the month's traffic light on its own, which is how the
+# guard below proves the reserve is not being ignored outright. A reserve the
+# month can comfortably absorb would leave the colour unchanged and the guard
+# would then pass for the wrong reason.
+_RESERVE_PENCE = 200000
 # What the month actually does to the balance: income in, bills out. The
 # reserve is deliberately absent, which is the whole point of the test.
 _NET_EFFECT_PENCE = _INCOME_PENCE - _BILLS_PENCE
@@ -126,6 +130,7 @@ class _Panel(
     @staticmethod
     def _set_projection_label(label, *, heading, body, colour, clarion) -> None:
         label.setText(f"{heading}\n{body}")
+        label.colour = colour
 
 
 def _run(panel, *, assumed: bool):
@@ -150,6 +155,20 @@ def _openings(reserve_pence: int, *, assumed: bool = True) -> list[int]:
     return seen
 
 
+def _assumed_colour(reserve_pence: int) -> str:
+    """The colour the first assumed forward month was painted."""
+    panel = _Panel(reserve_pence)
+    _run(panel, assumed=True)
+    return panel.m1_assumed_projection_label.colour
+
+
+def _entered_colour(reserve_pence: int) -> str:
+    """The colour the first entered forward month was painted."""
+    panel = _Panel(reserve_pence)
+    _run(panel, assumed=False)
+    return panel.m1_projection_label.colour
+
+
 class TestTheChainCarriesTheBalance:
     def test_the_second_month_opens_where_the_first_closed(self):
         """Bills out and income in; nothing else."""
@@ -160,12 +179,15 @@ class TestTheChainCarriesTheBalance:
         """The planted regression: subtracting what is merely held back."""
         assert _openings(_RESERVE_PENCE) == _openings(0)
 
-    def test_the_reserve_still_reaches_the_month_s_own_sentence(self):
-        """Proves the test above is not passing because the reserve is ignored."""
-        panel = _Panel(_RESERVE_PENCE)
-        report = SimpleNamespace(balance_pence=_OPENING_PENCE, year_month=_MONTH)
-        panel._render_assumed_forward(report, 0)
-        assert "more to hold flat" in panel.m1_assumed_projection_label.text
+    def test_the_reserve_still_reaches_the_month_s_own_colour(self):
+        """Proves the test above is not passing because the reserve is ignored.
+
+        The proof used to read the month's closing sentence, which named the
+        hold-flat gap. That sentence now names the sum that would keep the
+        month afloat instead, a figure the reserve is correctly absent from,
+        so the traffic light is where the reserve is read back.
+        """
+        assert _assumed_colour(_RESERVE_PENCE) != _assumed_colour(0)
 
 
 class TestTheEnteredChainCarriesTheBalanceToo:
@@ -178,7 +200,5 @@ class TestTheEnteredChainCarriesTheBalanceToo:
     def test_a_reserve_does_not_move_the_chain(self):
         assert _openings(_RESERVE_PENCE, assumed=False) == _openings(0, assumed=False)
 
-    def test_the_reserve_still_reaches_the_month_s_own_sentence(self):
-        panel = _Panel(_RESERVE_PENCE)
-        _run(panel, assumed=False)
-        assert "more to hold flat" in panel.m1_projection_label.text
+    def test_the_reserve_still_reaches_the_month_s_own_colour(self):
+        assert _entered_colour(_RESERVE_PENCE) != _entered_colour(0)
