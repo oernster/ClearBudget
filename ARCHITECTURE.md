@@ -39,6 +39,7 @@ Everything below this section explains how the code satisfies them.
 | A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
 | The Solvency bank page and the Reserves page can never disagree about a month's low or the day it falls on, because both read ONE simulation: `application/services/_month_walk.walk_month`. Two correct-looking walks that differ about the same month is exactly the failure this forbids | `tests/application/test_month_walk.py`, plus `tests/application/test_commitments_due.py` |
 | Every picture button the user can press is named on the How It Works screen and the heading counts the strip it lists. The tray had this guard and the view strip did not, which is how the screen came to announce six views while seven were drawn; the footer's donate button was the same shape of gap, a picture in no tray at all, so the button scan reads `bottom_tray.py` alongside `_tray_buttons.py` | `tests/structural/test_help_names_the_views.py` (the tray and footer half is `test_help_names_the_tray.py`) |
+| A worked example on the How It Works screen is what the code returns: the pro-rating figure is read out of the sentence and checked against `prorate_remaining_pence` to the penny. The picture guards could never have caught it, which is why the prose half of that screen was the half that drifted | `tests/structural/test_help_example_is_arithmetic.py` |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
 
 ## Overview
@@ -1327,15 +1328,23 @@ renderings of the same figures to hold in step. Every month any page shows
   view buttons need because their text labels became pictures. Then it states the
   three rules the numbers rest on and that no screen can say for itself: how
   an undated bill accrues, how the balance maintains itself, what Safe to
-  Spend Today promises. A final "Also worth knowing" run carries the handful
-  of behaviours that are neither furniture nor arithmetic: the per-month
-  machinery on a bill or income, the two delete scopes, the immovable-day
-  tick, what the sign-in screen remembers and how Switch User differs from
-  Log Out. Every icon is a BUNDLED IMAGE referenced by an absolute
+  Spend Today promises. A final "Also worth knowing" run carries the behaviours
+  that are neither furniture nor arithmetic and that a user would otherwise
+  never find: the per-month machinery on a bill or income, the two delete
+  scopes, the immovable-day tick, that one sign-in can hold several separate
+  budgets, the whole-estate backup and restore behind Import / Export, what
+  the sign-in screen remembers, that the recovery code is the only way back
+  into a lost account, how Switch User differs from Log Out, then the daily
+  update check and the fact that it is the only time the application touches
+  the network. That last run is where a capability with no icon of its own
+  goes; the guards below cover the pictures, so nothing else would have caught
+  its absence. About and View Licence are deliberately NOT named: this screen
+  is opened from the Help menu they sit in, so listing them is the
+  button-by-button inventory that was tried and rejected. Every icon is a BUNDLED IMAGE referenced by an absolute
   `file:///` URL that Qt's rich text resolves when the page is drawn, through
   the same `find_nav_icon_path` the tray uses (measured on the built page: 19
   image references, every one resolving to a file on disk, no data URI). It
-  is never described in words, never described in words, never
+  is never described in words, never
   approximated with a similar-looking emoji and never a decorative glyph
   corresponding to no control; an icon guide showing something other than the
   icon is worse than none. `_INLINE_ICON_PX` is 30, half again the 20 it
@@ -1348,7 +1357,10 @@ renderings of the same figures to hold in step. Every month any page shows
   `test_help_names_the_views.py` for the view strip, the second added after
   Reserves shipped with a picture, a tooltip and no caption anywhere in the
   application while the screen went on announcing six views. It also asserts
-  the heading counts what it lists. The third is `test_help_example_is_arithmetic.py`, which pins the pro-rating example to the function it teaches; the rest of the three-rules prose is still held by nothing but a reading, which is how it drifted. They are centred on the line rather than
+  the heading counts what it lists. The third is
+  `test_help_example_is_arithmetic.py`, which pins the pro-rating example to
+  the function it teaches; the rest of the three-rules prose is still held by
+  nothing but a reading, which is how it drifted. They are centred on the line rather than
   sitting on its baseline, since at this size a baseline-aligned picture hangs below the
   words it leads. Length is the recurring failure here. A button-by-button
   inventory was tried and read as a wall of text; the essay that replaced it
@@ -2225,8 +2237,14 @@ renderings of the same figures to hold in step. Every month any page shows
 - The solvency banner carries its traffic-light state as a Qt property
   (`state="red"` etc.) and the stylesheet supplies the fill per theme, so no
   view holds a banner colour
-- Colour literals live ONLY in `theme_tokens.py`: chrome tokens plus two data
-  palettes (chart series, solvency states) per theme. Every dark value equals
+- Colour literals live ONLY in `shared/palette.py`, which holds every one of
+  them; `theme_tokens.py` carries no literal at all and names what each colour
+  is FOR, as chrome tokens plus two data palettes (chart series, solvency
+  states) per theme. This paragraph said the literals lived in `theme_tokens`
+  until the palette split moved them and nobody moved the sentence, which is
+  the contradiction the invariant at the top of this document already
+  answered. `tests/structural/test_colour_source.py` fails the build on a hex
+  literal anywhere else. Every dark value equals
   the literal it replaced, so the dark theme is unchanged pixel for pixel
   (verified by an offscreen diff); the light values are chosen to pass WCAG AA
   on the light background

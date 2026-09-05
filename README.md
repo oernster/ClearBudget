@@ -321,9 +321,12 @@ what is deliberately left and what only looks like debt.
   describing, then states the three
   rules behind the numbers (how an undated bill accrues, how the balance
   maintains itself, what Safe to Spend Today promises) and closes on the
-  handful of behaviours that are neither an icon nor a rule: the per-month
-  machinery on a bill or income, the two delete scopes, what the sign-in
-  screen remembers and how Switch User differs from Log Out
+  behaviours that are neither an icon nor a rule and that you would otherwise
+  never find: the per-month machinery on a bill or income, the two delete
+  scopes, several budgets under one sign-in, the whole-estate backup and
+  restore, what the sign-in screen remembers, that the recovery code is the
+  only way back into a lost account, how Switch User differs from Log Out and
+  the daily update check
 - SQLite storage: per-user budget database + shared users database
 
 ---
@@ -679,7 +682,8 @@ entered before these existed continues to do.
   your entered balances reads as a fact about the account, which a promise
   about future months is not. A spend today lowers every later day, so the figure is
   measured across whole months rather than to the end of this one, bounded by
-  the last month that clears the buffer with nothing spent. That bound is the
+  the last month that clears its FLOOR with nothing spent: the buffer on every
+  day, plus whatever the Reserves page is holding back on that day. That bound is the
   promise, stated in full: "Holds every day through October above your
   £20.00 buffer; constrained by 14 Oct". A month beyond it that cannot be
   saved by spending nothing is named on a second line with its shortfall and
@@ -757,10 +761,13 @@ standing (one to twelve, four by default).
   exports, the tray, the strip along the foot and the keyboard, each entry led
   by the icon itself, then the three rules
   the numbers rest on: pro-rating, the self-maintaining balance and what Safe
-  to Spend Today promises, then a closing run of behaviours that are neither.
+  to Spend Today promises, then a closing run of the capabilities that carry
+  no icon of their own: several budgets under one sign-in, backup and restore,
+  the recovery code and the update check.
   One page, kept in sync with the calculation logic;
-  a structural test fails the build if a view button is missing from it or the
-  heading miscounts the strip
+  three structural tests fail the build if a view button is missing from it, if
+  the heading miscounts the strip or if the worked pro-rating figure stops
+  being what the function returns
 - **View Licence (LGPL-3.0)**
 
 ---

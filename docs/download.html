@@ -127,6 +127,10 @@
                     <p>Yes. Data is stored locally in isolated per-user databases on your own machine, protected by a bcrypt sign-in and is never transmitted to any server.</p>
                 </div>
                 <div class="faq-item">
+                    <h3>What if I forget my password?</h3>
+                    <p>Use the recovery code shown once when the account was created. The sign-in screen's "Forgot password?" link asks for your username and that code, then sets a new password. Nobody can reset it for you: the code is stored only as a bcrypt hash and there is no administrator override, so keep it somewhere safe.</p>
+                </div>
+                <div class="faq-item">
                     <h3>Does ClearBudget support multiple users and currencies?</h3>
                     <p>Yes. It supports multiple users with separate, isolated databases, several named budgets under each sign-in and 25 currencies covering English-speaking countries, defaulting to GBP.</p>
                 </div>
@@ -189,6 +193,11 @@
             "@type": "Question",
             "name": "Is my financial data private?",
             "acceptedAnswer": { "@type": "Answer", "text": "Yes. Data is stored locally in isolated per-user databases on your own machine, protected by a bcrypt sign-in and is never transmitted to any server." }
+        },
+        {
+            "@type": "Question",
+            "name": "What if I forget my ClearBudget password?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Use the recovery code shown once when the account was created. The sign-in screen's Forgot password? link asks for your username and that code, then sets a new password. Nobody can reset it for you: the code is stored only as a bcrypt hash and there is no administrator override, so keep it somewhere safe." }
         },
         {
             "@type": "Question",

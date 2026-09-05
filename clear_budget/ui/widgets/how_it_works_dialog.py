@@ -110,10 +110,14 @@ def _body_html() -> str:
 {_view_row(MONTHLY_BUDGET_ICON, "Monthly Budget",
           "this month's bills and income, plus what the balance does.", px)}
 {_view_row(SOLVENCY_ICON, "Solvency",
-          "whether the month holds, plus the two months after it. Two pages "
-          "behind the button at the top: the bank and Safe to Spend.", px)}
+          "whether the month holds, plus the two months after it, each led "
+          "by what it would take to keep it afloat and the day that money has "
+          "to arrive by. Two pages behind the button at the top: the bank and "
+          "Safe to Spend.", px)}
 {_view_row(CREDIT_CARDS_ICON, "Credit Cards",
-          "one panel per card, with a six-month projection.", px)}
+          "one panel per card, with a six-month projection. A limit that "
+          "changes on a known date is entered ahead of time, so each month is "
+          "projected against the limit it will actually have.", px)}
 {_view_row(RESERVES_ICON, "Reserves",
           "money held back for a bill that has not arrived yet. Name what is "
           "coming and it accrues a little each month, so Safe to Spend and "
@@ -198,11 +202,27 @@ given a new amount from a month onward. Deleting offers two scopes: stop it
 here (earlier months keep it) or remove it everywhere. A red tick in its
 dialog marks a day that cannot be moved in the real world; Recommendations
 then never proposes retiming it.</p>
+<p>One sign-in can hold several budgets, each a database of its own with its
+own bills, income and cards. File &gt; New Budget makes one and the
+switch-budget button in the tray moves between them; nothing you do in one
+reaches another.</p>
+<p>File &gt; Import / Export writes every account and every budget to a single
+zip and puts the whole set back from one. Both belong to the first account ever
+created, which is the only administrator. A restore is checked through before
+any live file is replaced, so a backup that turns out to be broken changes
+nothing.</p>
 <p>The sign-in screen remembers accounts: choose one from the dropdown, with
-a tick each for keeping the username and keeping the password.</p>
+a tick each for keeping the username and keeping the password. Keep the
+recovery code you were shown when the account was made; it is the only way
+back in if the password goes.</p>
 <p>The Users menu holds Manage Users (admins only), Switch User and Log Out.
 Switch User leaves this session running until somebody signs in, so
 cancelling costs nothing; Log Out ends it there and then.</p>
+<p>Help &gt; Check for Updates asks GitHub whether a newer ClearBudget has been
+published; it also runs on its own once a day. That is the only time this
+application touches the network and it sends nothing about you or your budget.
+A version you would rather not hear about again can be skipped from the
+prompt.</p>
 
 <hr>
 <h3>Keyboard</h3>
