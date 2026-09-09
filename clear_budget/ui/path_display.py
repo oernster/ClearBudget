@@ -62,19 +62,32 @@ def wrap_path(text: str, max_width: int, width_of: Callable[[str], int]) -> str:
     """`text` broken at separators into lines no wider than `max_width`.
 
     `width_of` measures a candidate line in the same units as `max_width`. A
-    single segment wider than the whole line is left whole, because breaking
-    mid-name would read as two different names.
+    segment too wide to fit a line of its own is broken between characters,
+    because a long filename carries no separator to break at and Qt finds no
+    break opportunity in one either, so anything left whole runs off the edge
+    of the dialog. Separators are preferred; the character break is the last
+    resort, taken only for the segment that needs it.
     """
     lines: list[str] = []
     current = ""
+
+    def flush() -> None:
+        nonlocal current
+        if current:
+            lines.append(current)
+            current = ""
+
     for token in _merge_prefix(_tokens(text)):
         if current and width_of(current + token) > max_width:
-            lines.append(current)
-            current = token
-        else:
+            flush()
+        if width_of(token) <= max_width:
             current += token
-    if current:
-        lines.append(current)
+            continue
+        for char in token:
+            if current and width_of(current + char) > max_width:
+                flush()
+            current += char
+    flush()
     return "\n".join(lines)
 
 

@@ -32,14 +32,15 @@ def test_every_line_fits_the_width() -> None:
 
 
 def test_drive_is_never_alone_on_its_line() -> None:
-    # One unit of width forces a break at every opportunity, which is where
-    # the bare `C:` used to appear.
-    first = wrap_path(_WINDOWS_PATH, 1, _chars).split("\n")[0]
+    # A line with room for the prefix and nothing beyond it: the width at
+    # which the bare `C:` used to appear.
+    first = wrap_path(_WINDOWS_PATH, len("C:\\Users\\"), _chars).split("\n")[0]
     assert first == "C:\\Users\\"
 
 
 def test_unc_prefix_is_never_alone_on_its_line() -> None:
-    first = wrap_path(r"\\nas\share\budget.db", 1, _chars).split("\n")[0]
+    unc = r"\\nas\share\budget.db"
+    first = wrap_path(unc, len("\\\\nas\\"), _chars).split("\n")[0]
     assert first == "\\\\nas\\"
 
 
@@ -51,11 +52,21 @@ def test_forward_slashes_break_the_same_way() -> None:
     ]
 
 
-def test_a_segment_wider_than_the_line_is_left_whole() -> None:
-    assert wrap_path("C:\\a\\averylongfilename.db", 4, _chars).split("\n") == [
+def test_a_segment_too_wide_is_broken_between_characters() -> None:
+    # A filename holds no separator; Qt finds no break opportunity in one
+    # either, so leaving it whole is what ran it off the edge of the dialog.
+    assert wrap_path("C:\\a\\averylongfilename.db", 6, _chars).split("\n") == [
         "C:\\a\\",
-        "averylongfilename.db",
+        "averyl",
+        "ongfil",
+        "ename.",
+        "db",
     ]
+
+
+def test_no_line_exceeds_the_width_whatever_the_name() -> None:
+    long_name = "C:\\a\\" + "x" * 200
+    assert all(len(line) <= 12 for line in wrap_path(long_name, 12, _chars).split("\n"))
 
 
 def test_empty_text_wraps_to_nothing() -> None:
