@@ -19,6 +19,7 @@ from clear_budget.auth.full_backup import (
     validate_full_backup,
 )
 from clear_budget.shared.config import Config
+from clear_budget.ui.path_display import wrap_for
 from clear_budget.ui.ui_paths import default_downloads_dir
 
 _BACKUP_TITLE = "Back Up Everything"
@@ -47,7 +48,7 @@ def backup_everything(window) -> None:
         window,
         _BACKUP_TITLE,
         f"Backed up every account and {budgets} budget database(s) to:\n"
-        f"{dest}\n\n"
+        f"{wrap_for(window, str(dest))}\n\n"
         "The file is not encrypted, so store it as carefully as the data "
         "itself.",
     )

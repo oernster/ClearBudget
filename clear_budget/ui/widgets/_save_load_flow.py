@@ -27,6 +27,7 @@ from clear_budget.shared.db_copy import DatabaseCopyError, backup_open_database
 from clear_budget.shared.db_ownership import owner_of, safe_username
 from clear_budget.shared.db_validation import is_accounts_database, validate_db
 from clear_budget.ui import ui_scale
+from clear_budget.ui.path_display import PATH_LABEL_WIDTH, wrap_for
 from clear_budget.ui.save_location import load_save_location, store_save_location
 from clear_budget.ui.ui_paths import default_data_dir
 
@@ -65,7 +66,7 @@ def _belongs_to_another_account(parent, dest: Path, username: str, user_store) -
     QMessageBox.critical(
         parent,
         "That Budget Belongs to Another Account",
-        f"{dest}\n\n"
+        f"{wrap_for(parent, str(dest))}\n\n"
         f"This file is {owner}'s budget. Saving here would replace "
         f"{owner}'s figures with yours. There would be no way back.\n\n"
         "Nothing has been changed. Choose a different file.",
@@ -77,8 +78,8 @@ def _report_saved(parent, dest: Path) -> None:
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Icon.Information)
     box.setWindowTitle("Save Successful")
-    box.setText(f"Database saved to:\n{dest}")
-    label_w = ui_scale.px(460)
+    box.setText(f"Database saved to:\n{wrap_for(box, str(dest))}")
+    label_w = ui_scale.px(PATH_LABEL_WIDTH)
     box.setStyleSheet(f"QLabel#qt_msgbox_label {{ min-width: {label_w}px; }}")
     box.exec()
 
@@ -183,7 +184,8 @@ def run_save_flow(parent, conn, username: str, user_store) -> None:
         reply = QMessageBox.question(
             parent,
             "Overwrite Save File?",
-            f"The save file already exists:\n{target}\n\nOverwrite it?",
+            f"The save file already exists:\n{wrap_for(parent, str(target))}"
+            "\n\nOverwrite it?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

@@ -20,6 +20,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from clear_budget.application.reporting.month_report import month_report_html
+from clear_budget.ui.path_display import wrap_for
 from clear_budget.ui.ui_paths import default_downloads_dir
 
 _HTML_FILTER = "Web page (*.html)"
@@ -57,7 +58,8 @@ class GraphExportsMixin:
         except OSError as exc:
             QMessageBox.critical(self, "Export Failed", str(exc))
             return
-        QMessageBox.information(self, "Export Successful", f"Saved to:\n{path}")
+        saved = wrap_for(self, path)
+        QMessageBox.information(self, "Export Successful", f"Saved to:\n{saved}")
 
     @staticmethod
     def _slug(text: str) -> str:
