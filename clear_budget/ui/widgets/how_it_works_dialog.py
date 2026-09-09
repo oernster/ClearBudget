@@ -202,6 +202,10 @@ given a new amount from a month onward. Deleting offers two scopes: stop it
 here (earlier months keep it) or remove it everywhere. A red tick in its
 dialog marks a day that cannot be moved in the real world; Recommendations
 then never proposes retiming it.</p>
+<p>Click a column heading to put a table in that column's order and click it
+again to turn the order round; the arrow beside the heading says which column
+the rows are in and which way it runs. The bills, the income, the commitments
+on Reserves and the archived year all read this way.</p>
 <p>One sign-in can hold several budgets, each a database of its own with its
 own bills, income and cards. File &gt; New Budget makes one and the
 switch-budget button in the tray moves between them; nothing you do in one
