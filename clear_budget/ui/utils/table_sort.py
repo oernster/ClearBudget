@@ -73,9 +73,10 @@ def sorted_rows(rows, state: SortState, keys: dict) -> list:
 def show_sort_indicator(header, state: SortState) -> None:
     """Point the header's arrow at the column the rows are ordered by.
 
-    A table still in the order its data arrived in shows no arrow: an arrow
-    on a column nobody chose would claim an ordering the table has not been
-    given.
+    The header is a `SortHeaderView`, which draws that arrow itself beside the
+    heading text; the platform's own indicator is a few pixels at the top edge
+    of the section and was read as no answer at all. A table still in the
+    order its data arrived in shows no arrow, since an arrow on a column
+    nobody chose would claim an ordering the table has not been given.
     """
-    header.setSortIndicatorShown(state.column != NO_COLUMN)
-    header.setSortIndicator(state.column, state.order)
+    header.show_sort(state)

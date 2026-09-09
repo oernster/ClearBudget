@@ -991,6 +991,21 @@ holding each budget's slug and display name plus which one is active.
   `UNSORTED` state is a table still in the order its data arrived in and shows
   no arrow at all. The pure half carries no Qt and is held by
   `tests/ui_logic/test_table_sort.py`
+- THE ARROW IS PAINTED, not left to the platform (`ui/utils/sort_header.py`,
+  `SortHeaderView`). Qt's own sort indicator is a few pixels drawn along the
+  TOP EDGE of the section on Windows, nowhere near the word it qualifies, so a
+  table that had been reordering itself on a click read as one ignoring
+  clicks. This header switches that indicator off and draws a filled triangle
+  at the full text colour (the heading itself is muted) immediately to the
+  RIGHT OF THE HEADING TEXT, up while ascending and down while descending.
+  `sectionSizeFromContents` reserves twice the arrow's span on the sorted
+  section alone, because the heading is centred and half the reserved width
+  falls each side of it, so the arrow can never land on the words and no other
+  column pays for it. Installed by `install_sort_header` BEFORE the section
+  resize mode is set, since replacing a header replaces what was configured on
+  the one it displaces (measured offscreen: a 16 by 10 painted box, 7px clear
+  of the text, inside its section and vertically centred, on every column and
+  in both directions; nothing at all while unsorted)
 
 **`glyph_metrics`** (`clear_budget/ui/utils/glyph_metrics.py`):
 - Painted-pixel measurement for both images and text. `opaque_bounding_rect`

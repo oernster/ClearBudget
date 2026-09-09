@@ -28,6 +28,7 @@ from clear_budget.ui.widgets._tray_buttons import (
     build_bank_button,
 )
 from clear_budget.ui.utils.table_focus import keyboard_only_focus
+from clear_budget.ui.utils.sort_header import install_sort_header
 from clear_budget.ui.utils.table_sort import show_sort_indicator
 from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
@@ -128,7 +129,9 @@ class MonthViewBuilderMixin:
         self.bills_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
         # Indicator and row-header colours come from the app stylesheet, so
         # they follow the theme (see _theme_controls.label_roles_qss).
-        _bh = self.bills_table.horizontalHeader()
+        # The header goes in BEFORE the resize mode: replacing a header
+        # replaces everything configured on the one it displaces.
+        _bh = install_sort_header(self.bills_table)
         _bh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         _bh.setStretchLastSection(False)
         self.bills_table.verticalHeader().sectionClicked.connect(
@@ -169,7 +172,7 @@ class MonthViewBuilderMixin:
         )
         self.income_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.income_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
-        _ih = self.income_table.horizontalHeader()
+        _ih = install_sort_header(self.income_table)
         _ih.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         _ih.setStretchLastSection(False)
         self.income_table.verticalHeader().sectionClicked.connect(

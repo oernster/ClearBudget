@@ -54,6 +54,7 @@ from clear_budget.ui.widgets._tray_buttons import (
     build_save_load_buttons,
     build_tray_separator,
 )
+from clear_budget.ui.utils.sort_header import install_sort_header
 from clear_budget.ui.utils.table_sort import UNSORTED
 from clear_budget.ui.widgets.commitment_dialog import CommitmentDialog
 
@@ -143,7 +144,7 @@ class ReservesView(ReservesContentMixin, QWidget):
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setMinimumHeight(ui_scale.px(_TABLE_MIN_HEIGHT_PX))
-        self.table.horizontalHeader().setSectionResizeMode(
+        install_sort_header(self.table).setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
         )
         self.table.horizontalHeader().sectionClicked.connect(self.on_header_click)

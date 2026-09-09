@@ -39,6 +39,7 @@ from clear_budget.ui.widgets._tray_buttons import (
 from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
 from clear_budget.ui.utils import reserves_text
 from clear_budget.ui.utils.table_focus import keyboard_only_focus
+from clear_budget.ui.utils.sort_header import install_sort_header
 from clear_budget.ui.utils.table_sort import (
     UNSORTED,
     show_sort_indicator,
@@ -120,7 +121,7 @@ class ArchiveView(QWidget):
         self.archive_table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
-        self.archive_table.horizontalHeader().setSectionResizeMode(
+        install_sort_header(self.archive_table).setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents
         )
         self.archive_table.horizontalHeader().setStretchLastSection(False)
