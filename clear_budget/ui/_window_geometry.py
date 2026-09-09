@@ -22,14 +22,7 @@ Rect = tuple[int, int, int, int]
 # one. They live here rather than in the composition root because they are
 # inputs to the arithmetic below; a constant kept away from the sum that
 # uses it is a constant that drifts from it.
-# The width was a third of the screen until the Bills table was measured
-# against it: eight columns of a real budget, with names as long as people
-# actually write them, came to more than the window gave them and the table
-# answered with a horizontal scrollbar. The fraction only binds on a screen
-# wider than about 2260 points, since the floor below wins on anything
-# smaller, so this buys room where there is room to spare and changes
-# nothing on a laptop.
-WINDOW_WIDTH_FRACTION = 0.38
+WINDOW_WIDTH_FRACTION = 0.33
 WINDOW_HEIGHT_FRACTION = 0.92
 
 # Absolute floors in logical screen points, device-independent and so NOT

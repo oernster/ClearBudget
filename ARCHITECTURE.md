@@ -1118,6 +1118,14 @@ unrelated to what it had to hold.
   correct only at one display size
 
 **Views**:
+- THE NAME COLUMN TAKES THE SLACK on both Monthly Budget tables
+  (`_month_view_builders`): every other column is sized to its contents while
+  the name is `Stretch`, so the table is exactly as wide as its viewport and a
+  name too long for the room it is given is elided. Sized to contents
+  throughout, the table could out-measure the window and answer with a
+  horizontal scrollbar: a real budget's bills put the Paid column off the
+  edge. Widening the window instead was tried and was wrong in kind, since it
+  made every user's window pay for a table that was not using the space
 - `MonthView` - bill/income tables with inline editing, each orderable from
   its own headings (`table_sort`; bills open on the due day, income on the
   name, the payment-method column ordered by the label the row actually shows
@@ -2172,7 +2180,7 @@ renderings of the same figures to hold in step. Every month any page shows
     height / 1260, capped at 1.5x on tall/4K displays and floored at 0.5x, so the UI
     scales *down* on short displays such as a 13in MacBook and scales for the
     monitor the app actually opens on
-  - Default window geometry: 38% of available width x 92% of available height,
+  - Default window geometry: 33% of available width x 92% of available height,
     centred, with absolute minimum floors (860 x 780 logical points, capped to the
     available screen) so the multi-column Bills/Income tables stay readable on small
     laptops. The arithmetic is `_window_geometry.default_window_rect`, kept Qt-free

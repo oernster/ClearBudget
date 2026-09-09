@@ -34,6 +34,11 @@ from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 INCOME_VISIBLE_ROWS = 5
 
+# The name is the first column of both tables and the one that can give room
+# back: every other column shows a figure, a category or a tick, all of which
+# have a width they need, while a name can be shortened and still be read.
+_NAME_COLUMN = 0
+
 
 class MonthViewBuilderMixin:
     """Methods for building the MonthView widget sections."""
@@ -134,6 +139,13 @@ class MonthViewBuilderMixin:
         _bh = install_sort_header(self.bills_table)
         _bh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         _bh.setStretchLastSection(False)
+        # The NAME column takes whatever is left, so the table is exactly as
+        # wide as its viewport: the other columns are as wide as their
+        # contents need and a name too long for the room it is given is
+        # elided. Sized to contents throughout, the table could out-measure
+        # the window and answer with a horizontal scrollbar, which put the
+        # Paid column off the edge of a real budget's bills.
+        _bh.setSectionResizeMode(_NAME_COLUMN, QHeaderView.ResizeMode.Stretch)
         self.bills_table.verticalHeader().sectionClicked.connect(
             self._on_bill_row_header_click
         )
@@ -175,6 +187,7 @@ class MonthViewBuilderMixin:
         _ih = install_sort_header(self.income_table)
         _ih.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         _ih.setStretchLastSection(False)
+        _ih.setSectionResizeMode(_NAME_COLUMN, QHeaderView.ResizeMode.Stretch)
         self.income_table.verticalHeader().sectionClicked.connect(
             self._on_income_row_header_click
         )
