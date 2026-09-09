@@ -297,6 +297,14 @@ what is deliberately left and what only looks like debt.
   not a table, not the panel around it. Clicking still does what it always did,
   including selecting the row you clicked; a text field, a spin box and a
   dropdown still take a click, because that is how you say where to type
+- Click a column heading to order a table by it: the bills and income tables on
+  Monthly Budget, the commitments on Reserves and the year on Archive. A second
+  click on the same heading reverses it and an arrow in the heading says which
+  column the rows are in and which way it runs. Every heading orders by what it
+  shows, the ticked columns included, so nothing answers a click by sorting on
+  something else. Monthly Budget opens on the due day and the income name;
+  Reserves and Archive open in the order they always did and take an order of
+  their own only when asked
 - A table is never outlined at all, by the mouse or by the keyboard. The row
   the keyboard lands on is highlighted, which says where you are without
   drawing a rectangle round a whole page of figures
@@ -341,18 +349,20 @@ box for Archive. They sit in the navigation tray rather than in a strip of
 their own. Hovering one names it, promptly rather than after the platform's
 usual tooltip delay; the keyboard ring still stops on each button in turn.
 
-- **Monthly Budget** - View and manage bills and income for the selected month; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning. A commitment falling due this month appears among the bills as a reminder, marked "(from Reserves)", so the same obligation is not entered a second time by hand; it carries no total and cannot be edited there
+- **Monthly Budget** - View and manage bills and income for the selected month;
+  order either table by any column from its heading; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning. A commitment falling due this month appears among the bills as a reminder, marked "(from Reserves)", so the same obligation is not entered a second time by hand; it carries no total and cannot be edited there
 - **Solvency** - two pages behind pilot buttons, each a coherent answer to one question rather than a single long scroll. The bank page carries financial health analysis, overdraft alerts, mid-month cashflow risk and forward projections for the next two months, all of it built from money you have actually entered; the Safe to Spend page carries Safe to Spend Today and answers what the picture looks like if the months ahead are like this one. The button for the page you are reading is hidden rather than disabled, so each other page is one press away and the keyboard ring never stops on a control that would do nothing. Each of the two months ahead leads with what would keep it afloat and by when, over one line of context; the month you are looking at states its own balance breakdown, its low point and what it needs to hold flat
 - **Credit Cards** - Scrollable list of per-card panels (active toggle, status badge, overview and this-month figures, Edit/Delete); month-navigation shows projected closing balances for future months; 6-month projection strip
 - **Reserves** - What is being held back for a bill that has not arrived
   yet: a table of commitments with what each has accrued and what is still to
-  find, the emergency buffer, then where each month lands once its reserve is
+  find, orderable from any of its headings, the emergency buffer, then where each month lands once its reserve is
   taken off its lowest day. Money is never moved and no second account is
   assumed; the page changes only what the application is willing to call
   spendable
 - **Graph** - The viewed month as a chart. A switch chooses what is plotted (the bank balance day by day or every card on one chart), a pilot button swaps bar and line renderings and the exports live here: a self-contained page for the month, plus a folder of months offered while the bank series is shown
 - **Recommendations** - Measured suggestions for surviving the months ahead: which bills or incomes could be retimed and how much extra each month still needs, against an optional emergency buffer, plus an optional headroom section for the few best retimings solvency does not need. A reference set only; every change is yours to make in its own dialog and the page recomputes. Each suggestion has a try-it-on checkbox opening a panel with that change's measured effect, multi-selectable and applying nothing
-- **Archive** - Historical month summaries by year with navigation; drill down into individual months (only fully-completed months are shown). A completed month reports the reserve it really carried, read at its own last day; the column appears only for a budget that sets something aside, so an archive that never had a commitment reads exactly as it always did. Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
+- **Archive** - Historical month summaries by year with navigation, in calendar
+  order until a heading is clicked; drill down into individual months (only fully-completed months are shown). A completed month reports the reserve it really carried, read at its own last day; the column appears only for a budget that sets something aside, so an archive that never had a commitment reads exactly as it always did. Months are archived automatically as they end (there is no manual archive step); opening the app records any month that has passed since it was last launched
 
 ---
 

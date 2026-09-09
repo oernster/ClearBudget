@@ -27,7 +27,10 @@ from clear_budget.application.reporting.curve import (
     inflection_days,
 )
 from clear_budget.ui import ui_scale
-from clear_budget.ui.widgets._chart_axes import ChartAxesMixin
+from clear_budget.ui.widgets._chart_axes import (
+    MARGIN_RIGHT,
+    ChartAxesMixin,
+)
 from clear_budget.ui.widgets._chart_colours import (
     ChartColoursMixin,
     active_palette,
@@ -41,10 +44,8 @@ MODE_LINE = "line"
 _BAR_SLOT_FILL = 0.8
 _RANGE_PAD_FRACTION = 0.05
 
-_MARGIN_RIGHT = 14
 _MARGIN_TOP = 14
 _MARGIN_BOTTOM = 30
-_LEGEND_ROW_HEIGHT = 22
 
 _CURVE_PEN_PX = 3
 # A marker sits on each direction change, so the hover readout has something
@@ -151,10 +152,12 @@ class LineBarChart(ChartAxesMixin, ChartColoursMixin, ChartHoverMixin, QWidget):
         """
         if not self._series or not self._series[0].values:
             return None
-        top = ui_scale.px(_MARGIN_TOP) + ui_scale.px(_LEGEND_ROW_HEIGHT)
         low, high = self._value_range()
         left = self._left_margin(low, high)
-        plot_w = self.width() - left - ui_scale.px(_MARGIN_RIGHT)
+        # The legend wraps when its entries will not fit on one row, so the
+        # plot starts below however many rows it actually took.
+        top = ui_scale.px(_MARGIN_TOP) + self._legend_band_height(left)
+        plot_w = self.width() - left - ui_scale.px(MARGIN_RIGHT)
         plot_h = self.height() - top - ui_scale.px(_MARGIN_BOTTOM)
         if plot_w <= 0 or plot_h <= 0:
             return None

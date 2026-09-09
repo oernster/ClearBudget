@@ -6,6 +6,8 @@ is something to report, so an archive that has never had a commitment reads
 exactly as it always did.
 """
 
+from collections import namedtuple
+
 from PySide6.QtWidgets import (
     QHeaderView,
     QPushButton,
@@ -37,7 +39,27 @@ from clear_budget.ui.widgets._tray_buttons import (
 from clear_budget.ui.widgets.archive_detail_dialog import ArchiveDetailDialog
 from clear_budget.ui.utils import reserves_text
 from clear_budget.ui.utils.table_focus import keyboard_only_focus
+from clear_budget.ui.utils.table_sort import (
+    UNSORTED,
+    show_sort_indicator,
+    sorted_rows,
+)
 from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
+
+# One archive row: the month, the summary the figures come from and the
+# reserve it carried, which is None on a budget that sets nothing aside.
+_ArchiveRow = namedtuple("_ArchiveRow", "month summary held_pence")
+
+# What each heading orders the year by. The reserve column only exists on a
+# budget that has one, so it is added to these when it is shown; the status
+# is the balance's sign, so it orders by the balance itself.
+_SORT_KEYS = {
+    0: lambda row: row.month,
+    1: lambda row: row.summary.total_income.pence,
+    2: lambda row: row.summary.total_bills.pence,
+    3: lambda row: row.summary.balance.pence,
+}
+_RESERVES_COLUMN = 4
 
 
 class ArchiveView(QWidget):
@@ -50,6 +72,9 @@ class ArchiveView(QWidget):
         self.current_year: int = 0
         self.available_years: list[int] = []
         self.months_by_row: dict = {}
+        # Calendar order until a heading is clicked, which is the order
+        # the year happened in.
+        self.sort = UNSORTED
         self.init_ui()
         self.on_load_history()
 
@@ -103,6 +128,9 @@ class ArchiveView(QWidget):
         # (QHeaderView::section:vertical), so it follows the theme.
         self.archive_table.verticalHeader().sectionClicked.connect(
             self.on_row_header_click
+        )
+        self.archive_table.horizontalHeader().sectionClicked.connect(
+            self.on_header_click
         )
         layout.addWidget(self.archive_table)
 
@@ -211,17 +239,64 @@ class ArchiveView(QWidget):
         """
         return bool(self.budget_service.list_commitments())
 
+    def _archive_rows(self, months: list[YearMonth]) -> list:
+        """The year's months with the figures the table states for each."""
+        shows_reserves = self._shows_reserves()
+        return [
+            _ArchiveRow(
+                month=month,
+                summary=self.budget_service.get_month_summary(year_month=month),
+                held_pence=(
+                    self.budget_service.get_reserve_held_pence(year_month=month)
+                    if shows_reserves
+                    else None
+                ),
+            )
+            for month in months
+        ]
+
+    def _sort_keys(self) -> dict:
+        """The orderings, laid out for the columns this budget actually shows.
+
+        The reserve column exists only where something is set aside; the
+        status sits after whichever column came last, so both are placed here
+        rather than written into the table as fixed numbers.
+        """
+        keys = dict(_SORT_KEYS)
+        status_column = _RESERVES_COLUMN
+        if self._shows_reserves():
+            keys[_RESERVES_COLUMN] = lambda row: row.held_pence
+            status_column += 1
+        # Solvent or deficit is the sign of the balance, so that is what it
+        # orders by; the deficits gather at one end either way.
+        keys[status_column] = lambda row: row.summary.balance.pence >= 0
+        return keys
+
+    def on_header_click(self, column: int) -> None:
+        """Order the year by the heading clicked, reversing on a second click.
+
+        The archive opens in calendar order, which is the order a year is
+        lived in; a click is what asks it for another, so the largest month
+        or the deficits can be found without reading down the column.
+        """
+        self.sort = self.sort.toggled(column)
+        show_sort_indicator(self.archive_table.horizontalHeader(), self.sort)
+        self._refresh_year_view()
+
     def load_history(self, months: list[YearMonth]) -> None:
         """Load historical months into table."""
         self.archive_table.setRowCount(0)
         self.months_by_row.clear()
 
-        for month in months:
-            summary = self.budget_service.get_month_summary(year_month=month)
-
-            row = self.archive_table.rowCount()
+        for row, entry in enumerate(
+            sorted_rows(self._archive_rows(months), self.sort, self._sort_keys())
+        ):
+            month, summary = entry.month, entry.summary
             self.archive_table.insertRow(row)
             self.archive_table.setVerticalHeaderItem(row, QTableWidgetItem("📝"))
+            # The detail dialog is opened by row number, so this mapping is
+            # rebuilt against the order actually drawn rather than the
+            # calendar one the months arrived in.
             self.months_by_row[row] = (month, summary)
 
             self.archive_table.setItem(row, 0, QTableWidgetItem(str(month)))
@@ -233,11 +308,12 @@ class ArchiveView(QWidget):
             )
             self.archive_table.setItem(row, 3, QTableWidgetItem(str(summary.balance)))
 
-            column = 4
-            if self._shows_reserves():
-                held = self.budget_service.get_reserve_held_pence(year_month=month)
+            column = _RESERVES_COLUMN
+            if entry.held_pence is not None:
                 self.archive_table.setItem(
-                    row, column, QTableWidgetItem(str(Amount(pence=held)))
+                    row,
+                    column,
+                    QTableWidgetItem(str(Amount(pence=entry.held_pence))),
                 )
                 column += 1
             status = "✓ Solvent" if summary.balance.pence >= 0 else "✗ Deficit"

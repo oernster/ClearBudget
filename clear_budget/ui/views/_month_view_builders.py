@@ -28,6 +28,7 @@ from clear_budget.ui.widgets._tray_buttons import (
     build_bank_button,
 )
 from clear_budget.ui.utils.table_focus import keyboard_only_focus
+from clear_budget.ui.utils.table_sort import show_sort_indicator
 from clear_budget.ui.utils.text_metrics import apply_comfortable_rows
 
 INCOME_VISIBLE_ROWS = 5
@@ -136,6 +137,9 @@ class MonthViewBuilderMixin:
         self.bills_table.horizontalHeader().sectionClicked.connect(
             self.on_bills_header_click
         )
+        # The table opens ordered by the due day, so the arrow says so from
+        # the first look rather than appearing on the first click.
+        show_sort_indicator(_bh, self.bills_sort)
         bills_layout.addWidget(self.bills_table)
         bills_btn_layout = QHBoxLayout()
         self.add_bill_btn = QPushButton("Add Bill")
@@ -174,6 +178,7 @@ class MonthViewBuilderMixin:
         self.income_table.horizontalHeader().sectionClicked.connect(
             self.on_income_header_click
         )
+        show_sort_indicator(_ih, self.income_sort)
         income_layout.addWidget(self.income_table)
         income_btn_layout = QHBoxLayout()
         self.add_income_btn = QPushButton("Add Income")

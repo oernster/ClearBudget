@@ -10,6 +10,11 @@ from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     apply_nav_label_color,
 )
+from clear_budget.ui.utils.table_sort import (
+    SortState,
+    show_sort_indicator,
+    sorted_rows,
+)
 from clear_budget.ui.view_models.month_view_model import MonthViewModel
 from clear_budget.ui.views._month_view_apply_prompt import MonthViewApplyPromptMixin
 from clear_budget.ui.views._month_view_balance_mixin import MonthViewBalanceMixin
@@ -29,21 +34,41 @@ from clear_budget.ui.widgets.balance_dialog import BalanceDialog
 from clear_budget.ui.widgets.bill_dialog import BillDialog
 from clear_budget.ui.widgets.income_dialog import IncomeDialog
 
+# What each column of the two tables is ordered by. EVERY column a user can
+# click has a key: a heading with none would answer a click by sorting on
+# some other column, which reads as the table ignoring the click.
+#
+# A ticked column reads as "the ticked ones first" when ascending, so the
+# key is the negation of the flag rather than the flag.
 _BILLS_SORT_KEYS = {
     0: lambda b: b.name.lower(),
     1: lambda b: b.amount.pence,
     2: lambda b: b.category.lower(),
-    3: lambda b: b.payment_method_id,
-    4: lambda b: b.day_of_month or 99,
+    4: lambda b: b.day_of_month or _NO_DAY_LAST,
     5: lambda b: not b.active,
+    6: lambda b: not b.skipped_for_month,
+    7: lambda b: not b.paid_for_month,
 }
+# The payment method is the one column showing something the bill does not
+# hold: it stores a method id and the table shows that method's NAME, so the
+# ordering is built per sort from the same labels the rows are drawn with.
+_BILLS_PAYMENT_METHOD_COLUMN = 3
 _INCOME_SORT_KEYS = {
     0: lambda i: i.name.lower(),
     1: lambda i: i.amount.pence,
     2: lambda i: not i.is_reliable,
-    3: lambda i: i.day_of_month or 99,
+    3: lambda i: i.day_of_month or _NO_DAY_LAST,
     4: lambda i: not i.active,
+    5: lambda i: not i.skipped_for_month,
+    6: lambda i: not i.received_for_month,
 }
+# A row with no day of the month has nothing to order by, so it sits after
+# every dated row rather than before the first of the month.
+_NO_DAY_LAST = 99
+# Bills open on the due day, which is the order the month is lived in;
+# income opens on the name, there being no day worth leading with.
+_BILLS_DEFAULT_SORT = SortState(column=4)
+_INCOME_DEFAULT_SORT = SortState(column=0)
 
 
 class MonthView(
@@ -64,10 +89,8 @@ class MonthView(
         self.add_bill_btn = self.delete_bill_btn = None
         self.add_income_btn = self.delete_income_btn = None
         self.month_label = self.prev_btn = None
-        self.bills_sort_column = 4
-        self.bills_sort_ascending = True
-        self.income_sort_column = 0
-        self.income_sort_ascending = True
+        self.bills_sort = _BILLS_DEFAULT_SORT
+        self.income_sort = _INCOME_DEFAULT_SORT
         self.init_ui()
         self.connect_signals()
         self.view_model.refresh_month_summary()
@@ -107,36 +130,31 @@ class MonthView(
         if self.view_model.month_summary:
             self.update_bills_table(self.view_model.month_summary)
 
-    def _toggle_sort(self, current_col: int, current_asc: bool, new_col: int) -> tuple:
-        return (new_col, not current_asc) if current_col == new_col else (new_col, True)
-
-    def on_bills_header_click(self, i: int) -> None:
-        self.bills_sort_column, self.bills_sort_ascending = self._toggle_sort(
-            self.bills_sort_column, self.bills_sort_ascending, i
-        )
+    def on_bills_header_click(self, column: int) -> None:
+        self.bills_sort = self.bills_sort.toggled(column)
+        show_sort_indicator(self.bills_table.horizontalHeader(), self.bills_sort)
         self.view_model.refresh_month_summary()
 
-    def on_income_header_click(self, i: int) -> None:
-        self.income_sort_column, self.income_sort_ascending = self._toggle_sort(
-            self.income_sort_column, self.income_sort_ascending, i
-        )
+    def on_income_header_click(self, column: int) -> None:
+        self.income_sort = self.income_sort.toggled(column)
+        show_sort_indicator(self.income_table.horizontalHeader(), self.income_sort)
         self.view_model.refresh_month_summary()
 
-    def _sort_bills(self, bills) -> list:
-        return sorted(
-            bills,
-            key=_BILLS_SORT_KEYS.get(self.bills_sort_column, lambda b: b.name.lower()),
-            reverse=not self.bills_sort_ascending,
+    def _bills_sort_keys(self, card_map: dict) -> dict:
+        """The bill keys, with the payment method read as its shown label."""
+        keys = dict(_BILLS_SORT_KEYS)
+        keys[_BILLS_PAYMENT_METHOD_COLUMN] = (
+            lambda bill: self._get_payment_method_label(
+                bill.payment_method_id, card_map
+            ).lower()
         )
+        return keys
+
+    def _sort_bills(self, bills, card_map: dict) -> list:
+        return sorted_rows(bills, self.bills_sort, self._bills_sort_keys(card_map))
 
     def _sort_income(self, income_sources) -> list:
-        return sorted(
-            income_sources,
-            key=_INCOME_SORT_KEYS.get(
-                self.income_sort_column, lambda i: i.name.lower()
-            ),
-            reverse=not self.income_sort_ascending,
-        )
+        return sorted_rows(income_sources, self.income_sort, _INCOME_SORT_KEYS)
 
     def _get_payment_method_label(self, mid: int, card_map: dict) -> str:
         return "Bank" if mid == _BANK_ACCOUNT_ID else card_map.get(mid, f"Card {mid}")

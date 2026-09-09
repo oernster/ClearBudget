@@ -74,7 +74,7 @@ class MonthViewTableMixin:
         self.bills_table.setRowCount(0)
         self.bills_table.blockSignals(False)
         self.bills_table.blockSignals(True)
-        bills = self._sort_bills(summary.all_bills)
+        bills = self._sort_bills(summary.all_bills, card_map)
         for row, bill in enumerate(bills):
             self._add_bill_row(row, bill, card_map)
         # After the bills rather than sorted among them: a reminder that reads

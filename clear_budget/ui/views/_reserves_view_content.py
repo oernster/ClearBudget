@@ -16,6 +16,25 @@ from clear_budget.application.formatting import money_from_pence
 from clear_budget.ui import theme
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 from clear_budget.ui.utils import reserves_text as copy
+from clear_budget.ui.utils.table_sort import (
+    show_sort_indicator,
+    sorted_rows,
+)
+
+# What each heading of the commitments table orders the page by, matching
+# TABLE_HEADINGS column for column. The figures sort as numbers rather than
+# as the text they are drawn as, so £1,000 follows £900 rather than leading
+# it; the tick column reads as the active ones first.
+_SORT_KEYS = {
+    0: lambda row: row.commitment.name.lower(),
+    1: lambda row: row.commitment.amount.pence,
+    2: lambda row: row.commitment.due_date,
+    3: lambda row: row.commitment.recurrence.months,
+    4: lambda row: row.monthly_pence,
+    5: lambda row: row.held_pence,
+    6: lambda row: row.outstanding_pence,
+    7: lambda row: not row.commitment.active,
+}
 
 
 def month_name(year: int, month: int) -> str:
@@ -80,8 +99,21 @@ class ReservesContentMixin:
             rendered.append(text)
         self.where_label.setText("<br>".join(rendered))
 
+    def on_header_click(self, column: int) -> None:
+        """Order the page by the heading clicked, reversing on a second click.
+
+        The ROWS are reordered, not just the cells: the buttons under the
+        table read the highlighted commitment by its row number, so a table
+        reordered underneath that list would edit or delete the wrong one.
+        """
+        self.sort = self.sort.toggled(column)
+        self._rows = sorted_rows(self._rows, self.sort, _SORT_KEYS)
+        show_sort_indicator(self.table.horizontalHeader(), self.sort)
+        self._fill_table()
+
     def _fill_table(self) -> None:
-        """One row per commitment, in the order the service gave them."""
+        """One row per commitment, in the order the page is sorted by."""
+        self._rows = sorted_rows(self._rows, self.sort, _SORT_KEYS)
         self.table.setRowCount(len(self._rows))
         for index, row in enumerate(self._rows):
             commitment = row.commitment

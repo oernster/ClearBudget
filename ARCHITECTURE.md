@@ -749,6 +749,17 @@ it is all under the coverage gate and testable without a QApplication.
 - `curve.py` - the monotone cubic (Fritsch-Carlson) curve maths. It lives here
   rather than beside the widget because BOTH the on-screen chart and the exported
   SVG need it and the UI layer is not something the application layer may import
+- `_chart_svg_text.py` - the escape and the one muted label style both the frame
+  and the legend write text through, so neither holds a second copy of it
+- `_chart_svg_legend.py` - the legend, laid out to FIT rather than stepped a
+  fixed distance per entry. A fixed stride ran the last entry off the right edge
+  of the canvas as soon as four cards were plotted with the total curve, so the
+  export lost that label exactly as the window did. There are no font metrics in
+  a string build, so a label's width is estimated from its character count at an
+  upper bound for the face (the same device the y-axis margin uses): each entry
+  takes the room its own words need, a row wraps when the next entry would cross
+  the right margin and a label too wide for a whole row is shortened. The band
+  grows a row at a time and the plot starts beneath it
 - `chart_svg.py` - the bar and line charts as inline SVG, following the same rules
   as `_line_bar_chart.py` (curve in bar mode only, axis always includes zero, zero
   line only when the range crosses it). The export redraws the series rather than
@@ -963,6 +974,24 @@ holding each budget's slug and display name plus which one is active.
   a typo there fails nothing at runtime and simply sends a supporter's money
   somewhere else.
 
+**`table_sort`** (`clear_budget/ui/utils/table_sort.py`):
+- Click a column heading and the table is ordered by it; click the same heading
+  again and it reverses. `SortState` is a frozen value holding which column and
+  which way, `toggled()` is the whole click rule and `sorted_rows` applies it
+  through a per-view key map. Three views hold one of these each (Monthly
+  Budget one per table, Reserves, Archive) and differ only in the keys they
+  hand it
+- THE ROWS ARE ORDERED BEFORE THEY ARE WRITTEN, never by Qt's own table
+  sorting. Every one of those views maps a row NUMBER back to the record it
+  came from (the bill an edit belongs to, the commitment a Delete acts on, the
+  month a detail dialog opens), so a table Qt reordered underneath that mapping
+  would act on the wrong record
+- A column with no key leaves the rows untouched rather than falling back to
+  some other column, which would answer a click with the wrong table; the
+  `UNSORTED` state is a table still in the order its data arrived in and shows
+  no arrow at all. The pure half carries no Qt and is held by
+  `tests/ui_logic/test_table_sort.py`
+
 **`glyph_metrics`** (`clear_budget/ui/utils/glyph_metrics.py`):
 - Painted-pixel measurement for both images and text. `opaque_bounding_rect`
   crops the nav icon to its real content (the source PNG carries uneven
@@ -1064,7 +1093,10 @@ unrelated to what it had to hold.
   correct only at one display size
 
 **Views**:
-- `MonthView` - bill/income tables with inline editing; balance display adapts
+- `MonthView` - bill/income tables with inline editing, each orderable from
+  its own headings (`table_sort`; bills open on the due day, income on the
+  name, the payment-method column ordered by the label the row actually shows
+  rather than by the stored method id); balance display adapts
   to current vs future month; composed of mixins (builders, table, edit, delete,
   apply-prompt) to stay under the LOC limit
 - `SolvencyPanel` - two pages in a `QStackedWidget`: bank and projection. Each has a pilot button naming the ANSWER that page holds rather
@@ -1240,8 +1272,12 @@ renderings of the same figures to hold in step. Every month any page shows
   never encourages: no progress bar, no goal and no congratulation, because a
   commitment is a bill that has not asked yet. All wording lives in the
   Qt-free `ui/utils/reserves_text.py`, tested under `tests/ui_logic`
-- `ArchiveView` - historical month summaries by year; year navigation. A
-  completed month reports the reserve it really carried, read at its own last
+- `ArchiveView` - historical month summaries by year; year navigation. The year
+  is in calendar order until a heading is clicked, which is the order it was
+  lived in; the reserve column joins the orderings only where it is drawn and
+  the status orders by the sign of the balance behind it. `months_by_row` is
+  rebuilt against the order actually drawn, so the detail dialog opens the month
+  whose row was clicked. A completed month reports the reserve it really carried, read at its own last
   day; the column appears only for a budget that sets something aside, so an
   archive that never had a commitment renders exactly as it always did
 
@@ -1480,6 +1516,14 @@ renderings of the same figures to hold in step. Every month any page shows
   large balance widens the margin rather than truncating; the SVG exporter
   mirrors the same rule with a character-count estimate, since SVG has no
   font metrics at build time
+  - The LEGEND is measured the same way and for the same reason. It stepped a
+    fixed width per entry, which four cards plus the total curve overran: the
+    last label was drawn past the right edge of the widget and read as a name
+    cut in half. Each entry now takes the width `QFontMetrics` gives its own
+    label, the row wraps when the next entry would cross the right margin and a
+    label too wide for a whole row is elided. `_legend_band_height` feeds
+    `_geometry`, so the plot starts below however many rows the legend took
+    rather than under them
   - Curve maths is Qt-free and lives in `application/reporting/curve.py`, NOT
     beside the widget: the day-end totals (one curve however many series are
     plotted, so with a single series it IS that series), the inflection days
@@ -2602,7 +2646,8 @@ an option that read as "remove my data" removed nothing.
   the income one-off and edit-scope rules, the bill amount-change entry,
   inline edits, highlight colour, ring order, theme, theme-token keys and
   save-location persistence, the default data directory, nav icon-button
-  sizing, the skipped-update record and the window-geometry arithmetic. The
+  sizing, the skipped-update record, the click-a-heading sort rule and the
+  window-geometry arithmetic. The
   Reserves page adds four: the Solvency reading of a month that sets money
   aside, its colour, the Monthly Budget reminder row and
   `test_reserves_buffer_survives.py`, which pins a real bug: opening the page

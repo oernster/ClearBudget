@@ -8,7 +8,9 @@ build) is testable without a QApplication.
 
 The fixed dark palette and the layout metrics live in _chart_svg_theme, so
 this file holds the drawing and that one holds what it draws with, the same
-shape the on-screen chart has in ui.theme_tokens and ui.ui_scale.
+shape the on-screen chart has in ui.theme_tokens and ui.ui_scale. The legend
+carries its own layout rules and sits in _chart_svg_legend; the escape and
+the label style both files write text through sit in _chart_svg_text.
 
 The chart rules match the widget exactly (see _line_bar_chart.py): the bar
 rendering carries the following curve through every day's real value, the
@@ -21,19 +23,9 @@ from __future__ import annotations
 from math import ceil
 
 from clear_budget.application.reporting import _chart_svg_theme as theme
+from clear_budget.application.reporting._chart_svg_legend import legend, rows
+from clear_budget.application.reporting._chart_svg_text import axis_text
 from clear_budget.application.reporting.curve import bezier_segments, daily_totals
-
-
-def _escape(text: str) -> str:
-    """Escape the five characters that would otherwise break the markup."""
-    return (
-        str(text)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&#39;")
-    )
 
 
 def _money(pence: int) -> str:
@@ -87,7 +79,10 @@ class _Plot:
             + theme.AXIS_LABEL_INSET
         )
         self.left = max(theme.MARGIN_LEFT_MIN, estimated)
-        self.top = theme.MARGIN_TOP + theme.LEGEND_HEIGHT
+        # The legend wraps when its entries will not fit on one row, so the
+        # plot starts below however many rows it actually took.
+        self.legend_rows = rows(self)
+        self.top = theme.MARGIN_TOP + theme.LEGEND_HEIGHT * len(self.legend_rows)
         self.width = theme.WIDTH - self.left - theme.MARGIN_RIGHT
         self.height = theme.HEIGHT - self.top - theme.MARGIN_BOTTOM
 
@@ -143,19 +138,6 @@ class _Plot:
         return theme.SOLO_CURVE if self.solo else theme.CURVE
 
 
-def _axis_text(x, y, anchor: str, label) -> str:
-    """One piece of axis or legend text, in the chart's muted label style.
-
-    The three callers differ only in where the text sits and how it hangs off
-    that point, so the style is written once.
-    """
-    return (
-        f'<text x="{x}" y="{y}" text-anchor="{anchor}" '
-        f'fill="{theme.MUTED}" font-size="{theme.AXIS_FONT}">'
-        f"{_escape(label)}</text>"
-    )
-
-
 def _grid(plot: _Plot) -> list[str]:
     parts = []
     # The same labels the margin was estimated from, so they always fit.
@@ -168,7 +150,7 @@ def _grid(plot: _Plot) -> list[str]:
             f'stroke="{theme.GRID}" stroke-width="1"/>'
         )
         parts.append(
-            _axis_text(plot.left - theme.AXIS_LABEL_GAP, f"{y + 4:.1f}", "end", label)
+            axis_text(plot.left - theme.AXIS_LABEL_GAP, f"{y + 4:.1f}", "end", label)
         )
     return parts
 
@@ -177,7 +159,7 @@ def _x_labels(plot: _Plot, *, labels) -> list[str]:
     base = plot.top + plot.height + 18
     parts = []
     for day, label in labels:
-        parts.append(_axis_text(f"{plot.x_at(day):.1f}", base, "middle", label))
+        parts.append(axis_text(f"{plot.x_at(day):.1f}", base, "middle", label))
     return parts
 
 
@@ -279,31 +261,6 @@ def _curve(plot: _Plot) -> list[str]:
     ]
 
 
-def _legend(plot: _Plot) -> list[str]:
-    # The swatch has to be the colour actually drawn, which for one series
-    # differs between the two renderings: green bars, a deep blue line.
-    mark = plot.bar_colour if plot.with_curve else plot.line_colour
-    entries = [(mark(i), s.label) for i, s in enumerate(plot.series)]
-    if plot.with_curve:
-        entries.append(
-            (plot.curve_colour(), "Curve (total)" if len(plot.series) > 1 else "Curve")
-        )
-    parts = []
-    x = plot.left
-    for colour, label in entries:
-        parts.append(
-            f'<rect x="{x}" y="{theme.MARGIN_TOP}" width="{theme.LEGEND_SWATCH}" '
-            f'height="{theme.LEGEND_SWATCH}" fill="{colour}"/>'
-        )
-        parts.append(
-            _axis_text(
-                x + theme.LEGEND_SWATCH + 6, theme.MARGIN_TOP + 11, "start", label
-            )
-        )
-        x += theme.LEGEND_GAP
-    return parts
-
-
 def chart_svg(
     series, *, mode: str, labels, floor_pence: int = 0, floor_values=None
 ) -> str:
@@ -333,7 +290,7 @@ def chart_svg(
     if with_curve:
         body += _curve(plot)
     body += _x_labels(plot, labels=labels)
-    body += _legend(plot)
+    body += legend(plot)
     # Its own background rect, so the chart reads correctly wherever it is
     # embedded rather than depending on the page behind it.
     canvas = (

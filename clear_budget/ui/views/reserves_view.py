@@ -54,6 +54,7 @@ from clear_budget.ui.widgets._tray_buttons import (
     build_save_load_buttons,
     build_tray_separator,
 )
+from clear_budget.ui.utils.table_sort import UNSORTED
 from clear_budget.ui.widgets.commitment_dialog import CommitmentDialog
 
 _BUFFER_FIELD_WIDTH_PX = 120
@@ -69,6 +70,9 @@ class ReservesView(ReservesContentMixin, QWidget):
         self.budget_service = budget_service
         self._current_month = current_month
         self._rows: list = []
+        # The page opens in the order the service hands the commitments over;
+        # a click on a heading is what gives it an order of its own.
+        self.sort = UNSORTED
         self._build_ui()
         self.refresh()
 
@@ -142,6 +146,7 @@ class ReservesView(ReservesContentMixin, QWidget):
         self.table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
         )
+        self.table.horizontalHeader().sectionClicked.connect(self.on_header_click)
         keyboard_only_focus(self.table)
         layout.addWidget(self.table)
 

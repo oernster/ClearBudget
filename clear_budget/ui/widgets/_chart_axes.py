@@ -28,7 +28,23 @@ _AXIS_LABEL_GAP = 6
 _AXIS_LABEL_INSET = 4
 
 _LEGEND_SWATCH = 12
-_LEGEND_LABEL_WIDTH = 180
+# The legend is laid out from MEASURED label widths rather than a fixed stride
+# per entry. A fixed 180 was used and it ran the last entry off the right edge
+# as soon as a month carried four cards plus the total curve: five strides of
+# 192 past the axis margin is wider than the window. Each entry now takes the
+# room its own words need, the row wraps when the next entry would cross the
+# right margin and a label too wide for a whole row is elided rather than drawn
+# over the edge.
+_LEGEND_TEXT_GAP = 6
+_LEGEND_ENTRY_GAP = 18
+_LEGEND_TOP_INSET = 4
+_LEGEND_SWATCH_DROP = 3
+_LEGEND_LABEL_HEIGHT = 18
+# One legend row's height and the plot's right margin both belong to the frame,
+# so they live here beside the rest of it; _line_bar_chart imports the margin
+# for its own geometry rather than holding a second copy of the number.
+LEGEND_ROW_HEIGHT = 22
+MARGIN_RIGHT = 14
 
 _CURVE_LABEL = "Curve"
 _CURVE_TOTAL_LABEL = "Curve (total)"
@@ -94,11 +110,8 @@ class ChartAxesMixin:
                 str(day),
             )
 
-    def _draw_legend(self, painter, geom) -> None:
-        left = geom[0]
-        x = left
-        y = ui_scale.px(4)
-        swatch = ui_scale.px(_LEGEND_SWATCH)
+    def _legend_entries(self) -> list[tuple]:
+        """(colour, label) for every series, plus the curve when it is drawn."""
         entries = [
             (self._plot_colour(idx), series.label)
             for idx, series in enumerate(self._series)
@@ -106,17 +119,61 @@ class ChartAxesMixin:
         if self._curve_shown():
             curve_label = _CURVE_TOTAL_LABEL if len(self._series) > 1 else _CURVE_LABEL
             entries.append((self._active_curve_colour(), curve_label))
-        for colour, label in entries:
-            painter.fillRect(QRectF(x, y + 3, swatch, swatch), colour)
-            painter.setPen(QColor(self._tokens["text_muted"]))
-            painter.drawText(
-                QRectF(
-                    x + swatch + ui_scale.px(6),
-                    y,
-                    ui_scale.px(_LEGEND_LABEL_WIDTH),
-                    ui_scale.px(18),
-                ),
-                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                label,
-            )
-            x += swatch + ui_scale.px(_LEGEND_LABEL_WIDTH)
+        return entries
+
+    def _legend_rows(self, left: int) -> list[list[tuple]]:
+        """Legend entries grouped into rows that fit inside the widget.
+
+        Each entry is (colour, label, x, text_width), placed left to right
+        from the axis margin; a new row starts as soon as one would cross the
+        right margin, so nothing is ever drawn off the edge.
+        """
+        metrics = self.fontMetrics()
+        swatch = ui_scale.px(_LEGEND_SWATCH)
+        text_gap = ui_scale.px(_LEGEND_TEXT_GAP)
+        entry_gap = ui_scale.px(_LEGEND_ENTRY_GAP)
+        limit = self.width() - ui_scale.px(MARGIN_RIGHT)
+        room = max(1, limit - left - swatch - text_gap)
+        rows: list[list[tuple]] = [[]]
+        x = left
+        for colour, label in self._legend_entries():
+            text = label
+            width = metrics.horizontalAdvance(text)
+            if width > room:
+                # Wider than a whole row on its own, so no wrap can save it.
+                text = metrics.elidedText(text, Qt.TextElideMode.ElideRight, room)
+                width = metrics.horizontalAdvance(text)
+            if rows[-1] and x + swatch + text_gap + width > limit:
+                rows.append([])
+                x = left
+            rows[-1].append((colour, text, x, width))
+            x += swatch + text_gap + width + entry_gap
+        return rows
+
+    def _legend_band_height(self, left: int) -> int:
+        """The vertical room the legend needs, one row deep or several."""
+        return ui_scale.px(LEGEND_ROW_HEIGHT) * len(self._legend_rows(left))
+
+    def _draw_legend(self, painter, geom) -> None:
+        left = geom[0]
+        swatch = ui_scale.px(_LEGEND_SWATCH)
+        text_gap = ui_scale.px(_LEGEND_TEXT_GAP)
+        row_height = ui_scale.px(LEGEND_ROW_HEIGHT)
+        for row_index, row in enumerate(self._legend_rows(left)):
+            y = ui_scale.px(_LEGEND_TOP_INSET) + row_index * row_height
+            for colour, label, x, width in row:
+                painter.fillRect(
+                    QRectF(x, y + ui_scale.px(_LEGEND_SWATCH_DROP), swatch, swatch),
+                    colour,
+                )
+                painter.setPen(QColor(self._tokens["text_muted"]))
+                painter.drawText(
+                    QRectF(
+                        x + swatch + text_gap,
+                        y,
+                        width,
+                        ui_scale.px(_LEGEND_LABEL_HEIGHT),
+                    ),
+                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                    label,
+                )

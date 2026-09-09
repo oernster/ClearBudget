@@ -14,7 +14,11 @@ import pytest
 from clear_budget.application.reporting._chart_svg_theme import (
     FLOOR_DASH,
     HEIGHT,
+    LEGEND_CHAR_WIDTH,
+    LEGEND_HEIGHT,
+    LEGEND_SWATCH,
     MARGIN_LEFT_MIN,
+    MARGIN_RIGHT,
     SOLO_BAR_UNDER,
     WIDTH,
     ZERO_LINE,
@@ -196,3 +200,67 @@ def test_a_floor_of_one_day_draws_no_line():
     assert _floor_line_count(svg) == 0
     # The one day it does cover still reads against it.
     assert f'fill="{SOLO_BAR_UNDER}"' in svg
+
+
+# ---- the legend fits inside the picture -----------------------------------
+# It used to step a fixed distance per entry, so four cards plus the total
+# curve wrote the last label off the right edge of the canvas and the export
+# lost it exactly as the window did.
+_TEXT = re.compile(r'<text x="([\d.]+)" y="([\d.]+)"[^>]*>([^<]*)</text>')
+_ELLIPSIS = "…"
+
+
+def _legend_texts(svg: str, wanted) -> list[tuple[float, float, str]]:
+    """(x, y, label) for every legend entry in `svg`."""
+    return [
+        (float(x), float(y), text)
+        for x, y, text in _TEXT.findall(svg)
+        if any(text.startswith(prefix) for prefix in wanted)
+    ]
+
+
+def _cards(count: int) -> list[_Series]:
+    return [_Series(f"Card number {index}", [100_00] * _DAYS) for index in range(count)]
+
+
+def test_every_legend_label_ends_inside_the_canvas():
+    """Four cards plus the total curve: the case that ran off the edge."""
+    cards = _cards(4)
+    svg = _svg(cards, "bar")
+    entries = _legend_texts(svg, ("Card number", "Curve"))
+    assert len(entries) == len(cards) + 1
+    for x, _y, label in entries:
+        assert x + len(label) * LEGEND_CHAR_WIDTH <= WIDTH - MARGIN_RIGHT
+
+
+def test_a_legend_too_wide_for_one_row_wraps_onto_the_next():
+    svg = _svg(_cards(12), "bar")
+    rows = {y for _x, y, _label in _legend_texts(svg, ("Card number", "Curve"))}
+    assert len(rows) > 1
+    assert sorted(rows) == [min(rows) + LEGEND_HEIGHT * i for i in range(len(rows))]
+
+
+def test_a_wrapped_legend_pushes_the_plot_down_rather_than_over_it():
+    """The band grows by a row, so no bar is drawn under a legend label."""
+    svg = _svg(_cards(12), "bar")
+    lowest_label = max(y for _x, y, _label in _legend_texts(svg, ("Card number",)))
+    assert lowest_label > max(
+        y for _x, y, _label in _legend_texts(_svg(_cards(2), "bar"), ("Card number",))
+    )
+    bars = [
+        (float(y), float(height))
+        for y, height in re.findall(
+            r'<rect x="[\d.]+" y="([\d.]+)" width="[\d.]+" height="([\d.]+)"', svg
+        )
+        if float(height) != LEGEND_SWATCH
+    ]
+    assert bars
+    assert min(top for top, _height in bars) >= lowest_label
+
+
+def test_a_label_wider_than_a_whole_row_is_shortened():
+    """No wrap can save it, so it is cut rather than drawn over the edge."""
+    svg = _svg([_Series("N" * 400, [100_00] * _DAYS)], "bar")
+    (x, _y, label), *_rest = _legend_texts(svg, ("N",))
+    assert label.endswith(_ELLIPSIS)
+    assert x + len(label) * LEGEND_CHAR_WIDTH <= WIDTH - MARGIN_RIGHT

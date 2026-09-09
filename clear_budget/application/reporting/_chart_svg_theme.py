@@ -74,6 +74,7 @@ AXIS_LABEL_INSET = 4
 MARGIN_RIGHT = 20
 MARGIN_TOP = 16
 MARGIN_BOTTOM = 40
+# One legend row's height; the band is this deep per row the legend takes.
 LEGEND_HEIGHT = 26
 
 GRID_LINES = 4
@@ -86,5 +87,14 @@ LINE_WIDTH = 2
 FLOOR_WIDTH = 1
 FLOOR_DASH = "4 4"
 LEGEND_SWATCH = 12
-LEGEND_GAP = 190
+# Gap from a swatch to its own label; also from one entry to the next. The
+# entry's width comes from its label rather than from a fixed stride, which
+# used to run the last entry off the right edge of the canvas.
+LEGEND_TEXT_GAP = 6
+LEGEND_ENTRY_GAP = 18
+# Where a legend label's baseline sits inside its row.
+LEGEND_TEXT_BASELINE = 11
+# An upper bound on one character's width in the 12px sans face, so an
+# estimated label width is never short of the rendered one.
+LEGEND_CHAR_WIDTH = 7.2
 AXIS_FONT = 12
