@@ -92,6 +92,15 @@ def wrap_path(text: str, max_width: int, width_of: Callable[[str], int]) -> str:
 
 
 def wrap_for(widget, text: str) -> str:
-    """`text` wrapped to the path label width in `widget`'s own font."""
+    """`text` wrapped to the path label width in `widget`'s painting font.
+
+    `ensurePolished` first; that is the whole point of the function. A
+    freshly built widget still carries the default 9pt font; the app
+    stylesheet's `QWidget { font-size: 14pt }` reaches it only at polish. A
+    line measured before that is about half again wider when it is painted,
+    so Qt re-wraps it and breaks where it likes, which for a path means
+    straight after the drive letter.
+    """
+    widget.ensurePolished()
     advance = QFontMetrics(widget.font()).horizontalAdvance
     return wrap_path(text, ui_scale.px(PATH_LABEL_WIDTH), advance)
