@@ -1118,14 +1118,19 @@ unrelated to what it had to hold.
   correct only at one display size
 
 **Views**:
-- THE NAME COLUMN TAKES THE SLACK on both Monthly Budget tables
-  (`_month_view_builders`): every other column is sized to its contents while
-  the name is `Stretch`, so the table is exactly as wide as its viewport and a
-  name too long for the room it is given is elided. Sized to contents
-  throughout, the table could out-measure the window and answer with a
-  horizontal scrollbar: a real budget's bills put the Paid column off the
-  edge. Widening the window instead was tried and was wrong in kind, since it
-  made every user's window pay for a table that was not using the space
+- ONE COLUMN TAKES THE SLACK in every table sized to its contents: the name on
+  both Monthly Budget tables (`_month_view_builders`) and the month on Archive.
+  That column is `Stretch` while the rest are sized to what they hold, so the
+  table is exactly as wide as its viewport and the flexible column is elided
+  when the room runs short. Sized to contents throughout, a table can
+  out-measure the window and answer with a horizontal scrollbar: a real
+  budget's bills put the Paid column off the edge. Widening the window instead
+  was tried and was wrong in kind, since it made every user's window pay for a
+  table that was not using the space. Archive was measured clear of that
+  failure at every width the window can reach; it takes the same shape anyway,
+  which also closes the strip of dead space its last column used to leave.
+  Reserves and the card projection strip stretch every column already, so
+  neither can overflow either
 - `MonthView` - bill/income tables with inline editing, each orderable from
   its own headings (`table_sort`; bills open on the due day, income on the
   name, the payment-method column ordered by the label the row actually shows

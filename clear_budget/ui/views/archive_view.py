@@ -61,6 +61,9 @@ _SORT_KEYS = {
     3: lambda row: row.summary.balance.pence,
 }
 _RESERVES_COLUMN = 4
+# The month names each row and is the one column that can be shortened and
+# still read, so it is the one that gives room back when the table is tight.
+_MONTH_COLUMN = 0
 
 
 class ArchiveView(QWidget):
@@ -121,10 +124,17 @@ class ArchiveView(QWidget):
         self.archive_table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
-        install_sort_header(self.archive_table).setSectionResizeMode(
-            QHeaderView.ResizeMode.ResizeToContents
-        )
+        _header = install_sort_header(self.archive_table)
+        _header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.archive_table.horizontalHeader().setStretchLastSection(False)
+        # The MONTH column takes whatever is left, the same rule the Monthly
+        # Budget tables follow: every other column states a figure or a
+        # verdict and has a width it needs, so this one gives room back and
+        # the table is always exactly as wide as its viewport. Sized to
+        # contents throughout it could out-measure the window and answer with
+        # a horizontal scrollbar, which is how the Bills table came to hide
+        # its last column.
+        _header.setSectionResizeMode(_MONTH_COLUMN, QHeaderView.ResizeMode.Stretch)
         # The row-header pencil colour comes from the app stylesheet
         # (QHeaderView::section:vertical), so it follows the theme.
         self.archive_table.verticalHeader().sectionClicked.connect(
