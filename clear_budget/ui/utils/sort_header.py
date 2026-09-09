@@ -23,7 +23,7 @@ from math import ceil
 
 from PySide6.QtCore import QPointF, QSize, Qt
 from PySide6.QtGui import QColor, QPainter, QPolygonF
-from PySide6.QtWidgets import QHeaderView
+from PySide6.QtWidgets import QHeaderView, QStyle, QStyleOptionHeader
 
 from clear_budget.ui import theme, ui_scale
 from clear_budget.ui.utils.table_sort import UNSORTED, SortState
@@ -66,35 +66,61 @@ class SortHeaderView(QHeaderView):
         return ceil(width) + ui_scale.px(_ARROW_GAP_PX)
 
     def sectionSizeFromContents(self, logical_index: int) -> QSize:
-        """Reserve room for the arrow in the section that carries it.
+        """Reserve one arrow's span in the section that carries it.
 
-        Twice the arrow's span, because the heading is CENTRED in the section:
-        half the reserved width falls on each side of it, so the arrow gets a
-        whole span to sit in and the text keeps its own room.
+        ONE span, not two, because this class lays the heading out itself: the
+        text and the arrow are centred as a single block, so the width the
+        arrow needs is the width the section grows by. Reserving two, which is
+        what a centred heading painted by the style would have needed, put
+        about sixty points into whichever column was sorted and that was
+        enough to push a full Bills table into a horizontal scrollbar.
         """
         size = super().sectionSizeFromContents(logical_index)
         if logical_index != self._sort.column:
             return size
-        return QSize(size.width() + 2 * self._arrow_span(), size.height())
+        return QSize(size.width() + self._arrow_span(), size.height())
 
     def paintSection(self, painter: QPainter, rect, logical_index: int) -> None:
-        """Draw the section as usual, then the arrow after its text."""
-        super().paintSection(painter, rect, logical_index)
+        """Draw the section, with the heading and its arrow as one block."""
         if logical_index != self._sort.column or not rect.isValid():
+            super().paintSection(painter, rect, logical_index)
             return
-        label = self.model().headerData(
-            logical_index, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole
-        )
+        option = QStyleOptionHeader()
+        self.initStyleOptionForIndex(option, logical_index)
+        option.rect = rect
+        label = str(option.text or "")
+        # The chrome is drawn by the style, so the section keeps the
+        # background, the border and the hover state the stylesheet gives
+        # every other section. Only the LABEL is taken over, so the arrow can
+        # be laid out beside it rather than paid for on both sides of a word
+        # the style would centre.
+        option.text = ""
+        self.style().drawControl(QStyle.ControlElement.CE_Header, option, painter, self)
+        self._paint_label_and_arrow(painter, rect, label)
+
+    def _paint_label_and_arrow(self, painter, rect, label: str) -> None:
+        """The heading and the arrow, centred together in `rect`."""
         metrics = self.fontMetrics()
-        text_width = metrics.horizontalAdvance(str(label or ""))
-        width, height = self._arrow_size()
-        left = rect.center().x() + text_width / 2 + ui_scale.px(_ARROW_GAP_PX)
+        text_width = metrics.horizontalAdvance(label)
+        arrow_width, arrow_height = self._arrow_size()
+        gap = ui_scale.px(_ARROW_GAP_PX)
+        left = rect.left() + (rect.width() - (text_width + gap + arrow_width)) / 2
         # The style centres the text's LINE BOX in the section, so the baseline
         # is that box's top plus the ascent and the capitals stand one cap
-        # height above it. The arrow is drawn between those same two lines.
-        baseline = rect.center().y() - metrics.height() / 2 + metrics.ascent()
+        # height above it. Both the heading and the arrow are drawn to it.
+        centre = rect.top() + rect.height() / 2
+        baseline = centre - metrics.height() / 2 + metrics.ascent()
+        painter.save()
+        painter.setPen(QColor(theme.colours()["text_muted"]))
+        painter.setFont(self.font())
+        painter.drawText(QPointF(left, baseline), label)
+        painter.restore()
         self._draw_arrow(
-            painter, left=left, top=baseline - height, width=width, height=height
+            painter,
+            left=left + text_width + gap,
+            top=baseline - arrow_height,
+            width=arrow_width,
+            height=arrow_height,
         )
 
     def _draw_arrow(self, painter, *, left, top, width, height) -> None:

@@ -2172,7 +2172,7 @@ renderings of the same figures to hold in step. Every month any page shows
     height / 1260, capped at 1.5x on tall/4K displays and floored at 0.5x, so the UI
     scales *down* on short displays such as a 13in MacBook and scales for the
     monitor the app actually opens on
-  - Default window geometry: 33% of available width x 92% of available height,
+  - Default window geometry: 38% of available width x 92% of available height,
     centred, with absolute minimum floors (860 x 780 logical points, capped to the
     available screen) so the multi-column Bills/Income tables stay readable on small
     laptops. The arithmetic is `_window_geometry.default_window_rect`, kept Qt-free
