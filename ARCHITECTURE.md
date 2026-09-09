@@ -1003,9 +1003,19 @@ holding each budget's slug and display name plus which one is active.
   falls each side of it, so the arrow can never land on the words and no other
   column pays for it. Installed by `install_sort_header` BEFORE the section
   resize mode is set, since replacing a header replaces what was configured on
-  the one it displaces (measured offscreen: a 16 by 10 painted box, 7px clear
-  of the text, inside its section and vertically centred, on every column and
-  in both directions; nothing at all while unsorted)
+  the one it displaces
+- IT IS SIZED FROM THE FONT, never in pixels of its own: its height is the
+  heading's `capHeight` and its base sits on the text's baseline, derived from
+  the style's own layout (the line box is centred in the section, so the
+  baseline is that box's top plus the ascent). So the arrow occupies exactly
+  the two lines the capitals beside it do, at any display scale. A pixel size
+  of its own would agree with the text at one scale and drift at every other.
+  This is one to measure on the REAL platform: under
+  `QT_QPA_PLATFORM=offscreen` Qt's substitute font database reports
+  ascent = capHeight = height and a zero descent, so the arrow measures right
+  there whatever the arithmetic says. Measured on Windows at three scales
+  (0.7, 1.0 and 1.35): the heading's ink and the arrow share their top and
+  bottom rows to within the pixel antialiasing spreads
 
 **`glyph_metrics`** (`clear_budget/ui/utils/glyph_metrics.py`):
 - Painted-pixel measurement for both images and text. `opaque_bounding_rect`

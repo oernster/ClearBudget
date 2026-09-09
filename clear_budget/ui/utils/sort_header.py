@@ -19,6 +19,8 @@ ever sorted.
 
 from __future__ import annotations
 
+from math import ceil
+
 from PySide6.QtCore import QPointF, QSize, Qt
 from PySide6.QtGui import QColor, QPainter, QPolygonF
 from PySide6.QtWidgets import QHeaderView
@@ -26,10 +28,12 @@ from PySide6.QtWidgets import QHeaderView
 from clear_budget.ui import theme, ui_scale
 from clear_budget.ui.utils.table_sort import UNSORTED, SortState
 
-# Deliberately larger than the spin-box arrows, which sit inside a field and
-# must not crowd it. This one is the whole point of the header it sits in.
-_ARROW_WIDTH_PX = 18
-_ARROW_HEIGHT_PX = 12
+# The arrow is as tall as the heading's own CAPITALS and sits on the same two
+# lines they do: its top on the cap height, its base on the baseline. That is
+# measured from the font rather than written as a pixel number, so it holds at
+# every display scale and follows the heading if the font ever changes. A
+# number of its own would agree with the text at exactly one size.
+_ARROW_WIDTH_RATIO = 1.5
 # Space between the last letter of the heading and the arrow.
 _ARROW_GAP_PX = 7
 
@@ -51,9 +55,15 @@ class SortHeaderView(QHeaderView):
         self.updateGeometries()
         self.viewport().update()
 
+    def _arrow_size(self) -> tuple[float, float]:
+        """The arrow's width and height, both taken from the heading font."""
+        height = float(self.fontMetrics().capHeight())
+        return height * _ARROW_WIDTH_RATIO, height
+
     def _arrow_span(self) -> int:
         """The width one arrow needs, gap included."""
-        return ui_scale.px(_ARROW_WIDTH_PX) + ui_scale.px(_ARROW_GAP_PX)
+        width, _height = self._arrow_size()
+        return ceil(width) + ui_scale.px(_ARROW_GAP_PX)
 
     def sectionSizeFromContents(self, logical_index: int) -> QSize:
         """Reserve room for the arrow in the section that carries it.
@@ -75,12 +85,17 @@ class SortHeaderView(QHeaderView):
         label = self.model().headerData(
             logical_index, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole
         )
-        text_width = self.fontMetrics().horizontalAdvance(str(label or ""))
-        width = ui_scale.px(_ARROW_WIDTH_PX)
-        height = ui_scale.px(_ARROW_HEIGHT_PX)
+        metrics = self.fontMetrics()
+        text_width = metrics.horizontalAdvance(str(label or ""))
+        width, height = self._arrow_size()
         left = rect.center().x() + text_width / 2 + ui_scale.px(_ARROW_GAP_PX)
-        top = rect.center().y() - height / 2
-        self._draw_arrow(painter, left=left, top=top, width=width, height=height)
+        # The style centres the text's LINE BOX in the section, so the baseline
+        # is that box's top plus the ascent and the capitals stand one cap
+        # height above it. The arrow is drawn between those same two lines.
+        baseline = rect.center().y() - metrics.height() / 2 + metrics.ascent()
+        self._draw_arrow(
+            painter, left=left, top=baseline - height, width=width, height=height
+        )
 
     def _draw_arrow(self, painter, *, left, top, width, height) -> None:
         """One filled triangle: up while ascending, down while descending."""
