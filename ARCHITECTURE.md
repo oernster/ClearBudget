@@ -1017,6 +1017,32 @@ holding each budget's slug and display name plus which one is active.
   (0.7, 1.0 and 1.35): the heading's ink and the arrow share their top and
   bottom rows to within the pixel antialiasing spreads
 
+**`path_display`** (`clear_budget/ui/path_display.py`):
+- A path shown in a message box is wrapped HERE, before the text reaches the
+  label, because Qt breaks a long one wherever it finds a break opportunity and
+  a Windows path offers exactly one: the colon after the drive letter. The
+  result was a first line holding `C:` alone and a remainder running past the
+  edge of the dialog (measured: a 460px label asked to hold an 840px line).
+  `wrap_path(text, max_width, width_of)` is pure, so the rule is tested without
+  Qt: the break falls after a separator, the separator stays on the line it
+  belongs to and a leading `C:\` or UNC `\\` is folded into the first named
+  segment so a prefix is never stranded on a line of its own. A segment too wide
+  for a whole line, which is what a long backup filename is, is broken between
+  characters as a last resort, since it carries no separator and Qt finds no
+  break opportunity in one either
+- `wrap_for(widget, text)` measures with `QFontMetrics` after
+  `widget.ensurePolished()`; the polish is the whole point. The app
+  stylesheet sets `QWidget { font-size: 14pt }`, which reaches a freshly built
+  `QMessageBox` only at polish; measuring before it silently used the 9pt
+  default, so every line came out about half again wider when painted, overflowed
+  the label and was re-broken by Qt at the colon. That is the same trap
+  `comfortable_row_height` documents for table rows, met a second time in a
+  different module
+- One home for the wrap, so every dialog that prints a path behaves alike: the
+  save confirmation, the overwrite question, the other-account refusal, the full
+  backup report and the graph's HTML export. `PATH_LABEL_WIDTH` is the width
+  they wrap and size to, rather than a literal repeated at each call site
+
 **`glyph_metrics`** (`clear_budget/ui/utils/glyph_metrics.py`):
 - Painted-pixel measurement for both images and text. `opaque_bounding_rect`
   crops the nav icon to its real content (the source PNG carries uneven
@@ -1027,8 +1053,11 @@ holding each budget's slug and display name plus which one is active.
 
 **`ui_paths.default_downloads_dir()`** (`clear_budget/ui/ui_paths.py`):
 - Cross-platform Downloads folder via `QStandardPaths.DownloadLocation`, falling
-  back to `Path.home()`. Used as the default directory for all file dialogs
-  (Save As/Load Database, Back Up / Restore Everything).
+  back to `Path.home()`. It is the default for the dialogs that write something
+  to take AWAY: the graph's HTML export, its folder-of-months export, Back Up
+  Everything and Restore Everything. Save As and Load Database deliberately do
+  NOT use it; they open on `default_data_dir()`, where the live databases are,
+  which `tests/structural/test_save_location_defaults.py` holds in place.
 
 **`db_validation`** (`clear_budget/shared/db_validation.py`):
 - `REQUIRED_SCHEMA` + `validate_db(path)` - confirms a loaded file is a genuine
