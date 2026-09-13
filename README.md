@@ -13,6 +13,12 @@ secure authentication.
 **Author:** Oliver Ernster  
 **Licence:** GNU Lesser General Public Licence v3.0 (LGPL-3.0)
 
+> **Commercial licences available.** ClearBudget is free and open source under
+> LGPL-3.0. If those terms do not suit what you are building, a commercial
+> licence can be bought from me separately. It covers my own code; PySide6
+> keeps its own LGPL-3.0 licence. See
+> [commercial licensing](https://ernster.dev/commercial-licensing.html).
+
 ---
 
 ## Who it is for
@@ -861,12 +867,18 @@ Donations support maintenance and continued development. Nothing is withheld
 behind one: there is no paid tier, no licence key and no feature a donation
 unlocks.
 
+<a href="https://www.paypal.com/ncp/payment/M874QPXXJPY84"><img src="docs/donate.png" alt="Donate to ClearBudget" width="120"></a>
+
 ---
 
 ## Licence
 
 Distributed under the GNU Lesser General Public Licence v3.0.  
 See Help > View Licence in the application or visit https://www.gnu.org/licenses/lgpl-3.0.html
+
+A commercial licence for my own code is also available, separately from the
+open-source licence: see
+[commercial licensing](https://ernster.dev/commercial-licensing.html).
 
 ### Open Source Credits
 
