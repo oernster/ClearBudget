@@ -206,7 +206,7 @@ def test_the_current_month_is_anchored_on_the_recorded_balance(budget_service):
 
     assert august.opening_pence != july.closing_pence
     # Recorded balance, less the income already received this month.
-    assert august.opening_pence == budget_service.get_bank_balance().pence - 200_000
+    assert august.opening_pence == budget_service.get_bank_balance_pence() - 200_000
 
 
 def test_a_bill_paid_early_moves_the_anchored_close(budget_service):
@@ -233,7 +233,7 @@ def test_a_bill_paid_early_moves_the_anchored_close(budget_service):
         start=_JULY, end=_SEPTEMBER, today=during_august
     )[1]
     # Nothing is still to come, so the month closes on the recorded balance.
-    assert month.closing_pence == budget_service.get_bank_balance().pence
+    assert month.closing_pence == budget_service.get_bank_balance_pence()
     assert month.opening_pence + month.net_pence == month.closing_pence - 50_000
 
 

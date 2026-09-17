@@ -15,10 +15,14 @@ from clear_budget.domain.value_objects.amount import Amount
 class BalanceDialog(QDialog):
     """Dialog for setting bank account balance."""
 
-    def __init__(self, parent=None, current_balance: Amount | None = None) -> None:
-        """Initialize balance dialog."""
+    def __init__(self, parent=None, current_balance_pence: int = 0) -> None:
+        """Initialize balance dialog.
+
+        The current balance arrives as signed pence because an overdrawn
+        account stores a negative one, which an Amount cannot hold.
+        """
         super().__init__(parent)
-        self.current_balance = current_balance or Amount(pence=0)
+        self.current_balance_pence = current_balance_pence
         self.setWindowTitle("Set Bank Balance")
         self.setModal(True)
         self.resize(300, 150)
@@ -33,7 +37,7 @@ class BalanceDialog(QDialog):
 
         layout.addWidget(QLabel(f"Bank Account Balance ({get_symbol()}):"))
         self.amount_edit = QLineEdit()
-        self.amount_edit.setText(f"{self.current_balance.pounds:.2f}")
+        self.amount_edit.setText(f"{self.current_balance_pence / 100:.2f}")
         self.amount_edit.setPlaceholderText("0.00")
         # Pre-select the current balance so typing replaces it outright.
         self.amount_edit.selectAll()

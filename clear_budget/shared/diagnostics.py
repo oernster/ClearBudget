@@ -31,6 +31,7 @@ import traceback
 from pathlib import Path
 from typing import Callable
 
+LOG_DIR_NAME = "logs"
 LOG_NAME = "clearbudget.log"
 LOGGER_NAME = "clearbudget"
 

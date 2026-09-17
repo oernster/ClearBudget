@@ -212,7 +212,7 @@ class BudgetService(
         today = _date.today()  # noqa: DTZ011 (naive local dates)
         return projected_month_end_balance_pence(
             get_month_summary=self.get_month_summary,
-            get_bank_balance_pence=lambda: self.get_bank_balance().pence,
+            get_bank_balance_pence=lambda: self.get_bank_balance_pence(),
             get_bank_balance_day=self._get_bank_balance_day,
             today_ym=YearMonth(today.year, today.month),
             today_day=today.day,
@@ -271,21 +271,25 @@ class BudgetService(
         today = today or _date.today()  # noqa: DTZ011 (naive local dates)
         return projected_starting_balance_pence(
             get_month_summary=self.get_month_summary,
-            get_bank_balance_pence=lambda: self.get_bank_balance().pence,
+            get_bank_balance_pence=lambda: self.get_bank_balance_pence(),
             get_bank_balance_day=self._get_bank_balance_day,
             today_ym=YearMonth(today.year, today.month),
             today_day=today.day,
             year_month=year_month,
         )
 
-    def get_bank_balance(self) -> Amount:  # pragma: no cover
+    def get_bank_balance_pence(self) -> int:  # pragma: no cover
+        """The stored balance in signed pence; negative when overdrawn.
+
+        Not an Amount: the midnight fold deducts bank bills whatever the
+        balance holds, so an overdraft is stored as negative pence and the
+        non-negative Amount raised on reading it back.
+        """
         from clear_budget.application.services._settings_operations import (
             get_bank_balance_pence,
         )
 
-        return Amount(
-            pence=get_bank_balance_pence(getattr(self.bill_repo, "conn", None))
-        )
+        return get_bank_balance_pence(getattr(self.bill_repo, "conn", None))
 
     def _get_bank_balance_day(self) -> int:  # pragma: no cover
         from clear_budget.application.services._settings_operations import (

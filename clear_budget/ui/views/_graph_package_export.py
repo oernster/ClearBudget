@@ -57,7 +57,7 @@ class GraphPackageExportMixin:
             title=_PACKAGE_TITLE,
             months=months,
             series_by_month=self._series_by_month(months),
-            recorded_balance_pence=self.budget_service.get_bank_balance().pence,
+            recorded_balance_pence=self.budget_service.get_bank_balance_pence(),
         )
         folder = self._chosen_folder(package_folder_name(months))
         if folder is None:

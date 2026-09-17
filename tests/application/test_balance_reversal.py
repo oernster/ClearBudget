@@ -84,9 +84,9 @@ class TestDeleteReversal:
         _seed_balance(conn, pence=10000, iso="2026-07-24")
         bill = budget_service.add_bill(bill=_bill("Water", 3000, 25))
         budget_service.apply_elapsed_bank_transactions(today=_TODAY)
-        assert budget_service.get_bank_balance().pence == 7000
+        assert budget_service.get_bank_balance_pence() == 7000
         budget_service.delete_bill(bill_id=bill.id)
-        assert budget_service.get_bank_balance().pence == 10000
+        assert budget_service.get_bank_balance_pence() == 10000
         assert _log_count(conn) == 0
 
     def test_deleting_folded_income_takes_amount_back(self, budget_service):
@@ -94,9 +94,9 @@ class TestDeleteReversal:
         _seed_balance(conn, pence=10000, iso="2026-07-24")
         income = budget_service.add_income(income=_income("Salary", 200000, 25))
         budget_service.apply_elapsed_bank_transactions(today=_TODAY)
-        assert budget_service.get_bank_balance().pence == 210000
+        assert budget_service.get_bank_balance_pence() == 210000
         budget_service.delete_income(income_id=income.id)
-        assert budget_service.get_bank_balance().pence == 10000
+        assert budget_service.get_bank_balance_pence() == 10000
         assert _log_count(conn) == 0
 
     def test_deleting_applied_extra_income_takes_amount_back(self, budget_service):
@@ -106,9 +106,9 @@ class TestDeleteReversal:
             income=_income("Refund", 1500, 25), year_month=_JULY
         )
         budget_service.apply_elapsed_bank_transactions(today=_TODAY)
-        assert budget_service.get_bank_balance().pence == 11500
+        assert budget_service.get_bank_balance_pence() == 11500
         budget_service.delete_income_month_extra(extra_id=extra.id)
-        assert budget_service.get_bank_balance().pence == 10000
+        assert budget_service.get_bank_balance_pence() == 10000
         assert _log_count(conn) == 0
 
     def test_deleting_unapplied_item_leaves_balance_alone(self, budget_service):
@@ -116,7 +116,7 @@ class TestDeleteReversal:
         _seed_balance(conn, pence=10000, iso="2026-07-26")
         bill = budget_service.add_bill(bill=_bill("Rent", 5000, 28))
         budget_service.delete_bill(bill_id=bill.id)
-        assert budget_service.get_bank_balance().pence == 10000
+        assert budget_service.get_bank_balance_pence() == 10000
 
     def test_manually_paid_bill_is_not_refunded_on_delete(self, budget_service):
         conn = budget_service.bill_repo.conn
@@ -124,7 +124,7 @@ class TestDeleteReversal:
         bill = budget_service.add_bill(bill=_bill("Rent", 5000, 28))
         budget_service.mark_bill_paid_for_month(bill_id=bill.id, year_month=_JULY)
         budget_service.delete_bill(bill_id=bill.id)
-        assert budget_service.get_bank_balance().pence == 10000
+        assert budget_service.get_bank_balance_pence() == 10000
 
     def test_end_bill_refunds_only_removed_months(self, budget_service):
         conn = budget_service.bill_repo.conn
@@ -132,10 +132,10 @@ class TestDeleteReversal:
         bill = budget_service.add_bill(bill=_bill("Rent", 5000, 25))
         budget_service.apply_elapsed_bank_transactions(today=_TODAY)
         # Applied for May 25, Jun 25 and Jul 25: balance 100000 - 15000.
-        assert budget_service.get_bank_balance().pence == 85000
+        assert budget_service.get_bank_balance_pence() == 85000
         budget_service.end_bill(bill_id=bill.id, last_active_month=YearMonth(2026, 6))
         # July's application is handed back; May and June keep theirs.
-        assert budget_service.get_bank_balance().pence == 90000
+        assert budget_service.get_bank_balance_pence() == 90000
         assert _log_count(conn) == 2
 
     def test_manual_balance_set_supersedes_applied_amounts(self, budget_service):
@@ -146,7 +146,7 @@ class TestDeleteReversal:
         budget_service.set_bank_balance(amount=Amount(pence=5000))
         assert _log_count(conn) == 0
         budget_service.delete_bill(bill_id=bill.id)
-        assert budget_service.get_bank_balance().pence == 5000
+        assert budget_service.get_bank_balance_pence() == 5000
 
 
 class TestApplyNow:
@@ -155,22 +155,22 @@ class TestApplyNow:
         _seed_balance(conn, pence=10000, iso="2026-07-26")
         bill = budget_service.add_bill(bill=_bill("Water", 3000, 26))
         budget_service.apply_bill_to_balance_now(bill=bill, year_month=_JULY)
-        assert budget_service.get_bank_balance().pence == 7000
+        assert budget_service.get_bank_balance_pence() == 7000
         summary = budget_service.get_month_summary(year_month=_JULY)
         assert all(b.paid_for_month for b in summary.bills)
         budget_service.delete_bill(bill_id=bill.id)
-        assert budget_service.get_bank_balance().pence == 10000
+        assert budget_service.get_bank_balance_pence() == 10000
 
     def test_apply_income_now_adds_marks_and_logs(self, budget_service):
         conn = budget_service.bill_repo.conn
         _seed_balance(conn, pence=10000, iso="2026-07-26")
         income = budget_service.add_income(income=_income("Bonus", 4000, 26))
         budget_service.apply_income_to_balance_now(income=income, year_month=_JULY)
-        assert budget_service.get_bank_balance().pence == 14000
+        assert budget_service.get_bank_balance_pence() == 14000
         summary = budget_service.get_month_summary(year_month=_JULY)
         assert all(i.received_for_month for i in summary.income_sources)
         budget_service.delete_income(income_id=income.id)
-        assert budget_service.get_bank_balance().pence == 10000
+        assert budget_service.get_bank_balance_pence() == 10000
 
     def test_apply_extra_income_now_marks_extra_and_logs(self, budget_service):
         conn = budget_service.bill_repo.conn
@@ -179,11 +179,11 @@ class TestApplyNow:
             income=_income("Refund", 1500, 26), year_month=_JULY
         )
         budget_service.apply_income_to_balance_now(income=extra, year_month=_JULY)
-        assert budget_service.get_bank_balance().pence == 11500
+        assert budget_service.get_bank_balance_pence() == 11500
         extras = budget_service.income_repo.list_extras_for_month(year_month=_JULY)
         assert all(e.received_for_month for e in extras)
         budget_service.delete_income_month_extra(extra_id=extra.id)
-        assert budget_service.get_bank_balance().pence == 10000
+        assert budget_service.get_bank_balance_pence() == 10000
 
 
 class TestReverseWithoutConnection:

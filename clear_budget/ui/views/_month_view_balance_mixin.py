@@ -35,7 +35,7 @@ class MonthViewBalanceMixin:
             if self.view_model.current_month == today_ym:
                 # Elapsed dated bills/income are folded into the stored
                 # balance at midnight (and at startup), so it is shown as-is.
-                pence = self.view_model.budget_service.get_bank_balance().pence
+                pence = self.view_model.budget_service.get_bank_balance_pence()
                 label = f"Balance: {fmt(pence)}"
             else:
                 _svc = self.view_model.budget_service

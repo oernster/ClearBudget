@@ -199,7 +199,9 @@ class MonthView(
         ]
 
     def on_edit_balance(self) -> None:
-        dialog = BalanceDialog(self, self.view_model.budget_service.get_bank_balance())
+        dialog = BalanceDialog(
+            self, self.view_model.budget_service.get_bank_balance_pence()
+        )
         if (
             dialog.exec() == BalanceDialog.Accepted
             and (balance := dialog.get_balance()) is not None

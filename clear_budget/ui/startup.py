@@ -75,7 +75,7 @@ def begin() -> Startup | None:
 
     tooltip_style.install(app)
 
-    diagnostics.install(Config.app_dir() / "logs")
+    diagnostics.install(Config.app_dir() / diagnostics.LOG_DIR_NAME)
     diagnostics.log(
         "session starting, version %s, data dir %s", __version__, Config.app_dir()
     )

@@ -105,7 +105,7 @@ class GraphSeriesMixin:
             )
         per_day = self._per_day_pence(summary, days, today_day=today.day)
         elapsed = sum(per_day[1 : min(today.day, days) + 1])
-        return self.get_bank_balance().pence - elapsed
+        return self.get_bank_balance_pence() - elapsed
 
     def get_bank_graph_series(
         self, *, year_month: YearMonth, summary, today: date | None = None

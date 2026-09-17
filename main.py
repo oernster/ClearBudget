@@ -283,6 +283,23 @@ def main() -> int:
             # Only now: the window it hands over to exists and is on screen.
             signed_in.screen.end_handover()
             diagnostics.log("main window shown")
+        except Exception:  # noqa: BLE001 (any failure must end the session)
+            # Left to the excepthook, a failure here was logged and nothing
+            # more: no window, the event loop still running and the process
+            # holding the single-instance lock, so every later launch handed
+            # off to this invisible copy and exited. Record it, say so, stop.
+            sys.excepthook(*sys.exc_info())
+            signed_in.screen.end_handover()
+            log_file = (
+                Config.app_dir() / diagnostics.LOG_DIR_NAME / diagnostics.LOG_NAME
+            )
+            QMessageBox.critical(
+                None,
+                "ClearBudget Could Not Start",
+                "The budget window could not be built, so ClearBudget will "
+                f"close. The details are in:\n\n{log_file}",
+            )
+            app.exit(1)
         finally:
             # The backstop, not the ordinary route: both paths above close
             # the screen themselves, at the exact moment they have something
