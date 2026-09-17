@@ -32,7 +32,8 @@ from clear_budget.ui.widgets._login_styles import input_style
 # used them too, which left the app UNKILLABLE from the keyboard and the
 # mouse alike on a fresh database: the wizard was the only window and it
 # could not be dismissed. Its close button is back; rejecting the wizard
-# quits the app cleanly (main._run_login_flow returns None on reject).
+# quits the app cleanly (login_flow.run_login_flow returns None on reject,
+# which with no session running is a refusal to start).
 _NO_CLOSE_FLAGS = (
     Qt.WindowType.Dialog
     | Qt.WindowType.WindowTitleHint
