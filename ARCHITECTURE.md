@@ -467,9 +467,16 @@ Key methods:
 - `get_projected_month_end_balance_pence(year_month, summary)` → `int` (signed);
   both arguments keyword-only, the summary passed in so callers that already
   hold one never pay for a second computation
-- `get_bank_balance()` / `set_bank_balance(amount)` - the stored balance is
-  stamped with the date it was set (`bank_balance_day` plus the full
-  `bank_balance_date`), the baseline the elapsed fold advances from
+- `get_bank_balance_pence()` → `int` (signed) / `set_bank_balance(amount)` -
+  the stored balance is stamped with the date it was set (`bank_balance_day`
+  plus the full `bank_balance_date`), the baseline the elapsed fold advances
+  from. It is read back as signed pence rather than as an `Amount`, because
+  the fold and the same-day prompt deduct a bank bill whatever the balance
+  holds, so a real overdraft is stored as a negative figure. Read through the
+  non-negative `Amount`, that figure raised while the window was being built
+  and an overdrawn account could not be opened at all
+  (`tests/application/test_overdrawn_balance.py`). Setting a balance still
+  takes an `Amount`, so the dialog accepts only a figure of zero or more
 - `apply_elapsed_bank_transactions(today=None)` → `int` (`_bank_transaction_fold.py`) -
   applies every dated bank bill/income that fell due after the balance baseline
   to the stored balance (local-midnight semantics), marks each item paid or
@@ -913,10 +920,13 @@ holding each budget's slug and display name plus which one is active.
 - `set_currency(code)` → activates named currency (falls back to GBP for unknown codes)
 - Module-level state: set once per session after loading user's DB settings
 
-**`format_helpers.fmt(amount)`** (`clear_budget/ui/utils/format_helpers.py`):
-- `fmt(pence: int)` → `"{symbol}{pence/100:.2f}"`
-- `fmt(pounds: float)` → `"{symbol}{pounds:.2f}"`
-- Used throughout UI for all inline currency formatting not going through `Amount.__str__`
+**`fmt(amount)`** (`clear_budget/application/formatting.py`, re-exported by
+`clear_budget/ui/utils/format_helpers.py` so no UI call site moved):
+- `fmt(pence: int)` and `fmt(pounds: float)` both render sign, then symbol, then
+  the amount grouped to two places: `£1,234.56`, `-£123.98`. The int/float
+  overload is a hazard stated in its docstring and pinned by a test
+- Used throughout the UI and the exported reports for every money figure not
+  going through `Amount.__str__`
 - `build_centered_nav_header(...)` - the shared navigation tray used by all
   seven views, built as TWO bordered rows and hoisted above the scroll area by
   `ScrollableView`: the month or year cluster centred in the upper row, every
@@ -1426,7 +1436,8 @@ renderings of the same figures to hold in step. Every month any page shows
   A commitment is money held back rather than money moved, so the note says
   exactly that and the dialog stores nothing else
 - `BalanceDialog` - edit current bank balance; opens with the figure focused
-  and selected for immediate overtype
+  and selected for immediate overtype. It is handed the current balance as
+  signed pence, so an overdrawn account can open it
 - `ArchiveDetailDialog` - drill-down for a single archived month
 - `HowItWorksDialog` - three jobs in one page, across seven `<h3>` runs
   (measured from the built page, not counted from this list). It NAMES the
@@ -2089,6 +2100,14 @@ renderings of the same figures to hold in step. Every month any page shows
   `end_handover` returns early when there is nothing left to end. Both halves
   are pinned by `tests/structural/test_handover_invariants.py`; the rendering
   is verified by an offscreen probe
+- Ending the handover is not enough on its own when the build RAISES. The
+  exception used to reach the excepthook, which logs it and nothing more: no
+  window, the event loop still running and the process still holding the
+  single-instance lock, so every later launch handed off to that invisible
+  copy and exited at once. The session loop now catches it, records it through
+  the same excepthook, ends the handover, tells the user where the log is and
+  ends the event loop with a failure code. `_reload_database` builds a window
+  too and has no such handler yet
 
 **Building a window** (`ui/window_builder.py`):
 - `build_main_window(database, current_user, user_store, progress=None)` is the
@@ -2471,12 +2490,17 @@ main()
                     └── window.full_restore_requested  → _restore_everything()
                     └── window.database_load_requested → _load_database()
               └── screen.end_handover()          # only now: there is a window
+        └── except:                              # the build raised
+              └── sys.excepthook(...)            # logged as UNCAUGHT EXCEPTION
+              └── QMessageBox.critical(...)      # names the log file
+              └── app.exit(1)                    # releases the instance lock
 ```
 
 The `finally` is the backstop, not the route: both paths above close the screen
 themselves, at the moment they have something to hand over to. It catches the
 third case, an exception, which would otherwise leave the screen up and inert
-with nothing behind it.
+with nothing behind it. The `except` beside it is what stops that same exception
+leaving a windowless process running.
 
 ## Dependency Injection
 
@@ -2539,7 +2563,7 @@ startup migration completes.
 | `arrows/`, `switches/` | Generated per-theme images (spin-box arrows, the card toggle slider); regenerated on demand |
 | `logs/` | Application log directory |
 
-The first three are what `full_backup` bundles; the generated images and the
+The first four are what `full_backup` bundles; the generated images and the
 Remember-me sidecar are deliberately excluded (regenerated; a keychain
 password cannot travel in a file).
 
@@ -2762,7 +2786,8 @@ an option that read as "remove my data" removed nothing.
 
 ### Setup Program
 - `tests/installer/` covers everything under `installer/` except `app.py` and
-  `installer/ui`, at 100% line and branch
+  `installer/ui`, at 100% line and branch. It runs on Windows only, since the
+  registry and shortcut work it exercises is real
 - `conftest.py` carries four isolations, each guarding one way a test could
   reach the real machine. THREE are autouse: the profile directories are
   redirected through the environment variables the code reads; the
@@ -2884,7 +2909,12 @@ an option that read as "remove my data" removed nothing.
   the Qt-free half of the setup program, excluding `main.py`,
   `clear_budget/ui/*`, `clear_budget/domain/interfaces/*`,
   `clear_budget/application/ports/*`, `clear_budget/shared/resources.py` and
-  the build scripts. The suite is Qt-free and runs clean in one process
+  the build scripts. The suite is Qt-free and runs in one process. The gate
+  holds on WINDOWS only: `tests/installer` writes real registry keys and Shell
+  Link shortcuts, which `installer/state/registry.py` refuses anywhere else, so
+  on Linux or macOS that directory fails wholesale and the run misses the gate.
+  Everything outside it runs on every platform
+  (`pytest --ignore=tests/installer --no-cov`)
 - The setup program is inside the gate because it does the most privileged work
   in the repository: registry writes, shortcut creation, per-user deployment,
   process termination and directory removal. `installer/app.py` and

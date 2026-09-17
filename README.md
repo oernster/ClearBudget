@@ -119,7 +119,9 @@ what is deliberately left and what only looks like debt.
 - Self-maintaining bank balance: dated bank bills are deducted from the balance
   at local midnight on their due day and dated income is added the same way;
   days that pass while the app is closed are caught up at the next launch and
-  applied items tick their Paid/Received flags so nothing is counted twice
+  applied items tick their Paid/Received flags so nothing is counted twice.
+  A bill larger than the balance takes it below zero and the overdrawn figure
+  is kept and shown as it stands (`-£123.98`)
 - Adding a bill or income dated today or editing an existing item's day to
   today, offers to apply it to the balance immediately (decline if your
   balance already reflects it)
@@ -848,7 +850,9 @@ pytest -v --cov
 The gate is 100% line and branch coverage over `clear_budget`, `main` and the
 Qt-free half of the setup program. A coverage-gated run prints the coverage
 table last and emits no "N passed" line, so read the exit code: `0` means the
-tests passed AND the gate was met. See
+tests passed AND the gate was met. The full run is a Windows job: the setup
+program's tests write real registry keys and shortcuts, so on Linux and macOS
+run everything else with `pytest --ignore=tests/installer --no-cov`. See
 [DEVELOPMENT-README.md](DEVELOPMENT-README.md) for what sits outside the gate.
 
 ---

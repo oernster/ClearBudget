@@ -102,7 +102,7 @@ flake8             # lint
 ruff check .       # lint (default rules plus the blind-handler rules)
 ```
 
-The suite is Qt-free and runs clean in one process: the fragile widget-level
+The suite is Qt-free and runs in one process: the fragile widget-level
 PySide6 tests were removed and the UI layer is excluded from the coverage gate
 (see `.coveragerc`). Pure UI-layer logic is still tested without a `QApplication`
 under `tests/ui_logic`. Tests use real implementations and hand-written fakes, no
@@ -111,6 +111,15 @@ mock libraries.
 A coverage-gated run prints the coverage table last and emits no "N passed"
 line, so read the exit code rather than the tail of the output: `0` means the
 tests passed AND the gate was met.
+
+**The full run is Windows only, which makes the gate Windows only too.** `tests/installer/` drives
+the real registry and the Shell Link COM interface, which the code under test
+refuses on any other platform, so on Linux or macOS that directory fails
+wholesale and coverage falls short of the gate. Everything else runs anywhere:
+
+```
+pytest --ignore=tests/installer --no-cov
+```
 
 The gate is measured by BRANCH as well as by line (`branch = True` in
 `.coveragerc`, `--cov-fail-under=100`) and it spans three sources:
@@ -134,7 +143,7 @@ outside it.
 ### Testing the setup program
 
 `tests/installer/` exercises everything under `installer/` except `app.py` and
-`installer/ui`. Nothing in it touches a real installation and that is held in
+`installer/ui`, on Windows only (see above). Nothing in it touches a real installation and that is held in
 place by four fixtures in `tests/installer/conftest.py`, each closing one
 route to the real machine. Three are autouse and unconditional:
 
