@@ -12,11 +12,27 @@ hidden controls are passed over, matching the ring's rule everywhere else
 that a dead stop is not a stop. Escape still closes; the ring still wraps
 from the last control back to this one.
 
+A reading pane is passed over too. The About credits and the licence text are
+scroll areas that come first in their dialogs, so both opened focused on the
+page rather than on Close: a dialog opens focused to put somebody where they
+can act; a page they can only read is not that place. The pane keeps its
+stop, so the keyboard still reaches it. Stellody's dialog skips every scroll
+area; this one keeps list and table views, because a table IS something to act
+on and the Budgets dialog rightly opens on its table (measured: skipping every
+scroll area moved it to a button).
+
 Subclasses overriding showEvent must call super().
 """
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QAbstractItemView, QAbstractScrollArea, QDialog
+
+
+def is_reading_pane_class(widget_class: type) -> bool:
+    """A scroll area that is read rather than acted on: not a list or table."""
+    return issubclass(widget_class, QAbstractScrollArea) and not issubclass(
+        widget_class, QAbstractItemView
+    )
 
 
 class FirstStopDialog(QDialog):
@@ -48,6 +64,7 @@ class FirstStopDialog(QDialog):
             and self.isAncestorOf(widget)
             and widget.isEnabled()
             and widget.isVisible()
+            and not is_reading_pane_class(type(widget))
             and bool(widget.focusPolicy() & Qt.FocusPolicy.TabFocus)
         )
 
