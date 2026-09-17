@@ -15,7 +15,7 @@ Everything below this section explains how the code satisfies them.
 | The auth layer's surface stays where it is declared: identity and credentials never leak into budget infrastructure | `tests/structural/test_auth_structure.py` |
 | No source file exceeds 400 lines and none sits in the 381 to 399 danger band: a file refactored down from over the cap lands at 350 or below rather than stopping the moment it clears 400 | `tests/structural/test_loc_limits.py` (both halves) |
 | Only `shared/config.py` derives the real data directory. The suite never resolves it; the installer never so much as names it, so no test and no install can disturb live user data | `tests/structural/test_data_dir_isolation.py` (plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py`) |
-| The data-directory migration cannot lose data: resolution prefers the legacy `~/.clearbudget` while it exists (its disappearance is the completion signal), the copied tree verifies byte for byte before the old directory is removed and `main()` migrates before the single-instance lock, never under the override | `tests/shared/test_data_migration.py`, `tests/shared/test_config.py` and `tests/structural/test_data_dir_isolation.py::TestTheMigrationRunsFirstAtStartup` |
+| The data-directory migration cannot lose data: resolution prefers the legacy `~/.clearbudget` while it exists (its disappearance is the completion signal), the copied tree verifies byte for byte before the old directory is removed and startup (`ui/startup.begin`, the first thing `main()` calls) migrates before the single-instance lock, never under the override | `tests/shared/test_data_migration.py`, `tests/shared/test_config.py` and `tests/structural/test_data_dir_isolation.py::TestTheMigrationRunsFirstAtStartup` |
 | A database the application has OPEN is never treated as an ordinary file: it is snapshotted out through SQLite's backup API and only ever replaced after its connection has been closed by the composition root. Both write to a scratch file and rename it into place, so a failure leaves the previous database whole | `tests/shared/test_db_copy.py` |
 | A full restore that cannot complete changes nothing: every file in the backup is staged and schema-validated before a single live file is replaced, strays and path-traversal names are refused and files not named in the backup survive untouched | `tests/auth/test_full_backup.py` |
 | 100% line AND branch coverage over `clear_budget`, `main` and the Qt-free half of the setup program | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
@@ -699,25 +699,31 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `id`, `username`, `is_admin`
 
 **`RememberedLogin`** (`clear_budget/auth/remembered_login.py`):
-- Backs the sign-in screen's Remember me checkbox. The password lives in the
-  operating system's credential store (Windows Credential Manager, macOS
-  Keychain, Linux Secret Service) via the `keyring` package under the service
-  name `ClearBudget`; only the remembered USERNAME is written to disk, as
-  `remembered_login.json` in the app directory, so the next launch knows which
-  credential-store entry to look up
-- `remember(username, password)` - keychain first, sidecar second, so a failed
-  keychain write never leaves a dangling half-state
-- `recall()` → `(username, password) | None`
-- `forget()` - deletes the keychain entry and the sidecar; still removes the
-  sidecar when the keychain is unavailable
+- Backs the sign-in screen's two ticks, Remember my username and Remember my
+  password, PER ACCOUNT. The password lives in the operating system's
+  credential store (Windows Credential Manager, macOS Keychain, Linux Secret
+  Service) via the `keyring` package under the service name `ClearBudget`;
+  what is written to disk, as `remembered_login.json` in the app directory, is
+  only which accounts are remembered, which of them keep a password and which
+  signed in last
+- `remember_username(username)` - remember the name without touching its
+  password flag (what the account-creation screen writes)
+- `remember_password(username, password)` - keychain first, sidecar second,
+  so a failed keychain write never leaves the screen promising a password it
+  cannot produce
+- `recall_password(username)` → `str | None`; `usernames()` and
+  `last_username()` say what the sign-in screen offers and preselects
+- `forget_password(username)` drops the keychain entry and keeps the name;
+  `forget(username)` drops both, tolerating an unreachable keychain
+- Reads the earlier single-account file too, as one account that kept its
+  password, since that file is on every machine the app has already run on
 - Every keychain failure (no backend, locked, denied) degrades to "nothing
   remembered": sign-in never crashes or blocks on the credential store
 - The keyring boundary is an injected `SecretBackend` Protocol; tests use a
   hand-written in-memory fake and the module sits inside the coverage gate
-- Constructed in `main.py` with `Config.app_dir()` and passed to `LoginDialog`;
-  the UI ticks the box and prefills both fields when `recall()` returns
-  credentials, forgets on untick and remembers (or forgets) on a successful
-  sign-in according to the box
+- Constructed in `main.py` with `Config.app_dir()` and handed to the sign-in
+  and account-creation dialogs through `ui/login_flow.run_login_flow`;
+  `LoginDialog._record_choices` applies both ticks on a successful sign-in
 
 **`full_backup`** (`clear_budget/auth/full_backup.py`):
 - Back Up Everything / Restore Everything behind File > Import / Export.
@@ -840,8 +846,8 @@ holding each budget's slug and display name plus which one is active.
   itself contain the `__` that separates it from the username in the filename;
   colliding slugs are numbered apart. Renaming changes the name only, never the
   slug, so a rename never moves a file
-- `main._open_user_database` is the ONE place that decides which file a session
-  opens; it asks the registry. Switching budget is therefore a registry
+- `infrastructure/sqlite/session_database.open_user_database` is the ONE place
+  that decides which file a session opens; it asks the registry. Switching budget is therefore a registry
   write plus the existing `database_replaced` signal, which already tore down
   and rebuilt a session on an import; no new session plumbing
 - `File > New Budget` creates. It used to be a double-confirmed WIPE, because a
@@ -1724,13 +1730,25 @@ renderings of the same figures to hold in step. Every month any page shows
   already on its FIRST stop: the first control in its own tab order that is
   enabled, visible and takes tab focus, found by walking Qt's focus chain so the
   answer is whatever the first Tab press would have reached. Disabled and hidden
-  controls are passed over, the same rule the ring applies everywhere else and a
+  controls are passed over, the same rule the ring applies everywhere else; a
   dialog with nothing focusable simply focuses nothing rather than failing.
   Replaced the old `NeutralDialog`: the neutral start belongs to the MAIN WINDOW,
   which you look at before you act in it, not to a dialog you opened deliberately
   to do one thing. Making a dialog wait for a Tab press costs a keystroke and
-  tells the user nothing. Plain `QDialog` subclasses already behave this way
-  through Qt's own default, so the rule holds across all 18 dialog classes
+  tells the user nothing
+  - A READING PANE IS PASSED OVER TOO. The About credits and the licence text
+    are scroll areas that come first in their dialogs, so both opened focused
+    on the page rather than on Close, a place the reader can only read.
+    `is_reading_pane_class` names what is skipped: a `QAbstractScrollArea` that
+    is not a `QAbstractItemView`. Lists and tables stay eligible because a
+    table is something to act on; the Budgets dialog opens on its table and
+    skipping every scroll area moved it to a button. The pane keeps its own
+    focus policy, so the keyboard still reaches it. The predicate works on
+    classes, so `tests/ui_logic/test_first_stop_reading_pane.py` holds it
+    without a `QApplication`
+  - Five of the 18 dialog classes derive from it (About, Licence, Budgets,
+    Commitment and Month Range); the other 13 subclass `QDialog` directly and
+    take Qt's own default focus, which the reading-pane rule does not reach
 - `auto_scroller.py` (`AutoScroller`) - gentle auto-scroll shared by the About
   credits and the How It Works text: the surface holds still on open, reads
   down slowly (one step every second tick), holds at the bottom, rewinds fast
@@ -1753,8 +1771,8 @@ renderings of the same figures to hold in step. Every month any page shows
 - A view may declare `nav_entry_stop()`: the control the FIRST Tab lands on
   when the ring is entered from neutral (launch or a view switch). Solvency
   names its visible pilot; Credit Cards names the first card's Active toggle
-  (Add Card when there are no cards); Monthly Budget and Archive keep the
-  default menu-first entry. `MainWindow._current_nav_entry` hands the
+  (Add Card when there are no cards); every other view keeps the default
+  menu-first entry. `MainWindow._current_nav_entry` hands the
   navigator a callable and `KeyboardNavigator._entry` prefers the declared
   stop on forward entry only; backward entry and every fallback keep the
   ring's ends. The view switch still restores the NEUTRAL sink (nothing is
@@ -2107,7 +2125,8 @@ renderings of the same figures to hold in step. Every month any page shows
 
 **Main Application**:
 - `MainWindow` - all views in `ScrollableView`; signals: `switch_user_requested`,
-  `sign_out_requested`, `database_replaced`
+  `sign_out_requested`, `database_replaced`, `full_restore_requested`,
+  `database_load_requested`
   - File menu: New Budget and Switch Budget, then Load / Save / Save As (Save
     goes to the remembered save file, kept in `ui_settings.json`), then the
     "Import / Export" submenu (Back Up Everything / Restore Everything,
@@ -2194,13 +2213,17 @@ renderings of the same figures to hold in step. Every month any page shows
 - `main.py` - composition root; manages full session lifecycle:
   - `_session_loop()` → login → open DB → load currency → build window → show
   - `_reload_database()` → triggered by `database_replaced`; closes old DB, reopens, loads currency, rebuilds window
-  - `_build_main_window()` calls `update_card_balances_for_elapsed_dates()` so any
-    fully-elapsed months are folded into card balances at session start, then
-    `apply_elapsed_bank_transactions()` so dated bank bills/income that fell due
-    while the app was closed are folded into the bank balance; while the app is
-    open, a MainWindow timer re-runs the bank fold just after each local midnight
-  - Cross-platform single-instance lock: a named kernel mutex on Windows, an
-    exclusive `fcntl` advisory lock on a file in the app data directory on macOS and Linux
+  - `ui/window_builder.build_main_window()` calls
+    `update_card_balances_for_elapsed_dates()` so any fully-elapsed months are
+    folded into card balances at session start, then
+    `apply_elapsed_limit_changes()`, then `apply_elapsed_bank_transactions()`
+    so dated bank bills/income that fell due while the app was closed are
+    folded into the bank balance, then `auto_archive_elapsed_months()`; while
+    the app is open, a MainWindow timer re-runs the bank fold just after each
+    local midnight
+  - Cross-platform single-instance lock (`shared/single_instance.py`, taken in
+    `ui/startup.begin`): a named kernel mutex on Windows, an exclusive `fcntl`
+    advisory lock on a file in the app data directory on macOS and Linux
   - Launch monitor (`launch_screen.init`): resolved ONCE at startup as the screen
     under the mouse pointer, falling back to the primary screen when the pointer is
     on none. Everything the session opens (the login dialog, the main window) is
@@ -2419,28 +2442,34 @@ renderings of the same figures to hold in step. Every month any page shows
 
 ```
 main()
-  └── QApplication created
+  └── startup.begin()                        # migrate data dir, QApplication,
+                                             # log, single-instance lock,
+                                             # launch monitor, UI scale
   └── apply_theme(app, load_saved_theme())     # persisted theme applied globally
   └── UserStore opened (users.db)
   └── QTimer.singleShot(0, _session_loop)   # deferred; app.exec() must be live first
   └── app.exec()
   └── _session_loop()                        # fires on first event loop tick
-        └── _run_login_flow()
+        └── run_login_flow()
               └── first run? → CreateUserDialog(is_first_user=True) → RecoveryCodeDialog
               └── else       → LoginDialog (prefilled from RememberedLogin
-                               when Remember me was ticked last time)
+                               for a remembered account)
                     └── Create Account...     → CreateUserDialog(is_first_user=False)
-              └── X button   → app.quit() → process exits
+              └── cancelled  → a hidden window resumes (Switch User);
+                               with none, app.quit() → process exits
         └── try:                                 # finally: screen.end_handover()
               └── screen.begin_handover()        # sign-in screen stays up,
                                                  # inert, now a progress bar
-              └── _open_user_database(username)  # budget_<username>.db
-              └── _load_currency(database)       # set_currency() from settings
+              └── open_user_database(username)   # the registry's active budget
+              └── load_currency(database)        # set_currency() from settings
               └── build_main_window(database, user, user_store,
                                     progress=screen.report_progress)
               └── _show_window(user, window)
-                    └── window.database_replaced → _reload_database()
-                    └── window.logout_requested  → _session_loop()
+                    └── window.database_replaced     → _reload_database()
+                    └── window.switch_user_requested → _session_loop()
+                    └── window.sign_out_requested    → _sign_out()
+                    └── window.full_restore_requested  → _restore_everything()
+                    └── window.database_load_requested → _load_database()
               └── screen.end_handover()          # only now: there is a window
 ```
 
@@ -2454,7 +2483,7 @@ with nothing behind it.
 No container - dependencies passed via constructor.
 
 ```python
-database = Database(config.db_path)        # Config.for_user(username)
+database = Database(active_db_path(username))   # open_user_database
 database.connect()
 database.create_schema()
 
@@ -2506,7 +2535,7 @@ startup migration completes.
 | `budget_<username>__<slug>.db` | One database per additional named budget |
 | `budgets_<username>.json` | The registry sidecar: that user's budgets and which is active. A map to the databases, never the data itself |
 | `ui_settings.json` | Theme, remembered save-file location and any skipped update version. No budget data |
-| `remembered_login.json` | The Remember me username (the password is in the OS credential store, never on disk) |
+| `remembered_login.json` | Which accounts are remembered, which keep a password and which signed in last (the password is in the OS credential store, never on disk) |
 | `arrows/`, `switches/` | Generated per-theme images (spin-box arrows, the card toggle slider); regenerated on demand |
 | `logs/` | Application log directory |
 
@@ -2533,8 +2562,8 @@ ClearBudget is a single PySide6 codebase that ships as a native package on
 Windows, macOS and Linux. The application layers carry no OS-specific logic;
 platform differences are isolated to a few well-defined seams:
 
-- **Single-instance lock**: per-OS implementation in `main.py` (named kernel mutex
-  on Windows, `fcntl` advisory file lock on macOS and Linux).
+- **Single-instance lock**: per-OS implementation in `shared/single_instance.py`
+  (named kernel mutex on Windows, `fcntl` advisory file lock on macOS and Linux).
 - **Data directory**: `Config.app_dir()` resolves to each platform's
   conventional application-data location (see Database Locations); all
   databases and the lock file live there. A legacy `~/.clearbudget` is
@@ -2686,8 +2715,8 @@ an option that read as "remove my data" removed nothing.
 - Hand-written fakes implementing Protocol interfaces
 
 ### Application Layer
-- Service tests use domain fakes
-- No database access
+- Service tests use hand-written fakes or a real SQLite database under
+  `tmp_path` (`test_budget_service_crud.py` among them), never a mock
 
 ### Infrastructure Layer
 - Real SQLite via `tmp_path` fixture - no mocking
@@ -2713,8 +2742,8 @@ an option that read as "remove my data" removed nothing.
   the income one-off and edit-scope rules, the bill amount-change entry,
   inline edits, highlight colour, ring order, theme, theme-token keys and
   save-location persistence, the default data directory, nav icon-button
-  sizing, the skipped-update record, the click-a-heading sort rule and the
-  window-geometry arithmetic. The
+  sizing, the skipped-update record, the click-a-heading sort rule, which
+  scroll areas a dialog opens past and the window-geometry arithmetic. The
   Reserves page adds four: the Solvency reading of a month that sets money
   aside, its colour, the Monthly Budget reminder row and
   `test_reserves_buffer_survives.py`, which pins a real bug: opening the page
@@ -2836,8 +2865,9 @@ an option that read as "remove my data" removed nothing.
   which flake8 matches as a directory NAME anywhere it appears, so 230 files
   went unchecked, the entire UI layer, BOTH services packages and the whole
   setup program among them, while the repo reported clean. Nothing is
-  excluded by layer now; only build output and the virtualenv are. One
-  per-file-ignore remains and is justified in the config: pycodestyle reads
+  excluded by layer now; only build output and the virtualenv are. Beyond the
+  three codes the test files relax, one per-file-ignore remains and is
+  justified in the config: pycodestyle reads
   `how_it_works_dialog`'s page-building f-string as one logical line, so it
   scores the row-factory calls inside its `{...}` expressions against the
   wrong anchor; a `# noqa` cannot be placed there either, because a comment
@@ -2883,4 +2913,4 @@ an option that read as "remove my data" removed nothing.
 
 **Per-user isolation**: each user has a completely separate budget database. No cross-user data access is possible.
 
-**Session lifecycle signals**: `logout_requested` and `database_replaced` on `MainWindow` drive all session transitions without tight coupling between UI and `main.py`.
+**Session lifecycle signals**: `switch_user_requested`, `sign_out_requested`, `database_replaced`, `full_restore_requested` and `database_load_requested` on `MainWindow` drive all session transitions without tight coupling between UI and `main.py`.

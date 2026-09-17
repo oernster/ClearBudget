@@ -88,10 +88,12 @@ what is deliberately left and what only looks like debt.
 ## Features
 
 - Multi-user login with bcrypt password hashing and recovery codes
-- Remember me on the sign-in screen: your username and password are prefilled
-  at the next launch, with the password held in the operating system's own
+- Remember my username and Remember my password on the sign-in screen, per
+  account: a remembered name is offered at the next launch and a remembered
+  password is filled in beside it, held in the operating system's own
   credential store (Windows Credential Manager, macOS Keychain, Linux Secret
-  Service), never in a plain file; unticking the box forgets them immediately
+  Service), never in a plain file. Both ticks take effect on a completed
+  sign-in (see User Accounts below)
 - Create an account from the sign-in screen at any time, not just on first
   launch (only the very first account ever created is an admin)
 - Back Up Everything / Restore Everything (admin only): one zip holding every
@@ -329,7 +331,9 @@ what is deliberately left and what only looks like debt.
   colour-coded by financial health (safe, caution, danger)
 - Opens on the monitor you started it from, centred, rather than on whichever
   display the system calls primary; dialogs open over the window that raised
-  them, focused on their first usable control
+  them, focused on their first usable control. A page of text you can only
+  read, such as the About credits or the licence, is passed over for that, so
+  those dialogs open on a control; the keyboard still reaches the page
 - Built-in "How It Works" help screen: one page that names every icon the app
   draws, every view button included, each entry led by the picture it is
   describing, then states the three
@@ -493,13 +497,13 @@ The directory holds:
   any release version you told the update prompt to skip, so the app opens the
   way you left it and Save goes back to the same file. No budget data is kept
   here.
-- `remembered_login.json` - present only while Remember me is ticked: the
-  username whose password is being remembered, so the app knows which
-  credential-store entry to look up. The password itself is never in this file;
-  it lives in the operating system's credential store (Windows Credential
-  Manager, macOS Keychain, Linux Secret Service), encrypted and managed by the
-  OS. Unticking Remember me deletes both the file and the credential-store
-  entry.
+- `remembered_login.json` - which accounts asked to be remembered, which of
+  them asked for a password to be kept and which signed in last, so the app
+  knows which credential-store entries to look up. The password itself is
+  never in this file; it lives in the operating system's credential store
+  (Windows Credential Manager, macOS Keychain, Linux Secret Service), managed
+  by the OS. Signing in with Remember my username unticked removes that
+  account from the file and deletes its credential-store entry.
 - `arrows/`, `switches/` and `logs/` - small images the app draws for itself
   (spin-box arrows and the card on/off slider, one set per theme colour) plus
   its log directory. All of it regenerates, so none of it is backed up.
@@ -863,8 +867,8 @@ A strip along the foot of the window carries a donate button at its left. It
 opens a PayPal page in your browser; ClearBudget itself sends nothing and asks
 for nothing, so the offline guarantee above is unchanged by the button existing.
 
-Donations support maintenance and continued development. Nothing is withheld
-behind one: there is no paid tier, no licence key and no feature a donation
+ClearBudget is free and stays free. Donations support maintenance and continued
+development. Nothing is withheld behind one: there is no paid tier, no licence key and no feature a donation
 unlocks.
 
 <a href="https://www.paypal.com/ncp/payment/M874QPXXJPY84"><img src="docs/donate.png" alt="Donate to ClearBudget" width="120"></a>
