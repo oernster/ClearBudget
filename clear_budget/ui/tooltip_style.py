@@ -10,11 +10,20 @@ The delay is a STYLE HINT, not a per-widget property, so the fix is one
 proxy style wrapping whatever style the platform chose, installed once at
 each composition root (the app's `startup.begin` and the installer's
 `main`). Every tooltip in the program is covered; no widget opts in.
+
+The same install also makes tooltips appear while another program has focus.
+Qt Widgets shows a tooltip only over the active window unless that window
+carries `WA_AlwaysShowToolTips`; measured on the real Windows platform with
+the cursor moved over an inactive window, the tip stayed hidden without the
+attribute and appeared with it. The attribute belongs to each top-level
+window, dialogs and message boxes included, so an application-wide filter
+sets it on every window as it is shown rather than each window opting in.
 """
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QProxyStyle, QStyle
+from PySide6.QtCore import QEvent, QObject, Qt
+from PySide6.QtWidgets import QProxyStyle, QStyle, QWidget
 
 # Short enough to read as immediate on an intentional pause, long enough
 # that sweeping the cursor across a tray of icon buttons does not flash
@@ -31,12 +40,27 @@ class _PromptTooltipStyle(QProxyStyle):
         return super().styleHint(hint, option, widget, returnData)
 
 
+class _TooltipsOnInactiveWindows(QObject):
+    """Marks every top-level window as it is shown so its tooltips always show."""
+
+    def eventFilter(self, watched, event) -> bool:  # noqa: N802 (Qt naming)
+        if (
+            event.type() == QEvent.Type.Show
+            and isinstance(watched, QWidget)
+            and watched.isWindow()
+        ):
+            watched.setAttribute(Qt.WidgetAttribute.WA_AlwaysShowToolTips, True)
+        return False
+
+
 def install(app) -> None:
-    """Wrap `app`'s current style so tooltips appear promptly.
+    """Make `app`'s tooltips prompt and shown over an inactive window too.
 
     Wrapping by style KEY rather than by object: handing the live style
     object to the proxy would leave two owners of one QStyle when the
     application replaces it, so the proxy builds its own base instance
-    from the same factory key.
+    from the same factory key. The filter is parented to `app`, which keeps
+    it alive for the application's lifetime.
     """
     app.setStyle(_PromptTooltipStyle(app.style().objectName()))
+    app.installEventFilter(_TooltipsOnInactiveWindows(app))
