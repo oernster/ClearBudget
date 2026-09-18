@@ -360,7 +360,9 @@ Credit Cards, a strongbox with a coin for Reserves, the app's own icon for
 Graph, a ticked clipboard under a lit bulb for Recommendations and a filing
 box for Archive. They sit in the navigation tray rather than in a strip of
 their own. Hovering one names it, promptly rather than after the platform's
-usual tooltip delay; the keyboard ring still stops on each button in turn.
+usual tooltip delay. That holds while another program has the focus too: every
+tooltip in ClearBudget and its setup program shows over an inactive window,
+dialogs included. The keyboard ring still stops on each button in turn.
 
 - **Monthly Budget** - View and manage bills and income for the selected month;
   order either table by any column from its heading; toggle active/skip/paid per bill and received per income; view balance (kept up to date automatically as dated items fall due) or projected end-of-month figure; mid-month overdraft dip warning. A commitment falling due this month appears among the bills as a reminder, marked "(from Reserves)", so the same obligation is not entered a second time by hand; it carries no total and cannot be edited there

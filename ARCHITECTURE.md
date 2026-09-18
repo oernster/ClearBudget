@@ -2364,6 +2364,17 @@ renderings of the same figures to hold in step. Every month any page shows
   icon buttons' hover text took a second or two to show). Installed at both
   composition roots, `startup.begin` and the installer's `main`, before any
   widget exists; every other style hint passes through untouched
+- Tooltips APPEAR OVER AN INACTIVE WINDOW too. Qt Widgets shows a tooltip only
+  over the active window unless that window carries `WA_AlwaysShowToolTips`,
+  so hovering ClearBudget while another program had the focus showed nothing.
+  The attribute belongs to each top-level window rather than to the
+  application, so the same `install` adds an application-wide event filter
+  (`_TooltipsOnInactiveWindows`, parented to the app for its lifetime) that
+  sets it on every window as it is SHOWN: the main window, every dialog and
+  message box, the setup program's window alike. Nothing opts in, so a window
+  added later cannot be missed. Measured on the real Windows platform with the
+  cursor over an inactive window: no tooltip without the attribute, the
+  tooltip shown with it, on the main window and on a dialog
 - Dark: background near-black `#0a0a0d`, panels/trays `#242938`, borders
   `#3a4156`, table selection deep blue `#1e3a5f`; light: grey `#f3f4f6`
   background, white panels, slate borders, blue selection
