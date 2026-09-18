@@ -2,10 +2,6 @@
 
 from datetime import date as _date
 
-from clear_budget.domain.services._prorating import (
-    days_in_month,
-    prorate_remaining_pence,
-)
 from clear_budget.ui import theme, ui_scale
 from clear_budget.ui.label_roles import set_role as _repolish_role
 from clear_budget.ui.theme_tokens import STATE_RED, STATE_SAFE
@@ -199,28 +195,16 @@ class SolvencyPanelDisplayMixin:
                     for b in summary.bills
                     if b.day_of_month and b.day_of_month < today.day
                 )
-                total_days = days_in_month(today.year, today.month)
-                remaining_bank = sum(
-                    (
-                        prorate_remaining_pence(b.amount.pence, today.day, total_days)
-                        if not b.day_of_month
-                        else b.amount.pence
+                still_due, _income = (
+                    self.view_model.budget_service.get_remaining_month_items(
+                        year_month=report.year_month, summary=summary
                     )
-                    for b in summary.bills
-                    if (not b.day_of_month or b.day_of_month >= today.day)
-                    and b.payment_method_id == 1
-                    and not b.paid_for_month
+                )
+                remaining_bank = sum(
+                    b.amount.pence for b in still_due if b.payment_method_id == 1
                 )
                 remaining_card = sum(
-                    (
-                        prorate_remaining_pence(b.amount.pence, today.day, total_days)
-                        if not b.day_of_month
-                        else b.amount.pence
-                    )
-                    for b in summary.bills
-                    if (not b.day_of_month or b.day_of_month >= today.day)
-                    and b.payment_method_id != 1
-                    and not b.paid_for_month
+                    b.amount.pence for b in still_due if b.payment_method_id != 1
                 )
                 self.committed_label.setText(f"Committed this month: {fmt(committed)}")
                 self.remaining_bank_label.setStyleSheet(

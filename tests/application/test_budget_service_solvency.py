@@ -262,6 +262,31 @@ class TestBudgetServiceSolvency:
         )
         assert service.calculate_solvency(year_month=current).balance_pence == 0
 
+    def test_calculate_solvency_current_month_skips_received_income(self) -> None:
+        """Income marked Received is already inside the stored balance, so the
+        balance the Solvency page carries into next month must not add it
+        again. Undated, so the test holds on any day of the month."""
+        bill_repo, income_repo, pm_repo = (
+            FakeBillRepository(),
+            FakeIncomeSourceRepository(),
+            FakePaymentMethodRepository(),
+        )
+        service = BudgetService(
+            bill_repo, income_repo, pm_repo, MonthGenerator(bill_repo, income_repo)
+        )
+        income_repo.add(
+            income=IncomeSource(
+                id=1,
+                name="UC",
+                amount=Amount(pence=200000),
+                is_reliable=True,
+                day_of_month=None,
+                received_for_month=True,
+            )
+        )
+        report = service.calculate_solvency(year_month=YearMonth.today())
+        assert report.balance_pence == 0
+
     def test_projected_balance_two_months_ahead(self) -> None:
         """else branch in _projected_starting_balance_pence for non-current months."""
         bill_repo, income_repo, pm_repo = (

@@ -1,10 +1,14 @@
 """BudgetService  -  main application orchestrator."""
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import date
 
 from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.application.dto.solvency_report import SolvencyReport
+from clear_budget.application.services._balance_projection import (
+    pending_bills,
+    pending_income,
+)
 from clear_budget.application.services._balance_application import (
     BalanceApplicationMixin,
 )
@@ -47,10 +51,7 @@ from clear_budget.domain.interfaces.income_source_repository import (
 from clear_budget.domain.interfaces.payment_method_repository import (
     PaymentMethodRepository,
 )
-from clear_budget.domain.services._prorating import (
-    days_in_month,
-    prorate_remaining_pence,
-)
+from clear_budget.domain.services._prorating import days_in_month
 from clear_budget.domain.services.solvency_calculator import (
     SolvencyCalculatorService,
 )
@@ -86,32 +87,31 @@ class BudgetService(
         *,
         year_month: YearMonth,
         month_summary: "MonthSummary | None",
+        today: date | None = None,
     ) -> SolvencyReport:
-        if month_summary is None:
-            return self.calculate_solvency(year_month=year_month)
-        from datetime import date as _date
+        """Solvency for year_month, as at `today` (the real date when omitted).
 
-        today = _date.today()  # noqa: DTZ011 (naive local dates)
-        today_ym = YearMonth(today.year, today.month)
+        `today` is injectable for the same reason as the graph's: the report
+        must be checkable against the graph for any date, not only this one.
+        """
+        if month_summary is None:
+            month_summary = self.get_month_summary(year_month=year_month)
+        today = today or date.today()  # noqa: DTZ011 (naive local dates)
         month_bills, month_income = self._apply_current_month_filters(
             month_summary.bills,
             month_summary.income_sources,
             year_month,
-            today_ym,
+            YearMonth(today.year, today.month),
             today.day,
         )
-        return self._build_solvency_report(month_bills, month_income, year_month)
+        return self._build_solvency_report(month_bills, month_income, year_month, today)
 
-    def calculate_solvency(self, *, year_month: YearMonth) -> SolvencyReport:
-        from datetime import date as _date
-
-        today = _date.today()  # noqa: DTZ011 (naive local dates)
-        today_ym = YearMonth(today.year, today.month)
-        summary = self.get_month_summary(year_month=year_month)
-        month_bills, month_income = self._apply_current_month_filters(
-            summary.bills, summary.income_sources, year_month, today_ym, today.day
+    def calculate_solvency(
+        self, *, year_month: YearMonth, today: date | None = None
+    ) -> SolvencyReport:
+        return self.calculate_solvency_from_summary(
+            year_month=year_month, month_summary=None, today=today
         )
-        return self._build_solvency_report(month_bills, month_income, year_month)
 
     def get_remaining_month_items(
         self, *, year_month: YearMonth, summary: MonthSummary
@@ -133,41 +133,14 @@ class BudgetService(
     ):
         if year_month != today_ym:
             return tuple(bills), tuple(income)
-        balance_day = self._get_bank_balance_day()
         total_days = days_in_month(year_month.year, year_month.month)
-        filtered_bills = tuple(
-            (
-                replace(
-                    b,
-                    amount=Amount(
-                        pence=prorate_remaining_pence(
-                            b.amount.pence, today_day, total_days
-                        )
-                    ),
-                )
-                if b.day_of_month is None
-                else b
-            )
-            for b in bills
-            if not b.paid_for_month
-            and (b.day_of_month is None or b.day_of_month >= today_day)
+        return (
+            pending_bills(bills, today_day, total_days),
+            pending_income(income, self._get_bank_balance_day(), today_day),
         )
-        if balance_day > 0:
-            filtered_income = tuple(
-                i
-                for i in income
-                if i.day_of_month is None or i.day_of_month > balance_day
-            )
-        else:
-            filtered_income = tuple(
-                i
-                for i in income
-                if i.day_of_month is None or i.day_of_month >= today_day
-            )
-        return filtered_bills, filtered_income
 
     def _build_solvency_report(
-        self, month_bills, month_income, year_month: YearMonth
+        self, month_bills, month_income, year_month: YearMonth, today: date
     ) -> SolvencyReport:
         m1 = year_month.next_month()
         m2 = m1.next_month()
@@ -186,7 +159,7 @@ class BudgetService(
             ],
         )
         projected_balance = (
-            self._projected_starting_balance_pence(year_month) + solvency.balance
+            self._projected_starting_balance_pence(year_month, today) + solvency.balance
         )
         return SolvencyReport(
             year_month=year_month,

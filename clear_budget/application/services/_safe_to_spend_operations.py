@@ -270,9 +270,9 @@ class SafeToSpendOperationsMixin:
             summary.bills, summary.income_sources, ym, ym, today.day
         )
         per_day = [0] * (days + 1)
+        # Received income is already gone from `income`: the shared filter
+        # drops it, since it sits inside the stored balance.
         for inc in income:
-            if inc.received_for_month:
-                continue
             nominal = min(inc.day_of_month or _UNDATED_INCOME_DAY, days)
             # An event whose nominal day has already passed (an undated
             # income, an overdue one) lands on the earliest day it still can.
