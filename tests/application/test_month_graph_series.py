@@ -183,6 +183,27 @@ class TestBankGraphSeries:
         assert series.values[25] == 60000
         assert series.values[29] == 60000  # day 30 adds nothing twice
 
+    def test_income_received_early_is_not_carried_into_next_month(self, budget_service):
+        """Next month opens where this month closes. Income marked Received
+        before its due day is already inside the stored balance, so carrying
+        it forward again would open next month too high by its amount; one
+        still to come is carried as before."""
+        _seed_balance(budget_service.bill_repo.conn, pence=60000, iso="2026-07-26")
+        early = budget_service.add_income(income=_income("Early", 20000, 30))
+        budget_service.add_income(income=_income("Pending", 7000, 29))
+        rent = budget_service.add_bill(bill=_bill("Rent", 10000, 28))
+        budget_service.mark_income_received_for_month(
+            income_id=early.id, year_month=_JULY
+        )
+        budget_service.mark_bill_paid_for_month(bill_id=rent.id, year_month=_JULY)
+        july_close = _bank_series(budget_service, _JULY).values[-1]
+        august = budget_service.get_month_summary(year_month=_AUGUST)
+        august_open = budget_service.get_bank_month_opening_pence(
+            year_month=_AUGUST, summary=august, today=_TODAY
+        )
+        assert july_close == 67000
+        assert august_open == july_close
+
     def test_an_overdue_unpaid_bill_draws_no_phantom_history(self, budget_service):
         """A dated bill that never got paid took no money on its day, so the
         historical stretch of the curve must not show a drop for it, exactly

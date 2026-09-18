@@ -13,15 +13,22 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 def _current_month_income_pence(
     summary: MonthSummary, balance_day: int, today_day: int
 ) -> int:
+    """Income this month still to arrive in the bank after the stored balance.
+
+    Income marked Received is already inside the stored balance, whatever its
+    due day, exactly as a Paid bill is already out of it; counting it again
+    would open next month too high by its amount.
+    """
+    pending = [i for i in summary.income_sources if not i.received_for_month]
     if balance_day > 0:
         return sum(
             i.amount.pence
-            for i in summary.income_sources
+            for i in pending
             if i.day_of_month is None or i.day_of_month > balance_day
         )
     return sum(
         i.amount.pence
-        for i in summary.income_sources
+        for i in pending
         if i.day_of_month is None or i.day_of_month >= today_day
     )
 
