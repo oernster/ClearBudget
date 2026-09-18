@@ -18,7 +18,7 @@ Everything below this section explains how the code satisfies them.
 | The data-directory migration cannot lose data: resolution prefers the legacy `~/.clearbudget` while it exists (its disappearance is the completion signal), the copied tree verifies byte for byte before the old directory is removed and startup (`ui/startup.begin`, the first thing `main()` calls) migrates before the single-instance lock, never under the override | `tests/shared/test_data_migration.py`, `tests/shared/test_config.py` and `tests/structural/test_data_dir_isolation.py::TestTheMigrationRunsFirstAtStartup` |
 | A database the application has OPEN is never treated as an ordinary file: it is snapshotted out through SQLite's backup API and only ever replaced after its connection has been closed by the composition root. Both write to a scratch file and rename it into place, so a failure leaves the previous database whole | `tests/shared/test_db_copy.py` |
 | A full restore that cannot complete changes nothing: every file in the backup is staged and schema-validated before a single live file is replaced, strays and path-traversal names are refused and files not named in the backup survive untouched | `tests/auth/test_full_backup.py` |
-| 100% line AND branch coverage over `clear_budget`, `main` and the Qt-free half of the setup program | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
+| 100% line AND branch coverage over `clear_budget` and the Qt-free half of the setup program (`main` is named as a source and then omitted as `main.py`, so none of it is measured) | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
 | An exported report adds up: `opening + net == close` for every month whose Paid/Received flags agree with the calendar. In the anchored month an item actioned early (or missed) moves the close off the totals by exactly that amount, because the series never charges twice what the recorded balance already contains | `tests/application/test_projection_series.py::test_opening_plus_net_equals_the_close` and `::test_a_bill_paid_early_moves_the_anchored_close` |
 | The exported report and the on-screen month graph can never disagree about a month they both cover, because both run the same day-by-day projection | `tests/application/test_projection_series.py::test_the_projection_agrees_with_the_month_graph` |
 | The card graph and the Credit Cards view open a future month from the SAME chained figure (`card_openings_at`), never from the stored balance and each month closes where the next one opens, its interest landing on its last day | `tests/application/test_month_graph_series.py::TestCardGraphChaining` |
@@ -37,6 +37,7 @@ Everything below this section explains how the code satisfies them.
 | A table draws no ring in ANY state. The row the keyboard lands on already shows where it is, so a rectangle round the whole pane says nothing the table was not saying better; it is also the wrong shape of feedback for a region the eye looks into | `tests/structural/test_table_focus_invariants.py::TestNoTableDrawsARingRoundItself` |
 | A destructive confirmation is never raised over a file that will be refused, in either direction. Load asks the accounts store, the schema and the owner challenge FIRST; Save asks whose file it is FIRST; in both the overwrite question is the last gate before anything is written | `tests/structural/test_refusal_order.py` |
 | A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
+| The Solvency page and the bank graph agree about every month ahead: its opening, its low, the day of the low and its close. Both chains start from what the current month still has to come after the stored balance and that rule has ONE home, `pending_income` and `pending_bills` in `application/services/_balance_projection.py`. Each chain once kept its own copy; the Solvency copy went on counting income already marked Received, so a month the graph showed overdrawn read as afloat on Solvency. Checked for twelve months ahead from five dates, a year end included | `tests/application/test_solvency_agrees_with_graph.py` |
 | The Solvency bank page and the Reserves page can never disagree about a month's low or the day it falls on, because both read ONE simulation: `application/services/_month_walk.walk_month`. Two correct-looking walks that differ about the same month is exactly the failure this forbids | `tests/application/test_month_walk.py`, plus `tests/application/test_commitments_due.py` |
 | Every picture button the user can press is named on the How It Works screen and the heading counts the strip it lists. The tray had this guard and the view strip did not, which is how the screen came to announce six views while seven were drawn; the footer's donate button was the same shape of gap, a picture in no tray at all, so the button scan reads `bottom_tray.py` alongside `_tray_buttons.py` | `tests/structural/test_help_names_the_views.py` (the tray and footer half is `test_help_names_the_tray.py`) |
 | A worked example on the How It Works screen is what the code returns: the pro-rating figure is read out of the sentence and checked against `prorate_remaining_pence` to the penny. The picture guards could never have caught it, which is why the prose half of that screen was the half that drifted | `tests/structural/test_help_example_is_arithmetic.py` |
@@ -444,11 +445,25 @@ focused mixins to stay under the 400-LOC-per-file limit:
   simulations that disagree about one month is the failure the invariant
   forbids; one walk makes agreement structural rather than a coincidence that
   has to be maintained. No Qt, no I/O and no clock
+- `pending_income(income, balance_day, today_day)` and
+  `pending_bills(bills, today_day, total_days)` (`_balance_projection.py`) -
+  what the CURRENT month still has to come after the stored balance, the one
+  statement of it. Received income and paid bills are already inside that
+  balance whatever their due day, so neither is counted; income due on or
+  before the balance day is presumed inside the typed figure; an undated bill
+  counts only its share of the days still to run. The balance carried into
+  next month, the Solvency report and the "Still due this month" lines all
+  read these two, which is what makes the invariant above structural. There
+  were two copies once; fixing one left the other counting Received income
+  twice
 
 Key methods:
 - `get_month_summary(year_month)` → `MonthSummary`
-- `calculate_solvency(year_month)` → `SolvencyReport`
-- `calculate_solvency_from_summary(year_month, month_summary)` → `SolvencyReport`
+- `calculate_solvency(year_month, today=None)` → `SolvencyReport`
+- `calculate_solvency_from_summary(year_month, month_summary, today=None)` →
+  `SolvencyReport`; the first delegates to the second. `today` is injectable
+  for the same reason as the graph's, so the report can be checked against
+  the graph for any date rather than only the one the code runs on
 - `get_card_monthly_states(year_month)` → `list[CardMonthlyState]`
 - `get_card_projection_months(start_month, n_months)` → `list[list[CardMonthlyState]]`
 - `save_credit_card_today_balance(card, today_balance, is_new)` → `int` - persists a
@@ -2905,11 +2920,12 @@ an option that read as "remove my data" removed nothing.
   `# noqa: <RULE>` and a reason, never by changing behaviour; where ruff and
   black disagree on formatting, black wins
 - **100% line and branch coverage** (`pytest -v --cov`, gated at
-  `--cov-fail-under=100` with `branch = True`) over `clear_budget`, `main` and
-  the Qt-free half of the setup program, excluding `main.py`,
-  `clear_budget/ui/*`, `clear_budget/domain/interfaces/*`,
-  `clear_budget/application/ports/*`, `clear_budget/shared/resources.py` and
-  the build scripts. The suite is Qt-free and runs in one process. The gate
+  `--cov-fail-under=100` with `branch = True`) over `clear_budget` and the
+  Qt-free half of the setup program. `main` is named as a source and then
+  omitted as `main.py`; the other omissions are `clear_budget/ui/*`,
+  `clear_budget/domain/interfaces/*`, `clear_budget/application/ports/*`,
+  `clear_budget/shared/resources.py`, the build scripts and the staged
+  `installer/payload/*` and `installer/resources/*` trees. The suite is Qt-free and runs in one process. The gate
   holds on WINDOWS only: `tests/installer` writes real registry keys and Shell
   Link shortcuts, which `installer/state/registry.py` refuses anywhere else, so
   on Linux or macOS that directory fails wholesale and the run misses the gate.

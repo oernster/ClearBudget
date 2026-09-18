@@ -115,7 +115,8 @@ what is deliberately left and what only looks like debt.
 - One-off bills: "This month only" when adding a bill creates a bill scoped to
   just that month, mirroring one-off income entries
 - Per-bill "paid" flag - excludes a paid bill from "still due" totals and the
-  projected balance for the rest of the month
+  projected balance for the rest of the month; the income "received" flag does
+  the same for income, so money that arrived early is never counted twice
 - Self-maintaining bank balance: dated bank bills are deducted from the balance
   at local midnight on their due day and dated income is added the same way;
   days that pass while the app is closed are caught up at the next launch and
@@ -639,6 +640,11 @@ or the bill template:
 Income sources have the same per-month flexibility (overrides, skips and a "received"
 flag that likewise ticks itself when a dated income is applied to the balance), plus
 "this month only" one-off entries for ad-hoc income not tied to a recurring template.
+An income marked received counts as already inside the bank balance whatever its due
+day, exactly as a paid bill counts as already out of it. So an income that arrives
+early and is ticked before its day is never added a second time, neither to the rest
+of this month nor to the balance the months ahead open from, on the graph or on
+Solvency.
 A one-off can be promoted to a regular income later; the reverse is deliberately
 not offered, because turning a regular income into a one-off would delete it from
 the months it really did arrive in.
@@ -847,8 +853,8 @@ python main.py
 pytest -v --cov
 ```
 
-The gate is 100% line and branch coverage over `clear_budget`, `main` and the
-Qt-free half of the setup program. A coverage-gated run prints the coverage
+The gate is 100% line and branch coverage over `clear_budget` and the Qt-free
+half of the setup program. A coverage-gated run prints the coverage
 table last and emits no "N passed" line, so read the exit code: `0` means the
 tests passed AND the gate was met. The full run is a Windows job: the setup
 program's tests write real registry keys and shortcuts, so on Linux and macOS
@@ -859,8 +865,8 @@ run everything else with `pytest --ignore=tests/installer --no-cov`. See
 
 ## Building from source
 
-To set up a development environment or build an installable package on Linux
-(Flatpak), macOS (.dmg) or Windows (installer), see
+To set up a development environment or build an installable package on Windows
+(installer), macOS (.dmg) or Linux (Flatpak), see
 [DEVELOPMENT-README.md](DEVELOPMENT-README.md).
 
 ---

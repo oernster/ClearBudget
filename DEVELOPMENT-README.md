@@ -122,9 +122,10 @@ pytest --ignore=tests/installer --no-cov
 ```
 
 The gate is measured by BRANCH as well as by line (`branch = True` in
-`.coveragerc`, `--cov-fail-under=100`) and it spans three sources:
-`clear_budget`, `main` and the Qt-free half of the setup program under
-`installer/`. The setup program is in there because it does the most privileged
+`.coveragerc`, `--cov-fail-under=100`) and in effect it spans two sources:
+`clear_budget` and the Qt-free half of the setup program under `installer/`.
+The pytest options also name `main` as a source; `.coveragerc` then omits
+`main.py`, so nothing of it is measured. The setup program is in there because it does the most privileged
 work in the repository: registry writes, shortcut creation, per-user
 deployment, process termination and directory removal. `installer/app.py` and
 `installer/ui` are excluded on the same grounds as `clear_budget/ui` and
@@ -134,7 +135,8 @@ Outside the gate, stated in full so the number is not read as more than it is:
 `main.py`, `clear_budget/ui/*`, `clear_budget/domain/interfaces/*`,
 `clear_budget/application/ports/*` (Protocol-only, nothing to execute),
 `clear_budget/shared/resources.py`, the root build scripts, `installer/app.py`,
-`installer/ui/*` and `installer/build_payload.py`; then any line marked
+`installer/ui/*`, `installer/build_payload.py` and the staged
+`installer/payload/*` and `installer/resources/*` trees; then any line marked
 `# pragma: no cover`, of which there are a fair number on thin pass-throughs
 and on the SQLite payment-method repository. Read 100% as "100% of what is
 gated", not as "every line is tested"; ARCHITECTURE.md says which parts sit
@@ -223,27 +225,21 @@ Never hardcode a version string anywhere except `VERSION`.
 Each build path is independent and writes its own artefact. Run from the
 repository root with the venv active.
 
-### Linux - Flatpak (`clearbudget.flatpak`)
+### Windows - Installer (`dist-installer\ClearBudgetSetup.exe`)
 
-Two helper scripts live in the repository root:
+Run the two build steps in order, then launch the resulting installer:
 
-```bash
-./cleanup_flatpak.sh   # optional: uninstall and purge any previous Flatpak build
-./build_flatpak.sh     # build, install locally and produce clearbudget.flatpak
+```
+python buildexe.py          # bundle the app with PyInstaller
+python buildinstaller.py    # build the payload and the setup executable
+dist-installer\ClearBudgetSetup.exe   # run the installer to perform a real install
 ```
 
-`build_flatpak.sh` installs `flatpak` and `flatpak-builder` if they are missing
-(via apt, dnf or pacman), adds the Flathub remote, pulls the Freedesktop runtime,
-builds fully offline from pre-downloaded wheels and writes **`clearbudget.flatpak`**
-for external deployment. Pass `--no-bundle` to build and install locally without
-producing the distributable bundle.
-
-Install the bundle on another machine:
-
-```bash
-flatpak install --user clearbudget.flatpak
-flatpak run com.oliverernster.clearbudget
-```
+`buildexe.py` creates the standalone application bundle at
+`dist-pyinstaller\ClearBudget\ClearBudget.exe`. `buildinstaller.py` (Windows
+only) wraps it into the single-file, per-user installer
+**`dist-installer\ClearBudgetSetup.exe`**, which performs the actual install when
+run.
 
 ### macOS - Disk image (`clearbudget.dmg`)
 
@@ -266,21 +262,27 @@ machine but the one that signed it and that failure is invisible at build
 time. Set `ALLOW_UNNOTARIZED=1` to build a local-testing image that must not
 be released.
 
-### Windows - Installer (`dist-installer\ClearBudgetSetup.exe`)
+### Linux - Flatpak (`clearbudget.flatpak`)
 
-Run the two build steps in order, then launch the resulting installer:
+Two helper scripts live in the repository root:
 
+```bash
+./cleanup_flatpak.sh   # optional: uninstall and purge any previous Flatpak build
+./build_flatpak.sh     # build, install locally and produce clearbudget.flatpak
 ```
-python buildexe.py          # bundle the app with PyInstaller
-python buildinstaller.py    # build the payload and the setup executable
-dist-installer\ClearBudgetSetup.exe   # run the installer to perform a real install
-```
 
-`buildexe.py` creates the standalone application bundle at
-`dist-pyinstaller\ClearBudget\ClearBudget.exe`. `buildinstaller.py` (Windows
-only) wraps it into the single-file, per-user installer
-**`dist-installer\ClearBudgetSetup.exe`**, which performs the actual install when
-run.
+`build_flatpak.sh` installs `flatpak` and `flatpak-builder` if they are missing
+(via apt, dnf or pacman), adds the Flathub remote, pulls the Freedesktop runtime,
+builds fully offline from pre-downloaded wheels and writes **`clearbudget.flatpak`**
+for external deployment. Pass `--no-bundle` to build and install locally without
+producing the distributable bundle.
+
+Install the bundle on another machine:
+
+```bash
+flatpak install --user clearbudget.flatpak
+flatpak run com.oliverernster.clearbudget
+```
 
 ---
 
@@ -288,6 +290,6 @@ run.
 
 | Platform | Command(s) | Artefact for deployment |
 |----------|------------|-------------------------|
-| Linux | `./build_flatpak.sh` | `clearbudget.flatpak` |
-| macOS | `python builddmg.py` | `clearbudget.dmg` |
 | Windows | `python buildexe.py` then `python buildinstaller.py` | `dist-installer\ClearBudgetSetup.exe` |
+| macOS | `python builddmg.py` | `clearbudget.dmg` |
+| Linux | `./build_flatpak.sh` | `clearbudget.flatpak` |
