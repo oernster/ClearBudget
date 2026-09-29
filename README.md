@@ -883,7 +883,7 @@ ClearBudget is free and stays free. Donations support maintenance and continued
 development. Nothing is withheld behind one: there is no paid tier, no licence key and no feature a donation
 unlocks.
 
-<a href="https://www.paypal.com/ncp/payment/M874QPXXJPY84"><img src="docs/donate.png" alt="Donate to ClearBudget" width="120"></a>
+<a href="https://www.paypal.com/ncp/payment/S6BW7C69J8SLQ"><img src="docs/donate.png" alt="Donate to ClearBudget" width="120"></a>
 
 ---
 

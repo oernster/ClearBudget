@@ -25,7 +25,7 @@ APP_COPYRIGHT: str = "© 2025 to 2026 Oliver Ernster"
 # knows; it is handed to the desktop rather than fetched, so nothing here ever
 # opens a connection of its own and the local-first guarantee is unchanged by
 # the button existing.
-DONATE_URL: str = "https://www.paypal.com/ncp/payment/M874QPXXJPY84"
+DONATE_URL: str = "https://www.paypal.com/ncp/payment/S6BW7C69J8SLQ"
 
 # Windows taskbar grouping / pinned icon identity.
 #
