@@ -209,7 +209,10 @@ patch/minor/major there and nothing else needs editing:
   are stamped from it by `stamp_version.py`, which `buildexe.py` and
   `buildinstaller.py` run automatically at the start of every build. Run
   `python stamp_version.py` by hand after a bump if you want the docs updated
-  without a full build. It is idempotent and prints what it touched.
+  without a full build. It is idempotent and prints what it touched. It also
+  puts a content hash on every local stylesheet and script link in the site
+  (`styles.css?v=<hash>`) so a browser cannot pair a fresh page with a stale
+  cached stylesheet.
 
 `stamp_version.py` targets the `docs/` tree ONLY. The root markdown files
 (README, ARCHITECTURE, TECH_DEBT, this file) carry no version data at all,
