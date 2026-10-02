@@ -14,7 +14,7 @@ Two things are stamped:
   comment token would corrupt the embedded JSON.
 
 The docs tree is the ONLY target. Root markdown (README, ARCHITECTURE,
-TECH_DEBT, DEVELOPMENT-README) carries no version data at all: it is read
+TECH_DEBT, DEVELOPMENT) carries no version data at all: it is read
 alongside the source, where VERSION is the answer, so a stamped copy in prose
 is one more thing that can disagree with it. The published site is the one
 place that cannot read VERSION at render time, which is the whole reason this

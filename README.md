@@ -869,7 +869,7 @@ table last and emits no "N passed" line, so read the exit code: `0` means the
 tests passed AND the gate was met. The full run is a Windows job: the setup
 program's tests write real registry keys and shortcuts, so on Linux and macOS
 run everything else with `pytest --ignore=tests/installer --no-cov`. See
-[DEVELOPMENT-README.md](DEVELOPMENT-README.md) for what sits outside the gate.
+[DEVELOPMENT.md](DEVELOPMENT.md) for what sits outside the gate.
 
 ---
 
@@ -877,7 +877,7 @@ run everything else with `pytest --ignore=tests/installer --no-cov`. See
 
 To set up a development environment or build an installable package on Windows
 (installer), macOS (.dmg) or Linux (Flatpak), see
-[DEVELOPMENT-README.md](DEVELOPMENT-README.md).
+[DEVELOPMENT.md](DEVELOPMENT.md).
 
 ---
 
