@@ -82,6 +82,8 @@ run. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 
 See [TECH_DEBT.md](TECH_DEBT.md) for the standing reference to what is still open,
 what is deliberately left and what only looks like debt.
+[`DECISIONS-TRADEOFFS.md`](DECISIONS-TRADEOFFS.md) sets out the decisions
+ClearBudget rests on, with what each one gains and what it costs.
 
 ---
 
