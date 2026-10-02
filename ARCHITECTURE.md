@@ -2984,3 +2984,8 @@ an option that read as "remove my data" removed nothing.
 **Per-user isolation**: each user has a completely separate budget database. No cross-user data access is possible.
 
 **Session lifecycle signals**: `switch_user_requested`, `sign_out_requested`, `database_replaced`, `full_restore_requested` and `database_load_requested` on `MainWindow` drive all session transitions without tight coupling between UI and `main.py`.
+
+---
+
+See also [README.md](README.md), [TESTING.md](TESTING.md) and
+[DEVELOPMENT.md](DEVELOPMENT.md).

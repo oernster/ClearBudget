@@ -860,16 +860,14 @@ python main.py
 ## Tests
 
 ```
-pytest -v --cov
+pytest
 ```
 
 The gate is 100% line and branch coverage over `clear_budget` and the Qt-free
-half of the setup program. A coverage-gated run prints the coverage
-table last and emits no "N passed" line, so read the exit code: `0` means the
-tests passed AND the gate was met. The full run is a Windows job: the setup
-program's tests write real registry keys and shortcuts, so on Linux and macOS
-run everything else with `pytest --ignore=tests/installer --no-cov`. See
-[DEVELOPMENT.md](DEVELOPMENT.md) for what sits outside the gate.
+half of the setup program; read the exit code, where `0` means the tests passed
+AND the gate was met. The full run is a Windows job. See
+[TESTING.md](TESTING.md) for the rest: the other platforms, what sits outside
+the gate and how a test is written.
 
 ---
 

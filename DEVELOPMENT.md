@@ -5,6 +5,7 @@ ClearBudget on each supported platform.
 
 - For the feature list and day-to-day usage, see [README.md](README.md).
 - For the layer boundaries and design rules, see [ARCHITECTURE.md](ARCHITECTURE.md).
+- For running and writing the tests, see [TESTING.md](TESTING.md).
 
 ---
 
@@ -96,106 +97,14 @@ icon either way.
 
 ```
 python main.py     # launch the app
-pytest -v --cov    # run the full suite (100% line and branch gate enforced)
+pytest             # run the full suite (100% line and branch gate enforced)
 black .            # format (line length 88)
 flake8             # lint
 ruff check .       # lint (default rules plus the blind-handler rules)
 ```
 
-The suite starts no `QApplication`, has no widget tests and runs in one
-process: the fragile widget-level PySide6 tests were removed and the UI layer
-is excluded from the coverage gate (see `.coveragerc`). Pure UI-layer logic is
-still tested without a `QApplication` under `tests/ui_logic`. PySide6 is still
-imported: a few tests take Qt classes or enums directly; others import UI
-modules that load it. Tests use real implementations and hand-written fakes,
-no mock libraries.
-
-A coverage-gated run prints the coverage table last and emits no "N passed"
-line, so read the exit code rather than the tail of the output: `0` means the
-tests passed AND the gate was met.
-
-**The full run is Windows only, which makes the gate Windows only too.** `tests/installer/` drives
-the real registry and the Shell Link COM interface, which the code under test
-refuses on any other platform, so on Linux or macOS that directory fails
-wholesale and coverage falls short of the gate. Everything else runs anywhere:
-
-```
-pytest --ignore=tests/installer --no-cov
-```
-
-The gate is measured by BRANCH as well as by line (`branch = True` in
-`.coveragerc`, `--cov-fail-under=100`) and in effect it spans two sources:
-`clear_budget` and the Qt-free half of the setup program under `installer/`.
-The pytest options also name `main` as a source; `.coveragerc` then omits
-`main.py`, so nothing of it is measured. The setup program is in there because it does the most privileged
-work in the repository: registry writes, shortcut creation, per-user
-deployment, process termination and directory removal. `installer/app.py` and
-`installer/ui` are excluded on the same grounds as `clear_budget/ui` and
-`installer/build_payload.py` is a build script.
-
-Outside the gate, stated in full so the number is not read as more than it is:
-`main.py`, `clear_budget/ui/*`, `clear_budget/domain/interfaces/*`,
-`clear_budget/application/ports/*` (Protocol-only, nothing to execute),
-`clear_budget/shared/resources.py`, the root build scripts, `installer/app.py`,
-`installer/ui/*`, `installer/build_payload.py` and the staged
-`installer/payload/*` and `installer/resources/*` trees; then any line marked
-`# pragma: no cover`, of which there are a fair number on thin pass-throughs
-and on the SQLite payment-method repository. Read 100% as "100% of what is
-gated", not as "every line is tested"; ARCHITECTURE.md says which parts sit
-outside it.
-
-### Testing the setup program
-
-`tests/installer/` exercises everything under `installer/` except `app.py` and
-`installer/ui`, on Windows only (see above). Nothing in it touches a real installation and that is held in
-place by four fixtures in `tests/installer/conftest.py`, each closing one
-route to the real machine. Three are autouse and unconditional:
-
-- the per-user profile directories are redirected through the environment
-  variables the code reads;
-- the `platformdirs` lookups are redirected **in their own right**, because
-  `platformdirs` asks Windows for the known folder rather than reading
-  `%LOCALAPPDATA%`. Without this fixture the legacy-directory migration would
-  find and move your actual data;
-- the payload anchor is redirected so a small stand-in bundle stands in for the
-  real fifty-megabyte payload.
-
-The fourth is requested by name rather than autouse: `scratch_identity` yields
-an `InstallerIdentity` whose HKCU key lives under a test-only root and is
-deleted in teardown. A test can only reach the registry by taking that
-identity, so asking for it is the same act as needing it.
-
-`tests/installer/fakes.py` holds the hand-written doubles for the three
-injectable seams (`CommandRunner`, `ProcessController` and the identity value).
-What can be exercised for real is: shortcuts are written through the same Shell
-Link COM interface the install uses, the registry round-trips through `winreg`
-against the scratch key; a full install deploys and registers a real bundle,
-all inside the redirected tree.
-
-Appearance is verified with throwaway offscreen probes rather than tests, since
-what matters is what gets painted. Run those with
-`QT_QPA_PLATFORM=offscreen`, EXCEPT when measuring text or emoji: offscreen
-substitutes Qt's own font database, so a font size tuned there does not match
-what ships. Measure those on the real platform.
-
-**Always point a probe at a scratch data directory.** The real data
-directory (`%LOCALAPPDATA%\ClearBudget` on Windows; see README's Data
-Storage section for the other platforms, plus a surviving legacy
-`~/.clearbudget`) holds live user data: both databases, the saved UI
-settings (theme, remembered save-file location and any skipped update
-version) and the Remember me sidecar (`remembered_login.json`). Set
-`CLEARBUDGET_HOME` and every path the app resolves moves with it:
-
-```powershell
-$env:CLEARBUDGET_HOME = "$env:TEMP\cb-probe"
-```
-
-This is not a style preference. A probe that calls `theme.apply_theme` to
-measure something persists that theme, because persisting is what the function
-is for and the app then opens in the theme the probe used. The test suite sets
-the variable for itself through an autouse fixture in `tests/conftest.py` and
-`tests/structural/test_data_dir_isolation.py` fails if that ever stops
-happening.
+How to read a run, what the gate holds and leaves out, the setup program's
+tests and how a new test or guard is written are in [TESTING.md](TESTING.md).
 
 ---
 
@@ -298,3 +207,8 @@ flatpak run com.oliverernster.clearbudget
 | Windows | `python buildexe.py` then `python buildinstaller.py` | `dist-installer\ClearBudgetSetup.exe` |
 | macOS | `python builddmg.py` | `clearbudget.dmg` |
 | Linux | `./build_flatpak.sh` | `clearbudget.flatpak` |
+
+---
+
+See also [README.md](README.md), [ARCHITECTURE.md](ARCHITECTURE.md) and
+[TESTING.md](TESTING.md).
