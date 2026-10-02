@@ -1,9 +1,11 @@
 """Pytest configuration and shared fixtures.
 
-The test suite is deliberately Qt-free: the fragile widget-level PySide6 tests
-were removed; the UI layer is excluded from the coverage gate (see
-.coveragerc). UI-layer logic that is pure Python is tested without a
-QApplication under tests/ui_logic.
+The test suite deliberately starts no QApplication and has no widget tests:
+the fragile widget-level PySide6 tests were removed; the UI layer is excluded
+from the coverage gate (see .coveragerc). UI-layer logic that is pure Python
+is tested without a QApplication under tests/ui_logic. PySide6 is still
+imported: a few tests take Qt classes or enums directly; others import UI
+modules that load it.
 
 Every test also runs against a THROWAWAY data directory. See `isolate_app_dir`.
 """

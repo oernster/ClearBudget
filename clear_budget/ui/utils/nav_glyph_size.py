@@ -90,7 +90,8 @@ def nav_icon_button_size(
     lets every one of them reach the same height.
 
     `measure_width` is the seam the arithmetic is tested through: measuring
-    for real needs a QPainter and the suite is deliberately Qt-free.
+    for real needs a QPainter and the suite deliberately starts no
+    QApplication.
     """
     if measure_width is None:
         from clear_budget.ui.utils.glyph_metrics import (

@@ -18,8 +18,8 @@ spells it with, a picture by the filename the help screen resolves to draw it
 inline. An icon guide showing something other than the icon is worse than no
 guide, which is why naming the button is not enough on its own.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py).
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py).
 """
 
 import ast

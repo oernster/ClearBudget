@@ -16,8 +16,8 @@ four dialogs that connected `returnPressed` were double-running; only one of
 them showed it (measured on all four, before and after).
 
 The rule is one mechanism: the default button. Asserted by source scan because
-the suite is deliberately Qt-free (see tests/conftest.py); the counts behind it
-came from an offscreen probe.
+the suite deliberately starts no QApplication (see tests/conftest.py); the
+counts behind it came from an offscreen probe.
 """
 
 from __future__ import annotations

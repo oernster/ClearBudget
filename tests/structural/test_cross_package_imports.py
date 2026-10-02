@@ -11,7 +11,8 @@ toggle's faces became pictures; the first anyone knew was an ImportError from
 a built installer.
 
 A source scan rather than an import: importing the installer's UI means
-importing Qt into a suite that is deliberately Qt-free (tests/conftest.py).
+importing its widget modules into a suite that has no widget tests and
+deliberately starts no QApplication (tests/conftest.py).
 The AST is enough to answer the question that matters, which is whether the
 name being imported is defined in the module it is being taken from.
 """

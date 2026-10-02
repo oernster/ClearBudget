@@ -1,4 +1,5 @@
-"""Qt-free tests for which scroll areas a dialog must not open on.
+"""Tests, run without a QApplication, for which scroll areas a dialog must not
+open on.
 
 A dialog opens on its first control. The About credits and the licence text are
 scroll areas that come first in their dialogs, so they were chosen and the

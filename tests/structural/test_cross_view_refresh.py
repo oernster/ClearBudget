@@ -14,9 +14,10 @@ again. The user's only route out was to switch month and back.
 
 So the invariant is the WIRING: `month_summary_updated`, which already keeps
 Solvency in step, must also reach the Credit Cards view. Asserted by source
-scan because the suite is deliberately Qt-free (see tests/conftest.py); a
-widget-level test would need a real window, which is exactly what was removed.
-The behaviour itself is verified by an offscreen probe.
+scan because the suite deliberately starts no QApplication (see
+tests/conftest.py); a widget-level test would need a real window, which is
+exactly what was removed. The behaviour itself is verified by an offscreen
+probe.
 """
 
 import ast

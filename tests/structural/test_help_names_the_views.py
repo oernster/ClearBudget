@@ -12,8 +12,8 @@ the button actually draws rather than a description of it. The HEADING: the
 count it announces must be the number of buttons there are, because a heading
 that miscounts is the first thing a reader checks the screen against.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py).
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py).
 """
 
 from __future__ import annotations

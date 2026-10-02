@@ -7,9 +7,9 @@ button to the same square and Qt shrinks the wide bitmaps whole to fit, so
 they come out short as well as narrow; measured on Windows at a 24px target,
 two busts drew 21px tall beside a diskette's 24.
 
-Measuring a glyph for real needs a QPainter and this suite is Qt-free (see
-tests/conftest.py), so the arithmetic is driven through the module's own
-measurement seam with widths stated outright.
+Measuring a glyph for real needs a QPainter and this suite starts no
+QApplication (see tests/conftest.py), so the arithmetic is driven through the
+module's own measurement seam with widths stated outright.
 """
 
 from __future__ import annotations

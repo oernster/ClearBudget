@@ -12,8 +12,9 @@ sign-in screen and nothing raises; the only symptom is a cancelled Switch User
 quietly closing the application, which is the exact bug this pair was built to
 fix. Collapse them into one signal and the symptom is the same.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py); the behaviour itself is verified by an offscreen probe.
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py); the behaviour itself is verified by an offscreen
+probe.
 """
 
 from __future__ import annotations

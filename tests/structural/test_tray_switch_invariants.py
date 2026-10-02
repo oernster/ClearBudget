@@ -28,8 +28,8 @@ beside the current view button's accent border and reads as two buttons current 
 once. `MainWindow` already owns a 0x0 focus sink for the neutral start on
 launch; the switch has to return to it.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py); a widget-level test would need a real window. The
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py); a widget-level test would need a real window. The
 behaviour itself is verified by an offscreen probe.
 """
 

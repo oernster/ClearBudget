@@ -14,8 +14,9 @@ critical state ", with no overdraft arranged" is the fact that a payment will
 bounce rather than draw on something arranged. That is a statement about what has
 happened to the balance, not a label on a section the reader is browsing.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py). The rendered heading is verified by an offscreen probe.
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py). The rendered heading is verified by an offscreen
+probe.
 """
 
 import ast

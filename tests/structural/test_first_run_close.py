@@ -4,9 +4,9 @@ With no users in the database the wizard is the ONLY window the app shows,
 so stripping its close button left the app unkillable from mouse and
 keyboard alike. The no-close flags belong to RecoveryCodeDialog alone (the
 one-time code must be acknowledged, since closing it unread loses the code
-forever). Asserted by source scan because the suite is Qt-free; the runtime
-behaviour (flag present, close rejects, main quits on reject) is verified
-by an offscreen probe.
+forever). Asserted by source scan because the suite starts no QApplication;
+the runtime behaviour (flag present, close rejects, main quits on reject) is
+verified by an offscreen probe.
 """
 
 import ast

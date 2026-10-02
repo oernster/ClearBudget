@@ -988,7 +988,7 @@ holding each budget's slug and display name plus which one is active.
   deliberately the heaviest band on the window (`NAV_GLYPH_SCALE` is above 1.0
   for that reason), so a footer sized to match would weigh the layout down at
   both ends. Measured on a built window, 27px in the tray and 18px in the
-  footer. The ratio is pinned Qt-free by
+  footer. The ratio is pinned without a `QApplication` by
   `tests/ui_logic/test_footer_glyph_height.py`. The strip takes the tray's
   own border and radius from the same two theme values, so head and foot are
   told apart by height alone. The button is built by `build_tray_image_button`
@@ -1153,7 +1153,7 @@ wrong when calculated; neither was calculated again.
 `MonthViewModel.set_month` emits `month_changed` and THEN refreshes the summary,
 so reloading there would be the first of two for one month change. The wiring
 is held by `tests/structural/test_cross_view_refresh.py`, a source scan rather
-than a widget test because the suite is Qt-free.
+than a widget test because the suite starts no `QApplication`.
 
 **Row heights are measured, never chosen.** A table row is
 `comfortable_row_height` (`ui/utils/text_metrics.py`): the polished widget's own
@@ -1834,7 +1834,7 @@ renderings of the same figures to hold in step. Every month any page shows
   tray stop's centre to (row, x) and requiring ascending on all four views, plus
   a check that no enabled, visible tray button is missing from its declaration
   bar the current view's button, which is correctly not a stop. That measurement is a PROBE rather than a test, because the
-  suite is Qt-free by design and ring order is geometry
+  suite starts no `QApplication` by design and ring order is geometry
 - One application-level `KeyboardNavigator` event filter drives an explicit
   focus ring: menu-bar titles, then the active view's stops (each
   view's `nav_targets()`), recomputed live so disabled or hidden stops are
@@ -2783,9 +2783,12 @@ an option that read as "remove my data" removed nothing.
 - `test_currency.py` - currency registry, `get_symbol`, `set_currency`, reset fixture
 
 ### UI Layer
-- The suite is Qt-free: fragile widget-level PySide6 tests (which needed a
-  `QApplication` and were flaky) have been removed
-- Pure UI-layer logic is still covered without Qt under `tests/ui_logic`:
+- The suite starts no `QApplication` and has no widget tests: fragile
+  widget-level PySide6 tests (which needed a `QApplication` and were flaky)
+  have been removed. PySide6 is still imported; a few tests take Qt classes or
+  enums directly and others import UI modules that load it
+- Pure UI-layer logic is still covered without a `QApplication` under
+  `tests/ui_logic`:
   the Solvency month-colour rule and its low-point
   line (by instantiating the mixins directly), the spendable headline's reach
   and shortfall sentences, the projection page's gap specification,
@@ -2936,7 +2939,7 @@ an option that read as "remove my data" removed nothing.
   omitted as `main.py`; the other omissions are `clear_budget/ui/*`,
   `clear_budget/domain/interfaces/*`, `clear_budget/application/ports/*`,
   `clear_budget/shared/resources.py`, the build scripts and the staged
-  `installer/payload/*` and `installer/resources/*` trees. The suite is Qt-free and runs in one process. The gate
+  `installer/payload/*` and `installer/resources/*` trees. The suite starts no `QApplication` and runs in one process. The gate
   holds on WINDOWS only: `tests/installer` writes real registry keys and Shell
   Link shortcuts, which `installer/state/registry.py` refuses anywhere else, so
   on Linux or macOS that directory fails wholesale and the run misses the gate.

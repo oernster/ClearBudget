@@ -127,9 +127,10 @@ def _save_in_place(parent, conn, dest: Path) -> None:
     writing to a file no longer reachable by that name, so the error was the
     good outcome and the fix is not to make the rename work.
 
-    Committing is the whole operation; it is enough. The journal mode is
-    `delete`, so a committed transaction is already in the `.db` file itself;
-    once the in-flight write is committed, the file at this path IS the
+    Committing is the whole operation; it is enough. Nothing in the app sets
+    a journal mode, so SQLite's default rollback journal (`delete`) applies
+    and a committed transaction is already in the `.db` file itself; once
+    the in-flight write is committed, the file at this path IS the
     current budget. There is nothing left to copy from or to.
     """
     try:

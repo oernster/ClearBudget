@@ -9,9 +9,9 @@ Downloads remains right for the exports that LEAVE the machine (the viewer
 package, the graph exports, the full-backup zip), which is why the ban is
 scoped to this one module rather than applied across the UI.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py); the directory the flows actually hand Qt is verified by
-an offscreen probe that intercepts QFileDialog.
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py); the directory the flows actually hand Qt is verified
+by an offscreen probe that intercepts QFileDialog.
 """
 
 from __future__ import annotations

@@ -152,7 +152,9 @@ ClearBudget rests on, with what each one gains and what it costs.
   limit on today, so it does not veto the figure: it gets a line of its own,
   in red, naming the month, the amount and the fact that spending the headline
   deepens it. The window you set (one to twelve months, four by default)
-  decides how far ahead the app looks, never how much it offers. What the
+  decides how far ahead the app looks; a longer one never offers more. It
+  lowers the figure only when a month it adds still clears your buffer at a
+  lower point; a month it adds that cannot is named as a shortfall. What the
   figure has to clear is no longer one number for every day: the buffer is
   held on every day alike, then whatever the Reserves page is accruing that day
   is held on top of it, so the floor rises as a distant bill gets closer. A
@@ -219,9 +221,10 @@ ClearBudget rests on, with what each one gains and what it costs.
   together would claim money that was never going to move
 - User-editable Safe to Spend buffer (a reserve the number always leaves in
   hand, £20 by default; set it to zero to plan to the wire) and a window: how
-  many months the figure must keep standing, one to twelve, four by default
-  (Settings > Bank Account). A longer window is a stricter question, so it
-  usually returns a smaller number
+  many months ahead the figure looks, one to twelve, four by default
+  (Settings > Bank Account). A longer window never returns a larger number;
+  it returns a smaller one only when a month it adds clears the buffer at a
+  lower point than the months before it
 - Solvency analysis with forward cashflow projections (next 2 months)
 - Runway warnings: a deficit month shows how fast savings are falling per month
   and the first month you would go overdrawn (a mid-month dip counts even when the

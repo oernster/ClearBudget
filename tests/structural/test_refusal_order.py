@@ -17,8 +17,8 @@ challenged. Loading someone else's budget is recoverable, which is why the
 Load side offers it behind that account's password; saving OVER one replaces
 their figures with yours and leaves nothing to recover from.
 
-Source scan rather than a widget test: the suite is deliberately Qt-free (see
-tests/conftest.py) and this flow is a chain of modal dialogs.
+Source scan rather than a widget test: the suite deliberately starts no
+QApplication (see tests/conftest.py) and this flow is a chain of modal dialogs.
 """
 
 from __future__ import annotations

@@ -7,8 +7,8 @@ that stop when the ring is entered from neutral. Any of the three silently
 missing degrades to "first Tab goes to the File menu", which reads as the
 feature never existing rather than as a failure, so each is pinned here.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py); the behaviour itself (which control actually takes the
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py); the behaviour itself (which control actually takes the
 ring on the first press, the pilot handover on a page turn) is verified by
 an offscreen probe.
 """

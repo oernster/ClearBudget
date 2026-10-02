@@ -12,10 +12,10 @@ than a filled one, so the column above it shifted by a pixel each time a
 message arrived or cleared.
 
 Both are fixed by reserving space rather than by watching for the symptom;
-both are asserted here by source scan because the suite is Qt-free (see
-tests/conftest.py) and `installer/ui` is outside the coverage gate, so nothing
-else would notice either one coming back. The measurements themselves come
-from an offscreen probe.
+both are asserted here by source scan because the suite starts no QApplication
+(see tests/conftest.py) and `installer/ui` is outside the coverage gate, so
+nothing else would notice either one coming back. The measurements themselves
+come from an offscreen probe.
 """
 
 import ast

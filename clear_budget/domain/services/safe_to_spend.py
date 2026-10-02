@@ -1,25 +1,31 @@
 """Sustainable spend - pure domain calculation over a day-by-day projection.
 
 The single actionable number the forecasting engine produces: the most that
-could be spent today with EVERY day of the window still clearing the safety
-floor.
+could be spent today with every month of the COVERED stretch still clearing
+the safety floor.
 
-    sustainable_spend = min(P(d) for d in W) - F
+    sustainable_spend = min(P(d) - F(d) for d in C)
 
 where P(d) is the projected end-of-day balance assuming no discretionary
-spend today, W is a bounded window of whole months from today and F is the
-safety floor.
+spend today, F(d) is the safety floor on that day (the buffer plus whatever
+is being set aside then) and C is the covered stretch: the longest run of
+whole months from today, inside a bounded window of whole months, whose own
+lowest day clears the floor with nothing spent. A month in the window beyond
+C is not a limit on today; its depth is carried on the result as a
+shortfall, named rather than netted off.
 
-An earlier version stopped the window at the first day already below the
+An earlier version stopped the window at the first DAY already below the
 floor, reasoning that those days were lost whatever happened today. The
 figure that produced was real yet it was not spendable: money spent today
-lowers the lost days too, so a number computed by ignoring them funded its
-own deficit. It could report hundreds of pounds as safe while the month
-after collapsed by exactly that much more.
+lowers the lost days too and the figure said nothing about them. It could
+report hundreds of pounds as safe while the month after collapsed by exactly
+that much more. The bound here falls at a month boundary instead, with the
+gap beyond it reported alongside the figure.
 
-The result is signed and is NOT clamped here. A negative value is the sum the
-window is short by, which is money to be found rather than spent; presenting
-that is the UI's job.
+The result is signed and is NOT clamped here. It is negative only when
+today's own month cannot clear the floor; it is then that month's shortfall,
+which is money to be found rather than spent. Presenting that is the UI's
+job.
 """
 
 from __future__ import annotations

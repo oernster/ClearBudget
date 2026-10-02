@@ -10,9 +10,9 @@ by keyboard and mouse. It simply has no arrow, which reads as a text field
 that mysteriously opens a list; nothing fails to announce it. That is what
 these pin.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py); the appearance itself is verified by rendering the real
-dialogs on the Windows platform.
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py); the appearance itself is verified by rendering the
+real dialogs on the Windows platform.
 """
 
 from __future__ import annotations

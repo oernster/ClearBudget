@@ -1,4 +1,4 @@
-"""Qt-free guard: a commitment reminder is never mistaken for a bill.
+"""No-QApplication guard: a commitment reminder is never mistaken for a bill.
 
 The Monthly Budget's bills table carries a reminder row for each commitment
 due that month, so the same obligation is not entered twice. That row sits in

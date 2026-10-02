@@ -14,8 +14,8 @@ The numbers are READ OUT of the sentence rather than restated here, so
 rewriting the example to use different figures does not need this file
 edited; it needs the new figures to be right.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py).
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py).
 """
 
 from __future__ import annotations

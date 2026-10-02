@@ -11,8 +11,9 @@ every one of them. Doing nothing is the WRONG state here, which is exactly why
 this test exists: a table added later inherits the bad default silently, with
 nothing about it looking wrong in review.
 
-Source scan because the suite is deliberately Qt-free (see tests/conftest.py);
-the behaviour on both policies was measured with an offscreen probe.
+Source scan because the suite deliberately starts no QApplication (see
+tests/conftest.py); the behaviour on both policies was measured with an
+offscreen probe.
 """
 
 from __future__ import annotations

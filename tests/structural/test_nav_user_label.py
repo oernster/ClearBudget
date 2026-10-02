@@ -9,8 +9,9 @@ the fill and every tray shows an empty space where a name should be, which is
 exactly what happened once already, because ScrollableView lifts the header out
 of its view and the name was being set by searching the view.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py); the appearance is verified by rendering the real window.
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py); the appearance is verified by rendering the real
+window.
 """
 
 from __future__ import annotations

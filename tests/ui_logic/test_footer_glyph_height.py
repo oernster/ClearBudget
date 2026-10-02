@@ -7,8 +7,8 @@ ends. Two thirds reads as subordinate while leaving the artwork recognisable.
 
 What these pin is that the RATIO is derived from the tray's own measurement
 rather than written a second time as a pixel number. Measuring a glyph for real
-needs a QPainter and this suite is Qt-free (see tests/conftest.py), so the
-arithmetic is driven with heights stated outright, exactly as
+needs a QPainter and this suite starts no QApplication (see tests/conftest.py),
+so the arithmetic is driven with heights stated outright, exactly as
 `test_nav_icon_button_size` drives the button sizing.
 """
 

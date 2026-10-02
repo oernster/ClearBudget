@@ -16,8 +16,8 @@ reported.
 `VIEW_SPECS` is the fourth statement of the same order and the one the strip
 is drawn from, so it is the authority all three are checked against.
 
-Asserted by source scan because the suite is deliberately Qt-free (see
-tests/conftest.py).
+Asserted by source scan because the suite deliberately starts no QApplication
+(see tests/conftest.py).
 """
 
 from __future__ import annotations
