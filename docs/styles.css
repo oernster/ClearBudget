@@ -159,12 +159,30 @@ h1 {
     margin: 0 auto 8px;
 }
 
+/* Column counts stated outright rather than left to auto-fit, so the rules
+   below can know when a last card would sit alone on its row. Each step is
+   where two, then three, cards of at least 250px fit beside the 16px gaps and
+   the container's 20px padding; the container's 1080px cap never fits four. */
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: 1fr;
     gap: 16px;
     margin-top: 28px;
     text-align: left;
+}
+@media (min-width: 556px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 822px) {
+    .grid { grid-template-columns: repeat(3, 1fr); }
+}
+/* A last card left alone on its row spans it, reading as a closing note
+   rather than a leftover. */
+@media (min-width: 556px) and (max-width: 821px) {
+    .grid:not(.small) > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@media (min-width: 822px) {
+    .grid:not(.small) > .card:last-child:nth-child(3n+1) { grid-column: 1 / -1; }
 }
 
 .grid.small {
@@ -198,6 +216,8 @@ h1 {
 }
 
 #features .card h3,
+#around .card h3,
+#forecast .card h3,
 #tabs .card h3 {
     color: var(--accent);
 }
@@ -462,3 +482,20 @@ nav.site .links a {
 }
 
 nav.site .links a:hover { color: var(--text); }
+
+/* The button that leads from a Features gateway card to its own page sits at
+   the card's foot, so gateways line up whatever the length above them. */
+.gateways .card { display: flex; flex-direction: column; }
+.gateways .card .card-cta { margin-top: auto; padding-top: 8px; }
+.gateways .card-cta a { margin: 0; }
+
+/* Where a detail page sits: its parent, then itself. The section after it
+   gives up most of its top margin, since the trail already opens the page. */
+.crumb {
+    font-size: 14px;
+    color: var(--faint);
+    text-align: left;
+}
+.crumb a { color: var(--accent); text-decoration: none; }
+.crumb a:hover { text-decoration: underline; }
+.crumb + .section { margin-top: 18px; }
