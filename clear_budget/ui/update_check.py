@@ -18,6 +18,7 @@ import json
 import threading
 from typing import TYPE_CHECKING
 
+import shiboken6
 from PySide6.QtCore import QObject, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox
@@ -118,7 +119,21 @@ class UpdateCheckController(QObject):
         thread.start()
 
     def _run(self, skipped: str | None, manual: bool) -> None:
-        self._result_ready.emit(self._service.check(skipped), manual)
+        """Ask, on the worker thread, then hand the answer back across.
+
+        The window can go while the question is out (Log Out, a reload or a
+        restore destroys it), taking this controller with it; the emit then
+        raises on a thread nothing would catch it on. Nobody is left to tell,
+        so that answer is dropped. Asking first whether the controller still
+        exists would not do: it can go between the asking and the emit.
+        Anything else the emit raises is still raised.
+        """
+        status = self._service.check(skipped)
+        try:
+            self._result_ready.emit(status, manual)
+        except RuntimeError:
+            if shiboken6.isValid(self):
+                raise
 
     def _on_result(self, status: UpdateStatus, manual: bool) -> None:
         if status.update_available:

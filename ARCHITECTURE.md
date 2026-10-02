@@ -1387,7 +1387,11 @@ renderings of the same figures to hold in step. Every month any page shows
   prompts with Download (the platform asset, falling back to the release
   page), Skip This Version (persisted in `ui_settings.json`) and Later.
   Automatic checks are silent on failure and when up to date; the manual
-  check reports both
+  check reports both. The controller is the window's child, so Log Out, a
+  reload or a restore destroys it with the window while a check may still be
+  out. That answer has nowhere to go and is dropped rather than raised on the
+  worker thread; anything else the emit raises still propagates
+  (`tests/ui_logic/test_update_check_after_close.py`)
 
 **Widgets**:
 - `LoginDialog` - username/password form, its logo resolved through
