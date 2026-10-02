@@ -120,8 +120,7 @@ budgets too, behind two confirmations.
 ### A new account never inherits an old budget
 
 The single-user budget file from before accounts existed is never adopted
-automatically. Copying it into the first account to sign in was tried and
-reverted.
+automatically.
 
 - **Rather than:** migrating it to whoever signed in first.
 - **Gains:** a new user on the machine cannot silently receive somebody
@@ -234,8 +233,7 @@ current month opens from the balance actually recorded.
 
 The Solvency page, the Reserves page and the graph read the same day-by-day
 walk of a month. What the current month still has to come after the stored
-balance has one home that every chain uses. A test checks that Solvency and
-the graph agree on opening, low, low day and close for twelve months ahead.
+balance has one home that every chain uses.
 
 - **Rather than:** each page with its own copy. A Solvency copy once kept
   counting income already received.
@@ -262,7 +260,7 @@ The figure always leaves a buffer in hand: twenty pounds unless changed, with
 zero allowed. A window of one to twelve months, four by default, sets how
 far ahead the calculation looks.
 
-- **Rather than:** a fixed horizon setting, since removed.
+- **Rather than:** a fixed horizon.
 - **Gains:** the margin and the reach are the user's own choice; planning to
   the wire is possible on purpose.
 - **Costs:** two settings to understand.
@@ -355,9 +353,8 @@ The old One Time category was retired and its bills recategorised.
 - **Rather than:** a category that duplicated the mechanism and carried no
   behaviour of its own.
 - **Gains:** one way to say "this happens once".
-- **Costs:** the recategorisation runs once on opening and cannot be undone,
-  so it was released as a major version; archived months keep their old
-  label.
+- **Costs:** the recategorisation runs once on opening and cannot be undone;
+  archived months keep their old label.
 
 ### The schema is versioned and loud
 
@@ -604,8 +601,8 @@ the setup program ask it for roles. A test fails the build on a colour
 written anywhere else. Light and dark themes switch live and the choice is
 remembered.
 
-- **Rather than:** colours written where they are used, which had drifted to
-  86 values with unrelated roles sharing one.
+- **Rather than:** colours written where they are used, which had drifted
+  into near-duplicates with unrelated roles sharing one.
 - **Gains:** a recolour moves every surface that shares the role and nothing
   else.
 - **Costs:** a new colour has to earn a place in the palette.
@@ -805,13 +802,19 @@ in every release.
 
 ### One version number, stamped into the site
 
-VERSION is the only place the version is written. The application and the
-packaging read it; a stamper writes it into the website, which cannot read
-it at render time. No root document carries a version.
+One version file is the only place the version is written. The application
+and the packaging read it; a stamper writes it into the website, which cannot
+read it at render time. No root document carries a version. The same stamper
+links each of the site's stylesheets and scripts by a hash of its content, so
+a browser fetches a changed file at once.
 
-- **Rather than:** the version typed wherever it is shown.
-- **Gains:** a version change is made once and cannot disagree with itself.
-- **Costs:** the site has to be stamped after every bump.
+- **Rather than:** the version typed wherever it is shown; leaving the site's
+  assets to expire from a browser's cache in their own time, which could pair
+  a new page with an old stylesheet.
+- **Gains:** a version change is made once and cannot disagree with itself; a
+  published page never renders against stale styling.
+- **Costs:** the site has to be stamped after every bump and after every
+  change to a stylesheet.
 
 ### LGPL-3.0, with a commercial licence offered
 
@@ -846,8 +849,7 @@ formatting money for display was moved inside it.
 - **Gains:** anything short of complete in the logic is a decision nobody
   made; where pence become a figure a person reads is held by tests.
 - **Costs:** interface code relies on targeted tests and measurement. Lines
-  marked to be skipped, one whole repository among them, also sit outside the
-  figure.
+  explicitly marked to be skipped also sit outside the figure.
 
 ### Small modules, with a danger band
 
@@ -894,9 +896,8 @@ blind exception handlers.
 - **Rather than:** an exclude list that silently hid the interface, both
   services packages and the setup program.
 - **Gains:** a clean lint means the whole repository was read.
-- **Costs:** tests are relaxed on three rules; one source file carries a named
-  exception, where a line-continuation check misreads a long help-page
-  string.
+- **Costs:** every exception to a rule has to be named and justified where it
+  is declared, tests included.
 
 ### The user's calendar, not UTC
 

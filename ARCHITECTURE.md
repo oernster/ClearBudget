@@ -2261,7 +2261,13 @@ renderings of the same figures to hold in step. Every month any page shows
     local midnight
   - Cross-platform single-instance lock (`shared/single_instance.py`, taken in
     `ui/startup.begin`): a named kernel mutex on Windows, an exclusive `fcntl`
-    advisory lock on a file in the app data directory on macOS and Linux
+    advisory lock on a file in the app data directory on macOS and Linux.
+    A launch that finds the lock held writes an empty request file into the
+    data directory (`shared/raise_request.py`) and exits; the running copy's
+    `ui/raise_watcher.py` polls for it and brings the window forward, fetching
+    the window through a callable because a reload replaces it. A poll rather
+    than a change notification, because one empty file per launch costs
+    almost nothing and a poll behaves the same on a network share
   - Launch monitor (`launch_screen.init`): resolved ONCE at startup as the screen
     under the mouse pointer, falling back to the primary screen when the pointer is
     on none. Everything the session opens (the login dialog, the main window) is

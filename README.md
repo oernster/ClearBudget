@@ -342,6 +342,9 @@ ClearBudget rests on, with what each one gains and what it costs.
   them, focused on their first usable control. A page of text you can only
   read, such as the About credits or the licence, is passed over for that, so
   those dialogs open on a control; the keyboard still reaches the page
+- One copy at a time: launching ClearBudget again while it is running starts
+  no second copy. The new launch asks the running one to come forward and
+  exits, so clicking the icon again brings back the window you already have
 - Built-in "How It Works" help screen: one page that names every icon the app
   draws, every view button included, each entry led by the picture it is
   describing, then states the three

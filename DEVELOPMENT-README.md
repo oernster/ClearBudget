@@ -106,9 +106,9 @@ The suite starts no `QApplication`, has no widget tests and runs in one
 process: the fragile widget-level PySide6 tests were removed and the UI layer
 is excluded from the coverage gate (see `.coveragerc`). Pure UI-layer logic is
 still tested without a `QApplication` under `tests/ui_logic`. PySide6 is still
-imported (a few tests take Qt classes or enums directly; others import UI
-modules that load it) yet no test starts a `QApplication`. Tests use real implementations and hand-written fakes, no
-mock libraries.
+imported: a few tests take Qt classes or enums directly; others import UI
+modules that load it. Tests use real implementations and hand-written fakes,
+no mock libraries.
 
 A coverage-gated run prints the coverage table last and emits no "N passed"
 line, so read the exit code rather than the tail of the output: `0` means the
