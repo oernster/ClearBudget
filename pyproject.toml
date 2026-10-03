@@ -35,7 +35,12 @@ target-version = "py311"
 # actually expects or carries a stated reason, so the rules are on for the whole
 # repository with no exemption: a new blind handler fails the lint rather than
 # waiting to be noticed.
-select = ["E4", "E7", "E9", "F", "BLE001", "S110", "S112"]
+#
+# DTZ (naive datetime) is on for the same reason: the application deliberately
+# runs on the user's local clock; every call that reads it carries a
+# `noqa: DTZ` marker saying so. Before DTZ was selected those markers silenced
+# a rule that was off; now an unmarked naive clock read fails the lint.
+select = ["E4", "E7", "E9", "F", "BLE001", "S110", "S112", "DTZ"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests build fixtures relative to the local calendar date, because that is the
@@ -51,7 +56,7 @@ testpaths = ["tests"]
 # uninstall), so its operations and its state model are gated rather than left
 # unmeasured. installer/app.py and installer/ui are the Qt client and are
 # excluded in .coveragerc on the same grounds as clear_budget/ui.
-addopts = "-q --cov=clear_budget --cov=main --cov=installer --cov-report=term-missing --cov-fail-under=100 --cov-config=.coveragerc"
+addopts = "-q --cov=clear_budget --cov=installer --cov-report=term-missing --cov-fail-under=100 --cov-config=.coveragerc"
 pythonpath = ["."]
 
 [tool.coverage.run]

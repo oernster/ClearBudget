@@ -202,6 +202,34 @@ class TestAnUnreadableBudgetIsReportedRatherThanSilent:
         with pytest.raises(sqlite3.DatabaseError):
             open_user_database(_USER)
 
+    def test_a_failed_open_lets_go_of_the_file_so_a_backup_can_replace_it(self, home):
+        """The way back from a damaged budget is a saved copy put in its place.
+
+        A failed open used to leave its connection open: the error travelled
+        out with the half-opened database still referenced from the
+        traceback, so the file stayed held until the garbage collector got to
+        it. Holding on to the exception here keeps that traceback alive, so
+        a leaked connection is still open when the replace runs.
+        """
+        database = open_user_database(_USER)
+        _populate(database, bills=3)
+        saved = home / "saved_budget.db"
+        backup_open_database(database.conn, saved)
+        path = database.db_path
+        database.close()
+        path.write_bytes(b"\x00" * len(saved.read_bytes()))
+
+        with pytest.raises(sqlite3.DatabaseError) as failed_open:
+            open_user_database(_USER)
+
+        replace_closed_database(saved, path)
+        restored = open_user_database(_USER)
+        try:
+            assert _counts(restored.db_path)["bills"] == 3
+        finally:
+            restored.close()
+        assert failed_open.value is not None
+
 
 _DEADLOCK_PROBE = """
 import sqlite3, sys

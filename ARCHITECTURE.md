@@ -1104,6 +1104,19 @@ holding each budget's slug and display name plus which one is active.
   anything that is not a readable SQLite file, because that is `validate_db`'s
   question and it says it better
 
+**`diagnostics`** (`clear_budget/shared/diagnostics.py`):
+- `install(log_dir)` - called once by `ui/startup.py`; opens
+  `logs/clearbudget.log` in the data directory and installs one handler for
+  uncaught exceptions in BOTH places Python sends them: `sys.excepthook`
+  (where PySide6 routes an exception escaping a slot) and
+  `threading.excepthook` (where an exception escaping a worker thread goes,
+  never reaching `sys.excepthook`). Each is logged as `UNCAUGHT EXCEPTION`
+  with its traceback; a worker thread's is preceded by a line naming the
+  thread. A thread ending through `sys.exit` is ignored, as Python's own
+  thread hook ignores it. A log directory that cannot be made returns None
+  and the app runs on without a log (`tests/shared/test_diagnostics.py`)
+- `log(message, *args)` - one flushed line about what the session is doing
+
 **`resources`** (`clear_budget/shared/resources.py`):
 - Runtime asset discovery for packaged builds: locates the app icon, the Qt
   window/taskbar icon, the splash image and the view-button artwork across
@@ -2943,7 +2956,11 @@ an option that read as "remove my data" removed nothing.
 - **Ruff** clean (`ruff check .`) under its default rules plus the three
   blind-handler rules (`BLE001`, `S110`, `S112`) enabled repo-wide in
   `pyproject.toml`, so a new blind exception handler fails the lint rather
-  than waiting to be noticed. Run alongside black and flake8 rather than
+  than waiting to be noticed. The naive-datetime rules (`DTZ`) are on too:
+  the application runs on the user's local clock by design, so each read of
+  it carries a `# noqa: DTZ005` or `# noqa: DTZ011` with that reason; the
+  tests carry a per-file ignore for the same two rules. An unmarked naive
+  clock read fails the lint. Run alongside black and flake8 rather than
   replacing either. A genuine false positive is suppressed with a targeted
   `# noqa: <RULE>` and a reason, never by changing behaviour; where ruff and
   black disagree on formatting, black wins

@@ -486,7 +486,12 @@ machine in the platform's conventional application-data location:
 |----------|----------------|
 | Windows | `%LOCALAPPDATA%\ClearBudget` |
 | macOS | `~/Library/Application Support/ClearBudget` |
-| Linux | `$XDG_DATA_HOME/clearbudget`, by default `~/.local/share/clearbudget` |
+| Linux (Flatpak) | `~/.var/app/com.oliverernster.clearbudget/data/clearbudget` |
+
+On Linux the app uses `$XDG_DATA_HOME/clearbudget`. ClearBudget ships for
+Linux only as a Flatpak; inside its sandbox `XDG_DATA_HOME` is the app's own
+`~/.var/app/com.oliverernster.clearbudget/data`, not `~/.local/share`, so
+that is where the data lives.
 
 An install that predates this layout kept everything in `~/.clearbudget`;
 the app moves that directory to the new location automatically the first
@@ -690,7 +695,8 @@ entered before these existed continues to do.
   overwriting it. The first ever save for an account prompts for a filename,
   defaulting to the app's own data folder (`%LOCALAPPDATA%\ClearBudget` on
   Windows, `~/Library/Application Support/ClearBudget` on macOS,
-  `~/.local/share/clearbudget` on Linux), which is where the live databases
+  `~/.var/app/com.oliverernster.clearbudget/data/clearbudget` in the Linux
+  Flatpak), which is where the live databases
   are, under a name carrying the account's own
   (`clearbudget_backup_<account>.db`); the chosen location is remembered
   between runs and takes precedence over that default from then on

@@ -100,7 +100,7 @@ python main.py     # launch the app
 pytest             # run the full suite (100% line and branch gate enforced)
 black .            # format (line length 88)
 flake8             # lint
-ruff check .       # lint (default rules plus the blind-handler rules)
+ruff check .       # lint (default rules, blind-handler rules, DTZ)
 ```
 
 How to read a run, what the gate holds and leaves out, the setup program's

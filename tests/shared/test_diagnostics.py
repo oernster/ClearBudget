@@ -9,12 +9,28 @@ pin the instrumentation that ends that.
 from __future__ import annotations
 
 import logging
+import sys
+import threading
+
+import pytest
 
 from clear_budget.shared import diagnostics
 
 
+@pytest.fixture(autouse=True)
+def _restore_thread_hook(monkeypatch):
+    """install() replaces threading.excepthook; put the original back after."""
+    monkeypatch.setattr(threading, "excepthook", threading.excepthook)
+
+
 def _read_log(log_dir):
     return (log_dir / diagnostics.LOG_NAME).read_text(encoding="utf-8")
+
+
+def _run_in_thread(target, name):
+    worker = threading.Thread(target=target, name=name)
+    worker.start()
+    worker.join()
 
 
 class TestTheLogFile:
@@ -81,3 +97,36 @@ class TestUncaughtExceptionsAreRecorded:
             captured[0](type(exc), exc, exc.__traceback__)
 
         assert "file is not a database" in _read_log(log_dir)
+
+
+class TestWorkerThreadExceptionsAreRecorded:
+    """A worker thread's exception never reaches sys.excepthook.
+
+    Python routes it through threading.excepthook instead, whose default
+    prints to the stderr a windowed build does not have, so before this the
+    update check's worker could fail leaving no trace at all.
+    """
+
+    def test_a_thread_that_raises_leaves_its_traceback_in_the_log(self, tmp_path):
+        log_dir = tmp_path / "logs"
+        diagnostics.install(log_dir, set_hook=lambda hook: None)
+
+        def fail():
+            raise RuntimeError("the worker failure nobody could see")
+
+        _run_in_thread(fail, name="update-check")
+
+        text = _read_log(log_dir)
+        assert "UNCAUGHT EXCEPTION" in text
+        assert "the worker failure nobody could see" in text
+        assert "RuntimeError" in text
+        assert "update-check" in text
+
+    def test_a_thread_ending_through_sys_exit_is_not_recorded(self, tmp_path):
+        """Python's own thread hook ignores SystemExit; so does this one."""
+        log_dir = tmp_path / "logs"
+        diagnostics.install(log_dir, set_hook=lambda hook: None)
+
+        _run_in_thread(sys.exit, name="clean-exit")
+
+        assert "UNCAUGHT EXCEPTION" not in _read_log(log_dir)

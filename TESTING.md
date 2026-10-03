@@ -25,8 +25,8 @@ coverage measurement and the floor, so nothing else needs passing to it. Add
 formatting or lint regression passes `pytest` untouched. Run all four and read
 the exit code of each.
 
-**A full run takes about a minute on Windows.** Measured on 2026-10-02: 1,966
-tests passed in 63 seconds, with no window opened.
+**A full run takes about a minute on Windows.** Measured on 2026-10-03: 1,969
+tests passed in 66 seconds, with no window opened.
 
 **Read the exit code, never the text.** The run prints the coverage table
 then one summary line. A search of the output for a result word is still not
@@ -48,10 +48,9 @@ pytest --ignore=tests/installer --no-cov
 ## What the gate holds
 
 The floor is 100%, measured by BRANCH as well as by line (`branch = True` in
-`.coveragerc`, `--cov-fail-under=100` in `pyproject.toml`). In effect it spans
-two sources: `clear_budget` and the Qt-free half of the setup program under
-`installer/`. The pytest options also name `main` as a source; `.coveragerc`
-then omits `main.py`, so nothing of it is measured. The setup program is inside
+`.coveragerc`, `--cov-fail-under=100` in `pyproject.toml`). It spans two
+sources: `clear_budget` and the Qt-free half of the setup program under
+`installer/`. `main.py`, the composition root, is not measured. The setup program is inside
 the floor because it does the most privileged work in the repository: registry
 writes, shortcut creation, per-user deployment, process termination and
 directory removal.

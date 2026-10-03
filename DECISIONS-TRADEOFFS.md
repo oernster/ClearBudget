@@ -528,15 +528,17 @@ removed; while it still exists it is the one used.
 ### A log file and a handler for errors escaping a slot
 
 The application writes a plain log to its data directory and records every
-exception escaping a slot. A log directory that cannot be created is skipped
-rather than stopping the app.
+exception escaping a slot. The same handler is installed as the thread hook
+too, so an exception escaping a worker thread (the update check runs on one)
+is recorded the same way, under a line naming the thread. A log directory that
+cannot be created is skipped rather than stopping the app.
 
 - **Rather than:** no logging, which made every fault in a windowed build look
   like nothing happening.
-- **Gains:** a failure leaves something to diagnose.
-- **Costs:** a local file naming the accounts that signed in. An exception
-  raised on a background thread does not reach the handler, so it leaves no
-  trace in the log.
+- **Gains:** a failure leaves something to diagnose, on whichever thread it
+  happened.
+- **Costs:** a local file naming the accounts that signed in. A thread ending
+  through `sys.exit` is not recorded, matching Python's own thread hook.
 
 ## Exports and the graph
 
@@ -893,7 +895,7 @@ resolve the real one.
 
 flake8 reads every source file, with only build output and the virtual
 environment excluded. ruff runs its default rules plus the rules against
-blind exception handlers.
+blind exception handlers and naive datetimes (DTZ).
 
 - **Rather than:** an exclude list that silently hid the interface, both
   services packages and the setup program.

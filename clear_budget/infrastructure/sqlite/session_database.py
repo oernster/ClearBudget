@@ -35,11 +35,21 @@ def open_user_database(username: str) -> Database:
     config.ensure_directories()
     database = Database(active_db_path(username))
     database.connect()
-    database.create_schema()
-    # Record who this budget belongs to, so the stamp travels with the file and
-    # copying it elsewhere does not launder its ownership. Written once and
-    # never overwritten, so opening a file can never be a way to claim it.
-    stamp_owner(database.conn, username)
+    try:
+        database.create_schema()
+        # Record who this budget belongs to, so the stamp travels with the file
+        # and copying it elsewhere does not launder its ownership. Written once
+        # and never overwritten, so opening a file can never be a way to claim
+        # it.
+        stamp_owner(database.conn, username)
+    except BaseException:
+        # A budget that cannot be opened (a damaged file raises here) must not
+        # stay held. The error carries this frame out in its traceback, which
+        # would keep the connection open until the garbage collector ran; on
+        # Windows that open handle refuses the saved copy the user restores in
+        # its place.
+        database.close()
+        raise
     return database
 
 

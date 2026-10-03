@@ -14,7 +14,10 @@ Two things are installed:
   * a handler for exceptions nobody caught. PySide6 routes an exception
     raised inside a slot through `sys.excepthook`, which by default prints to
     the stderr a windowed build does not have. Anything reaching it is
-    therefore recorded rather than lost.
+    therefore recorded rather than lost. An exception on a worker thread
+    (the update check runs on one) never reaches `sys.excepthook`: Python
+    sends it to `threading.excepthook` instead, so the same handler is
+    installed there too.
 
 Installing must never be the reason the application fails to start, so a
 logging directory that cannot be created is swallowed and the app runs on
@@ -27,6 +30,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import threading
 import traceback
 from pathlib import Path
 from typing import Callable
@@ -72,13 +76,33 @@ def install(
     logger.addHandler(handler)
     logger.propagate = False
 
+    hook = _make_excepthook(logger)
     setter = set_hook if set_hook is not None else _set_system_hook
-    setter(_make_excepthook(logger))
+    setter(hook)
+    threading.excepthook = _make_thread_excepthook(hook)
     return log_dir / LOG_NAME
 
 
 def _set_system_hook(hook: Callable) -> None:  # pragma: no cover - global state
     sys.excepthook = hook
+
+
+def _make_thread_excepthook(hook: Callable) -> Callable:
+    """Route a worker thread's uncaught exception through ``hook``.
+
+    SystemExit is ignored, as Python's own thread hook ignores it: a thread
+    calling sys.exit has ended deliberately rather than failed.
+    """
+
+    def handle(args: threading.ExceptHookArgs) -> None:
+        if issubclass(args.exc_type, SystemExit):
+            return
+        # The thread is None only when it was not started through threading.
+        name = getattr(args.thread, "name", "unknown")
+        logging.getLogger(LOGGER_NAME).error("worker thread %s failed", name)
+        hook(args.exc_type, args.exc_value, args.exc_traceback)
+
+    return handle
 
 
 def _make_excepthook(logger: logging.Logger) -> Callable:
