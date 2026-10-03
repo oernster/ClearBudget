@@ -41,6 +41,7 @@ Everything below this section explains how the code satisfies them.
 | The Solvency bank page and the Reserves page can never disagree about a month's low or the day it falls on, because both read ONE simulation: `application/services/_month_walk.walk_month`. Two correct-looking walks that differ about the same month is exactly the failure this forbids | `tests/application/test_month_walk.py`, plus `tests/application/test_commitments_due.py` |
 | Every picture button the user can press is named on the How It Works screen and the heading counts the strip it lists. The tray had this guard and the view strip did not, which is how the screen came to announce six views while seven were drawn; the footer's donate button was the same shape of gap, a picture in no tray at all, so the button scan reads `bottom_tray.py` alongside `_tray_buttons.py` | `tests/structural/test_help_names_the_views.py` (the tray and footer half is `test_help_names_the_tray.py`) |
 | A worked example on the How It Works screen is what the code returns: the pro-rating figure is read out of the sentence and checked against `prorate_remaining_pence` to the penny. The picture guards could never have caught it, which is why the prose half of that screen was the half that drifted | `tests/structural/test_help_example_is_arithmetic.py` |
+| The update check is the only connection the application opens itself. No module of the package, the setup program or `main.py` may import a networking module (`socket`, `http`, `urllib.request`, a third-party HTTP client, Qt's network or web-engine modules) except the update check's GitHub adapter, which may import `urllib.request` and nothing else networked | `tests/structural/test_no_network.py` |
 | No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
 
 ## Overview
@@ -693,7 +694,7 @@ Key methods:
   (published releases only, so drafts, prereleases and bare tags can never
   prompt). Any failure yields None; the opener is injected so tests never
   touch the network. This is the only outbound network call in the
-  application
+  application, held so by `tests/structural/test_no_network.py`
 
 ### Auth Layer
 

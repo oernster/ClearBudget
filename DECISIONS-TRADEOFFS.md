@@ -61,7 +61,8 @@ figure.
 
 The update check is the only connection the application opens itself, made
 with Python's own library. The donate button and the download offered by an
-update both hand an address to the browser.
+update both hand an address to the browser. A structural test holds the
+claim: nothing else shipped may import a networking module.
 
 - **Rather than:** a networking library; the application making those other
   requests itself.

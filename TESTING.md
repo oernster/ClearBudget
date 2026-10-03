@@ -177,6 +177,7 @@ for code nobody has written yet. The suite in `tests/structural/`:
 | `test_loc_limits.py` | the 400 line cap and the danger band below it |
 | `test_colour_source.py` | colour values have one home |
 | `test_donation_address.py` | the donation address has one home and is the one meant |
+| `test_no_network.py` | the update check is the only connection anything shipped opens itself |
 | `test_data_dir_isolation.py` | the suite never writes to the real data directory |
 | `test_save_location_defaults.py` | Save and Load default to the data directory, not Downloads |
 | `test_database_replacement_order.py` | a live database is closed before it is replaced, only in `main.py` |
