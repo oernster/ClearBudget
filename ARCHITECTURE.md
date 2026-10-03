@@ -11,7 +11,7 @@ Everything below this section explains how the code satisfies them.
 
 | Invariant | Enforced by |
 |-----------|-------------|
-| Dependencies point inward: UI → Application → Domain ← Infrastructure. The Domain imports nothing outward, has no I/O and no framework | `tests/structural/test_layering_rules.py` (AST scan for forbidden imports) |
+| Dependencies point inward: UI → Application → Domain ← Infrastructure. The Domain imports no other layer but `shared` and no I/O, threading, network, logging or UI-framework module; Application never imports Infrastructure or the UI; Infrastructure never imports the UI (it may import the Application ports it implements); the UI never imports Infrastructure except `ui/window_builder.py`, the wiring split out of the composition root. Every import is resolved to its layer, relative ones included. The UI still imports the Domain directly (TECH_DEBT.md item 1) | `tests/structural/test_layering_rules.py` (AST scan, each rule proven by a planted violation) |
 | The auth layer's surface stays where it is declared: identity and credentials never leak into budget infrastructure | `tests/structural/test_auth_structure.py` |
 | No source file exceeds 400 lines and none sits in the 381 to 399 danger band: a file refactored down from over the cap lands at 350 or below rather than stopping the moment it clears 400 | `tests/structural/test_loc_limits.py` (both halves) |
 | Only `shared/config.py` derives the real data directory. The suite never resolves it; the installer never so much as names it, so no test and no install can disturb live user data | `tests/structural/test_data_dir_isolation.py` (plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py`) |

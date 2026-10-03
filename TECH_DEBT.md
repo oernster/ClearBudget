@@ -2,7 +2,15 @@
 
 A standing reference to the project's outstanding technical debt. It records what is still open, weighs whether each item is worth doing and gives the rationale. Every item is a behaviour-preserving internal concern: nothing here proposes reverting a feature or changing any UI or UX behaviour. Scope is the whole repository (the `clear_budget` package, the bespoke installer, the delivery scripts for Windows, Linux and macOS, plus the GitHub Pages site under `docs/`) read against `ARCHITECTURE.md` and the tests under `tests/structural/`.
 
-**There is no open technical debt in this repository.** Every numbered item has been resolved and deleted. The two sections below are standing decisions, not work: they record what is deliberately left alone and why, so that neither gets raised again as though it were debt.
+One item is open. The two sections after it are standing decisions, not work: they record what is deliberately left alone and why, so that neither gets raised again as though it were debt.
+
+---
+
+## 1. The UI imports the domain directly
+
+The architecture has the UI reach the application layer through DTOs. In practice 24 UI modules import the domain directly in 43 statements: 34 take value objects (`Amount`, `YearMonth` and their kind), 5 take entities and 4 take domain services. Nothing breaks because of it and every layer rule that is written down holds; the cost is that a domain change can reach a widget without passing the application layer, which is the coupling the DTOs exist to prevent.
+
+`tests/structural/test_layering_rules.py` deliberately allows it for now, so the rest of the layering could be enforced at once rather than waiting on this. Clearing it means moving the entity and service uses behind the application layer and deciding whether value objects such as `Amount` stay importable as the vocabulary both layers share; then the UI rule in that test gains `domain`. Blocked on an owner decision about the value objects.
 
 ---
 

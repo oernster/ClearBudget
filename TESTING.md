@@ -171,7 +171,7 @@ for code nobody has written yet. The suite in `tests/structural/`:
 
 | Guard | Holds |
 |---|---|
-| `test_layering_rules.py` | the layer boundaries |
+| `test_layering_rules.py` | the layer boundaries and a domain free of I/O and frameworks |
 | `test_auth_structure.py` | the shape of the auth module |
 | `test_cross_package_imports.py` | every name one package imports from another is actually there |
 | `test_loc_limits.py` | the 400 line cap and the danger band below it |
