@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.bill_amount_change import BillAmountChange
+from clear_budget.domain.value_objects.due_day import check_due_day
 from clear_budget.domain.value_objects.year_month import YearMonth
 
 
@@ -57,6 +58,10 @@ class Bill:
     # retimed by asking, so the default is movable. Consulted by the
     # Recommendations engine, which proposes retiming only what can move.
     day_fixed: bool = False
+
+    def __post_init__(self) -> None:
+        """Refuse a due day no month can have, wherever the bill was built."""
+        check_due_day(self.day_of_month)
 
     def is_active_in_month(self, year_month: YearMonth) -> bool:
         """Check if this bill is active in the given month."""

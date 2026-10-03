@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from clear_budget.application.formatting import pounds_from_text
+from clear_budget.application.formatting import pence_from_text
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.bill_amount_change import BillAmountChange
 from clear_budget.shared.errors import (
@@ -93,14 +93,11 @@ def parse_amount_change(
     Kept out of the widget so the rule can be tested without a QApplication,
     which this repository deliberately does not run in its suite.
     """
-    pounds = pounds_from_text(amount_text)
-    if pounds is None:
-        return None
     try:
         return BillAmountChange(
             effective_year=year,
             effective_month=month,
-            new_amount=Amount.from_pounds(pounds),
+            new_amount=Amount(pence=pence_from_text(amount_text)),
         )
     except (InvalidAmountError, InvalidBillAmountChangeError):
         return None

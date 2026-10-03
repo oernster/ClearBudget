@@ -9,6 +9,7 @@ from clear_budget.domain.services.bill_amount_schedule import (
     scheduled_change_applies,
 )
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.due_day import due_day_from_storage
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite._bill_amount_changes import (
     BillAmountChangesMixin,
@@ -91,7 +92,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
                 payment_method_id=row["payment_method_id"],
                 category=row["category"],
                 bill_type=row["bill_type"],
-                day_of_month=row["day_of_month"],
+                day_of_month=due_day_from_storage(row["day_of_month"]),
                 start_ym=YearMonth(row["start_year"], row["start_month"]),
                 end_ym=(
                     YearMonth(row["end_year"], row["end_month"])
@@ -172,15 +173,23 @@ class SQLiteBillRepository(BillAmountChangesMixin):
         )
         self.conn.commit()
 
-    def mark_paid_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:
-        """Mark a bill as paid for one specific month (visual only)."""
+    def mark_paid_for_month(
+        self, *, bill_id: int, year_month: YearMonth, commit: bool = True
+    ) -> None:
+        """Mark a bill as paid for one specific month.
+
+        `commit=False` leaves the write in the caller's open transaction, for
+        the overnight fold, which must commit its marks with the balance or
+        not at all.
+        """
         cursor = self.conn.cursor()
         cursor.execute(
             "INSERT OR IGNORE INTO bill_month_paid"
             " (bill_id, year, month) VALUES (?, ?, ?)",
             (bill_id, year_month.year, year_month.month),
         )
-        self.conn.commit()
+        if commit:
+            self.conn.commit()
 
     def unmark_paid_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:
         """Remove the paid flag for a bill in one specific month."""
@@ -224,7 +233,7 @@ class SQLiteBillRepository(BillAmountChangesMixin):
             payment_method_id=row["payment_method_id"],
             category=row["category"],
             bill_type=row["bill_type"],
-            day_of_month=row["day_of_month"],
+            day_of_month=due_day_from_storage(row["day_of_month"]),
             start_ym=YearMonth(row["start_year"], row["start_month"]),
             end_ym=(
                 YearMonth(row["end_year"], row["end_month"])

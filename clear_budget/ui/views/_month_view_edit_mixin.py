@@ -5,16 +5,36 @@ from typing import ClassVar
 
 from PySide6.QtCore import Qt, QTimer
 
-from clear_budget.application.formatting import pounds_from_text
-from clear_budget.domain.value_objects.amount import Amount
-from clear_budget.shared.currency import get_symbol
+from clear_budget.shared.errors import InvalidAmountError, InvalidDueDayError
+from clear_budget.ui.views._month_view_cell_edits import (
+    BILL_AMOUNT_COL,
+    BILL_CATEGORY_COL,
+    BILL_DAY_COL,
+    BILL_NAME_COL,
+    INCOME_AMOUNT_COL,
+    INCOME_DAY_COL,
+    INCOME_NAME_COL,
+    edited_bill,
+    edited_income,
+)
+
+_CELL_REFUSED_TITLE = "Not saved"
 
 
 class MonthViewEditMixin:
     """Inline cell-edit and checkbox handlers for MonthView."""
 
-    _EDITABLE_BILL_COLS: ClassVar[set[int]] = {0, 1, 2, 4}
-    _EDITABLE_INCOME_COLS: ClassVar[set[int]] = {0, 1, 3}
+    _EDITABLE_BILL_COLS: ClassVar[set[int]] = {
+        BILL_NAME_COL,
+        BILL_AMOUNT_COL,
+        BILL_CATEGORY_COL,
+        BILL_DAY_COL,
+    }
+    _EDITABLE_INCOME_COLS: ClassVar[set[int]] = {
+        INCOME_NAME_COL,
+        INCOME_AMOUNT_COL,
+        INCOME_DAY_COL,
+    }
 
     def _on_bill_cell_clicked(self, row: int, col: int) -> None:
         if col not in (5, 6, 7):
@@ -73,29 +93,28 @@ class MonthViewEditMixin:
         if bill is None:
             return
         col, v = item.column(), item.text().strip()
+        if col == BILL_AMOUNT_COL and bill.base_amount is not None:
+            self._reject_inline_amount_edit(bill)
+            return
         try:
-            if col == 0:
-                u = dataclasses.replace(bill, name=v or bill.name)
-            elif col == 1:
-                if bill.base_amount is not None:
-                    self._reject_inline_amount_edit(bill)
-                    return
-                pounds = pounds_from_text(v)
-                if pounds is None:
-                    QTimer.singleShot(0, self.view_model.refresh_month_summary)
-                    return
-                u = dataclasses.replace(bill, amount=Amount.from_pounds(pounds))
-            elif col == 2:
-                u = dataclasses.replace(bill, category=v.lower().replace(" ", "_"))
-            elif col == 4:
-                u = dataclasses.replace(bill, day_of_month=int(v))
-            else:
-                return
-            if u == bill:
-                return
-            QTimer.singleShot(0, lambda: self._inline_update_bill(bill, u))
-        except (ValueError, AttributeError):
-            QTimer.singleShot(0, self.view_model.refresh_month_summary)
+            u = edited_bill(bill, col, v)
+        except (InvalidAmountError, InvalidDueDayError) as refusal:
+            self._refuse_cell_edit(refusal)
+            return
+        if u is None or u == bill:
+            return
+        QTimer.singleShot(0, lambda: self._inline_update_bill(bill, u))
+
+    def _refuse_cell_edit(self, refusal: Exception) -> None:
+        """Say why a typed cell cannot be saved, then put the cell back.
+
+        The same shape as `_reject_inline_amount_edit`: a message naming the
+        problem, then the table redrawn from what is stored.
+        """
+        from PySide6.QtWidgets import QMessageBox
+
+        QMessageBox.information(self, _CELL_REFUSED_TITLE, str(refusal))
+        QTimer.singleShot(0, self.view_model.refresh_month_summary)
 
     @staticmethod
     def _own_amount(bill):
@@ -152,25 +171,14 @@ class MonthViewEditMixin:
         inc = self._get_income_from_row(item.row())
         if inc is None:
             return
-        col, v = item.column(), item.text().strip()
         try:
-            if col == 0:
-                u = dataclasses.replace(inc, name=v or inc.name)
-            elif col == 1:
-                u = dataclasses.replace(
-                    inc, amount=Amount.from_pounds(float(v.lstrip(get_symbol())))
-                )
-            elif col == 3:
-                u = dataclasses.replace(
-                    inc, day_of_month=int(v) if v.isdigit() else None
-                )
-            else:
-                return
-            if u == inc:
-                return
-            QTimer.singleShot(0, lambda: self._inline_update_income(inc, u))
-        except (ValueError, AttributeError):
-            QTimer.singleShot(0, self.view_model.refresh_month_summary)
+            u = edited_income(inc, item.column(), item.text().strip())
+        except (InvalidAmountError, InvalidDueDayError) as refusal:
+            self._refuse_cell_edit(refusal)
+            return
+        if u is None or u == inc:
+            return
+        QTimer.singleShot(0, lambda: self._inline_update_income(inc, u))
 
     def _on_income_cell_clicked(self, row: int, col: int) -> None:
         if col not in (2, 4, 5, 6):

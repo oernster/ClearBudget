@@ -15,6 +15,16 @@ from pathlib import Path
 # one careless click away in the Load dialog.
 _ACCOUNTS_TABLE = "users"
 
+# The columns sign-in reads from it (see auth.user_store). A `users` table of
+# any other shape was measured passing a restore and then failing every
+# sign-in with "no such column".
+ACCOUNTS_REQUIRED_COLUMNS = frozenset(
+    {"id", "username", "password_hash", "recovery_code_hash", "is_admin"}
+)
+
+# What SQLite's quick_check reports for a database whose pages all read.
+_INTEGRITY_OK = "ok"
+
 REQUIRED_SCHEMA: dict[str, set[str]] = {
     "bills": {
         "amount_pence",
@@ -77,42 +87,91 @@ def is_accounts_database(path: Path) -> bool:
     return _ACCOUNTS_TABLE in tables and not (tables & set(REQUIRED_SCHEMA))
 
 
+def _missing_columns(conn, table: str, required: frozenset[str] | set[str]) -> str:
+    """The required columns ``table`` lacks, joined for a message; else ''."""
+    present = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+    return ", ".join(sorted(set(required) - present))
+
+
+def _integrity_error(conn) -> str | None:
+    """None when every page of the database reads; else what SQLite found.
+
+    The schema checks read `sqlite_master` and nothing else, so a file whose
+    data pages were damaged behind an intact schema passed them and then
+    failed to open once it had replaced the user's budget. `quick_check`
+    walks every page; it skips only the index-to-table cross-check, which
+    costs far more and protects nothing a damaged page would not show.
+    """
+    # quick_check always answers with at least one row: "ok" or the first fault.
+    verdict = conn.execute("PRAGMA quick_check").fetchone()[0]
+    if verdict == _INTEGRITY_OK:
+        return None
+    return f"The file is damaged: {verdict}"
+
+
 def validate_db(path: Path) -> str | None:
-    """Return an error string if path is not a valid ClearBudget db, else None."""
+    """Return an error string if path is not a valid ClearBudget db, else None.
+
+    Shape first, then every data page: a budget must have the tables and
+    columns the app reads AND be readable all the way through.
+    """
     import sqlite3
 
     conn = None
     try:
         conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = {r["name"] for r in cursor.fetchall()}
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = {row[0] for row in cursor.fetchall()}
 
         missing_tables = set(REQUIRED_SCHEMA) - tables
         if missing_tables:
-            conn.close()
             missing = ", ".join(sorted(missing_tables))
             return f"Not a ClearBudget database - missing tables: {missing}"
 
         for table, required_cols in REQUIRED_SCHEMA.items():
-            cursor.execute(f"PRAGMA table_info({table})")
-            present_cols = {r["name"] for r in cursor.fetchall()}
-            missing_cols = required_cols - present_cols
+            missing_cols = _missing_columns(conn, table, required_cols)
             if missing_cols:
-                conn.close()
                 return (
                     f"Not a ClearBudget database - table '{table}' "
-                    f"missing columns: "
-                    f"{', '.join(sorted(missing_cols))}"
+                    f"missing columns: {missing_cols}"
                 )
-
-        conn.close()
+        return _integrity_error(conn)
     except sqlite3.DatabaseError as exc:
         return f"Not a valid SQLite database: {exc}"
     finally:
-        # Falling through to here means the connection opened, because a
-        # connect that failed returns from the except clause instead.
-        if conn is not None:  # pragma: no branch
+        # A connect that failed leaves nothing to close.
+        if conn is not None:
             conn.close()
-    return None
+
+
+def validate_accounts_db(path: Path) -> str | None:
+    """None when ``path`` is an accounts database sign-in can use; else why not.
+
+    The same two questions as `validate_db`, asked of the accounts store:
+    the `users` table with every column sign-in reads, then every page.
+    """
+    import sqlite3
+
+    conn = None
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        found = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            (_ACCOUNTS_TABLE,),
+        ).fetchone()
+        if found is None:
+            return "The accounts database in the backup holds no users table."
+        missing = _missing_columns(conn, _ACCOUNTS_TABLE, ACCOUNTS_REQUIRED_COLUMNS)
+        if missing:
+            return (
+                "The accounts database in the backup is missing columns: " f"{missing}"
+            )
+        damage = _integrity_error(conn)
+        if damage:
+            return f"The accounts database in the backup: {damage}"
+        return None
+    except sqlite3.DatabaseError:
+        return "The accounts database in the backup is not readable."
+    finally:
+        if conn is not None:
+            conn.close()

@@ -4,6 +4,14 @@ from dataclasses import dataclass
 
 from clear_budget.shared.errors import InvalidAmountError
 
+# The most one typed entry may hold: one billion in whole currency units.
+# SQLite stores INTEGER as signed 64-bit (2**63 - 1 at most, about 9.2e18
+# pence) and its SUM raises on overflow; the application adds amounts together
+# (month totals, the balance, the applied log), so the cap sits far below that
+# ceiling: tens of millions of entries at the cap still sum safely. It is also
+# below 2**53, so pence divided by 100 still renders to the penny as a float.
+MAX_AMOUNT_PENCE = 100_000_000_000
+
 
 @dataclass(frozen=True, slots=True)
 class Amount:

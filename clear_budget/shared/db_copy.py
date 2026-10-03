@@ -36,9 +36,14 @@ from __future__ import annotations
 import os
 import sqlite3
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 _TEMP_SUFFIX = ".partial"
+
+# How long a snapshot waits for another connection's write lock to clear
+# before refusing. Read at call time so a test can shorten it.
+SNAPSHOT_BUSY_TIMEOUT_S = 5.0
 
 
 class DatabaseCopyError(RuntimeError):
@@ -85,9 +90,18 @@ def backup_open_database(conn: sqlite3.Connection, dest: Path) -> None:
     then renamed over it, so a failure part way through leaves an existing
     backup exactly as it was rather than truncated.
     """
+    _backup_into(conn, dest, commit_first=True)
+
+
+def _backup_into(conn: sqlite3.Connection, dest: Path, *, commit_first: bool) -> None:
+    """Back ``conn`` up to a scratch file beside ``dest``, then rename it in.
+
+    ``commit_first`` ends a write ``conn`` has in flight; a snapshot passes
+    False because its own read transaction is what keeps it consistent.
+    """
     temp = _temp_beside(dest)
     try:
-        if conn.in_transaction:
+        if commit_first and conn.in_transaction:
             conn.commit()
         target = sqlite3.connect(str(temp))
         try:
@@ -100,6 +114,99 @@ def backup_open_database(conn: sqlite3.Connection, dest: Path) -> None:
     except (OSError, sqlite3.Error) as exc:
         _discard(temp)
         raise DatabaseCopyError(str(exc)) from exc
+
+
+def snapshot_database_file(source: Path, dest: Path) -> None:
+    """Write a consistent snapshot of the database FILE ``source`` to ``dest``.
+
+    For a database some other connection may hold open, when that connection
+    is not ours to use: Back Up Everything copies every account's budget and
+    the accounts store while the app holds at least two of them. A byte copy
+    was measured taking a write still in progress into the backup as if it
+    had been committed.
+
+    A read transaction is opened FIRST (under a bounded busy timeout) and the
+    backup runs inside it. Opening it is what makes the wait bounded: without
+    it, SQLite's backup retries a locked source forever, which on the UI
+    thread is a hang. With it, a file that stays locked (a writer part way
+    through a large change) is refused with "database is locked" after
+    `SNAPSHOT_BUSY_TIMEOUT_S`; an ordinary pending write does not lock
+    readers out, so the snapshot simply holds the last committed state.
+    """
+    try:
+        conn = sqlite3.connect(
+            f"file:{source}?mode=ro",
+            uri=True,
+            timeout=SNAPSHOT_BUSY_TIMEOUT_S,
+            isolation_level=None,
+        )
+    except sqlite3.Error as exc:
+        raise DatabaseCopyError(str(exc)) from exc
+    try:
+        try:
+            conn.execute("BEGIN")
+            conn.execute("SELECT count(*) FROM sqlite_master").fetchone()
+        except sqlite3.Error as exc:
+            raise DatabaseCopyError(str(exc)) from exc
+        _backup_into(conn, dest, commit_first=False)
+    finally:
+        conn.close()
+
+
+@dataclass(frozen=True, slots=True)
+class KeptOriginal:
+    """The database a replace displaced, held until the new one has opened.
+
+    ``kept`` is None when there was nothing at ``dest`` to keep.
+    """
+
+    dest: Path
+    kept: Path | None
+
+    def restore(self) -> None:
+        """Put the original back over whatever replaced it."""
+        if self.kept is None:
+            self.dest.unlink(missing_ok=True)
+            return
+        os.replace(self.kept, self.dest)
+
+    def discard(self) -> None:
+        """The replacement is good: let the original go."""
+        if self.kept is not None:
+            _discard(self.kept)
+
+
+def replace_keeping_original(source: Path, dest: Path) -> KeptOriginal:
+    """`replace_closed_database`, holding on to the database it displaces.
+
+    Load validates the chosen file before this is called, yet a file can pass
+    every check and still fail to open; measured, the budget it replaced was
+    then simply gone. So the original is MOVED aside first (a rename, so it
+    is never half-copied). The caller restores it if the new one does not
+    open; once it has, the caller discards it. A failed copy puts it back at once.
+    """
+    kept = _move_aside(dest) if dest.exists() else None
+    try:
+        replace_closed_database(source, dest)
+    except DatabaseCopyError:
+        if kept is not None:
+            os.replace(kept, dest)
+        raise
+    return KeptOriginal(dest=dest, kept=kept)
+
+
+def _move_aside(dest: Path) -> Path:
+    """Rename ``dest`` to a fresh scratch name beside it; return that name."""
+    try:
+        kept = _temp_beside(dest)
+    except OSError as exc:
+        raise DatabaseCopyError(str(exc)) from exc
+    try:
+        os.replace(dest, kept)
+    except OSError as exc:
+        _discard(kept)
+        raise DatabaseCopyError(str(exc)) from exc
+    return kept
 
 
 def replace_closed_database(source: Path, dest: Path) -> None:

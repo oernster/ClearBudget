@@ -155,11 +155,14 @@ def main() -> int:
         is the right length and entirely zero bytes.
 
         A failure to replace leaves the existing database untouched, so the
-        session simply carries on with the budget it already had.
+        session simply carries on with the budget it already had. The budget
+        it replaces is KEPT until the loaded one has opened: a file can pass
+        every check and still fail to open; it must not take the user's
+        budget with it.
         """
         from clear_budget.shared.db_copy import (
             DatabaseCopyError,
-            replace_closed_database,
+            replace_keeping_original,
         )
 
         old_window.hide()
@@ -167,8 +170,9 @@ def main() -> int:
         if _active_database:
             _active_database[0].close()
             _active_database.clear()
+        kept = None
         try:
-            replace_closed_database(Path(source), Path(target))
+            kept = replace_keeping_original(Path(source), Path(target))
         except DatabaseCopyError as exc:
             QMessageBox.critical(
                 None,
@@ -176,19 +180,47 @@ def main() -> int:
                 f"The database could not be loaded, so nothing was "
                 f"changed:\n\n{exc}",
             )
-        _reload_database(user, old_window)
+        _reload_database(user, old_window, kept)
 
-    def _reload_database(user: "User", old_window: "MainWindow") -> None:
-        """Reload the database in-place after an import or settings change."""
-        old_window.hide()
-        if _active_database:
-            _active_database[0].close()
-            _active_database.clear()
+    def _open_session(user: "User") -> "MainWindow":
+        """Open the user's active budget and build its window."""
         database = open_user_database(user.username)
         _active_database.append(database)
         load_currency(database)
         diagnostics.log("reloaded budget %s", database.db_path)
-        window = build_main_window(database, user, user_store)
+        return build_main_window(database, user, user_store)
+
+    def _reload_database(user: "User", old_window: "MainWindow", kept=None) -> None:
+        """Reload the database in-place after an import or settings change.
+
+        ``kept`` is the budget a Load displaced. If the loaded file will not
+        open, that budget is put back and opened instead; once the loaded
+        one has opened, it is let go.
+        """
+        old_window.hide()
+        if _active_database:
+            _active_database[0].close()
+            _active_database.clear()
+        try:
+            window = _open_session(user)
+        except sqlite3.DatabaseError as exc:
+            if kept is None:
+                raise
+            diagnostics.log("loaded budget failed to open: %s", exc)
+            if _active_database:
+                _active_database[0].close()
+                _active_database.clear()
+            kept.restore()
+            QMessageBox.critical(
+                None,
+                "Load Failed",
+                "The chosen database could not be opened, so the budget you "
+                f"had was put back:\n\n{exc}",
+            )
+            window = _open_session(user)
+        else:
+            if kept is not None:
+                kept.discard()
         _show_window(user, window)
         diagnostics.log("main window rebuilt")
 
@@ -202,7 +234,10 @@ def main() -> int:
         rather than reloaded. The zip was validated and double-confirmed by
         the UI flow before the signal fired; the restore validates again in
         staging before touching a live file, so a failure leaves everything
-        as it was and simply returns to sign-in.
+        as it was and simply returns to sign-in. A damaged archive arrives
+        here as a FullBackupError like any other refusal. Budgets of accounts
+        the backup does not hold are moved to quarantine and the user is told
+        where.
         """
         nonlocal user_store
         from clear_budget.auth.full_backup import FullBackupError, restore_full_backup
@@ -213,12 +248,27 @@ def main() -> int:
             _active_database.clear()
         user_store.close()
         try:
-            restore_full_backup(package_path=Path(zip_path), app_dir=Config.app_dir())
+            result = restore_full_backup(
+                package_path=Path(zip_path), app_dir=Config.app_dir()
+            )
         except (FullBackupError, OSError) as exc:
             QMessageBox.warning(None, "Restore Everything", str(exc))
-        user_store = UserStore(Config.users_db_path())
-        _drop_window()
-        _session_loop()
+        else:
+            if result.quarantine_dir is not None:
+                QMessageBox.information(
+                    None,
+                    "Restore Everything",
+                    f"{len(result.quarantined)} file(s) belonging to no account "
+                    "in the backup were moved, not deleted, to:\n\n"
+                    f"{result.quarantine_dir}",
+                )
+        finally:
+            # Whatever happened, the session was torn down above, so the only
+            # place left to go is sign-in. Without this an unexpected error
+            # left the window hidden and no sign-in screen (measured).
+            user_store = UserStore(Config.users_db_path())
+            _drop_window()
+            _session_loop()
 
     def _session_loop() -> None:
         """Run login → main window → (optional) re-login cycle."""

@@ -16,8 +16,10 @@ Everything below this section explains how the code satisfies them.
 | No source file exceeds 400 lines and none sits in the 381 to 399 danger band: a file refactored down from over the cap lands at 350 or below rather than stopping the moment it clears 400 | `tests/structural/test_loc_limits.py` (both halves) |
 | Only `shared/config.py` derives the real data directory. The suite never resolves it; the installer never so much as names it, so no test and no install can disturb live user data | `tests/structural/test_data_dir_isolation.py` (plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py`) |
 | The data-directory migration cannot lose data: resolution prefers the legacy `~/.clearbudget` while it exists (its disappearance is the completion signal), the copied tree verifies byte for byte before the old directory is removed and startup (`ui/startup.begin`, the first thing `main()` calls) migrates before the single-instance lock, never under the override | `tests/shared/test_data_migration.py`, `tests/shared/test_config.py` and `tests/structural/test_data_dir_isolation.py::TestTheMigrationRunsFirstAtStartup` |
-| A database the application has OPEN is never treated as an ordinary file: it is snapshotted out through SQLite's backup API and only ever replaced after its connection has been closed by the composition root. Both write to a scratch file and rename it into place, so a failure leaves the previous database whole | `tests/shared/test_db_copy.py` |
-| A full restore that cannot complete changes nothing: every file in the backup is staged and schema-validated before a single live file is replaced, strays and path-traversal names are refused and files not named in the backup survive untouched | `tests/auth/test_full_backup.py` |
+| A database the application has OPEN is never treated as an ordinary file: it is snapshotted out through SQLite's backup API (Back Up Everything included, inside a read transaction with a bounded wait) and only ever replaced after its connection has been closed by the composition root. Both write to a scratch file and rename it into place, so a failure leaves the previous database whole. A Load keeps the budget it replaces until the loaded one has opened and puts it back if it does not | `tests/shared/test_db_copy.py`, `tests/shared/test_db_copy_keep.py`, `tests/auth/test_full_backup_estate.py` and `tests/structural/test_database_replacement_order.py` |
+| A full restore that cannot complete changes nothing: every file in the backup is staged and checked before a single live file is replaced (strays, path-traversal names and a name repeated in any letter case refused; the accounts database checked for the columns sign-in reads; every database read page by page; every budget list parsed and its slugs checked; a damaged archive refused) and a failure part way puts each live file back with its SQLite sidecars | `tests/auth/test_full_backup.py` and `tests/auth/test_full_backup_hostile.py` |
+| After a restore no budget or budget list of an account the backup does not hold is left where a new account of that name would open it: it is moved to `quarantine/` in the data directory, never deleted. Account creation does the same for any file already under the new name | `tests/auth/test_full_backup_estate.py` and `tests/auth/test_user_store_new_account.py` |
+| A budget list cannot lose or misdirect budgets: one that cannot be used is rebuilt from the budget files on disk, a slug the app could not have written is dropped on read and the list is written whole (scratch file, fsync, rename) | `tests/shared/test_budget_registry_recovery.py` |
 | 100% line AND branch coverage over `clear_budget` and the Qt-free half of the setup program (`main` is named as a source and then omitted as `main.py`, so none of it is measured) | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
 | An exported report adds up: `opening + net == close` for every month whose Paid/Received flags agree with the calendar. In the anchored month an item actioned early (or missed) moves the close off the totals by exactly that amount, because the series never charges twice what the recorded balance already contains | `tests/application/test_projection_series.py::test_opening_plus_net_equals_the_close` and `::test_a_bill_paid_early_moves_the_anchored_close` |
 | The exported report and the on-screen month graph can never disagree about a month they both cover, because both run the same day-by-day projection | `tests/application/test_projection_series.py::test_the_projection_agrees_with_the_month_graph` |
@@ -28,7 +30,7 @@ Everything below this section explains how the code satisfies them.
 | User-entered text cannot inject markup into an exported report | `tests/application/reporting/test_reports.py::test_user_text_cannot_inject_markup_into_a_report` |
 | Highlight text takes the ACCENT, never the ring colour: the ring says where focus is, the accent says what is selected. Stated in roles, so it survived both colours being retired | `tests/ui_logic/test_highlight_text_colour.py` |
 | Every colour value in the tree lives in `clear_budget/shared/palette.py` and nowhere else. `ui.theme_tokens` and `application.reporting` hold what a colour is FOR and reference it by name; the setup program asks `ui.theme_tokens` for the same ROLES rather than choosing its own, so the two surfaces cannot drift apart; a hex literal anywhere else fails the build. Prose is exempt, so a docstring may still quote a hex it is recording a decision about | `tests/structural/test_colour_source.py` |
-| Money is integer pence everywhere. No financial value is ever a float, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object; signed balances are plain `int` pence |
+| Money is integer pence everywhere. Typed text is read into pence by `application/formatting.pence_from_text` as a `Decimal`, never a float; a figure finer than a penny, a negative, a non-number and anything over `MAX_AMOUNT_PENCE` are refused with a message rather than rounded or clamped, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object capped at `MAX_AMOUNT_PENCE`; signed balances are plain `int` pence; `tests/application/test_pence_from_text.py` |
 | Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
 | Two accounts can never share one budget file. Every account's budget is `budget_<safe username>.db` and the safe form maps anything outside `[A-Za-z0-9_-]` to an underscore, so "john doe" and "john_doe" are two accounts resolving to ONE file: shared bills, shared income, shared balance, either able to delete the other's figures (measured). The `UNIQUE` constraint cannot see it, since as typed the names differ, so `UserStore.create_user` refuses it. A case-only difference is left to that constraint, which answers it in the right words | `tests/auth/test_user_store.py::TestUsernamesThatWouldShareOneBudgetFile` |
 | A budget belonging to another account cannot be opened without that account's password; it cannot be SAVED OVER at all: loading one is recoverable and is offered behind their password, while a save replaces their figures and leaves nothing to recover from. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
@@ -491,15 +493,21 @@ Key methods:
   holds, so a real overdraft is stored as a negative figure. Read through the
   non-negative `Amount`, that figure raised while the window was being built
   and an overdrawn account could not be opened at all
-  (`tests/application/test_overdrawn_balance.py`). Setting a balance still
-  takes an `Amount`, so the dialog accepts only a figure of zero or more
+  (`tests/application/test_overdrawn_balance.py`). Setting one is signed
+  too: `set_bank_balance_pence(pence=...)` stores signed pence (clearing the
+  applied log as `set_bank_balance` does), so Set Bank Balance accepts an
+  overdrawn figure such as -£250.00. It used to take an `Amount`, so OK on a
+  negative balance failed
 - `apply_elapsed_bank_transactions(today=None)` → `int` (`_bank_transaction_fold.py`) -
   applies every dated bank bill/income that fell due after the balance baseline
   to the stored balance (local-midnight semantics), marks each item paid or
   received so no projection counts it twice, then advances the baseline to
   today; run at launch and re-run by the MainWindow midnight timer; a due day
   beyond a short month's end is applied on its last day; card bills are left to
-  the card fold
+  the card fold. Every mark, every applied-log row and the new balance commit
+  as ONE transaction and roll back together: measured before, an interruption
+  after a mark left a bill paid and never deducted
+  (`tests/application/test_bank_transaction_fold_atomic.py`)
 - `adjust_bank_balance(delta_pence)` - signed delta to the stored balance,
   stamped as-of today (backs the same-day "update balance now?" prompt when an
   item dated today is added)
@@ -712,7 +720,11 @@ Separate from budget infrastructure. Manages user identity and credentials.
 - `create_user(username, password, is_admin)` → `(User, recovery_code)` - hashes
   password and recovery code with bcrypt. Only the first-ever user is created with
   `is_admin=True`; all subsequent accounts (login screen "Create Account..." or
-  admin "Add User") are non-admin
+  admin "Add User") are non-admin. Before committing, it moves any budget file or
+  budget list already lying under the new name (left by a restore, by hand or by
+  an older version) to `quarantine/` through `shared.budget_files`, so a new
+  account never opens someone else's figures; a file another live account owns
+  stays put. A move that fails rolls the account back
 - `change_password(username, new_password)`
 - `delete_user(user_id)`
 - `get_all_users()` → `list[User]`
@@ -755,17 +767,33 @@ Separate from budget infrastructure. Manages user identity and credentials.
   zip: `users.db`, every `budget_*.db` and the `budgets_*.json` registry
   sidecars. Caches are excluded (regenerated) and so is the Remember-me
   sidecar, whose password lives in the OS keychain and cannot travel in a file
-- `create_full_backup(app_dir, dest_path)` → the member names bundled
+- `create_full_backup(app_dir, dest_path)` → the member names bundled. Each
+  database goes in as a snapshot (`shared.db_copy.snapshot_database_file`),
+  never as a copy of its bytes: the app holds the accounts store and the open
+  budget while the backup runs and a byte copy was measured taking a write in
+  progress into the zip as if committed. A database locked mid-write refuses
+  the backup after a bounded wait rather than hanging. The zip is built beside
+  the destination and renamed into place
 - `validate_full_backup(package_path)` → the member names, refusing a zip
-  with no `users.db`, a stray member or a path-traversal name
-- `restore_full_backup(package_path, app_dir)` stages first: members are
-  extracted to `_restore_staging` inside the data directory, each budget
-  database is schema-checked via `shared.db_validation` and `users.db` is
-  confirmed to hold a `users` table; only then are live files replaced one by
-  one. Strays and path-traversal names refuse the whole restore before any
-  replacement. The caller must have closed every open connection (Windows
-  refuses to replace an open database); `main.py` tears the session down,
-  rebinds a fresh `UserStore` and returns to the sign-in screen
+  with no `users.db`, a stray member, a path-traversal name or a name that
+  appears twice in any letter case (two entries for one file let the second
+  overwrite the first's saved original)
+- `restore_full_backup(package_path, app_dir)` → `RestoreResult(names,
+  quarantined, quarantine_dir)`. It stages first: members are extracted to
+  `_restore_staging` inside the data directory (a damaged archive is a
+  `FullBackupError`, never a `BadZipFile` or `zlib.error`); `users.db` must
+  pass `validate_accounts_db`; each budget database must pass `validate_db`;
+  each budget list must pass `budget_registry.index_text_error`. Only then
+  are live files replaced one by one, each moved aside first WITH its
+  `-journal`, `-wal` and `-shm` files to a path unique to its position; all
+  are put back in reverse order if anything fails. A crash journal left beside a
+  live budget used to be played back over the restored file. Last, every
+  budget and budget list that belongs to no restored account is moved to a
+  fresh folder under `quarantine/`, never deleted. The caller must have closed
+  every open connection (Windows refuses to replace an open database);
+  `main.py` tears the session down, says what was quarantined and where,
+  rebinds a fresh `UserStore` and returns to the sign-in screen in a
+  `finally`, so even an unexpected error ends there
 - Pure stdlib (`zipfile`, `sqlite3`, `shutil`) and inside the coverage gate;
   the UI flow (`ui/widgets/_full_backup_flow.py`: dialogs, unencrypted
   warning, double confirmation) sits outside it like the rest of the UI layer
@@ -857,14 +885,26 @@ holding each budget's slug and display name plus which one is active.
   same file it always did, with nothing moved and no migration step to get
   wrong. So the FIRST budget keeps the reserved empty slug, whose filename is
   the very `budget_<user>.db` that already exists; an absent or unreadable
-  sidecar SYNTHESISES exactly that one record rather than failing. The sidecar
-  is written the first time a second budget is created and not before, so the
-  migration is that there is no migration
-- Every failure mode of the sidecar collapses to that same single record: no
-  file, bad JSON, the wrong shape, a budget list holding nothing usable, an
-  active slug naming a budget that is gone. The databases are the data and the
-  sidecar is only the map to them, so a lost map means "the one budget I can
-  prove exists", never an error the user cannot act on
+  sidecar SYNTHESISES the records rather than failing. The sidecar is written
+  the first time a second budget is created and not before, so the migration
+  is that there is no migration
+- Every failure mode of the sidecar collapses to the same answer: no file, bad
+  JSON, the wrong shape, a budget list holding nothing usable. The records are
+  rebuilt from disk: the first budget plus every `budget_<user>__<slug>.db`
+  that is this user's (bounded to the user's prefix and to slugs the app could
+  write; a file whose owner stamp names someone else is left out), each named
+  after its slug since the real name was in the sidecar. Measured before: a
+  list that did not parse left only "Main budget", with every named budget on
+  disk and unreachable. An active slug naming a budget that is gone falls back
+  to the first. The databases are the data and the sidecar is only the map to
+  them, so a lost map means "the budgets I can prove exist", never an error
+  the user cannot act on
+- A slug READ from the sidecar builds a file path, so one the app could not
+  have written (`../x`, a separator, a double underscore, upper case) is
+  dropped on read; `index_text_error` is the stricter check a restore applies
+  to a list it is about to put in place
+- `store_index` writes the whole list to a scratch file beside it, fsyncs and
+  renames it over the old one, so a crash part way leaves the previous list
 - A slug is a run-collapsed alphanumeric reduction of the name, so it can never
   itself contain the `__` that separates it from the username in the filename;
   colliding slugs are numbered apart. Renaming changes the name only, never the
@@ -882,9 +922,26 @@ holding each budget's slug and display name plus which one is active.
   unlink an open file. It also means the last remaining budget can never be
   deleted, since it is always the active one
 - Deleting an ACCOUNT deletes every budget it owns plus the sidecar
-  (`delete_all_budgets`). Deleting only the legacy path, which was all there
-  was to delete before, would strand the named ones in the data directory with
-  no account able to reach them
+  (`delete_all_budgets`): every budget the list names AND every named budget
+  file of this user's on disk, found the same bounded way, so an unreadable
+  or incomplete list cannot leave one behind (measured: one did). Deleting
+  only the legacy path, which was all there was to delete before, would strand
+  the named ones in the data directory with no account able to reach them
+
+**`budget_files`** (`clear_budget/shared/budget_files.py`): the one place that
+reads an account back out of a data-directory file name.
+- `belongs_to(path, username)`: the name must be the user's first budget, one
+  of their named budgets (a slug of the shape `safe_slug` writes) or their
+  list; for a database, an owner stamp naming someone else overrides the name.
+  The name alone cannot always decide, because a safe username may contain the
+  `__` that separates a slug: `budget_alice__bob.db` is alice's budget "bob" or
+  the first budget of `alice  bob`
+- `is_safe_slug`, `named_slug`, `estate_files` (every budget and list in the
+  directory), `with_sidecars` (a database plus its `-journal`, `-wal`, `-shm`)
+- `quarantine(paths, app_dir, reason)` moves files and their sidecars into a
+  fresh `quarantine/<UTC time>-<reason>-<random>/` folder and returns it with
+  the names moved; nothing is ever deleted. Used by a restore and by account
+  creation. The quarantine folder is not part of a full backup
 
 ### Shared Layer
 
@@ -1093,8 +1150,15 @@ holding each budget's slug and display name plus which one is active.
 
 **`db_validation`** (`clear_budget/shared/db_validation.py`):
 - `REQUIRED_SCHEMA` + `validate_db(path)` - confirms a loaded file is a genuine
-  ClearBudget database (all required tables and columns present) before any
-  Load Database write touches the active database.
+  ClearBudget database (all required tables and columns present, then
+  `PRAGMA quick_check` over every page) before any Load Database write touches
+  the active database; a restore applies it to every budget in the backup. The
+  schema checks read `sqlite_master` only, so a budget whose data pages were
+  damaged behind an intact schema used to pass and then fail to open.
+- `validate_accounts_db(path)` - the same two questions of the accounts store:
+  a `users` table with every column in `ACCOUNTS_REQUIRED_COLUMNS` (what
+  sign-in reads), then every page. A `users` table of any other shape used to
+  pass a restore and fail every sign-in afterwards.
 - `is_accounts_database(path)` - a separate question with a separate answer:
   whether the chosen file is the ACCOUNTS store, which holds who may sign in,
   is not a budget and sits in the same directory the Load dialog opens on. It
@@ -1598,6 +1662,33 @@ renderings of the same figures to hold in step. Every month any page shows
   now that archiving is automatic (no manual "Archive Month" button)
 - `_month_view_edit_mixin.py` (`MonthViewEditMixin`) - inline cell edits and
   the active/skip/paid/received checkbox handlers
+- `_month_view_cell_edits.py` - what a typed bill or income cell turns the
+  entity into, Qt-free so it is tested without a QApplication. Both tables
+  read amounts through `pence_from_text` (so the income table accepts
+  `£1,500` as the bill table always did) and due days through
+  `domain/value_objects/due_day.due_day_from_text`; a refusal shows its
+  message and the cell is restored
+- `ui/utils/amount_fields.py` - every other typed money field (the bank
+  balance, bank-account settings, commitments, credit cards and the Reserves
+  and Recommendations buffers) is read the same way: `field_pence` passes the
+  text through `pence_from_text` (`signed=True` for the bank balance only) and
+  a refusal, prefixed with the field's label, is shown by
+  `AmountRefusalMixin._refuse_amount`, which focuses that field. The dialog
+  stays open and nothing is saved. The overdraft APR in Bank Account settings
+  is read as exact basis points, 0 to 1000% with at most two decimal places
+- `ui/widgets/_entry_dialog_rules.py` (`EntryDialogRulesMixin`) - the rules
+  the Bill and Income dialogs share: the amount read as exact pence (a
+  refusal keeps the dialog open with its message) and the start month of a
+  new entry, the month being viewed. The income dialog used to leave a new
+  income unbounded, so it appeared in every earlier month
+
+**`due_day`** (`clear_budget/domain/value_objects/due_day.py`): the one home
+for the due-day rule. `FIRST_DUE_DAY` is 1 and `LAST_DUE_DAY` is read from the
+calendar (31). `check_due_day` refuses anything else and the `Bill` and
+`IncomeSource` entities call it, so no path can store -3 or 45 again;
+`due_day_from_storage` repairs a row written before the rule the way the
+overnight update already treated it (above 31 falls on the month's last day,
+0 or below means no fixed day) without rewriting the row
 - `_month_view_delete_mixin.py` (`MonthViewDeleteMixin`) - the delete
   confirmation flows. Bills and income share one stop-from-month vs
   delete-entirely choice, so the two sides of the ledger behave alike. A
@@ -2141,7 +2232,10 @@ renderings of the same figures to hold in step. Every month any page shows
   copy and exited at once. The session loop now catches it, records it through
   the same excepthook, ends the handover, tells the user where the log is and
   ends the event loop with a failure code. `_reload_database` builds a window
-  too and has no such handler yet
+  too and has a narrower handler: after a Load, a loaded database that raises
+  `sqlite3.DatabaseError` while opening is replaced by the budget it displaced
+  (kept aside by `db_copy.replace_keeping_original`), the user is told and that
+  budget is opened instead. Any other failure there is still unhandled
 
 **Building a window** (`ui/window_builder.py`):
 - `build_main_window(database, current_user, user_store, progress=None)` is the
@@ -2265,7 +2359,7 @@ renderings of the same figures to hold in step. Every month any page shows
     included), How It Works, View Licence
 - `main.py` - composition root; manages full session lifecycle:
   - `_session_loop()` → login → open DB → load currency → build window → show
-  - `_reload_database()` → triggered by `database_replaced`; closes old DB, reopens, loads currency, rebuilds window
+  - `_reload_database()` → triggered by `database_replaced` and by `_load_database()`; closes old DB, reopens, loads currency, rebuilds window. After a Load it puts the displaced budget back if the loaded one will not open, else lets it go
   - `ui/window_builder.build_main_window()` calls
     `update_card_balances_for_elapsed_dates()` so any fully-elapsed months are
     folded into card balances at session start, then
@@ -2611,6 +2705,7 @@ startup migration completes.
 | `budgets_<username>.json` | The registry sidecar: that user's budgets and which is active. A map to the databases, never the data itself |
 | `ui_settings.json` | Theme, remembered save-file location and any skipped update version. No budget data |
 | `remembered_login.json` | Which accounts are remembered, which keep a password and which signed in last (the password is in the OS credential store, never on disk) |
+| `quarantine/` | Budgets and budget lists that belonged to no account after a restore (or that lay under a name a new account took). Moved here, never deleted; not part of a full backup |
 | `arrows/`, `switches/` | Generated per-theme images (spin-box arrows, the card toggle slider); regenerated on demand |
 | `logs/` | Application log directory |
 

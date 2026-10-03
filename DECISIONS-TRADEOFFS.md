@@ -48,12 +48,15 @@ application-data folder. There is no service to sign up to and no cloud copy.
 
 Every amount is an integer number of pence. An amount that cannot be negative
 has a type of its own; a balance that can go below zero is a plain signed
-figure.
+figure. Typed text is read into pence as a decimal, never through a float;
+a figure finer than a penny is refused rather than rounded.
 
-- **Rather than:** floating-point money.
+- **Rather than:** floating-point money; rounding a typed fraction of a penny
+  (measured: 0.125 became 12p while 0.135 became 14p).
 - **Gains:** nothing rounds away between the figure typed and the figure a
   projection uses.
-- **Costs:** two representations of money to keep apart.
+- **Costs:** two representations of money to keep apart; an entry with a
+  third decimal place is refused and has to be retyped.
 
 ## Privacy, accounts and the network
 
@@ -503,16 +506,35 @@ to leave.
 ### Back up everything in one file, restore all or nothing
 
 An administrator can write every account and every budget into one zip and
-restore it. A restore is staged and schema-checked before any live file is
-replaced; each live file is moved aside first, so a failure part way through
-is undone.
+restore it. Each database goes in as a snapshot taken through SQLite. A
+restore is staged and checked before any live file is replaced: duplicate
+names, the accounts database's columns, every page of every database, every
+budget list. Each live file is moved aside first with its SQLite sidecars, so
+a failure part way through is undone.
 
 - **Rather than:** per-budget saves alone, which left the accounts database
-  with no backup at all.
+  with no backup at all; a byte copy of each file, which was measured taking
+  an unsaved change into the backup.
 - **Gains:** a lost or rebuilt machine can be put back in one step; a broken
   backup changes nothing.
 - **Costs:** the zip is as unencrypted as the files in it and holds every
-  account in one portable file.
+  account in one portable file. A budget caught part way through a large save
+  stops the backup after a short wait, to be tried again.
+
+### Files that belong to no account are quarantined, never deleted
+
+After a restore, a budget or budget list of an account the backup does not
+hold is moved to a dated folder under `quarantine/` in the data directory and
+the user is told where. Creating an account does the same for any file left
+under the new name.
+
+- **Rather than:** leaving the file where it was, which handed one person's
+  budget to the next account given that name (measured); deleting it, which
+  destroys figures on a guess about whose they are.
+- **Gains:** no account inherits another's budget; nothing is lost.
+- **Costs:** the folder grows until someone empties it by hand; a file name
+  alone cannot always say whose a budget is, so an unstamped file whose name
+  fits a live account as well as the new one is left with the live account.
 
 ### Data in each platform's own folder, moved with proof
 

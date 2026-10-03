@@ -17,6 +17,12 @@ names are different.
 So the collision is refused where the account is created, which is the only
 place it can enter. Renaming an account is not offered, so there is no second
 door.
+
+The same door guards against the files of an account that no longer exists.
+A budget left under a name (by a restore, by hand, by an older version) used
+to be opened by the next account given that name: one person's figures handed
+to another. Creating an account first moves any such file to the quarantine
+folder (see shared.budget_files); files another live account owns stay put.
 """
 
 import secrets
@@ -26,7 +32,11 @@ from pathlib import Path
 import bcrypt
 
 from clear_budget.auth.models import User
+from clear_budget.shared import budget_files, diagnostics
 from clear_budget.shared.db_ownership import safe_username
+
+# Names the quarantine folder an account creation creates.
+_QUARANTINE_REASON = "new-account"
 
 # bcrypt work factor - 12 is a solid default (≈0.3 s on modern hardware).
 _BCRYPT_ROUNDS = 12
@@ -44,6 +54,8 @@ class UserStore:
 
     def __init__(self, db_path: Path) -> None:
         db_path.parent.mkdir(parents=True, exist_ok=True)
+        # The data directory: the accounts store sits beside every budget.
+        self._app_dir = db_path.parent
         self._conn = sqlite3.connect(str(db_path))
         self._conn.row_factory = sqlite3.Row
         self._init_schema()
@@ -196,9 +208,38 @@ class UserStore:
             " VALUES (?, ?, ?, ?)",
             (username, password_hash, recovery_hash, int(is_admin)),
         )
+        # After the INSERT, so a name the store refuses moves nothing; before
+        # the commit, so a move that fails leaves no account behind.
+        try:
+            self._quarantine_leftovers(username)
+        except OSError:
+            self._conn.rollback()
+            raise
         self._conn.commit()
         user = User(id=cursor.lastrowid, username=username, is_admin=is_admin)
         return user, recovery_code
+
+    def _quarantine_leftovers(self, username: str) -> None:
+        """Move aside any budget file lying under the new account's name.
+
+        A file another live account owns is left alone: a name cannot always
+        say whose a file is (see shared.budget_files), so a file that fits a
+        live account as well is theirs.
+        """
+        others = [u.username for u in self.get_all_users() if u.username != username]
+        leftovers = [
+            path
+            for path in budget_files.estate_files(self._app_dir)
+            if budget_files.belongs_to(path, username)
+            and not any(budget_files.belongs_to(path, other) for other in others)
+        ]
+        folder, moved = budget_files.quarantine(
+            leftovers, app_dir=self._app_dir, reason=_QUARANTINE_REASON
+        )
+        if folder is not None:
+            diagnostics.log(
+                "new account %s: moved leftover %s to %s", username, moved, folder
+            )
 
     def change_password(self, username: str, new_password: str) -> None:
         """Replace password hash for username."""

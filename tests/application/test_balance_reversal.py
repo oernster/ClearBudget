@@ -148,6 +148,16 @@ class TestDeleteReversal:
         budget_service.delete_bill(bill_id=bill.id)
         assert budget_service.get_bank_balance_pence() == 5000
 
+    def test_an_overdrawn_balance_can_be_typed(self, budget_service):
+        """The Set Balance dialog hands back signed pence; an Amount cannot."""
+        conn = budget_service.bill_repo.conn
+        _seed_balance(conn, pence=10000, iso="2026-07-24")
+        budget_service.add_bill(bill=_bill("Water", 3000, 25))
+        budget_service.apply_elapsed_bank_transactions(today=_TODAY)
+        budget_service.set_bank_balance_pence(pence=-125050)
+        assert budget_service.get_bank_balance_pence() == -125050
+        assert _log_count(conn) == 0
+
 
 class TestApplyNow:
     def test_apply_bill_now_deducts_marks_and_logs(self, budget_service):

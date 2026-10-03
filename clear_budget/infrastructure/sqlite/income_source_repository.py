@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.due_day import due_day_from_storage
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.infrastructure.sqlite._income_month_extras import (
     IncomeMonthExtrasMixin,
@@ -77,7 +78,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
             name=row["name"],
             amount=Amount(pence=row["amount_pence"]),
             is_reliable=bool(row["is_reliable"]),
-            day_of_month=row["day_of_month"],
+            day_of_month=due_day_from_storage(row["day_of_month"]),
             active=bool(row["active"]),
             start_ym=start_ym,
             end_ym=end_ym,
@@ -252,7 +253,7 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
                 name=row["name"],
                 amount=Amount(pence=row["amount_pence"]),
                 is_reliable=bool(row["is_reliable"]),
-                day_of_month=row["day_of_month"],
+                day_of_month=due_day_from_storage(row["day_of_month"]),
                 active=bool(row["active"]),
                 start_ym=_bounds(row)[0],
                 end_ym=_bounds(row)[1],
@@ -284,15 +285,22 @@ class SQLiteIncomeSourceRepository(IncomeMonthExtrasMixin):
         )
         self.conn.commit()
 
-    def mark_received_for_month(self, *, income_id: int, year_month: YearMonth) -> None:
-        """Mark an income source as received for one specific month."""
+    def mark_received_for_month(
+        self, *, income_id: int, year_month: YearMonth, commit: bool = True
+    ) -> None:
+        """Mark an income source as received for one specific month.
+
+        `commit=False` leaves the write in the caller's open transaction (the
+        overnight fold commits it with the balance).
+        """
         cursor = self.conn.cursor()
         cursor.execute(
             "INSERT OR IGNORE INTO income_month_received"
             " (income_id, year, month) VALUES (?, ?, ?)",
             (income_id, year_month.year, year_month.month),
         )
-        self.conn.commit()
+        if commit:
+            self.conn.commit()
 
     def unmark_received_for_month(
         self, *, income_id: int, year_month: YearMonth

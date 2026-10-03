@@ -21,9 +21,15 @@ grouped number with no symbol and no decimals, which is a different job.
 
 from __future__ import annotations
 
-from clear_budget.shared.currency import get_symbol
+from decimal import Decimal, InvalidOperation
 
-_PENCE_PER_UNIT = 100
+from clear_budget.domain.value_objects.amount import MAX_AMOUNT_PENCE
+from clear_budget.shared.currency import get_symbol
+from clear_budget.shared.errors import InvalidAmountError
+
+_PENNY_PLACES = 2
+_PENCE_PER_UNIT = 10**_PENNY_PLACES
+_MAX_UNITS = Decimal(MAX_AMOUNT_PENCE).scaleb(-_PENNY_PLACES)
 _PERCENT_DECIMALS = 1
 
 # Categories whose stored plural reads wrong as a label for a single item.
@@ -69,36 +75,73 @@ def fmt(amount: int | float) -> str:
     return money_from_pounds(amount)
 
 
-def pounds_from_text(text: str) -> float | None:
-    """Read a typed amount back into whole currency units; None if unreadable.
+def pence_from_text(text: str, *, signed: bool = False) -> int:
+    """Read a typed amount into exact integer pence, never through a float.
 
     The inverse of `_render`; it has to live beside it: what the application
-    prints is what a person types back. `_render` groups thousands, so a
-    figure this module itself rendered as "1,400.00" was refused by a plain
-    `float()` and the entry was lost. The symbol, the grouping separators,
-    surrounding space and a leading sign are all things people type; none of
-    them make an entry invalid.
+    prints is what a person types back. `_render` groups thousands and leads
+    with the sign, so the sign, the symbol, the grouping separators and
+    surrounding space are all accepted.
 
-    Returns None rather than raising, because what an unreadable entry means
-    belongs to the caller: one field warns, another leaves the cell alone.
+    Raises InvalidAmountError, carrying a message fit to show the user, for
+    an empty entry, anything that is not a finite number, an amount finer
+    than a penny and an amount whose size is above MAX_AMOUNT_PENCE. A
+    negative amount is refused too unless `signed` (a bank balance, which
+    is negative when overdrawn). A fraction of a penny is refused rather
+    than rounded: every rounding rule stores a figure the user did not type.
     """
-    cleaned = text.strip()
-    negative = cleaned.startswith("-")
-    if negative:
-        cleaned = cleaned[1:].lstrip()
+    typed = text.strip()
+    if not typed:
+        raise InvalidAmountError("Enter an amount.")
+    not_an_amount = InvalidAmountError(f"'{typed}' is not an amount.")
+    negative = typed.startswith("-")
+    cleaned = typed[1:].lstrip() if negative else typed
     symbol = get_symbol()
     if cleaned.startswith(symbol):
         # Sliced by length, never `lstrip`, which takes a character SET: a
         # multi-character symbol such as "A$" would eat any leading A or $.
         cleaned = cleaned[len(symbol) :]
     cleaned = cleaned.replace(",", "").replace(" ", "")
-    if not cleaned:
-        return None
     try:
-        value = float(cleaned)
-    except ValueError:
-        return None
-    return -value if negative else value
+        value = Decimal(cleaned)
+    except InvalidOperation:
+        raise not_an_amount from None
+    if not value.is_finite():
+        raise not_an_amount
+    if value.is_zero():
+        return 0
+    if negative and value.is_signed():
+        raise not_an_amount
+    is_negative = negative or value.is_signed()
+    if is_negative and not signed:
+        raise InvalidAmountError("An amount cannot be negative.")
+    # `copy_abs`, compared and never computed with: both are exact, while
+    # arithmetic goes through the decimal context and can overflow.
+    size = value.copy_abs()
+    if size > _MAX_UNITS:
+        raise InvalidAmountError(
+            f"An amount cannot be more than {money_from_pence(MAX_AMOUNT_PENCE)}."
+        )
+    pence = _exact_pence(size)
+    return -pence if is_negative else pence
+
+
+def _exact_pence(value: Decimal) -> int:
+    """`value` (finite, positive, within the cap) as integer pence.
+
+    Worked on the decimal digits directly so no context precision can round
+    anything: the digits shifted past the penny must all be zero.
+    """
+    _sign, digits, exponent = value.as_tuple()
+    shift = exponent + _PENNY_PLACES
+    if shift >= 0:
+        return int("".join(map(str, digits))) * 10**shift
+    kept, dropped = digits[:shift], digits[shift:]
+    if any(dropped):
+        raise InvalidAmountError(
+            "Amounts go to the penny: use at most two decimal places."
+        )
+    return int("".join(map(str, kept)) or "0")
 
 
 def percentage(value: float) -> str:

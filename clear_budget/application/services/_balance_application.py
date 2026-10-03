@@ -16,15 +16,26 @@ from clear_budget.domain.value_objects.year_month import YearMonth
 
 
 def record_applied(
-    conn, *, item_type: str, item_id: int, year_month: YearMonth, amount_pence: int
+    conn,
+    *,
+    item_type: str,
+    item_id: int,
+    year_month: YearMonth,
+    amount_pence: int,
+    commit: bool = True,
 ) -> None:
-    """Log a signed amount applied to the balance for one item in one month."""
+    """Log a signed amount applied to the balance for one item in one month.
+
+    `commit=False` leaves the row in the caller's open transaction (the
+    overnight fold commits it with the mark and the balance).
+    """
     conn.execute(
         "INSERT INTO balance_applied (item_type, item_id, year, month, amount_pence)"
         " VALUES (?, ?, ?, ?, ?)",
         (item_type, item_id, year_month.year, year_month.month, amount_pence),
     )
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def clear_applied_log(conn) -> None:

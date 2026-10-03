@@ -10,6 +10,7 @@ import sqlite3
 
 from clear_budget.domain.entities.income_source import IncomeSource
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.due_day import due_day_from_storage
 from clear_budget.domain.value_objects.year_month import YearMonth
 
 
@@ -18,13 +19,18 @@ class IncomeMonthExtrasMixin:
 
     conn: sqlite3.Connection
 
-    def mark_extra_received(self, *, extra_id: int) -> None:
-        """Mark a one-off income entry as received."""
+    def mark_extra_received(self, *, extra_id: int, commit: bool = True) -> None:
+        """Mark a one-off income entry as received.
+
+        `commit=False` leaves the write in the caller's open transaction (the
+        overnight fold commits it with the balance).
+        """
         cursor = self.conn.cursor()
         cursor.execute(
             "UPDATE income_month_extras SET received = 1 WHERE id = ?", (extra_id,)
         )
-        self.conn.commit()
+        if commit:
+            self.conn.commit()
 
     def unmark_extra_received(self, *, extra_id: int) -> None:
         """Remove the received flag from a one-off income entry."""
@@ -83,7 +89,7 @@ class IncomeMonthExtrasMixin:
                 name=row["name"],
                 amount=Amount(pence=row["amount_pence"]),
                 is_reliable=bool(row["is_reliable"]),
-                day_of_month=row["day_of_month"],
+                day_of_month=due_day_from_storage(row["day_of_month"]),
                 active=True,
                 is_month_only=True,
                 received_for_month=bool(row["received"]),

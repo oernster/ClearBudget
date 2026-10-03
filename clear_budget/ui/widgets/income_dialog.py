@@ -34,13 +34,17 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.domain.entities.income_source import IncomeSource
-from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.shared.errors import InvalidAmountError
 from clear_budget.ui import label_roles
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
+from clear_budget.ui.widgets._entry_dialog_rules import (
+    EntryDialogRulesMixin,
+    entry_start_month,
+)
 
 
-class IncomeDialog(QDialog):
+class IncomeDialog(EntryDialogRulesMixin, QDialog):
     """Dialog for creating/editing an income source."""
 
     def __init__(
@@ -240,6 +244,12 @@ class IncomeDialog(QDialog):
         chosen = self.end_month_edit.date()
         return YearMonth(year=chosen.year(), month=chosen.month())
 
+    def accept(self) -> None:
+        """Close only with an amount that can be saved exactly as typed."""
+        if self._refuse_unreadable_amount():
+            return
+        super().accept()
+
     def get_income(self) -> IncomeSource | None:
         """Get income from form (returns None if invalid).
 
@@ -252,8 +262,7 @@ class IncomeDialog(QDialog):
             if not name:
                 return None
 
-            amount_str = self.amount_edit.text().strip()
-            amount = Amount.from_pounds(float(amount_str))
+            amount = self._typed_amount()
 
             due_day = self.due_day_spinbox.value()
             due_day_value = due_day if due_day > 0 else None
@@ -265,10 +274,10 @@ class IncomeDialog(QDialog):
                 is_reliable=True,
                 day_of_month=due_day_value,
                 active=True,
-                start_ym=self.income.start_ym if self.income else None,
+                start_ym=entry_start_month(self.income, self.current_month),
                 end_ym=self._chosen_end_month(),
                 is_month_only=self.one_off_check.isChecked(),
                 day_fixed=self.day_fixed_check.isChecked(),
             )
-        except (ValueError, AttributeError):
+        except (InvalidAmountError, ValueError, AttributeError):
             return None

@@ -36,6 +36,12 @@ from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui.utils.amount_fields import (
+    BUFFER_LABEL,
+    AmountFieldRefused,
+    AmountRefusalMixin,
+    field_pence,
+)
 from clear_budget.ui.utils.format_helpers import (
     MONTH_NAMES,
     apply_nav_label_color,
@@ -61,7 +67,7 @@ def _month_name(year: int, month: int) -> str:
     return f"{MONTH_NAMES[month]} {year}"
 
 
-class RecommendationsView(QWidget):
+class RecommendationsView(AmountRefusalMixin, QWidget):
     """Suggestions for surviving the months ahead, computed from today."""
 
     def __init__(self, budget_service: BudgetService, current_month: YearMonth) -> None:
@@ -148,13 +154,12 @@ class RecommendationsView(QWidget):
         enabled = self.buffer_check.isChecked()
         self.buffer_edit.setEnabled(enabled)
         try:
-            pounds = float(self.buffer_edit.text().strip() or "0")
-        except ValueError:
-            return
-        if pounds < 0:
+            pence = field_pence(self.buffer_edit, label=BUFFER_LABEL, when_empty=0)
+        except AmountFieldRefused as refusal:
+            self._refuse_amount(refusal.field, refusal)
             return
         self.budget_service.set_recommendation_buffer(
-            enabled=enabled, amount=Amount.from_pounds(pounds)
+            enabled=enabled, amount=Amount(pence=pence)
         )
         self.refresh()
 

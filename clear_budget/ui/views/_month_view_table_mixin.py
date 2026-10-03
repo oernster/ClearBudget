@@ -13,6 +13,10 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QTableWidgetItem
 
 from clear_budget.ui import theme
+from clear_budget.ui.views._month_view_cell_edits import (
+    BILL_NO_DAY_MARK,
+    INCOME_NO_DAY_MARK,
+)
 from clear_budget.ui.utils import reserves_text
 from clear_budget.ui.utils.format_helpers import format_category
 
@@ -100,7 +104,9 @@ class MonthViewTableMixin:
         self.bills_table.setItem(row, 2, _ei(format_category(bill.category)))
         pm_label = self._get_payment_method_label(bill.payment_method_id, card_map)
         self.bills_table.setItem(row, 3, QTableWidgetItem(pm_label))
-        self.bills_table.setItem(row, 4, _ei(str(bill.day_of_month or "N/A")))
+        self.bills_table.setItem(
+            row, 4, _ei(str(bill.day_of_month or BILL_NO_DAY_MARK))
+        )
         self.bills_table.setItem(row, 5, _checkbox_item(bill.active))
         self.bills_table.setItem(row, 6, _checkbox_item(bill.skipped_for_month))
         self.bills_table.setItem(row, 7, _checkbox_item(bill.paid_for_month))
@@ -172,7 +178,9 @@ class MonthViewTableMixin:
         self.income_table.setItem(
             row,
             3,
-            _ei(str(income.day_of_month) if income.day_of_month else "~"),
+            _ei(
+                str(income.day_of_month) if income.day_of_month else INCOME_NO_DAY_MARK
+            ),
         )
         self.income_table.setItem(row, 4, _checkbox_item(income.active))
         self.income_table.setItem(row, 5, _checkbox_item(income.skipped_for_month))

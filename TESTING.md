@@ -99,7 +99,7 @@ gated", not as "every line is tested".
 | `domain/` | entities, value objects and the domain services, pure | values built in the test |
 | `application/` | the services and the reports | hand-written fakes of the repositories (`tests/application/fakes.py`) |
 | `infrastructure/` | the SQLite repositories, the migrations, the release source | a real SQLite file in a temporary folder (the `db` fixture) |
-| `auth/` | the user store, remembered sign-in, full backup | real SQLite files in a temporary folder |
+| `auth/` | the user store, remembered sign-in, full backup (hostile and damaged backups included, built by `tests/auth/backup_helpers.py`) | real SQLite files in a temporary folder |
 | `shared/` | configuration, the budget registry, database copy and validation, single instance | real files in a temporary folder |
 | `ui_logic/` | the pure logic inside the UI layer | plain values; no `QApplication` |
 | `installer/` | the Qt-free half of the setup program | the real registry under a scratch key and the real Shell Link interface, inside a redirected profile |
@@ -111,6 +111,10 @@ gated", not as "every line is tested".
   `tests/application/fakes.py` holds the repository fakes and
   `tests/installer/fakes.py` the setup program's. Environment and attributes are
   redirected with pytest's own `monkeypatch`.
+- **Patch in a scope, never undo.** To lift a patch part way through a test,
+  use `with monkeypatch.context() as patch:`. `monkeypatch.undo()` undoes
+  EVERY patch on that fixture, the autouse data-directory redirect included,
+  so any path resolved afterwards is the real data directory.
 - **A database.** Ask for the `db` fixture in `tests/infrastructure/conftest.py`
   for a connected database with the production schema, closed again in
   teardown.
@@ -180,7 +184,8 @@ for code nobody has written yet. The suite in `tests/structural/`:
 | `test_no_network.py` | the update check is the only connection anything shipped opens itself |
 | `test_data_dir_isolation.py` | the suite never writes to the real data directory |
 | `test_save_location_defaults.py` | Save and Load default to the data directory, not Downloads |
-| `test_database_replacement_order.py` | a live database is closed before it is replaced, only in `main.py` |
+| `test_database_replacement_order.py` | a live database is closed before it is replaced, only in `main.py`; so is a failed Load before the kept budget goes back |
+| `test_restore_returns_to_sign_in.py` | after Restore Everything the sign-in screen appears whatever happened |
 | `test_refusal_order.py` | nothing threatens a budget until the chosen file is known to be writable |
 | `test_session_exit_invariants.py` | switching user and signing out stay two different things |
 | `test_handover_invariants.py` | the sign-in screen is never left stranded on screen |

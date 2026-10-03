@@ -6,6 +6,8 @@ clutter the tray paid for. The bank button now opens everything the
 account can configure.
 """
 
+from decimal import Decimal, InvalidOperation, localcontext
+
 from PySide6.QtWidgets import (
     QSpinBox,
     QCheckBox,
@@ -19,17 +21,59 @@ from PySide6.QtWidgets import (
 
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.shared.currency import CURRENCIES, get_symbol
+from clear_budget.shared.errors import InvalidRateError
 from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui.utils.amount_fields import (
+    AmountFieldRefused,
+    AmountRefusalMixin,
+    field_pence,
+)
 from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 
-_BASIS_POINTS_PER_PERCENT = 100
+_RATE_PLACES = 2
+_BASIS_POINTS_PER_PERCENT = 10**_RATE_PLACES
+# Far above any rate the overdraft projection is meant for. It exists so a
+# typing slip cannot store a figure the settings table could not hold.
+_MAX_APR_PERCENT = 1000
+_LIMIT_LABEL = "Overdraft limit"
+_FLOOR_LABEL = "Buffer"
+_APR_REFUSAL = (
+    f"Overdraft APR: enter a rate from 0 to {_MAX_APR_PERCENT}%,"
+    f" to at most {_RATE_PLACES} decimal places."
+)
+
+
+def apr_basis_points_from_text(text: str) -> int:
+    """A typed APR percentage as exact basis points; empty means none (0).
+
+    Read as a decimal, never a float: `nan` and `inf` used to raise out of
+    the Save handler. Raises InvalidRateError for anything that is not a
+    finite rate from 0 to _MAX_APR_PERCENT in whole basis points.
+    """
+    cleaned = text.strip().removesuffix("%").strip()
+    if not cleaned:
+        return 0
+    try:
+        value = Decimal(cleaned)
+    except InvalidOperation:
+        raise InvalidRateError(_APR_REFUSAL) from None
+    if not value.is_finite() or value.is_signed() or value > _MAX_APR_PERCENT:
+        raise InvalidRateError(_APR_REFUSAL)
+    with localcontext() as exact:
+        # Enough digits that scaling can never round a trailing digit away.
+        exact.prec = len(value.as_tuple().digits) + _RATE_PLACES + 1
+        scaled = value.scaleb(_RATE_PLACES)
+    if scaled != scaled.to_integral_value():
+        raise InvalidRateError(_APR_REFUSAL)
+    return int(scaled)
+
 
 # Bounds on how far ahead a spendable figure must hold.
 _MIN_WINDOW_MONTHS = 1
 _MAX_WINDOW_MONTHS = 12
 
 
-class BankAccountSettingsDialog(QDialog):
+class BankAccountSettingsDialog(AmountRefusalMixin, QDialog):
     """Dialog for configuring the bank account's overdraft facility."""
 
     def __init__(
@@ -174,27 +218,30 @@ class BankAccountSettingsDialog(QDialog):
             self.accept()
             return
         try:
-            limit_pounds = float(self._limit_edit.text().strip() or "0")
-            apr_percent = float(self._apr_edit.text().strip() or "0")
-        except ValueError:
+            limit_pence = field_pence(
+                self._limit_edit, label=_LIMIT_LABEL, when_empty=0
+            )
+            apr_basis_points = apr_basis_points_from_text(self._apr_edit.text())
+        except AmountFieldRefused as refusal:
+            self._refuse_amount(refusal.field, refusal)
             return
-        if limit_pounds < 0 or apr_percent < 0:
+        except InvalidRateError as refusal:
+            self._refuse_amount(self._apr_edit, refusal)
             return
-        self._new_overdraft_limit = Amount.from_pounds(limit_pounds)
-        self._new_overdraft_apr_basis_points = round(
-            apr_percent * _BASIS_POINTS_PER_PERCENT
-        )
+        self._new_overdraft_limit = Amount(pence=limit_pence)
+        self._new_overdraft_apr_basis_points = apr_basis_points
         self.accept()
 
     def _read_safe_to_spend_inputs(self) -> bool:
         """Validate and stage the safe-to-spend fields; False keeps the dialog."""
         try:
-            floor_pounds = float(self._floor_edit.text().strip() or "0")
-        except ValueError:
+            floor_pence = field_pence(
+                self._floor_edit, label=_FLOOR_LABEL, when_empty=0
+            )
+        except AmountFieldRefused as refusal:
+            self._refuse_amount(refusal.field, refusal)
             return False
-        if floor_pounds < 0:
-            return False
-        self._new_safe_to_spend_floor = Amount.from_pounds(floor_pounds)
+        self._new_safe_to_spend_floor = Amount(pence=floor_pence)
         self._new_sustainable_window_months = self._window_spin.value()
         return True
 

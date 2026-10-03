@@ -31,8 +31,13 @@ def get_bank_balance_date_iso(conn) -> str | None:  # pragma: no cover
 
 
 def set_bank_balance_pence(
-    conn, pence: int, today: _date | None = None
+    conn, pence: int, today: _date | None = None, *, commit: bool = True
 ) -> None:  # pragma: no cover
+    """Store the balance stamped as-of `today`.
+
+    `commit=False` leaves the write in the caller's open transaction (the
+    overnight fold commits it with its marks).
+    """
     stamp = today or _date.today()  # noqa: DTZ011 (naive local dates)
     cursor = conn.cursor()
     cursor.execute(
@@ -47,7 +52,8 @@ def set_bank_balance_pence(
         "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
         ("bank_balance_date", stamp.isoformat()),
     )
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def get_overdraft_limit_pence(conn) -> int:  # pragma: no cover

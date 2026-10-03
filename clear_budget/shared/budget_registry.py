@@ -11,21 +11,34 @@ it:
 
 * The FIRST budget keeps the reserved empty slug, so its file is the very
   `budget_<user>.db` that already exists. Naming budgets moves no data.
-* An absent, empty or unreadable sidecar SYNTHESISES that one record rather
-  than failing. A user who has never opened this dialog has one budget called
-  "Main budget" and cannot tell the sidecar is missing.
+* An absent, empty or unreadable sidecar SYNTHESISES the records from the
+  files on disk rather than failing: that one first budget plus every named
+  budget file of this user's (see `budget_files`). A user who has never
+  opened this dialog has one budget called "Main budget" and cannot tell the
+  sidecar is missing; a user whose sidecar was damaged keeps every budget.
 
 So the migration is that there is no migration: the sidecar is written the
 first time a second budget is created; not before.
+
+A slug read from the sidecar builds a file path, so one the app could not
+have written (`../x`, a separator, a double underscore) is dropped on read.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
+import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from clear_budget.shared.budget_files import (
+    SQLITE_SIDECAR_SUFFIXES,
+    belongs_to,
+    is_safe_slug,
+    named_slug,
+)
 from clear_budget.shared.config import LEGACY_BUDGET_SLUG, Config
 
 # What the first budget is called when the sidecar has never been written.
@@ -41,9 +54,13 @@ _SLUG_KEY = "slug"
 _NAME_KEY = "name"
 _FORMAT_VERSION = 1
 
-# The sidecar files SQLite writes beside a database. Deleting a budget has to
-# take these too; otherwise a stale WAL outlives the database it belonged to.
-_DB_SIDECAR_SUFFIXES = ("", "-wal", "-shm", "-journal")
+# The database plus the sidecar files SQLite writes beside it. Deleting a
+# budget has to take these too; otherwise a stale WAL outlives the database
+# it belonged to.
+_DB_SIDECAR_SUFFIXES = ("", *SQLITE_SIDECAR_SUFFIXES)
+
+# How a discovered budget's slug becomes the name shown for it.
+_SLUG_WORD_SEPARATOR = "_"
 
 
 class BudgetRegistryError(Exception):
@@ -82,11 +99,36 @@ class BudgetIndex:
         return self.find(self.active) or self.budgets[0]
 
 
-def _default_index() -> BudgetIndex:
-    """The synthesised record for a user whose sidecar has never been written."""
+def _discovered_slugs(username: str) -> list[str]:
+    """The slugs of `username`'s named budget files actually on disk.
+
+    Bounded to this user's prefix and to slugs the app could have written;
+    a file stamped as someone else's is left alone (see `belongs_to`).
+    """
+    legacy = Config.for_user(username).db_path
+    slugs = []
+    for path in sorted(legacy.parent.glob(f"{legacy.stem}__*.db")):
+        slug = named_slug(path, username)
+        if slug is not None and belongs_to(path, username):
+            slugs.append(slug)
+    return slugs
+
+
+def _default_index(username: str) -> BudgetIndex:
+    """The records rebuilt from disk when the sidecar cannot be used.
+
+    The first budget always, under its usual name, then one record per named
+    budget file found, named after its slug since the real name was in the
+    sidecar. A lost map then means "the budgets I can prove exist", not just
+    the first of them.
+    """
+    found = tuple(
+        BudgetRecord(slug, slug.replace(_SLUG_WORD_SEPARATOR, " ").capitalize())
+        for slug in _discovered_slugs(username)
+    )
     return BudgetIndex(
         active=LEGACY_BUDGET_SLUG,
-        budgets=(BudgetRecord(LEGACY_BUDGET_SLUG, DEFAULT_BUDGET_NAME),),
+        budgets=(BudgetRecord(LEGACY_BUDGET_SLUG, DEFAULT_BUDGET_NAME), *found),
     )
 
 
@@ -119,34 +161,27 @@ def _parse_record(raw: object) -> BudgetRecord | None:
         return None
     slug = raw.get(_SLUG_KEY)
     name = raw.get(_NAME_KEY)
-    if not isinstance(slug, str) or not isinstance(name, str) or not name.strip():
+    if not isinstance(name, str) or not name.strip() or not is_safe_slug(slug):
         return None
     return BudgetRecord(slug, name.strip())
 
 
-def load_index(username: str) -> BudgetIndex:
-    """Return `username`'s budgets, synthesising the default when unreadable.
-
-    Every failure mode collapses to the same answer, the single legacy budget:
-    no file, unparseable JSON, the wrong shape, a budget list holding
-    nothing usable. The user's data is the database files; this sidecar is only
-    the map to them, so a lost map means "the one budget I can prove exists"
-    rather than an error the user cannot act on.
-    """
+def _index_from_text(text: str) -> BudgetIndex | None:
+    """The index `text` describes; None when it holds nothing usable."""
     try:
-        data = json.loads(Config.budgets_index_path(username).read_text("utf-8"))
-    except (OSError, ValueError):
-        return _default_index()
+        data = json.loads(text)
+    except ValueError:
+        return None
     if not isinstance(data, dict):
-        return _default_index()
+        return None
     raw_budgets = data.get(_BUDGETS_KEY)
     if not isinstance(raw_budgets, list):
-        return _default_index()
+        return None
     records = tuple(
         record for record in map(_parse_record, raw_budgets) if record is not None
     )
     if not records:
-        return _default_index()
+        return None
     active = data.get(_ACTIVE_KEY)
     return BudgetIndex(
         active=active if isinstance(active, str) else records[0].slug,
@@ -154,9 +189,48 @@ def load_index(username: str) -> BudgetIndex:
     )
 
 
-def store_index(username: str, index: BudgetIndex) -> None:
-    """Persist `index` for `username`, best-effort.
+def load_index(username: str) -> BudgetIndex:
+    """Return `username`'s budgets, rebuilt from disk when the sidecar fails.
 
+    Every failure mode collapses to the same answer: no file, unparseable
+    JSON, the wrong shape, a budget list holding nothing usable. The user's
+    data is the database files; this sidecar is only the map to them, so a
+    lost map means the budgets found on disk rather than an error the user
+    cannot act on.
+    """
+    try:
+        text = Config.budgets_index_path(username).read_text("utf-8")
+    except OSError:
+        return _default_index(username)
+    return _index_from_text(text) or _default_index(username)
+
+
+def index_text_error(text: str) -> str | None:
+    """Why a budget list must not be restored; None when it may be.
+
+    Stricter than reading, which degrades gracefully: a restore REPLACES the
+    list, so one that does not parse would hide the named budgets (measured)
+    and one naming a slug the app could not have written would aim a later
+    delete at a path of its choosing.
+    """
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return "the budget list is not valid JSON"
+    if not isinstance(data, dict):
+        return "the file is not a budget list"
+    raw_budgets = data.get(_BUDGETS_KEY)
+    for raw in raw_budgets if isinstance(raw_budgets, list) else ():
+        if isinstance(raw, dict) and not is_safe_slug(raw.get(_SLUG_KEY, "")):
+            return "the budget list names an unsafe file"
+    return None
+
+
+def store_index(username: str, index: BudgetIndex) -> None:
+    """Persist `index` for `username`, best-effort and whole.
+
+    Written to a scratch file beside the list and renamed over it, so a crash
+    part way through leaves the previous list rather than a truncated one.
     A write failure is swallowed for the same reason `save_location` swallows
     one: the databases themselves are untouched, so the only cost is that the
     session's choice of active budget is not remembered next launch.
@@ -171,9 +245,23 @@ def store_index(username: str, index: BudgetIndex) -> None:
     }
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        _write_whole(path, json.dumps(payload, indent=2))
     except OSError:
         pass
+
+
+def _write_whole(path: Path, text: str) -> None:
+    """Replace `path` with `text` atomically: scratch file, fsync, rename."""
+    handle, scratch = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as out:
+            out.write(text)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(scratch, path)
+    except OSError:
+        Path(scratch).unlink(missing_ok=True)
+        raise
 
 
 def active_db_path(username: str) -> Path:
@@ -273,9 +361,13 @@ def delete_all_budgets(username: str) -> None:
 
     Called when the ACCOUNT goes. The legacy path is deleted whether or not the
     index mentions it, because an account that never opened the budgets dialog
-    has a database and no index at all.
+    has a database and no index at all. The named budget files on disk are
+    deleted whether or not the index lists them, because an unreadable index
+    lists none of them (measured: they outlived the account).
     """
-    for record in load_index(username).budgets:
-        delete_db_files(Config.for_user_budget(username, record.slug).db_path)
+    slugs = {record.slug for record in load_index(username).budgets}
+    slugs.update(_discovered_slugs(username))
+    for slug in sorted(slugs):
+        delete_db_files(Config.for_user_budget(username, slug).db_path)
     delete_db_files(Config.for_user(username).db_path)
     Config.budgets_index_path(username).unlink(missing_ok=True)

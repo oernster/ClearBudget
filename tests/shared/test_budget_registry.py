@@ -92,7 +92,7 @@ def test_reading_the_index_does_not_create_it():
 )
 def test_an_unusable_index_means_the_single_legacy_budget(payload):
     _write_index(payload)
-    assert reg.load_index(_USER) == reg._default_index()
+    assert reg.load_index(_USER) == reg._default_index(_USER)
 
 
 def test_unusable_records_are_dropped_and_the_good_ones_kept():
@@ -123,8 +123,8 @@ def test_an_unwritable_index_is_swallowed(monkeypatch):
     def _boom(*_args, **_kwargs):
         raise OSError("read-only filesystem")
 
-    monkeypatch.setattr(type(_index_path()), "write_text", _boom)
-    reg.store_index(_USER, reg._default_index())
+    monkeypatch.setattr(reg.tempfile, "mkstemp", _boom)
+    reg.store_index(_USER, reg._default_index(_USER))
     assert not _index_path().exists()
 
 

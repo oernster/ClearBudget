@@ -273,6 +273,13 @@ class BudgetService(
 
     def set_bank_balance(self, *, amount: Amount) -> None:
         """Store a manually entered balance; supersedes prior auto-applications."""
+        self.set_bank_balance_pence(pence=amount.pence)
+
+    def set_bank_balance_pence(self, *, pence: int) -> None:
+        """Store a manually entered balance in signed pence (negative overdrawn).
+
+        Supersedes prior auto-applications, as `set_bank_balance` does.
+        """
         from clear_budget.application.services._balance_application import (
             clear_applied_log,
         )
@@ -281,7 +288,7 @@ class BudgetService(
         )
 
         clear_applied_log(self.bill_repo.conn)
-        set_bank_balance_pence(self.bill_repo.conn, amount.pence)
+        set_bank_balance_pence(self.bill_repo.conn, pence)
 
     def adjust_bank_balance(self, *, delta_pence: int) -> None:
         """Apply a signed delta to the stored bank balance, stamped as-of today."""
@@ -307,14 +314,17 @@ class BudgetService(
         return _impl(
             conn=getattr(self.bill_repo, "conn", None),
             get_month_summary=self.get_month_summary,
+            # Uncommitted: the fold commits every mark with the balance at once.
             mark_bill_paid=lambda bill_id, ym: self.bill_repo.mark_paid_for_month(
-                bill_id=bill_id, year_month=ym
+                bill_id=bill_id, year_month=ym, commit=False
             ),
             mark_income_received=lambda iid, ym: (
-                self.income_repo.mark_received_for_month(income_id=iid, year_month=ym)
+                self.income_repo.mark_received_for_month(
+                    income_id=iid, year_month=ym, commit=False
+                )
             ),
             mark_income_extra_received=lambda extra_id: (
-                self.income_repo.mark_extra_received(extra_id=extra_id)
+                self.income_repo.mark_extra_received(extra_id=extra_id, commit=False)
             ),
             today=today or date.today(),  # noqa: DTZ011 (naive local dates)
         )

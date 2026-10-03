@@ -204,9 +204,9 @@ class MonthView(
         )
         if (
             dialog.exec() == BalanceDialog.Accepted
-            and (balance := dialog.get_balance()) is not None
+            and (pence := dialog.get_balance_pence()) is not None
         ):
-            self.view_model.budget_service.set_bank_balance(amount=balance)
+            self.view_model.budget_service.set_bank_balance_pence(pence=pence)
             self.view_model.month_summary = (
                 self.view_model.budget_service.get_month_summary(
                     year_month=self.view_model.current_month

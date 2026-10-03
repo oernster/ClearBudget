@@ -36,6 +36,12 @@ from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui.utils.amount_fields import (
+    BUFFER_LABEL,
+    AmountFieldRefused,
+    AmountRefusalMixin,
+    field_pence,
+)
 from clear_budget.ui.utils import reserves_text as copy
 from clear_budget.ui.utils.format_helpers import (
     build_centered_nav_header,
@@ -63,7 +69,7 @@ _TABLE_MIN_HEIGHT_PX = 160
 _ACTIVE_COLUMN = 7
 
 
-class ReservesView(ReservesContentMixin, QWidget):
+class ReservesView(AmountRefusalMixin, ReservesContentMixin, QWidget):
     """What is being held back, with the obligations it is held for."""
 
     def __init__(self, budget_service: BudgetService, current_month: YearMonth) -> None:
@@ -219,14 +225,19 @@ class ReservesView(ReservesContentMixin, QWidget):
         self._fill_where()
 
     def _save_buffer(self) -> None:
-        """Store the buffer as typed; an unreadable figure is left alone."""
+        """Store the buffer exactly as typed; a refused figure is not saved.
+
+        Empty means no buffer (0). Anything `pence_from_text` will not read
+        exactly is refused with its message rather than ignored or clamped.
+        """
         self.buffer_edit.setEnabled(self.buffer_check.isChecked())
         try:
-            pence = round(float(self.buffer_edit.text() or 0) * 100)
-        except ValueError:
+            pence = field_pence(self.buffer_edit, label=BUFFER_LABEL, when_empty=0)
+        except AmountFieldRefused as refusal:
+            self._refuse_amount(refusal.field, refusal)
             return
         self.budget_service.set_recommendation_buffer(
-            enabled=self.buffer_check.isChecked(), amount=Amount(pence=max(pence, 0))
+            enabled=self.buffer_check.isChecked(), amount=Amount(pence=pence)
         )
 
     def _selected_row(self):

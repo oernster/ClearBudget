@@ -105,7 +105,9 @@ ClearBudget rests on, with what each one gains and what it costs.
   more than punctuation or spacing: budget files are named after a
   simplified form of the account name, so two names differing only that way
   would land on one file and share everything in it. Creating such an
-  account is refused, with the existing name it clashes with
+  account is refused, with the existing name it clashes with. A new account
+  never opens a budget file left under its name by an account that no longer
+  exists: any such file is moved to the `quarantine` folder first
 - Month-by-month budget tracking with income and bill templates
 - Per-bill monthly skip (exclude a bill from one month without deleting it)
 - Per-bill end month: give a subscription or credit payment a final month, after
@@ -400,7 +402,7 @@ dialogs included. The keyboard ring still stops on each button in turn.
 | File | Save | Copy the database to the save file this account last used; the first save prompts for a filename, defaulting to the app's own data folder under a name carrying the account's own |
 | File | Save As... | Choose a new save file; the location is remembered between runs, for that account alone |
 | File | Import / Export > Back Up Everything... (admin only) | Save every account and every budget as one zip file |
-| File | Import / Export > Restore Everything... (admin only) | Replace all accounts and budgets from a full backup (validated before anything is touched; signs everyone out) |
+| File | Import / Export > Restore Everything... (admin only) | Replace every account and every backed-up budget from a full backup (validated before anything is touched; budgets of accounts not in the backup move to the quarantine folder; signs everyone out) |
 | File | Exit | Close application |
 | Settings | Bank Account | Choose the display currency and configure an overdraft facility (limit and APR) plus the Safe to Spend Today buffer and window |
 | Users | Switch User... | Suspend this session and return to the sign-in screen; cancelling comes back to it |
@@ -471,8 +473,9 @@ one-click way out of a session in the tray would end it on a misclick.
 For admins the menu also carries **Manage Users...** for adding and removing
 accounts (added accounts are also non-admin). Admins cannot delete their own
 account. Deleting a user account always permanently deletes that user's budget
-data too (two confirmations required) - there is no way to keep an orphaned
-data file after the account's credentials are destroyed. Non-admin users see
+data too (two confirmations required), every named budget included even when
+its budget list cannot be read - there is no way to keep an orphaned data file
+after the account's credentials are destroyed. Non-admin users see
 Switch User and Log Out only.
 
 ---
@@ -510,8 +513,14 @@ The directory holds:
   each entirely separate: its own bills, income, cards and settings.
 - `budgets_<username>.json` - the list of that user's budgets and which one is
   active. It is only a map to the databases above, so losing it costs names
-  rather than data: the app falls back to the one budget it can prove exists.
-  Written the first time a second budget is created and not before.
+  rather than data: the app falls back to the budget files it finds on disk
+  for that user, each named after its file. Written the first time a second
+  budget is created and not before, always as a whole file.
+- `quarantine/` - budget files and budget lists that belong to no account,
+  moved here rather than deleted: after Restore Everything, those of accounts
+  the backup does not hold; when an account is created, any left under its
+  name. Each move gets its own dated folder. Nothing in it is backed up; once
+  you are sure nothing in it is wanted, you may delete it yourself.
 - `ui_settings.json` - the chosen theme, the remembered save-file location and
   any release version you told the update prompt to skip, so the app opens the
   way you left it and Save goes back to the same file. No budget data is kept
@@ -531,9 +540,21 @@ The directory holds:
 only; the accounts database sits outside it. File > Import / Export >
 Back Up Everything (admin only) writes the whole set, `users.db`, every
 `budget_<username>.db` and the budget registry sidecars, into one zip and
-Restore Everything puts it all back. A restore is validated in a staging
-area first: every database in the zip is schema-checked and only then are
-the live files replaced, so a broken backup changes nothing. The zip is as
+Restore Everything puts it all back. Each database is copied through SQLite
+itself, so the backup holds only saved changes; a budget caught part way
+through a large save makes the backup stop with a message rather than write
+a half-saved copy. A restore is validated in a staging area first: a name
+appearing twice is refused; the accounts database must have everything
+sign-in reads; every database is read page by page as well as checked for
+its tables; every budget list must parse and name only files ClearBudget
+could have written; a damaged zip is refused. Only then are the live files
+replaced, each with any crash journal SQLite left beside it. If a
+replacement fails part way, the files already replaced are put back. So a
+broken backup changes nothing. Restoring replaces every account with the
+backup's and every budget the backup holds. A budget of an account the
+backup does not hold is moved to the `quarantine` folder (never deleted)
+and the app says where; budgets of restored accounts that are not in the backup
+are left as they are. The zip is as
 unencrypted as the files it contains; it carries bcrypt hashes rather than
 passwords but it is still every account and every budget in one portable
 file, so treat it with the same care as the data directory itself.
@@ -544,9 +565,16 @@ reinstalling picks up where you left off, saved theme included. Uninstall
 deliberately offers no option to delete the directory: to remove your data,
 delete the data directory above yourself.
 
-All amounts are held as integer pence. No financial figure in the application
-is ever a floating-point number, so nothing rounds away between the value you
-type and the value a projection uses.
+All amounts are held as integer pence. Every amount you type (bills, income,
+the bank balance and its settings, commitments, credit cards and the
+Reserves and Recommendations buffers) is read straight into pence, never
+through a floating-point number; an amount finer than a penny is refused
+rather than rounded, so nothing rounds away between the value you type and
+the value a projection uses. Anything that is not a number, a negative amount
+(other than an overdrawn bank balance) and anything over 1,000,000,000.00 are
+refused with a message naming the box; nothing is saved until it is
+corrected. The overdraft APR must be a number from 0 to 1000% with at most
+two decimal places.
 
 **What the login protects and what it does not.** The username/password sign-in
 is an access-control gate for the application: it stops another person who shares
@@ -710,9 +738,12 @@ entered before these existed continues to do.
   refused outright rather than offered behind their password, unlike Load:
   loading someone else's budget can be undone, replacing it cannot
 - **Load** (File > Load... or the folder button beside the diskette): file
-  validated as SQLite and verified to contain all required ClearBudget tables
-  and columns before any write; confirmation required if active database has
-  data; window reloads automatically after load - no restart needed
+  validated as SQLite, verified to contain all required ClearBudget tables
+  and columns and read page by page before any write; confirmation required
+  if active database has data; window reloads automatically after load - no
+  restart needed. The budget it replaces is kept until the loaded one has
+  opened: if the loaded file will not open, your budget is put back and you
+  are told
 
 ---
 

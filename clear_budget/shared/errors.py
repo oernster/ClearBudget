@@ -9,6 +9,14 @@ class InvalidAmountError(BudgetError):
     """Raised when an amount is invalid (negative, etc.)."""
 
 
+class InvalidDueDayError(BudgetError):
+    """Raised when a due day is not a day any month can have."""
+
+
+class InvalidRateError(BudgetError):
+    """Raised when a typed interest rate cannot be stored exactly."""
+
+
 class InvalidYearMonthError(BudgetError):
     """Raised when a year-month string is invalid."""
 

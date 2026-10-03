@@ -16,12 +16,16 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.domain.entities.bill import Bill
-from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.bill_amount_change import BillAmountChange
 from clear_budget.domain.value_objects.year_month import YearMonth
+from clear_budget.shared.errors import InvalidAmountError
 from clear_budget.ui import label_roles
 from clear_budget.ui.widgets._bill_amount_changes_section import (
     BillAmountChangesSectionMixin,
+)
+from clear_budget.ui.widgets._entry_dialog_rules import (
+    EntryDialogRulesMixin,
+    entry_start_month,
 )
 from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 
@@ -31,7 +35,7 @@ _DIALOG_WIDTH_PX = 620
 _DIALOG_HEIGHT_PX = 560
 
 
-class BillDialog(BillAmountChangesSectionMixin, QDialog):
+class BillDialog(EntryDialogRulesMixin, BillAmountChangesSectionMixin, QDialog):
     """Dialog for creating/editing a bill."""
 
     CATEGORIES: ClassVar[list[str]] = [
@@ -274,6 +278,8 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
         whole edit, not only the change, because the way out of a dialog that
         will not close is to cancel it.
         """
+        if self._refuse_unreadable_amount():
+            return
         if not self._commit_pending_amount_change():
             return
         super().accept()
@@ -285,8 +291,7 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
             if not name:
                 return None
 
-            amount_str = self.amount_edit.text().strip()
-            amount = Amount.from_pounds(float(amount_str))
+            amount = self._typed_amount()
 
             # Convert display category back to internal format
             display_category = self.category_combo.currentText()
@@ -311,7 +316,7 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
             # A new bill exists from the month it was created onward. Editing an
             # existing one never moves its start, since that would restate what
             # earlier months already reported.
-            start_ym = self.bill.start_ym if self.bill else self.current_month
+            start_ym = entry_start_month(self.bill, self.current_month)
             if self.bill is None and self.month_only_check.isChecked():
                 # One-off: scoped to exactly the viewed month.
                 start_ym = self.current_month
@@ -334,5 +339,5 @@ class BillDialog(BillAmountChangesSectionMixin, QDialog):
                 target_card_id=target_card_id,
                 day_fixed=self.day_fixed_check.isChecked(),
             )
-        except (ValueError, AttributeError):
+        except (InvalidAmountError, ValueError, AttributeError):
             return None

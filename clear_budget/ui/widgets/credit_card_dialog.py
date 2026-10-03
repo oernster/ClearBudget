@@ -20,13 +20,23 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.credit_limit_change import CreditLimitChange
 from clear_budget.shared.errors import InvalidCreditLimitChangeError
 from clear_budget.ui import label_roles
+from clear_budget.ui.utils.amount_fields import (
+    AmountFieldRefused,
+    AmountRefusalMixin,
+    field_pence,
+)
 from clear_budget.ui.utils.format_helpers import MONTH_NAMES
 
 _MAX_SCHEDULE_YEAR = 2050
 _LIMIT_FIELD_MIN_WIDTH_PX = 120
+# Named as the dialog labels them, so a refusal says which box to fix.
+_LIMIT_LABEL = "Credit Limit"
+_BALANCE_LABEL = "Current Balance"
+_MINIMUM_LABEL = "Minimum Payment"
+_NEW_LIMIT_LABEL = "New limit"
 
 
-class CreditCardDialog(QDialog):
+class CreditCardDialog(AmountRefusalMixin, QDialog):
     """Dialog for creating/editing a credit card."""
 
     def __init__(self, parent=None, card: CreditCard | None = None) -> None:
@@ -233,14 +243,19 @@ class CreditCardDialog(QDialog):
             return
         qdate = self.change_date_edit.date()
         try:
-            new_limit = Amount.from_pounds(float(limit_str))
+            new_limit = Amount(
+                pence=field_pence(self.change_limit_edit, label=_NEW_LIMIT_LABEL)
+            )
             change = CreditLimitChange(
                 effective_year=qdate.year(),
                 effective_month=qdate.month(),
                 effective_day=qdate.day(),
                 new_limit=new_limit,
             )
-        except (ValueError, InvalidCreditLimitChangeError):
+        except AmountFieldRefused as refusal:
+            self._show_change_warning(str(refusal))
+            return
+        except InvalidCreditLimitChangeError:
             self._show_change_warning("Enter a valid date and limit.")
             return
         self._limit_changes.append(change)
@@ -252,8 +267,11 @@ class CreditCardDialog(QDialog):
     def _warn_if_below_balance(self, new_limit: Amount) -> None:
         """Flag a change that would drop the limit below the current balance."""
         try:
-            used = Amount.from_pounds(float(self.balance_edit.text().strip() or "0"))
-        except ValueError:
+            used = Amount(
+                pence=field_pence(self.balance_edit, label=_BALANCE_LABEL, when_empty=0)
+            )
+        except AmountFieldRefused:
+            # Unreadable here is the OK button's to refuse, with its message.
             return
         if new_limit.pence < used.pence:
             self._show_change_warning(
@@ -270,6 +288,28 @@ class CreditCardDialog(QDialog):
         """Return the scheduled limit changes entered in the dialog."""
         return tuple(self._limit_changes)
 
+    def _typed_card_pence(self) -> tuple[int, int, int | None]:
+        """Limit, balance used and minimum payment as exact pence.
+
+        The limit is required. An empty balance is nothing used; an empty
+        minimum payment is no fixed minimum. Raises AmountFieldRefused for a
+        figure that cannot be stored exactly.
+        """
+        return (
+            field_pence(self.limit_edit, label=_LIMIT_LABEL),
+            field_pence(self.balance_edit, label=_BALANCE_LABEL, when_empty=0),
+            field_pence(self.min_payment_edit, label=_MINIMUM_LABEL, when_empty=None),
+        )
+
+    def accept(self) -> None:
+        """Close only when every amount can be saved exactly as typed."""
+        try:
+            self._typed_card_pence()
+        except AmountFieldRefused as refusal:
+            self._refuse_amount(refusal.field, refusal)
+            return
+        super().accept()
+
     def get_card(self) -> CreditCard | None:
         """Get card from form (returns None if invalid)."""
         try:
@@ -277,17 +317,9 @@ class CreditCardDialog(QDialog):
             if not name:
                 return None
 
-            limit_str = self.limit_edit.text().strip()
-            if not limit_str:
-                return None
-            limit = Amount.from_pounds(float(limit_str))
-
-            balance_str = self.balance_edit.text().strip()
-            balance = (
-                Amount.from_pounds(float(balance_str))
-                if balance_str
-                else Amount(pence=0)
-            )
+            limit_pence, balance_pence, min_pmt_pence = self._typed_card_pence()
+            limit = Amount(pence=limit_pence)
+            balance = Amount(pence=balance_pence)
 
             interest_rate = (
                 self.interest_spin.value() if self.interest_spin.value() > 0 else None
@@ -301,11 +333,6 @@ class CreditCardDialog(QDialog):
             else:
                 expiry_month = None
                 expiry_year = None
-
-            min_pmt_str = self.min_payment_edit.text().strip()
-            min_pmt_pence = None
-            if min_pmt_str:
-                min_pmt_pence = Amount.from_pounds(float(min_pmt_str)).pence
 
             active = 1 if self.active_checkbox.isChecked() else 0
 
@@ -326,5 +353,5 @@ class CreditCardDialog(QDialog):
                 minimum_payment_percent=min_pct,
                 active=active,
             )
-        except (ValueError, AttributeError, TypeError):
+        except (AmountFieldRefused, ValueError, AttributeError, TypeError):
             return None

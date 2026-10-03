@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.domain.value_objects.due_day import check_due_day
 from clear_budget.domain.value_objects.year_month import YearMonth
 
 
@@ -47,6 +48,10 @@ class IncomeSource:
     # is movable; the Recommendations engine proposes retiming only what can
     # move.
     day_fixed: bool = False
+
+    def __post_init__(self) -> None:
+        """Refuse an arrival day no month can have, as Bill does."""
+        check_due_day(self.day_of_month)
 
     def is_active_in_month(self, year_month: YearMonth) -> bool:
         """Whether this income appears in the given month.

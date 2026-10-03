@@ -22,10 +22,17 @@ from clear_budget.domain.value_objects.amount import Amount
 from clear_budget.domain.value_objects.recurrence import Recurrence
 from clear_budget.domain.value_objects.year_month import YearMonth
 from clear_budget.ui import label_roles, ui_scale
+from clear_budget.ui.utils.amount_fields import (
+    AmountFieldRefused,
+    AmountRefusalMixin,
+    field_pence,
+)
 from clear_budget.ui.widgets.first_stop_dialog import FirstStopDialog
 from clear_budget.ui.widgets.themed_combo_box import ThemedComboBox
 
 _DIALOG_MIN_WIDTH_PX = 420
+_AMOUNT_LABEL = "Amount"
+_HELD_LABEL = "Already put by"
 # The repeats a user can pick, as (label, interval in months). Every one is a
 # real interval; "Once" is the absence of one.
 _REPEAT_CHOICES = (
@@ -38,7 +45,7 @@ _REPEAT_CHOICES = (
 _DEFAULT_REPEAT_INDEX = 4
 
 
-class CommitmentDialog(FirstStopDialog):
+class CommitmentDialog(AmountRefusalMixin, FirstStopDialog):
     """Collects one obligation to reserve for."""
 
     def __init__(self, parent=None, commitment: Commitment | None = None) -> None:
@@ -112,6 +119,26 @@ class CommitmentDialog(FirstStopDialog):
                 break
         self.held_edit.setText(f"{commitment.already_held.pence / 100:.2f}")
 
+    def _typed_commitment_pence(self) -> tuple[int, int]:
+        """The amount and the sum already put by, as exact pence.
+
+        An empty field is nothing (as before). Raises AmountFieldRefused for
+        a figure that cannot be stored exactly.
+        """
+        return (
+            field_pence(self.amount_edit, label=_AMOUNT_LABEL, when_empty=0),
+            field_pence(self.held_edit, label=_HELD_LABEL, when_empty=0),
+        )
+
+    def accept(self) -> None:
+        """Close only when both figures can be saved exactly as typed."""
+        try:
+            self._typed_commitment_pence()
+        except AmountFieldRefused as refusal:
+            self._refuse_amount(refusal.field, refusal)
+            return
+        super().accept()
+
     def commitment(self, *, today: date | None = None) -> Commitment:
         """The commitment as entered.
 
@@ -122,10 +149,11 @@ class CommitmentDialog(FirstStopDialog):
         qdate = self.due_edit.date()
         months = _REPEAT_CHOICES[self.repeat_combo.currentIndex()][1]
         existing = self._existing
+        amount_pence, held_pence = self._typed_commitment_pence()
         return Commitment(
             id=existing.id if existing else 0,
             name=self.name_edit.text().strip(),
-            amount=Amount(pence=_pence(self.amount_edit.text())),
+            amount=Amount(pence=amount_pence),
             due_date=date(qdate.year(), qdate.month(), qdate.day()),
             recurrence=Recurrence(months=months),
             created_month=(
@@ -133,16 +161,8 @@ class CommitmentDialog(FirstStopDialog):
                 if existing
                 else YearMonth(year=day.year, month=day.month)
             ),
-            already_held=Amount(pence=_pence(self.held_edit.text())),
+            already_held=Amount(pence=held_pence),
             category=existing.category if existing else None,
             active=existing.active if existing else True,
             final_month=existing.final_month if existing else None,
         )
-
-
-def _pence(text: str) -> int:
-    """A typed money figure as pence; an empty field is nothing put by."""
-    cleaned = text.strip()
-    if not cleaned:
-        return 0
-    return round(float(cleaned) * 100)

@@ -9,10 +9,16 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from clear_budget.domain.value_objects.amount import Amount
+from clear_budget.ui.utils.amount_fields import (
+    AmountFieldRefused,
+    AmountRefusalMixin,
+    field_pence,
+)
+
+_LABEL = "Bank balance"
 
 
-class BalanceDialog(QDialog):
+class BalanceDialog(AmountRefusalMixin, QDialog):
     """Dialog for setting bank account balance."""
 
     def __init__(self, parent=None, current_balance_pence: int = 0) -> None:
@@ -26,7 +32,7 @@ class BalanceDialog(QDialog):
         self.setWindowTitle("Set Bank Balance")
         self.setModal(True)
         self.resize(300, 150)
-        self.new_balance: Amount | None = None
+        self.new_balance_pence: int | None = None
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -65,15 +71,19 @@ class BalanceDialog(QDialog):
         # on_ok twice on one press.
 
     def on_ok(self) -> None:
-        """Handle OK button press."""
-        try:
-            amount_str = self.amount_edit.text().strip()
-            if amount_str:
-                self.new_balance = Amount.from_pounds(float(amount_str))
-                self.accept()
-        except ValueError:
-            pass
+        """Save the balance exactly as typed; otherwise say why and stay open.
 
-    def get_balance(self) -> Amount | None:
-        """Get balance that was set (returns None if invalid)."""
-        return self.new_balance
+        Signed: an overdrawn account is negative. This dialog pre-fills the
+        balance as it stands, so a negative figure must be accepted back.
+        """
+        try:
+            pence = field_pence(self.amount_edit, label=_LABEL, signed=True)
+        except AmountFieldRefused as refusal:
+            self._refuse_amount(refusal.field, refusal)
+            return
+        self.new_balance_pence = pence
+        self.accept()
+
+    def get_balance_pence(self) -> int | None:
+        """The balance set, in signed pence; None if the dialog was cancelled."""
+        return self.new_balance_pence

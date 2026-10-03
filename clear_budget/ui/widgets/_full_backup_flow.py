@@ -2,7 +2,8 @@
 
 Backup writes one zip of the whole identity-and-data set (accounts plus
 every budget; see auth.full_backup). Restore is the destructive mirror:
-it replaces EVERY account and every budget, so it is validated first,
+it replaces EVERY account and every budget the backup holds (budgets of
+accounts it does not hold go to quarantine), so it is validated first,
 double-confirmed in words that name the blast radius and then handed to the
 composition root through ``full_restore_requested``, because only main.py
 can close the open databases, swap the files and return to the sign-in
@@ -71,8 +72,10 @@ def restore_everything(window) -> None:
     first = QMessageBox.warning(
         window,
         _RESTORE_TITLE,
-        "Restoring replaces EVERY account and every budget on this machine "
-        "with the backup's contents.\n\n"
+        "Restoring replaces EVERY account on this machine with the backup's "
+        "accounts and every budget the backup holds with its copy.\n\n"
+        "A budget belonging to an account the backup does not hold is moved "
+        "to the quarantine folder in the data folder, not deleted.\n\n"
         "The application returns to the sign-in screen afterwards.",
         buttons,
         cancel,
@@ -82,7 +85,7 @@ def restore_everything(window) -> None:
     second = QMessageBox.warning(
         window,
         _RESTORE_TITLE,
-        "This cannot be undone. Replace all accounts and budgets now?",
+        "This cannot be undone. Replace the accounts and budgets now?",
         buttons,
         cancel,
     )

@@ -38,6 +38,11 @@ class TestAnEntryRowThatDoesNot:
     ) -> None:
         assert parse_amount_change(year=2026, month=9, amount_text=text) is None
 
+    @pytest.mark.parametrize("text", ["0.125", "nan", "inf", "-5", "1e19"])
+    def test_amounts_the_parser_refuses_are_refused_here(self, text: str) -> None:
+        """Never rounded, never raised past the dialog: refused like any typo."""
+        assert parse_amount_change(year=2026, month=9, amount_text=text) is None
+
     def test_an_impossible_month_is_refused(self) -> None:
         """The value object owns the month rule; this only has to not swallow it."""
         assert parse_amount_change(year=2026, month=13, amount_text="106") is None

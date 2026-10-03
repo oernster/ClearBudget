@@ -71,6 +71,10 @@ def apply_elapsed_bank_transactions(
     are handled by the card fold. Advances the baseline to today even when
     nothing was due, so a same-day item the user declined to apply is
     never applied late.
+
+    The three mark callbacks must NOT commit: the fold commits every mark,
+    every applied-log row and the new balance as one transaction; if any step
+    fails, all of them are rolled back.
     """
     if conn is None:
         return 0
@@ -81,46 +85,86 @@ def apply_elapsed_bank_transactions(
     )
     if baseline is None or baseline >= today:
         return 0
+    days = _days_after(baseline, today)
+    # Every read happens before the first write, so nothing the summaries do
+    # can commit part of the fold.
+    summaries = {
+        year_month: get_month_summary(year_month=year_month)
+        for year_month in dict.fromkeys(YearMonth(d.year, d.month) for d in days)
+    }
+    opening = get_bank_balance_pence(conn)
+    try:
+        delta = sum(
+            _fold_day(
+                conn=conn,
+                summary=summaries[YearMonth(day.year, day.month)],
+                day=day,
+                mark_bill_paid=mark_bill_paid,
+                mark_income_received=mark_income_received,
+                mark_income_extra_received=mark_income_extra_received,
+            )
+            for day in days
+        )
+        set_bank_balance_pence(conn, opening + delta, today=today, commit=False)
+        conn.commit()
+    except BaseException:
+        # One transaction: the marks, the log rows and the balance land
+        # together or not at all, so a rerun applies every item exactly once.
+        conn.rollback()
+        raise
+    return delta
+
+
+def _days_after(baseline: date, today: date) -> list[date]:
+    """Each day after the baseline up to and including today."""
+    span = (today - baseline).days
+    return [baseline + timedelta(days=offset) for offset in range(1, span + 1)]
+
+
+def _fold_day(
+    *,
+    conn,
+    summary,
+    day: date,
+    mark_bill_paid,
+    mark_income_received,
+    mark_income_extra_received,
+) -> int:
+    """Mark and log every bank item due on `day`, uncommitted; return its delta."""
+    year_month = YearMonth(day.year, day.month)
     delta = 0
-    summaries: dict[YearMonth, object] = {}
-    day = baseline + timedelta(days=1)
-    while day <= today:
-        year_month = YearMonth(day.year, day.month)
-        if year_month not in summaries:
-            summaries[year_month] = get_month_summary(year_month=year_month)
-        summary = summaries[year_month]
-        for bill in summary.bills:
-            if (
-                bill.payment_method_id == _BANK_ACCOUNT_ID
-                and not bill.paid_for_month
-                and _due_on(bill.day_of_month, day)
-            ):
-                delta -= bill.amount.pence
-                mark_bill_paid(bill.id, year_month)
-                record_applied(
-                    conn,
-                    item_type="bill",
-                    item_id=bill.id,
-                    year_month=year_month,
-                    amount_pence=-bill.amount.pence,
-                )
-        for income in summary.income_sources:
-            if income.received_for_month or not _due_on(income.day_of_month, day):
-                continue
-            delta += income.amount.pence
-            if income.is_month_only:
-                mark_income_extra_received(income.id)
-                income_type = "income_extra"
-            else:
-                mark_income_received(income.id, year_month)
-                income_type = "income"
+    for bill in summary.bills:
+        if (
+            bill.payment_method_id == _BANK_ACCOUNT_ID
+            and not bill.paid_for_month
+            and _due_on(bill.day_of_month, day)
+        ):
+            delta -= bill.amount.pence
+            mark_bill_paid(bill.id, year_month)
             record_applied(
                 conn,
-                item_type=income_type,
-                item_id=income.id,
+                item_type="bill",
+                item_id=bill.id,
                 year_month=year_month,
-                amount_pence=income.amount.pence,
+                amount_pence=-bill.amount.pence,
+                commit=False,
             )
-        day += timedelta(days=1)
-    set_bank_balance_pence(conn, get_bank_balance_pence(conn) + delta, today=today)
+    for income in summary.income_sources:
+        if income.received_for_month or not _due_on(income.day_of_month, day):
+            continue
+        delta += income.amount.pence
+        if income.is_month_only:
+            mark_income_extra_received(income.id)
+            income_type = "income_extra"
+        else:
+            mark_income_received(income.id, year_month)
+            income_type = "income"
+        record_applied(
+            conn,
+            item_type=income_type,
+            item_id=income.id,
+            year_month=year_month,
+            amount_pence=income.amount.pence,
+            commit=False,
+        )
     return delta
