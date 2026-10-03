@@ -933,9 +933,12 @@ reads an account back out of a data-directory file name.
 - `belongs_to(path, username)`: the name must be the user's first budget, one
   of their named budgets (a slug of the shape `safe_slug` writes) or their
   list; for a database, an owner stamp naming someone else overrides the name.
-  The name alone cannot always decide, because a safe username may contain the
-  `__` that separates a slug: `budget_alice__bob.db` is alice's budget "bob" or
-  the first budget of `alice  bob`
+  The name alone cannot always decide for an account created before such
+  names were refused: a safe username holding the `SLUG_SEPARATOR` (`__`)
+  makes `budget_alice__bob.db` either alice's budget "bob" or the first budget
+  of `alice  bob`. `UserStore.create_user` now refuses any new name whose safe
+  form holds it (`UsernameSeparatorError`; measured, such an account opened
+  the other's unstamped budget); existing accounts are untouched
 - `is_safe_slug`, `named_slug`, `estate_files` (every budget and list in the
   directory), `with_sidecars` (a database plus its `-journal`, `-wal`, `-shm`)
 - `quarantine(paths, app_dir, reason)` moves files and their sidecars into a

@@ -13,7 +13,6 @@ import pytest
 
 from clear_budget.auth.user_store import UserStore
 from clear_budget.shared.budget_files import QUARANTINE_DIR_NAME
-from clear_budget.shared.db_ownership import stamp_owner
 from tests.auth.backup_helpers import marker_of, real_budget_db
 
 
@@ -51,18 +50,23 @@ def test_a_leftover_budget_is_quarantined_not_adopted(store, tmp_path):
 
 
 def test_another_live_accounts_files_are_never_moved(store, tmp_path):
-    store.create_user("alice", "password-1")
+    """An account created before separator names were refused keeps its file.
+
+    `alice  bob` can no longer be created, so it is inserted as an older
+    version would have left it. Its first budget's name also fits a named
+    budget of a new `alice`; the file is the live account's, so it stays.
+    """
+    store._conn.execute(
+        "INSERT INTO users (username, password_hash, recovery_code_hash)"
+        " VALUES ('alice  bob', 'x', 'x')"
+    )
+    store._conn.commit()
     shared_name = tmp_path / "budget_alice__bob.db"
-    real_budget_db(shared_name)
-    conn = sqlite3.connect(str(shared_name))
-    stamp_owner(conn, "alice")
-    conn.close()
-    real_budget_db(tmp_path / "budget_alice.db")
+    real_budget_db(shared_name, marker="ALICE-BOB")
 
-    store.create_user("alice  bob", "password-2")
+    store.create_user("alice", "password-1")
 
-    assert shared_name.exists()
-    assert (tmp_path / "budget_alice.db").exists()
+    assert marker_of(shared_name) == "ALICE-BOB"
     assert _quarantined(tmp_path) == []
 
 

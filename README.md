@@ -105,7 +105,9 @@ ClearBudget rests on, with what each one gains and what it costs.
   more than punctuation or spacing: budget files are named after a
   simplified form of the account name, so two names differing only that way
   would land on one file and share everything in it. Creating such an
-  account is refused, with the existing name it clashes with. A new account
+  account is refused, with the existing name it clashes with. A name with two
+  or more spaces, underscores or punctuation marks in a row is refused too:
+  its file name would read like another account's named budget. A new account
   never opens a budget file left under its name by an account that no longer
   exists: any such file is moved to the `quarantine` folder first
 - Month-by-month budget tracking with income and bill templates

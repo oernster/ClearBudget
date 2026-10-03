@@ -49,6 +49,16 @@ class UsernameCollisionError(ValueError):
     """A username that would share another account's files."""
 
 
+class UsernameSeparatorError(UsernameCollisionError):
+    """A username whose file-name form holds the named-budget separator.
+
+    Its first budget would be named exactly like another account's named
+    budget (`alice  bob` and alice's budget "Bob" are both
+    `budget_alice__bob.db`); measured, such an account opened the other's
+    figures. A collision of the same kind, so the dialog shows it the same way.
+    """
+
+
 class UserStore:
     """CRUD and authentication for user accounts."""
 
@@ -188,9 +198,18 @@ class UserStore:
         The recovery code is shown to the user exactly once and stored hashed.
 
         Raises `UsernameCollisionError` when the name would share an existing
-        account's budget file (see the module docstring). Refused here rather
-        than in the dialog, so no caller can create such a pair.
+        account's budget file (see the module docstring); its subclass
+        `UsernameSeparatorError` when the name's file form holds the
+        named-budget separator. Refused here rather than in the dialog, so no
+        caller can create such a name.
         """
+        if budget_files.SLUG_SEPARATOR in safe_username(username):
+            raise UsernameSeparatorError(
+                f"'{username}' cannot be used: two or more spaces, underscores "
+                "or punctuation marks in a row would let this account's "
+                "budgets be mistaken for another account's. Separate words "
+                "with a single space or mark."
+            )
         clash = self.colliding_account(username)
         if clash is not None:
             raise UsernameCollisionError(

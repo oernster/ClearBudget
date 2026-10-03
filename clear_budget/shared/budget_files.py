@@ -37,6 +37,12 @@ QUARANTINE_DIR_NAME = "quarantine"
 # that name.
 SQLITE_SIDECAR_SUFFIXES = ("-journal", "-wal", "-shm")
 
+# What separates the username from a named budget's slug in its file name.
+# A slug can never contain it (see `is_safe_slug`); nor may a new account's
+# safe username (see auth.user_store), else `budget_alice__bob.db` would be
+# both alice's budget "Bob" and the first budget of `alice  bob`.
+SLUG_SEPARATOR = "__"
+
 BUDGET_DB_PATTERN = "budget_*.db"
 BUDGET_LIST_PATTERN = "budgets_*.json"
 
@@ -44,7 +50,6 @@ _BUDGET_PREFIX = "budget_"
 _LIST_PREFIX = "budgets_"
 _DB_SUFFIX = ".db"
 _LIST_SUFFIX = ".json"
-_SLUG_SEPARATOR = "__"
 _QUARANTINE_STAMP = "%Y%m%d-%H%M%S"
 
 # The exact shape `budget_registry.safe_slug` produces: lower-case runs of
@@ -67,7 +72,7 @@ def named_slug(path: Path, username: str) -> str | None:
     app could have written. Says nothing about the stamp; see `belongs_to`.
     """
     name = path.name.lower()
-    prefix = f"{_BUDGET_PREFIX}{safe_username(username)}{_SLUG_SEPARATOR}"
+    prefix = f"{_BUDGET_PREFIX}{safe_username(username)}{SLUG_SEPARATOR}"
     if not (name.startswith(prefix) and name.endswith(_DB_SUFFIX)):
         return None
     slug = name[len(prefix) : -len(_DB_SUFFIX)]

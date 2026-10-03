@@ -19,6 +19,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from clear_budget.shared.budget_files import SLUG_SEPARATOR
+
 # The pre-5.1 data directory. Kept only so existing installs migrate and so a
 # failed migration leaves the app running on the data it always had.
 _LEGACY_APP_DIR_NAME = ".clearbudget"
@@ -124,7 +126,7 @@ class Config:
         """
         app_data = _resolve_app_dir()
         safe_name = _safe_username(username)
-        suffix = f"__{slug}" if slug else ""
+        suffix = f"{SLUG_SEPARATOR}{slug}" if slug else ""
         return cls(
             db_path=app_data / f"budget_{safe_name}{suffix}.db",
             log_dir=app_data / "logs",

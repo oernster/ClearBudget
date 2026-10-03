@@ -34,6 +34,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from clear_budget.shared.budget_files import (
+    SLUG_SEPARATOR,
     SQLITE_SIDECAR_SUFFIXES,
     belongs_to,
     is_safe_slug,
@@ -107,7 +108,7 @@ def _discovered_slugs(username: str) -> list[str]:
     """
     legacy = Config.for_user(username).db_path
     slugs = []
-    for path in sorted(legacy.parent.glob(f"{legacy.stem}__*.db")):
+    for path in sorted(legacy.parent.glob(f"{legacy.stem}{SLUG_SEPARATOR}*.db")):
         slug = named_slug(path, username)
         if slug is not None and belongs_to(path, username):
             slugs.append(slug)
