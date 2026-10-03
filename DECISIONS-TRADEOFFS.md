@@ -525,16 +525,18 @@ removed; while it still exists it is the one used.
 - **Costs:** a move that keeps failing leaves the app on the old folder,
   retrying at every launch.
 
-### A log file and a handler for every uncaught error
+### A log file and a handler for errors escaping a slot
 
-The application writes a plain log to its data directory and catches every
+The application writes a plain log to its data directory and records every
 exception escaping a slot. A log directory that cannot be created is skipped
 rather than stopping the app.
 
 - **Rather than:** no logging, which made every fault in a windowed build look
   like nothing happening.
 - **Gains:** a failure leaves something to diagnose.
-- **Costs:** a local file naming the accounts that signed in.
+- **Costs:** a local file naming the accounts that signed in. An exception
+  raised on a background thread does not reach the handler, so it leaves no
+  trace in the log.
 
 ## Exports and the graph
 

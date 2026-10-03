@@ -216,7 +216,7 @@ Everything below this section explains how the code satisfies them.
 
 **Domain Services**:
 - `SolvencyCalculatorService.calculate()` - Computes balance, deficit, forward shortfall
-- `CardExhaustionService.analyse()` - Months until card maxes out
+- `CardExhaustionService.analyze()` - Months until card maxes out
 - `BankCashflowService`:
   - `find_first_negative_day()` - Detects overdraft date
   - `project_month(starting_balance_pence, events, overdraft_limit_pence)` -
@@ -1460,24 +1460,24 @@ renderings of the same figures to hold in step. Every month any page shows
 - `ArchiveDetailDialog` - drill-down for a single archived month
 - `HowItWorksDialog` - three jobs in one page, across seven `<h3>` runs
   (measured from the built page, not counted from this list). It NAMES the
-  furniture in five of them (the seven views, the Graph page's own controls,
-  the tray, the strip along the foot, then the keyboard), each entry led by
-  the real icon that
-  control draws, which the
-  view buttons need because their text labels became pictures. Then it states the
+  furniture in the first four of them (the seven views, the Graph page's own
+  controls, the tray, then the strip along the foot), each entry led by the
+  real icon that control draws, which the view buttons need because their
+  text labels became pictures. Then it states the
   three rules the numbers rest on and that no screen can say for itself: how
   an undated bill accrues, how the balance maintains itself, what Safe to
-  Spend Today promises. A final "Also worth knowing" run carries the behaviours
-  that are neither furniture nor arithmetic and that a user would otherwise
-  never find: the per-month machinery on a bill or income, the two delete
-  scopes, the immovable-day tick, that one sign-in can hold several separate
+  Spend Today promises. An "Also worth knowing" run follows, carrying the
+  behaviours that are neither furniture nor arithmetic and that a user would
+  otherwise never find: the per-month machinery on a bill or income, the two
+  delete scopes, the immovable-day tick, ordering a table by clicking a
+  heading, that one sign-in can hold several separate
   budgets, the whole-estate backup and restore behind Import / Export, what
   the sign-in screen remembers, that the recovery code is the only way back
   into a lost account, how Switch User differs from Log Out, then the daily
   update check and the fact that it is the only time the application touches
-  the network. That last run is where a capability with no icon of its own
+  the network. That run is where a capability with no icon of its own
   goes; the guards below cover the pictures, so nothing else would have caught
-  its absence. About and View Licence are deliberately NOT named: this screen
+  its absence. The page closes on the keyboard, in words alone. About and View Licence are deliberately NOT named: this screen
   is opened from the Help menu they sit in, so listing them is the
   button-by-button inventory that was tried and rejected. Every icon is a BUNDLED IMAGE referenced by an absolute
   `file:///` URL that Qt's rich text resolves when the page is drawn, through
@@ -1780,7 +1780,8 @@ renderings of the same figures to hold in step. Every month any page shows
     Commitment and Month Range); the other 13 subclass `QDialog` directly and
     take Qt's own default focus, which the reading-pane rule does not reach
 - `auto_scroller.py` (`AutoScroller`) - gentle auto-scroll shared by the About
-  credits and the How It Works text: the surface holds still on open, reads
+  credits, the licence notice behind View Licence and the How It Works text
+  (the setup program's own licence dialog uses it too): the surface holds still on open, reads
   down slowly (one step every second tick), holds at the bottom, rewinds fast
   and repeats. Any manual input (wheel, click, keys, the scrollbar or keyboard
   focus entering the surface) only SUSPENDS it; after a moment of stillness it
@@ -2898,6 +2899,9 @@ an option that read as "remove my data" removed nothing.
   two halves separately, so a picture cannot be lost silently in a packaged
   build
 - `test_colour_source.py` - a hex literal lives only in `shared/palette.py`
+- `test_donation_address.py` - the donation address is written once in the
+  package (`version.DONATE_URL`), is asserted literally, is never plain HTTP
+  and is the same address the landing page links
 - `test_combo_box_invariants.py` - no plain `QComboBox` is built, so none can
   lose its arrow to the transparent `drop-down` rule
 - `test_cross_view_refresh.py` - the Credit Cards view is wired to

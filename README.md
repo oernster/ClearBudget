@@ -349,13 +349,14 @@ ClearBudget rests on, with what each one gains and what it costs.
   draws, every view button included, each entry led by the picture it is
   describing, then states the three
   rules behind the numbers (how an undated bill accrues, how the balance
-  maintains itself, what Safe to Spend Today promises) and closes on the
+  maintains itself, what Safe to Spend Today promises). After them come the
   behaviours that are neither an icon nor a rule and that you would otherwise
   never find: the per-month machinery on a bill or income, the two delete
-  scopes, several budgets under one sign-in, the whole-estate backup and
-  restore, what the sign-in screen remembers, that the recovery code is the
-  only way back into a lost account, how Switch User differs from Log Out and
-  the daily update check
+  scopes, the immovable-day tick, ordering a table by its headings, several
+  budgets under one sign-in, the whole-estate backup and restore, what the
+  sign-in screen remembers, that the recovery code is the only way back into
+  a lost account, how Switch User differs from Log Out and the daily update
+  check. It closes on the keyboard
 - SQLite storage: per-user budget database + shared users database
 
 ---
@@ -796,12 +797,12 @@ standing (one to twelve, four by default).
 - **Check for Updates** - queries this project's GitHub releases and reports
   whether a newer version exists, offering the download for your platform
 - **How It Works** - names all seven views, the Graph page's switches and
-  exports, the tray, the strip along the foot and the keyboard, each entry led
-  by the icon itself, then the three rules
+  exports, the tray and the strip along the foot, each entry led by the icon
+  itself, then the three rules
   the numbers rest on: pro-rating, the self-maintaining balance and what Safe
-  to Spend Today promises, then a closing run of the capabilities that carry
-  no icon of their own: several budgets under one sign-in, backup and restore,
-  the recovery code and the update check.
+  to Spend Today promises, then a run of the capabilities that carry no icon
+  of their own (several budgets under one sign-in, backup and restore, the
+  recovery code and the update check among them) and finally the keyboard.
   One page, kept in sync with the calculation logic;
   three structural tests fail the build if a view button is missing from it, if
   the heading miscounts the strip or if the worked pro-rating figure stops
