@@ -57,6 +57,37 @@ class SolvencyPanelMonthLinesMixin:
         )
 
     @staticmethod
+    def _overdrawn_line(opening_pence: int, walk: dict) -> str:
+        """When the month first goes below zero and how far, on one line.
+
+        The two facts a reader otherwise had to fetch from the graph: the day
+        the account goes overdrawn and the deepest it gets. Below ZERO, not
+        below the facility, because "overdrawn" is the bank's word for any
+        negative balance; whether that is arranged borrowing or a refusal is
+        the colour's job and the afloat clause's.
+
+        Every month gets a line, the clean ones included, for the reason the
+        shape line gives: a statement missing from one month reads as a
+        statement nobody worked out.
+
+        A month that opens negative is overdrawn before any event, which the
+        walk's own first-negative day cannot express, so the opening is read
+        here directly.
+        """
+        if opening_pence < 0:
+            start = "Overdrawn from the start"
+        elif walk["first_negative_day"] is not None:
+            start = f"Overdrawn from day {walk['first_negative_day']}"
+        else:
+            return "Never overdrawn"
+        worst = (
+            "at the start"
+            if walk["min_day"] == _LOW_AT_START
+            else f"on day {walk['min_day']}"
+        )
+        return f"{start}; at worst {fmt(abs(walk['min_balance']))} overdrawn {worst}"
+
+    @staticmethod
     def _overdraft_facility_outcome(
         min_balance_pence: int, overdraft_limit_pence: int
     ) -> tuple[str, str, bool]:

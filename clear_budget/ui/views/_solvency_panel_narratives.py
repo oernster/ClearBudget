@@ -169,15 +169,17 @@ class SolvencyPanelNarrativeMixin(SolvencyPanelMonthLinesMixin):
         monthly_shortfall_pence: int,
         overdraft_limit_pence: int = 0,
     ) -> tuple[str, str, bool]:
-        """One month as TWO lines: the money it needs, then its shape.
+        """One month as THREE lines: when it goes overdrawn, the money it
+        needs, then its shape.
 
         Returns (display_text, color, clarion). ``clarion`` is True when the
         month goes overdrawn with no facility or beyond it, so the caller can
         render it as a stark warning.
 
-        The FIRST line is the answer and the only line carrying a decision:
-        what has to arrive for this month to survive. Everything else is
-        context for it.
+        The overdrawn line leads because it answers the question the page is
+        opened with (when do I go under; how far) without a trip to the
+        graph. The line after it is the only one carrying a decision: what has
+        to arrive for this month to survive.
 
         It was seven lines and five of them said the month went overdrawn:
         the day it went under, that nothing rescued it, that payments would be
@@ -208,6 +210,7 @@ class SolvencyPanelNarrativeMixin(SolvencyPanelMonthLinesMixin):
             min_balance, overdraft_limit_pence, walk["first_breach_day"]
         )
         lines = [
+            self._overdrawn_line(opening_pence, walk),
             clause[0].upper() + clause[1:],
             self._shape_line(opening_pence, walk),
         ]

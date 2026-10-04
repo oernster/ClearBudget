@@ -1,6 +1,7 @@
 """Display mixin for SolvencyPanel.update_display - extracted for LOC limit."""
 
 from datetime import date as _date
+from types import SimpleNamespace
 
 from clear_budget.ui import theme, ui_scale
 from clear_budget.ui.label_roles import set_role as _repolish_role
@@ -269,8 +270,17 @@ class SolvencyPanelDisplayMixin:
             timeline_lines = self._build_income_timeline(
                 opening_pence, remaining_income, remaining_bills
             )
+            # The same walk the forward months read, over the same outstanding
+            # items the timeline uses, so the line and the timeline agree.
+            walk = self._walk_month(
+                opening_pence,
+                SimpleNamespace(income_sources=remaining_income, bills=remaining_bills),
+            )
             self.month_breakdown_label.setText(
-                f"{month_name} balance breakdown:\n" + "\n".join(timeline_lines)
+                f"{month_name} balance breakdown:\n"
+                + "\n".join(
+                    [self._overdrawn_line(opening_pence, walk), *timeline_lines]
+                )
             )
         else:
             self.month_breakdown_label.setText("")
