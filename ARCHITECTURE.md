@@ -1,3111 +1,354 @@
 # ClearBudget Architecture
 
-A clean architecture implementation with 4 isolated layers: Domain, Application, Infrastructure and UI.
-An additional Auth layer sits alongside the main layers for user identity and credential management.
+ClearBudget is a local-first PySide6 desktop budgeting application built as a
+clean architecture: UI, Application, Domain and Infrastructure, with `auth` and
+`shared` packages beside them and a bespoke setup program under `installer/`.
+Why the design is shaped this way lives in
+[DECISIONS-TRADEOFFS.md](DECISIONS-TRADEOFFS.md); this document says what the
+structure is and which test holds each rule.
 
 ## Invariants
 
-The rules the design turns on. Each one is enforced by a test rather than by
-convention, so it is named here with the test that fails when it is broken.
-Everything below this section explains how the code satisfies them.
+The rules the design turns on. Each is enforced by a test, named beside it.
 
 | Invariant | Enforced by |
 |-----------|-------------|
-| Dependencies point inward: UI → Application → Domain ← Infrastructure. The Domain imports no other layer but `shared` and no I/O, threading, network, logging or UI-framework module; Application never imports Infrastructure or the UI; Infrastructure never imports the UI (it may import the Application ports it implements); the UI never imports Infrastructure except `ui/window_builder.py`, the wiring split out of the composition root. Every import is resolved to its layer, relative ones included. The UI still imports the Domain directly (TECH_DEBT.md item 1) | `tests/structural/test_layering_rules.py` (AST scan, each rule proven by a planted violation) |
-| The auth layer's surface stays where it is declared: identity and credentials never leak into budget infrastructure | `tests/structural/test_auth_structure.py` |
-| No source file exceeds 400 lines and none sits in the 381 to 399 danger band: a file refactored down from over the cap lands at 350 or below rather than stopping the moment it clears 400 | `tests/structural/test_loc_limits.py` (both halves) |
-| Only `shared/config.py` derives the real data directory. The suite never resolves it; the installer never so much as names it, so no test and no install can disturb live user data | `tests/structural/test_data_dir_isolation.py` (plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py`) |
-| The data-directory migration cannot lose data: resolution prefers the legacy `~/.clearbudget` while it exists (its disappearance is the completion signal), the copied tree verifies byte for byte before the old directory is removed and startup (`ui/startup.begin`, the first thing `main()` calls) migrates before the single-instance lock, never under the override | `tests/shared/test_data_migration.py`, `tests/shared/test_config.py` and `tests/structural/test_data_dir_isolation.py::TestTheMigrationRunsFirstAtStartup` |
-| A database the application has OPEN is never treated as an ordinary file: it is snapshotted out through SQLite's backup API (Back Up Everything included, inside a read transaction with a bounded wait) and only ever replaced after its connection has been closed by the composition root. Both write to a scratch file and rename it into place, so a failure leaves the previous database whole. A Load keeps the budget it replaces until the loaded one has opened and puts it back if it does not | `tests/shared/test_db_copy.py`, `tests/shared/test_db_copy_keep.py`, `tests/auth/test_full_backup_estate.py` and `tests/structural/test_database_replacement_order.py` |
-| A full restore that cannot complete changes nothing: every file in the backup is staged and checked before a single live file is replaced (strays, path-traversal names and a name repeated in any letter case refused; the accounts database checked for the columns sign-in reads; every database read page by page; every budget list parsed and its slugs checked; a damaged archive refused) and a failure part way puts each live file back with its SQLite sidecars | `tests/auth/test_full_backup.py` and `tests/auth/test_full_backup_hostile.py` |
-| After a restore no budget or budget list of an account the backup does not hold is left where a new account of that name would open it: it is moved to `quarantine/` in the data directory, never deleted. Account creation does the same for any file already under the new name | `tests/auth/test_full_backup_estate.py` and `tests/auth/test_user_store_new_account.py` |
-| A budget list cannot lose or misdirect budgets: one that cannot be used is rebuilt from the budget files on disk, a slug the app could not have written is dropped on read and the list is written whole (scratch file, fsync, rename) | `tests/shared/test_budget_registry_recovery.py` |
-| 100% line AND branch coverage over `clear_budget` and the Qt-free half of the setup program (`main` is named as a source and then omitted as `main.py`, so none of it is measured) | `--cov-fail-under=100` with `branch = True` (`.coveragerc`, `pyproject.toml`) |
-| An exported report adds up: `opening + net == close` for every month whose Paid/Received flags agree with the calendar. In the anchored month an item actioned early (or missed) moves the close off the totals by exactly that amount, because the series never charges twice what the recorded balance already contains | `tests/application/test_projection_series.py::test_opening_plus_net_equals_the_close` and `::test_a_bill_paid_early_moves_the_anchored_close` |
-| The exported report and the on-screen month graph can never disagree about a month they both cover, because both run the same day-by-day projection | `tests/application/test_projection_series.py::test_the_projection_agrees_with_the_month_graph` |
-| The card graph and the Credit Cards view open a future month from the SAME chained figure (`card_openings_at`), never from the stored balance and each month closes where the next one opens, its interest landing on its last day | `tests/application/test_month_graph_series.py::TestCardGraphChaining` |
-| With ONE deliberate exception: the month in progress opens from the recorded bank balance, not the previous month's projected close. The recorded balance is the only figure in the report that is a fact; the gap is the drift the report exists to expose | `tests/application/test_projection_series.py::test_the_current_month_is_anchored_on_the_recorded_balance` and `::test_months_outside_the_current_one_still_chain_when_today_is_inside` |
-| A single exported HTML file references nothing outside itself, so it survives being emailed and opens offline | `tests/application/reporting/test_reports.py::test_a_report_references_nothing_outside_itself` |
-| An exported PACKAGE is self-contained as a folder: every link is a bare sibling filename and nothing is fetched | `tests/application/reporting/test_package_report.py::TestThePackageIsSelfContained` |
-| User-entered text cannot inject markup into an exported report | `tests/application/reporting/test_reports.py::test_user_text_cannot_inject_markup_into_a_report` |
-| Highlight text takes the ACCENT, never the ring colour: the ring says where focus is, the accent says what is selected. Stated in roles, so it survived both colours being retired | `tests/ui_logic/test_highlight_text_colour.py` |
-| Every colour value in the tree lives in `clear_budget/shared/palette.py` and nowhere else. `ui.theme_tokens` and `application.reporting` hold what a colour is FOR and reference it by name; the setup program asks `ui.theme_tokens` for the same ROLES rather than choosing its own, so the two surfaces cannot drift apart; a hex literal anywhere else fails the build. Prose is exempt, so a docstring may still quote a hex it is recording a decision about | `tests/structural/test_colour_source.py` |
-| Money is integer pence everywhere. Typed text is read into pence by `application/formatting.pence_from_text` as a `Decimal`, never a float; a figure finer than a penny, a negative, a non-number and anything over `MAX_AMOUNT_PENCE` are refused with a message rather than rounded or clamped, so nothing rounds away between what the user typed and what a projection uses | `Amount(pence: int)` is a frozen value object capped at `MAX_AMOUNT_PENCE`; signed balances are plain `int` pence; `tests/application/test_pence_from_text.py` |
-| Payload extraction and repair cannot write outside their destination directory | `tests/installer/test_payload.py::test_an_entry_that_escapes_the_target_is_refused` and `::test_an_entry_that_escapes_the_target_stops_the_extraction` |
-| Two accounts can never share one budget file. Every account's budget is `budget_<safe username>.db` and the safe form maps anything outside `[A-Za-z0-9_-]` to an underscore, so "john doe" and "john_doe" are two accounts resolving to ONE file: shared bills, shared income, shared balance, either able to delete the other's figures (measured). The `UNIQUE` constraint cannot see it, since as typed the names differ, so `UserStore.create_user` refuses it. A case-only difference is left to that constraint, which answers it in the right words | `tests/auth/test_user_store.py::TestUsernamesThatWouldShareOneBudgetFile` |
-| A budget belonging to another account cannot be opened without that account's password; it cannot be SAVED OVER at all: loading one is recoverable and is offered behind their password, while a save replaces their figures and leaves nothing to recover from. Every account's budget sits in one directory the Load dialog opens on, where loading validated the schema alone, so any signed-in user could pick an administrator's budget out of the file list. Ownership comes from a stamp written inside the database, falling back to the file name for anything written before the stamp existed | `tests/shared/test_db_ownership.py`, plus `tests/infrastructure/test_session_database.py` for the stamping |
-| One Return press runs a dialog's submit ONCE. A `QLineEdit` emits `returnPressed` and then ignores the key so it reaches the dialog's default button, so connecting both gives one press two routes. No slot may answer both `returnPressed` and `clicked` in the same module | `tests/structural/test_return_key_invariants.py` |
-| Focus follows the KEYBOARD, never the pointer, wherever a click has nothing to act on: a button refuses mouse-reason focus outright and every table is `TabFocus` rather than Qt's default `StrongFocus`, so no pane is ever ringed by a click. Selection is untouched, since selection is not focus | `tests/structural/test_table_focus_invariants.py`, plus `KeyboardNavigator._focus_arriving` for buttons |
-| A table draws no ring in ANY state. The row the keyboard lands on already shows where it is, so a rectangle round the whole pane says nothing the table was not saying better; it is also the wrong shape of feedback for a region the eye looks into | `tests/structural/test_table_focus_invariants.py::TestNoTableDrawsARingRoundItself` |
-| A destructive confirmation is never raised over a file that will be refused, in either direction. Load asks the accounts store, the schema and the owner challenge FIRST; Save asks whose file it is FIRST; in both the overwrite question is the last gate before anything is written | `tests/structural/test_refusal_order.py` |
-| A handover that begins always ends: while the sign-in screen is showing build progress it is deliberately inert, so any path out of the session that skipped `end_handover` would strand it on screen, unclosable, with nothing behind it. The composition root ends it in a `finally` and `end_handover` is idempotent so that backstop can land on top of the ordinary call | `tests/structural/test_handover_invariants.py` (both halves) |
-| The Solvency page and the bank graph agree about every month ahead: its opening, its low, the day of the low and its close. Both chains start from what the current month still has to come after the stored balance and that rule has ONE home, `pending_income` and `pending_bills` in `application/services/_balance_projection.py`. Each chain once kept its own copy; the Solvency copy went on counting income already marked Received, so a month the graph showed overdrawn read as afloat on Solvency. Checked for twelve months ahead from five dates, a year end included | `tests/application/test_solvency_agrees_with_graph.py` |
-| The Solvency bank page and the Reserves page can never disagree about a month's low or the day it falls on, because both read ONE simulation: `application/services/_month_walk.walk_month`. Two correct-looking walks that differ about the same month is exactly the failure this forbids | `tests/application/test_month_walk.py`, plus `tests/application/test_commitments_due.py` |
-| Every picture button the user can press is named on the How It Works screen and the heading counts the strip it lists. The tray had this guard and the view strip did not, which is how the screen came to announce six views while seven were drawn; the footer's donate button was the same shape of gap, a picture in no tray at all, so the button scan reads `bottom_tray.py` alongside `_tray_buttons.py` | `tests/structural/test_help_names_the_views.py` (the tray and footer half is `test_help_names_the_tray.py`) |
-| A worked example on the How It Works screen is what the code returns: the pro-rating figure is read out of the sentence and checked against `prorate_remaining_pence` to the penny. The picture guards could never have caught it, which is why the prose half of that screen was the half that drifted | `tests/structural/test_help_example_is_arithmetic.py` |
-| The update check is the only connection the application opens itself. No module of the package, the setup program or `main.py` may import a networking module (`socket`, `http`, `urllib.request`, a third-party HTTP client, Qt's network or web-engine modules) except the update check's GitHub adapter, which may import `urllib.request` and nothing else networked | `tests/structural/test_no_network.py` |
-| No mock libraries: real implementations and hand-written fakes only | House rule; `tests/*/fakes.py` are the doubles |
+| Dependencies point inward: UI -> Application -> Domain <- Infrastructure. The Domain imports nothing but `shared` and no I/O, threading, network, logging or UI-framework module. Application never imports Infrastructure or the UI. Infrastructure never imports the UI (it may import the Application ports it implements). The UI never imports Infrastructure except `ui/window_builder.py`. The UI importing the Domain directly is recorded in [TECH_DEBT.md](TECH_DEBT.md) | [`tests/structural/test_layering_rules.py`](tests/structural/test_layering_rules.py) |
+| `auth` imports only `auth`, `shared`, the standard library and `bcrypt`; never the Domain, Application, Infrastructure or UI | [`tests/structural/test_auth_structure.py`](tests/structural/test_auth_structure.py) |
+| No source file exceeds 400 lines; none sits in the 381 to 399 danger band (a file refactored down lands at 350 or below) | [`tests/structural/test_loc_limits.py`](tests/structural/test_loc_limits.py) |
+| Only `shared/config.py` derives the real data directory. The suite never resolves it and no installer module names it | [`tests/structural/test_data_dir_isolation.py`](tests/structural/test_data_dir_isolation.py) plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py` |
+| The legacy data-directory migration cannot lose data: it is one rename on the same volume, otherwise a copy verified before the old tree is retired; the old tree stays in use until then. It runs at startup before the single-instance lock, never under the override | [`tests/shared/test_data_migration.py`](tests/shared/test_data_migration.py) and `test_data_dir_isolation.py::TestTheMigrationRunsFirstAtStartup` |
+| An open database is never copied as a file: it is snapshotted through SQLite's backup API and replaced only after its connection is closed, in `main.py` alone. A Load keeps the displaced budget until the loaded one opens | [`tests/shared/test_db_copy.py`](tests/shared/test_db_copy.py), [`test_db_copy_keep.py`](tests/shared/test_db_copy_keep.py), [`tests/structural/test_database_replacement_order.py`](tests/structural/test_database_replacement_order.py) |
+| A full restore that cannot complete changes nothing: every member is staged and validated first; a failure part way puts each live file back with its SQLite sidecars | [`tests/auth/test_full_backup.py`](tests/auth/test_full_backup.py), [`test_full_backup_hostile.py`](tests/auth/test_full_backup_hostile.py) |
+| A budget belonging to no restored account (or lying under a name a new account takes) is moved to `quarantine/`, never deleted | [`tests/auth/test_full_backup_estate.py`](tests/auth/test_full_backup_estate.py), [`test_user_store_new_account.py`](tests/auth/test_user_store_new_account.py) |
+| A budget list cannot lose budgets: an unusable list is rebuilt from the files on disk, an unsafe slug is dropped on read and the list is written whole | [`tests/shared/test_budget_registry_recovery.py`](tests/shared/test_budget_registry_recovery.py) |
+| Two accounts can never share one budget file: `UserStore.create_user` refuses a name whose safe file form collides with an existing account | [`tests/auth/test_user_store.py`](tests/auth/test_user_store.py) (`TestUsernamesThatWouldShareOneBudgetFile`) |
+| Another account's budget opens only behind that account's password and can never be saved over. Ownership is a stamp inside the database, falling back to the file name | [`tests/shared/test_db_ownership.py`](tests/shared/test_db_ownership.py), [`tests/infrastructure/test_session_database.py`](tests/infrastructure/test_session_database.py) |
+| A destructive confirmation is never raised over a file that will be refused: in Load and Save every refusal precedes the overwrite question | [`tests/structural/test_refusal_order.py`](tests/structural/test_refusal_order.py) |
+| 100% line and branch coverage over `clear_budget` and the Qt-free half of `installer` | `--cov-fail-under=100`, `branch = True` in [`.coveragerc`](.coveragerc) and [`pyproject.toml`](pyproject.toml) |
+| Money is integer pence. Typed text is read by `application/formatting.pence_from_text` through `Decimal`; a fraction of a penny, a negative (outside signed fields), a non-number or anything over `MAX_AMOUNT_PENCE` is refused, never rounded | [`tests/application/test_pence_from_text.py`](tests/application/test_pence_from_text.py) |
+| An exported report adds up (`opening + net == close`), agrees with the on-screen month graph and anchors the current month on the recorded balance | [`tests/application/test_projection_series.py`](tests/application/test_projection_series.py) |
+| The card graph and the Credit Cards view open a future month from the same chained figure (`card_openings_at`) | [`tests/application/test_month_graph_series.py`](tests/application/test_month_graph_series.py) (`TestCardGraphChaining`) |
+| A single exported HTML file references nothing outside itself; an exported package links only to bare sibling filenames; user text cannot inject markup | [`tests/application/reporting/test_reports.py`](tests/application/reporting/test_reports.py), [`test_package_report.py`](tests/application/reporting/test_package_report.py) |
+| The Solvency page and the bank graph agree about every month ahead, because what the current month still has to come has one home (`pending_income` and `pending_bills` in `_balance_projection.py`) | [`tests/application/test_solvency_agrees_with_graph.py`](tests/application/test_solvency_agrees_with_graph.py) |
+| The Solvency bank page and the Reserves page read one simulation, `application/services/_month_walk.walk_month` | [`tests/application/test_month_walk.py`](tests/application/test_month_walk.py) |
+| Every colour value lives in `shared/palette.py`; a hex literal anywhere else fails the build | [`tests/structural/test_colour_source.py`](tests/structural/test_colour_source.py) |
+| Highlight text takes the accent colour, never the focus-ring colour | [`tests/ui_logic/test_highlight_text_colour.py`](tests/ui_logic/test_highlight_text_colour.py) |
+| One Return press runs a dialog's submit once: no slot answers both `returnPressed` and `clicked` | [`tests/structural/test_return_key_invariants.py`](tests/structural/test_return_key_invariants.py) |
+| Every table takes focus from the keyboard only (`TabFocus`) and draws no focus ring in any state | [`tests/structural/test_table_focus_invariants.py`](tests/structural/test_table_focus_invariants.py) |
+| A sign-in handover that begins always ends: the composition root ends it in a `finally` and `end_handover` is idempotent | [`tests/structural/test_handover_invariants.py`](tests/structural/test_handover_invariants.py) |
+| Every picture button and view button is named on the How It Works screen; its worked pro-rating example is what `prorate_remaining_pence` returns | [`test_help_names_the_tray.py`](tests/structural/test_help_names_the_tray.py), [`test_help_names_the_views.py`](tests/structural/test_help_names_the_views.py), [`test_help_example_is_arithmetic.py`](tests/structural/test_help_example_is_arithmetic.py) |
+| The update check is the only connection the application opens: only its GitHub adapter may import `urllib.request` | [`tests/structural/test_no_network.py`](tests/structural/test_no_network.py) |
+| Installer payload extraction and repair cannot write outside their destination | [`tests/installer/test_payload.py`](tests/installer/test_payload.py) |
+| No mock libraries: real implementations and hand-written fakes only | House rule; the doubles are `tests/application/fakes.py` and `tests/installer/fakes.py` |
 
 ## Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       UI Layer (PySide6)                    │
-│    MainWindow → MonthView, SolvencyPanel, etc.              │
-│    ViewModels → State management & signals                  │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ DTOs (MonthSummary, SolvencyReport)
-┌──────────────────────▼──────────────────────────────────────┐
-│           Application Layer (Orchestration)                 │
-│    BudgetService → MonthGenerator                           │
-│    (coordinates domain services & repositories)             │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ Domain Entities, Value Objects, Services
-┌──────────────────────▼──────────────────────────────────────┐
-│        Domain Layer (Pure Business Logic)                   │
-│    Entities, Value Objects, Services (no I/O)              │
-│    Interfaces (Protocols) → Repository abstraction          │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ Concrete Repository implementations
-┌──────────────────────▼──────────────────────────────────────┐
-│       Infrastructure Layer (SQLite Persistence)             │
-│    Database, Repositories, Schema Management                │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+|  UI (PySide6): MainWindow, views, view models, dialogs      |
++------------------------------+------------------------------+
+                               | DTOs (MonthSummary, SolvencyReport, ...)
++------------------------------v------------------------------+
+|  Application: BudgetService, reporting, DTOs, ports         |
++------------------------------+------------------------------+
+                               | entities, value objects, services
++------------------------------v------------------------------+
+|  Domain: pure business logic, repository Protocols (no I/O) |
++------------------------------^------------------------------+
+                               | implements the Protocols
++------------------------------+------------------------------+
+|  Infrastructure: SQLite repositories, GitHub release source |
++-------------------------------------------------------------+
 
-┌─────────────────────────────────────────────────────────────┐
-│       Auth Layer (User Identity - cross-cutting)            │
-│    UserStore → users.db   User, UserManagementDialog        │
-│    RememberedLogin → OS credential store + sidecar file     │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│       Shared Layer (Config, Currency, Errors)               │
-│    Config, Currency, Errors - used by all layers            │
-└─────────────────────────────────────────────────────────────┘
+  auth:   UserStore (users.db), RememberedLogin, full_backup
+  shared: config, currency, palette, budget registry, db helpers
 ```
+
+Dependencies point inward. `main.py` is the composition root; the UI's
+`window_builder.py` holds the per-budget wiring split out of it.
 
 ## Layer Responsibilities
 
-### Domain Layer
-
-**Pure Business Logic** - No I/O, no frameworks, fully testable.
-
-**Entities** (frozen dataclasses with `slots=True`):
-- `Bill` - Template for a recurring or one-time expense
-  - `name`, `amount`, `category`, `bill_type`, `day_of_month`
-  - `start_ym`, `end_ym` - active month range; `end_ym` is the final month a bill
-    appears (set in the dialog for a subscription's last payment or by the
-    history-safe delete to end a bill from the viewed month onward)
-  - `skipped_for_month: bool` - per-month skip flag (joined from `bill_month_skips`)
-  - `has_month_override: bool` - per-month override flag (joined from `bill_month_overrides`)
-  - `paid_for_month: bool` - per-month paid flag; excludes the bill from "still due"
-    totals and the projected balance for the rest of that month
-  - `day_fixed: bool` - the payment day is fixed in the real world, so
-    Recommendations never proposes moving it. The flag records the EXCEPTION;
-    it defaults False because most days can be moved by asking
-  - `is_active_in_month(year_month)` - checks date range
-
-- `IncomeSource` - Recurring income (salary, benefits)
-  - `name`, `amount`, `is_reliable` (excluded from counted totals when false)
-  - `start_ym`, `end_ym` - active month range, mirroring `Bill`. BOTH are
-    nullable and a null means unbounded on that side, unlike a bill's
-    mandatory start: every income row written before these columns existed has
-    no start to record and inventing one would rewrite the months it already
-    appeared in. An income that stops names its final month rather than being
-    deleted, so the months it really did arrive in keep it
-  - `is_active_in_month(year_month)` - checks the range, the same rule `Bill`
-    applies, so a month decides what it contains identically on both sides of
-    the ledger
-  - `is_month_only: bool` - one-off "this month only" entry not tied to a
-    template; stored in `income_month_extras`, an unrelated table with its own
-    id space, which is why a one-off and a recurring source are matched by NAME
-    wherever the two have to be compared
-  - `skipped_for_month` / `has_month_override` / `received_for_month` - same
-    per-month machinery as `Bill`
-  - `day_fixed: bool` - as on `Bill` (a Universal Credit date is the worked
-    example of an arrival day nobody can move)
-
-- `CreditCard` - Credit card tracking
-  - `id`, `name`, `credit_limit`, `current_balance_used`
-  - `interest_rate_apr` (nullable), `payment_due_day` (1-31)
-  - `card_expiry_month` (1-12, nullable), `card_expiry_year` (nullable)
-  - `minimum_payment_pence` (nullable), `minimum_payment_percent` (nullable)
-  - `active` (soft-delete flag, 1 or 0)
-  - `balance_applied_year` / `balance_applied_month` / `balance_applied_day` - the
-    date `current_balance_used` is accurate as-of. A `day` marks a mid-month manual
-    entry (balance as-of that day); `day = None` marks a whole-month fold. The
-    same-month stamp also makes the elapsed-date fold skip a freshly entered figure
-    rather than overwrite it
-  - `current_balance_used` is stored verbatim: exactly the figure the user enters,
-    which is their balance as-of `balance_applied_day`. "Current Balance" and "Used"
-    are the same number. The start-of-month opening the projection needs is derived
-    on the fly (see `_card_live_projection.anchored_month_opening_pence`); nothing is
-    transformed at rest
-  - `scheduled_limit_changes` - upcoming dated changes to the credit limit (any
-    number over time, sorted by effective date). The effective limit for any date
-    is derived on the fly (see `services.credit_limit_schedule`); once a change's
-    date passes it folds into `credit_limit` and is dropped
-  - Properties: `available`, `utilization_percent`
-
-- `Commitment` - money owed later that this month's table cannot see: an
-  annual premium, an MOT, Christmas. It is NOT a bill. A bill leaves the
-  account on a day inside the month being read; a commitment is money held
-  back over the months BEFORE the day it leaves, so the spendable figure stops
-  counting it
-  - `name`, `amount` (one occurrence in full), `due_date`, `recurrence`,
-    `created_month` (where the first cycle starts accruing from),
-    `already_held` (what the user says is put by for this occurrence),
-    `category` (optional, reusing the bill categories), `active`
-  - `final_month` - the ending rule matches `Bill` and `IncomeSource` exactly:
-    a commitment that stops names its last month rather than being deleted, so
-    a month that really did hold a reserve keeps it when the archive reads it
-    back
-  - `outstanding_pence` is never negative: a user who says more is held than
-    the bill costs has over-held rather than earned a credit
-  - `applies_to(year_month)` / `applies_on(day)` - whether it is being reserved
-    for then
-
-- `MonthBill` - Bill instantiated for a specific month
-- `MonthIncome` - Income for a specific month
-
-**Value Objects** (frozen, immutable):
-- `Amount(pence: int)` - Non-negative currency; `__str__` uses `get_symbol()` from `shared.currency`
-- `YearMonth(year, month)` - Date validation with arithmetic
-- `SolvencyResult` - Outcome of solvency calculation
-- `MonthGap(income_pence, bank_bills_pence, card_interest_pence, reserve_pence=0)` -
-  what one
-  month costs against what it brings in. `needed_pence` derives the shortfall
-  (positive) or the headroom (negative) and `holds_flat` reads it. Whole-month
-  arithmetic on both sides deliberately, so it describes the SHAPE of the month
-  rather than how far through it we are: "what does a month like this need" is
-  a structural question, so the answer must not move simply because time
-  passed. The reserve is IN the figure, because money set aside leaves the same
-  account the bills do and a month that cannot fund it is borrowing from a
-  later one. Card interest is carried alongside and never folded into
-  `needed_pence`, because it accrues on the cards and never leaves the bank
-  account, so adding it would overstate the gap by money that was never going
-  to move (`tests/domain/value_objects/test_month_gap.py` asserts exactly that)
-- `MonthAfloat(low_point_pence, overdraft_limit_pence=0)` - how far a month's
-  lowest point sits from the balance it may not go below. `needed_pence` is
-  what must arrive to lift that low up to the floor (zero for a month that
-  already clears it, never a negative), `headroom_pence` is the margin the
-  other way and `stays_afloat` reads the sign. `floor_pence` is the agreed
-  overdraft rather than zero, so borrowing the bank has agreed to is not
-  counted as a shortfall.
-  It carries the AMOUNT alone. The deadline that goes with it is the walk's
-  `first_breach_day`, kept separate because the two come from different days:
-  the amount is set by the month's LOW while the deadline is its FIRST breach;
-  a month can dip under on the 21st while reaching its worst on the 28th.
-  An amount with no deadline is not actionable, so the clause states both.
-  It exists because MonthGap cannot answer this and was being read as though
-  it could: the gap knows nothing about the balance a month opens with, so a
-  month can need hundreds to hold flat while needing nothing at all to stay
-  afloat; a month going under is told a number unrelated to how far under
-  it goes. The two are asserted against each other in
-  `tests/domain/value_objects/test_month_afloat.py`. Measured at the month's
-  LOW rather than its close, since a month that dips under and recovers by
-  payday has still had payments refused. Pointedly not cumulative across
-  months: each forecast month is measured on the projection as it stands, so
-  its figure agrees with the opening balance printed at the top of its own
-  block
-- `Recurrence(months: int | None)` - how often a commitment comes round again;
-  `None` means it falls due once and never again. `once()`, `annual()` and
-  `every_months(n)` construct it and `parse()` reads the stored label. `annual`
-  is the twelve-month interval said the way a person says it: both forms parse
-  to the same interval, so the arithmetic only ever reads `months`
-- `CardExhaustionWarning` - Credit card exhaustion analysis
-- `CreditLimitChange(effective_year, effective_month, effective_day, new_limit)` -
-  one scheduled credit-limit change; validates its date is a real calendar date
-
-**Domain Services**:
-- `SolvencyCalculatorService.calculate()` - Computes balance, deficit, forward shortfall
-- `CardExhaustionService.analyze()` - Months until card maxes out
-- `BankCashflowService`:
-  - `find_first_negative_day()` - Detects overdraft date
-  - `project_month(starting_balance_pence, events, overdraft_limit_pence)` -
-    day-by-day simulation returning `MonthCashflowProjection`
-    (opening/closing/min balance, day of min balance, first negative day,
-    overdraft-exceeded day)
-  - `MonthCashflowProjection.overdraft_severity(overdraft_limit_pence)` ->
-    `"none" | "amber" | "red"`
-  - `estimate_daily_overdraft_interest_pence(overdrawn_pence, apr_basis_points)` -
-    daily interest estimate from APR stored in basis points
-- `recommendations.py` - the Recommendations engine, pure over its inputs:
-  `recommend(months, opening_balance_pence, overdraft_limit_pence,
-  buffer_pence)` takes `PlannedMonth` tuples and returns
-  `Recommendations(moves, asks, outlook, extras)`, where `extras` are the
-  headroom pass's optional retimings, measured after each month's mandatory
-  work (an ask month provably has none: an ask shifts every day equally, so
-  it changes no candidate). `TrialDay` plus `retimed_months` are the
-  try-it-on transform: months with a chosen item on a chosen day, pure and
-  movability-guarded, applied by the adapter before the engine runs. A
-  greedy best-move loop re-runs
-  the day-by-day simulation for every candidate retiming and applies the
-  single most lifting one until none improves the month's low; whatever
-  shortfall survives becomes that month's incremental ask. Ties resolve by
-  name so the result is stable run to run. 100% line and branch covered by
-  `tests/domain/services/test_recommendations.py`, each candidate rejection
-  planted as its own scenario
-- `safe_to_spend.py` - the Safe to Spend Today calculation, pure over its
-  inputs and with `today` always a parameter, never read from the clock.
-  `sustainable_spend(projection=, today=, floor=, window_months=)` returns a
-  `SustainableResult` (signed `amount_pence`, the `binding_day` that set the
-  minimum, the `covered_end` the figure makes a promise up to, the floor
-  echoed back as the pence it stood at on the binding day, plus `shortfall_pence` and `shortfall_day` for the gap beyond
-  it). The window bounds how far the calculation LOOKS; what it OFFERS is
-  bounded by `_covered_and_beyond`, the longest run of whole months from
-  today whose own lowest day clears the floor with nothing spent.
-  Two wrong answers were tried before this one and the rule reconciles both.
-  Truncating at the first breaching DAY reported the healthy stretch as
-  though the days after it did not exist, so the figure it offered deepened
-  the very month it had skipped while saying nothing about it. Letting every
-  day veto instead reported nothing spendable whenever any month in the
-  window collapsed, which answers "does my budget hold" in the slot reserved
-  for "what can I spend": a user with real headroom in front of them read
-  NOTHING SAFE TO SPEND. Bounding at a MONTH boundary and carrying the
-  shortfall separately keeps both truths: the promise is one a reader can
-  state ("everything through October holds") and the gap it does not fix is
-  named rather than netted off. A month after a collapse is excluded even
-  when it looks healthy, because it is projected from that collapse.
-  Only when today's own month is under the floor is `amount_pence` negative;
-  it is then THIS month's shortfall rather than the window's deepest
-  point, because the nearest gap is the one that can still be acted on.
-  `sustainable_capacity(...)` answers the rest of the month rather than one
-  day: `tuple[CapacityStep, ...]`, one step per CHANGE in the figure, each
-  carrying `from_day`, the signed `amount_pence` from that day onward and
-  the `binding_day` that set it. Each step is a suffix minimum over its own
-  window, so waiting past a tight day raises what a day can carry while
-  every step stays measured across whole months. Only days in today's own
-  calendar month are reported, because the question is what THIS month can
-  carry. `floor` is a `ReserveFloor` rather than a scalar, so what a day must
-  clear is the buffer plus whatever the Reserves page is accruing on that day:
-  the threshold rises as a distant bill gets closer. A budget with no
-  commitments passes `ReserveFloor.flat(buffer)` and projects exactly as it did
-  before the feature existed.
-  Both functions take their window from one shared `_window_days()`
-  helper, so the headline and the schedule cannot disagree about what they
-  are measured over and the first step always equals the headline.
-  `SustainableError` is the module's typed failure
-- `reserve_accrual.py` - what a commitment is holding back on a given day.
-  Pure: dates and commitments in, pence out, no clock read. The accrual runs
-  over the months REMAINING rather than over the commitment's natural period,
-  which is the deliberate choice here: an annual bill entered four months
-  before it lands accrues at a quarter of it a month, not a twelfth, because
-  the money genuinely has to be found in four months and a gentler figure
-  would be a reassurance the calendar does not support. `natural_rate_pence`
-  is reported alongside `monthly_rate_pence` so the first steep cycle can be
-  explained rather than merely endured. Two functions rather than one, because
-  the due day has to say two things at once: `accrued_pence` is the ramp,
-  climbing from what is already held to the full amount and reaching it
-  exactly on the due date, while `reserve_pence` is that ramp with the drop
-  applied, since on the day the money leaves the account it is no longer being
-  held back. That pair is what makes the netting-out in the projection fall
-  out of the arithmetic instead of needing a special case. `occurrence_at`
-  answers which cycle a day sits inside; `add_months` handles a due day past a
-  short month's end
-- `reserve_floor.py` - `ReserveFloor`, the balance the projection refuses to
-  call spendable. It REPLACES the scalar buffer everywhere the projection used
-  one: a buffer meant the same thing on every day of every month, while what a
-  budget has to keep back genuinely varies, since an annual bill four months
-  out holds back more of today's balance each month it gets closer. `at(day)`
-  is the buffer plus `reserved_at(day)` plus `variable_pence_at(day)`;
-  `ReserveFloor.flat(buffer_pence)` is the no-commitments case and `is_flat()`
-  reports it, which is what lets an existing budget project bit-identically
-  after the migration. Pure and deterministic, so the same commitments answer
-  the same for the same day whatever the clock says
-- `_recommendation_pauses.py` - the third recommendation lever, split from
-  `recommendations` and re-exported from it so nothing outside imports it by
-  name. Pausing a reserve is different in kind from the other two levers: it
-  does not find money, it stops putting money by, which ALWAYS looks like an
-  improvement inside the window on screen because the relief lands there while
-  the bill it was for lands later, sometimes outside the window entirely. So a
-  pause is never emitted as a bare win: every one carries what it lifts and
-  what the due month then arrives short by, both measured by re-walking the
-  same simulation with that commitment's hold-back removed. A suggestion that
-  cannot state its own price does not belong on the page
-- `_prorating.py` - shared pro-rating helpers (`days_in_month`,
-  `prorate_remaining_pence`) used by live card projection and balance projection
-- `CardMonthlyCalculator.calculate_card_monthly_state()` - Per-card monthly cashflow
-  - Inputs: card, opening balance pence, bills list
-  - Computes charges, payment received, interest, closing balance, minimum payment
-  - Returns `CardMonthlyState` frozen dataclass
-- `_card_live_projection.py` - live pro-rated balance: undated bills accrue evenly
-  across the elapsed days of the month (rounded up), dated bills count fully once
-  their due day has passed
-  - `month_to_date_net_pence()` - signed charges-minus-payments accrued so far this
-    month; the shared core of the live balance (live = `max(0, opening + net)`)
-  - `anchored_month_opening_pence()` - the start-of-month opening derived on the fly
-    from a verbatim `current_balance_used` and its `balance_applied_day` anchor. For
-    the anchor month it backs out the pre-anchor net (the part of the entered figure
-    already posted this month); for any other month or a card with no day anchor, it
-    returns the stored value unchanged. This is what lets "Used" equal exactly what
-    you typed while the projection and solvency stay correctly anchored
-- `credit_limit_schedule.py` - effective credit limit over a card's scheduled
-  changes:
-  - `effective_credit_limit_pence(card, as_of)` - the latest change on or before
-    `as_of`, else the current `credit_limit`; same-day ties resolve to the last
-    entered
-  - `month_end_effective_limit_pence(card, year, month)` - the limit at a month's
-    end, used by the projection strip and the per-month available-headroom colours
-
-### Application Layer
-
-**Orchestration** - Coordinates domain layer, defines cross-boundary DTOs.
-
-**BudgetService** (main orchestrator) - frozen dataclass (`slots=True`) composed of
-focused mixins to stay under the 400-LOC-per-file limit:
-- `BillOperationsMixin` (`_bill_operations.py`) - bill CRUD, per-month
-  skip/override/paid and `end_bill` (history-safe delete: sets the bill's end
-  month so earlier and archived months keep it)
-- `IncomeOperationsMixin` (`_income_operations.py`) - income CRUD, per-month
-  skip/override/received, "this month only" extras and `end_income` (the
-  mirror of `end_bill`: sets the income's end month so earlier and archived
-  months keep it)
-- `OverdraftOperationsMixin` (`_overdraft_operations.py`) - overdraft facility
-  settings, `get_month_gap()` (the month's bank shortfall and its card
-  interest, as a `MonthGap`), `get_month_cashflow_projection()` and
-  `first_overdrawn_month()`
-  (the runway: first future month to dip into the red, delegating to
-  `_overdraft_projection.py`)
-- `CardOperationsMixin` (`_card_operations.py`) - credit-card pass-throughs and
-  folds (card monthly states/projections, live balance, as-of-today balance
-  save, elapsed-date and limit-change folds)
-- `BalanceApplicationMixin` (`_balance_application.py`) - same-day
-  `apply_bill_to_balance_now` / `apply_income_to_balance_now` plus the
-  `balance_applied` log helpers; deleting a bill or income (or ending a bill
-  from a month onward) reverses its logged applications and a manual balance
-  entry clears the log because the typed figure supersedes them
-- `GraphSeriesMixin` (`_month_graph_series.py`) - month graph data:
-  `get_bank_graph_series` (day-end projected bank balance across the viewed
-  month, anchored through today's stored balance for the current month) and
-  `get_card_graph_series` (one day-end balance series per active card),
-  reusing the same projection day conventions as the rest of the app. A card
-  month AFTER the current one opens from `card_openings_at`
-  (`_card_projection.py`), the same chained openings the Credit Cards view's
-  panels and projection strip read, never from the stored balance: the stored
-  figure is as-of the day it was entered, so a distant month opened from it
-  drew a balance untouched by every intervening payment and every month's
-  interest. The viewed month's interest (one shared
-  `monthly_interest_pence` rule with the monthly state) lands on the series'
-  last day, so a month closes exactly where the next one opens
-- `SafeToSpendOperationsMixin` (`_safe_to_spend_operations.py`) - the Safe to
-  Spend Today adapter and its settings. `get_safe_to_spend(today=None)`
-  builds the per-day projection across the forecast window, then calls
-  the pure domain calculation with the stored floor and window.
-  The current month runs from today's stored balance over the same still-due
-  items the Solvency panel's timeline shows, an undated bill counted at its
-  prorated REMAINING portion because its elapsed portion is already inside
-  the stored balance (the raw month-graph convention charges the full undated
-  amount again near month end, which double-counted elapsed spending and made
-  the headline disagree with the panel it sits on); its close therefore
-  equals the panel's projected end-of-month figure. Later months chain day by
-  day from that close, over the same 24-month window the overdraft runway
-  walks. `get_spending_capacity(today=None)` runs the capacity
-  schedule over that same projection, floor and window, so it and the
-  headline are two readings of one forecast rather than two forecasts.
-  `get_assumed_expectations(today=None)` returns the (month, income) pairs the
-  assumed reading counts that a reading of only what was entered would not,
-  scoped to the sustainable window because that is what a figure promises to
-  keep standing.
-  `get_assumed_month_summary(year_month, today=None)` states the same
-  assumption as a MonthSummary, filling a later month's gaps from this month's
-  income exactly as the per-day projection does, so the projection page's
-  spendable figure and its month narrative are two readings of one assumption
-  rather than two implementations of it. A month at or before the current one
-  comes back unfilled: income repeats forward, so there is nothing for an
-  earlier month to receive
-
-- `ReserveOperationsMixin` (`_reserve_operations.py`) - the Reserves adapter:
-  commitment CRUD (`add_commitment`, `update_commitment`, `end_commitment`,
-  `delete_commitment`, `list_commitments`), `build_reserve_floor(buffer_pence=)`
-  which bridges the stored commitments to the pure `ReserveFloor`, plus every
-  figure a row on the page needs (`get_reserve_rows`, `get_reserve_cost_pence`,
-  `get_reserved_today_pence`, `get_reserve_held_pence`,
-  `get_month_reserve_cost_pence`, `get_commitments_due_in`,
-  `get_bank_graph_floor_values`, `get_reserve_month_lines`). The page never
-  reaches past the service to a repository of its own and never does the
-  accrual arithmetic itself
-  - **The buffer is taken as a PARAMETER, not read inside.**
-    `build_reserve_floor(buffer_pence=)` makes the caller own which buffer it
-    means, because there are two and they are not the same setting:
-    `safe_to_spend_floor` (Settings > Bank Account) is what the graph and Safe
-    to Spend measure against, while `recommendation_buffer` (the emergency
-    buffer) is what the Reserves page and the Recommendations target use. They
-    are stored separately and merging them is an open product question, not a
-    tidy-up
-- `walk_month(opening_pence, summary, floor_pence=0)` (`_month_walk.py`) - one
-  month simulated day by day, returning its low, the day the low lands on, its
-  close, the first day it went below zero and `first_breach_day`, the first day
-  it went below `floor_pence`. That last one is the deadline the Solvency
-  forward blocks date their rescue figure to. `floor_pence` is a PARAMETER
-  rather than a second walk precisely so the invariant below survives: at its
-  default of zero it changes nothing and the two days agree, so a caller that
-  ignores it reads exactly what it always did. It moves no balance. It was
-  lifted out of `_solvency_panel_narratives`, where it had grown up as UI code
-  although nothing about it is UI. Two pages need it now: the bank page tells a
-  month's story from it and the Reserves page reads the same months against
-  what they hold back. That is the whole reason it moved. Two correct-looking
-  simulations that disagree about one month is the failure the invariant
-  forbids; one walk makes agreement structural rather than a coincidence that
-  has to be maintained. No Qt, no I/O and no clock
-- `pending_income(income, balance_day, today_day)` and
-  `pending_bills(bills, today_day, total_days)` (`_balance_projection.py`) -
-  what the CURRENT month still has to come after the stored balance, the one
-  statement of it. Received income and paid bills are already inside that
-  balance whatever their due day, so neither is counted; income due on or
-  before the balance day is presumed inside the typed figure; an undated bill
-  counts only its share of the days still to run. The balance carried into
-  next month, the Solvency report and the "Still due this month" lines all
-  read these two, which is what makes the invariant above structural. There
-  were two copies once; fixing one left the other counting Received income
-  twice
-
-Key methods:
-- `get_month_summary(year_month)` → `MonthSummary`
-- `calculate_solvency(year_month, today=None)` → `SolvencyReport`
-- `calculate_solvency_from_summary(year_month, month_summary, today=None)` →
-  `SolvencyReport`; the first delegates to the second. `today` is injectable
-  for the same reason as the graph's, so the report can be checked against
-  the graph for any date rather than only the one the code runs on
-- `get_card_monthly_states(year_month)` → `list[CardMonthlyState]`
-- `get_card_projection_months(start_month, n_months)` → `list[list[CardMonthlyState]]`
-- `save_credit_card_today_balance(card, today_balance, is_new)` → `int` - persists a
-  card from the as-of-today balance the user entered, stored verbatim and stamped with
-  today's date as its `balance_applied` anchor. "Used" therefore equals exactly what
-  was entered; the start-of-month opening is derived on the fly where the projection
-  needs it (`anchored_month_opening_pence`) and the same-month stamp makes the
-  elapsed-date fold skip the freshly entered figure rather than overwrite it
-- `set_credit_limit_changes(card_id, changes)` - replace a card's scheduled limit
-  changes (the dialog manages the list and persists it whole on save)
-- `apply_elapsed_limit_changes(today=None)` - fold each card's elapsed scheduled
-  limit changes into its current limit, keeping only the still-upcoming ones; run at
-  launch alongside `update_card_balances_for_elapsed_dates`
-- `skip_bill_for_month(bill_id, year_month)` / `unskip_bill_for_month(bill_id, year_month)`
-- `delete_bill_month_override(bill_id, year_month)`
-- `get_projected_month_end_balance_pence(year_month, summary)` → `int` (signed);
-  both arguments keyword-only, the summary passed in so callers that already
-  hold one never pay for a second computation
-- `get_bank_balance_pence()` → `int` (signed) / `set_bank_balance(amount)` -
-  the stored balance is stamped with the date it was set (`bank_balance_day`
-  plus the full `bank_balance_date`), the baseline the elapsed fold advances
-  from. It is read back as signed pence rather than as an `Amount`, because
-  the fold and the same-day prompt deduct a bank bill whatever the balance
-  holds, so a real overdraft is stored as a negative figure. Read through the
-  non-negative `Amount`, that figure raised while the window was being built
-  and an overdrawn account could not be opened at all
-  (`tests/application/test_overdrawn_balance.py`). Setting one is signed
-  too: `set_bank_balance_pence(pence=...)` stores signed pence (clearing the
-  applied log as `set_bank_balance` does), so Set Bank Balance accepts an
-  overdrawn figure such as -£250.00. It used to take an `Amount`, so OK on a
-  negative balance failed
-- `apply_elapsed_bank_transactions(today=None)` → `int` (`_bank_transaction_fold.py`) -
-  applies every dated bank bill/income that fell due after the balance baseline
-  to the stored balance (local-midnight semantics), marks each item paid or
-  received so no projection counts it twice, then advances the baseline to
-  today; run at launch and re-run by the MainWindow midnight timer; a due day
-  beyond a short month's end is applied on its last day; card bills are left to
-  the card fold. Every mark, every applied-log row and the new balance commit
-  as ONE transaction and roll back together: measured before, an interruption
-  after a mark left a bill paid and never deducted
-  (`tests/application/test_bank_transaction_fold_atomic.py`)
-- `adjust_bank_balance(delta_pence)` - signed delta to the stored balance,
-  stamped as-of today (backs the same-day "update balance now?" prompt when an
-  item dated today is added)
-- `get_safe_to_spend(today=None)` → `SustainableResult` - Safe to
-  Spend Today from the stored floor and window; `today` is injectable so the
-  result is decided by its inputs rather than by the day the code runs
-- `get_spending_capacity(today=None)` → `tuple[CapacityStep, ...]` -
-  what could be spent from each remaining day of this month onward, one entry
-  per change; the first entry always equals `get_safe_to_spend`
-- `get_assumed_expectations(today=None)` → `tuple[tuple[YearMonth, IncomeSource], ...]` -
-  the money the assumed reading counts that a reading of only what was entered
-  would not, as (month, income) pairs so the panel can say WHEN each amount has
-  to arrive
-- `get_assumed_month_summary(year_month, today=None)` → `MonthSummary` - one
-  month as the repeat assumption sees it, for the projection page's forward
-  narrative. Fills gaps only, never reducing a month below what was entered
-  for it; the current month and every earlier one are left alone
-- `get_safe_to_spend_floor()` / `set_safe_to_spend_floor(amount)` - the
-  floor, which the UI calls the Safe to Spend "buffer" (the naming split:
-  floor is the domain term the calculation uses, buffer is what a user
-  reads). Defaults to 20.00 in the active currency when never set; an
-  explicitly saved zero is honoured as zero
-- `get_sustainable_window_months()` / `set_sustainable_window_months(months)` -
-  how many months the figure must keep standing, defaulting to 4 when never
-  set; the dialog offers 1 to 12
-- `get_overdraft_limit()` / `set_overdraft_limit(amount)` - overdraft facility limit
-- `get_overdraft_apr_basis_points()` / `set_overdraft_apr_basis_points(basis_points)` -
-  overdraft APR, stored as basis points (1bp = 0.01%)
-- `get_recommendations(today=None, trial=(), pinned=False)` → `(Recommendations, horizon)` - the
-  recommendation engine's answer plus the months it covers, computed over the
-  sustainable window starting the month after today and opening from the
-  current month's projected end-of-month balance (see the RecommendationsView
-  entry for the full shape)
-- `get_recommendation_buffer()` / `set_recommendation_buffer(enabled, amount)` -
-  the Recommendations page's emergency buffer; disabled and zero until the
-  user says otherwise and the amount survives disabling
-- `get_month_gap(year_month)` → `MonthGap` - the month's full bank bills against
-  its full income, plus the interest accruing across its active cards; drives
-  the Solvency "needs X more to hold flat" line
-- `get_month_cashflow_projection(year_month, summary)` → `MonthCashflowProjection` -
-  drives the Monthly Budget mid-month overdraft warning
-- `first_overdrawn_month(from_year_month, from_balance_pence)` → `YearMonth | None` -
-  first future month whose day-by-day projection dips below zero (a mid-month dip
-  counts even when the month closes positive); drives the Solvency runway warning
-  and the "overdrawn in <month>" escalation
-- `end_bill(bill_id, last_active_month)` - history-safe delete: set the bill's end
-  month, leaving every earlier month (and archived snapshots) untouched
-- `end_income(income_id, last_active_month)` - the same for income. Deleting the
-  source instead would remove it from months it really did arrive in, which is
-  why this exists and why the income dialog offers no way to turn a recurring
-  income into a one-off
-- `get_recorded_months()` → `list[YearMonth]` - months already snapshotted into the
-  archive (drives the Archive view)
-- `archive_month(year_month)` - snapshot one month's generated bills and income into
-  `months` / `month_bills` / `month_income` (idempotent; the internal archiving
-  primitive)
-- `auto_archive_elapsed_months(current_month)` - archiving is automatic, never manual:
-  run at launch (alongside `apply_elapsed_limit_changes`), it archives every elapsed
-  month up to the live month, filling any gap from the earliest recorded month so a
-  month is captured the moment it ends even across several missed launches
-
-**The repeat-forward assumption** (`_safe_to_spend_operations._missing_from`):
-- Every income entered for the current month is assumed to arrive, then to
-  arrive again in each later month with no entry of THAT NAME. It only fills
-  gaps, so it can never reduce a month below what was entered for it.
-  Matching is by name because a recurring source and a one-off live in
-  different tables with unrelated ids
-- It is NOT optional and there is no second, unassumed reading to select.
-  There was: a `ProjectionBasis` enum with `KNOWN` and `REPEAT_CURRENT`,
-  from when the bank page showed one figure and the projection page the
-  other. Once the spendable figure moved to the projection page for good,
-  every call passed `REPEAT_CURRENT` and the parameter selected between one
-  behaviour and a dead one, so it went. One projection, one assumption,
-  stated on the page that shows it
-- It replaced a per-item "reliable" tick as the basis of the second reading.
-  The tick still excludes income from the counted totals. An assumption
-  nobody remembers to switch on is not a second reading, so the assumption is
-  DERIVED from the shape of the current month
-- **An ENDED income is never filled forward.** The rule exists to cover an
-  absence of DATA (ad hoc money typed in only where it has already
-  happened), so `_missing_from` also tests `is_active_in_month` on the
-  target month and skips a source whose final month has passed. Without
-  that test the rule resurrects income the user deliberately stopped and
-  the spendable figure does not fall when an income ends, which is exactly
-  when it must. Held by
-  `tests/application/test_ended_income_not_repeated.py`; it is also why
-  `test_income_month_bounds.py::test_the_spendable_figure_reads_the_ended_income`
-  exists
-
-**DTOs**:
-- `MonthSummary` - `year_month`, `total_income`, `total_bills`, `bank_bills`,
-  `balance`, `bills`, `all_bills`, `income_sources` (the counted set),
-  `all_income_sources` and `assumed_income_sources` (active but not reliable,
-  carried separately whether or not they were counted, so the gap
-  specification can name them)
-- `SolvencyReport` - `year_month`, `balance_pence: int` (signed), `deficit`, `buffer`, `forward_shortfall`, `is_solvent`, `first_negative_day`
-- `GraphSeries` - `label`, `values` (one signed pence value per day of month)
-- `ReleaseInfo` / `ReleaseAsset` / `UpdateStatus` (`dto/update_info.py`) - the
-  latest published release, its downloadable files and the outcome of an
-  update check
-
-**Update check**:
-- `ports/release_source.py` - `ReleaseSource` Protocol: the one seam through
-  which the application ever learns about releases; implemented in
-  infrastructure, faked in tests
-- `UpdateService` (`services/update_service.py`) - compares the running
-  version against the latest published release, honours a skipped version and
-  picks the download asset for the running platform by filename suffix
-  (`.exe` / `.dmg` / `.flatpak`); an unreachable source reports no update
-- `version_compare.is_newer` (`services/version_compare.py`) - pure dotted
-  semver comparison with an optional leading "v"; a malformed tag is never
-  newer, so it can never raise a spurious prompt
-
-### Infrastructure Layer
-
-**Per-user database** (`budget_<username>.db` in the app data directory):
-- `Database(db_path)` - SQLite connection and schema management. `_schema.py`
-  holds the baseline DDL; `_migrations.py` holds the numbered migrations that
-  bring an existing database forward. A column is added only after reading
-  `PRAGMA table_info`, so "already present" is established by looking rather
-  than inferred from a swallowed exception; every other failure propagates
-- Schema - 20 application tables (plus SQLite's internal `sqlite_sequence`):
-  1. `payment_methods` - id=1 is "Bank Account"
-  2. `bills` - templates; includes `target_card_id` (migration). A bill starts
-     in the month it was created and its start month is never moved afterwards,
-     since moving it would make the bill appear in months before it existed. The
-     retired `one_time` category is folded into `discretionary` by a numbered
-     migration that runs once rather than on every launch. `amount_pence` here
-     is only the ORIGINAL amount: what a bill costs in a given month comes from
-     table 18 via `domain.services.bill_amount_schedule`. `day_fixed`
-     (migration) records a payment day fixed in the real world, defaulting 0
-     (movable) on every row written before the concept existed
-  3. `income_sources` - templates; `start_year` / `start_month` / `end_year` / `end_month` (migration) bound the months it appears in, all four nullable and all NULL on every row that predates them, so an upgraded database behaves exactly as it did; `day_fixed` (migration) as on `bills`
-  4. `months` - one row per archived month (written by auto-archive at launch)
-  5. `month_bills` - archived per-month bill snapshot
-  6. `month_income` - archived per-month income snapshot
-  7. `credit_cards` - includes `minimum_payment_percent` (migration)
-  8. `settings` - key/value store (`bank_balance`, `bank_balance_day`,
-     `bank_balance_date` (the fold baseline; legacy databases without it fall
-     back to `bank_balance_day`), `currency`,
-     `overdraft_limit`, `overdraft_apr_bp`, `safe_to_spend_floor`,
-     `sustainable_window_months`, `recommendation_buffer_enabled`,
-     `recommendation_buffer`, `variable_spend_monthly`)
-  9. `bill_month_overrides` - per-month bill amount/day override (`day_of_month` is a migration)
-  10. `bill_month_skips` - per-month bill exclusion
-  11. `bill_month_paid` - per-month bill "paid" flag (excludes it from "still due")
-  12. `income_month_overrides` - per-month income amount override
-  13. `income_month_skips` - per-month income exclusion
-  14. `income_month_received` - per-month income "received" flag
-  15. `income_month_extras` - "this month only" one-off income, not tied to a template
-  16. `credit_limit_changes` - scheduled dated credit-limit changes (one row per
-      change; no uniqueness, so a card may have any number over time)
-  17. `balance_applied` - log of amounts the app applied to the bank balance
-      automatically (midnight fold or same-day prompt), one signed row per item
-      per month; deleting an item reverses its rows, a manual balance entry
-      clears the log
-  18. `bill_amount_changes` - what a bill costs from a month onward, one row per
-      change, unique per (bill, month). A change applies to its month and every
-      month after it and to no month before it, so raising the rent leaves
-      earlier months reporting what they actually cost
-  19. `commitments` - what the budget is reserving for: name, amount, the due
-      date, the recurrence label, what is already held, the created month and
-      an optional final month. Added by a numbered migration, so an existing
-      budget gains the table empty and projects bit-identically until the
-      first commitment is entered
-  20. `schema_version` - a single row recording how far this database has been
-      migrated, so each migration runs once and in order
-
-**Repositories**:
-- `SQLiteBillRepository`
-  - `list_active_for_month()` - LEFT JOINs `bill_month_skips` and `bill_month_overrides`
-  - `skip_for_month` / `unskip_for_month`
-  - `hard_delete(bill_id)` - cleans related skips and overrides
-- `SQLiteIncomeSourceRepository`
-  - `list_active_for_month()` - LEFT JOINs the per-month override, skip and
-    received tables and filters on the month bounds, where a NULL on either
-    side reads as unbounded
-  - `IncomeMonthExtrasMixin` (`_income_month_extras.py`) - the one-off rows in
-    `income_month_extras`, split out as a distinct concern from template CRUD
-- `SQLitePaymentMethodRepository`
-  - `set_card_active(card_id, active)` - soft-delete toggle
-- `SQLiteCommitmentRepository` - implements the `CommitmentRepository` Protocol
-  over the `commitments` table. `list_for_month` applies the same
-  created-month-to-final-month bounds `Commitment.applies_to` states, so the
-  rule is not written twice in two dialects; `end_from` stops a commitment
-  after a named month while `delete` removes it outright, the same two scopes
-  bills and income offer
-
-**Update source** (`infrastructure/update/github_release_source.py`):
-- `GitHubReleaseSource` - implements the `ReleaseSource` port with a single
-  best-effort stdlib `urllib` GET against GitHub's latest-release endpoint
-  (published releases only, so drafts, prereleases and bare tags can never
-  prompt). Any failure yields None; the opener is injected so tests never
-  touch the network. This is the only outbound network call in the
-  application, held so by `tests/structural/test_no_network.py`
-
-### Auth Layer
-
-Separate from budget infrastructure. Manages user identity and credentials.
-
-**Central users database** (`users.db` in the app data directory):
-- Single SQLite database shared across all users on the machine
-- `users` table: `id`, `username`, `password_hash` (bcrypt), `recovery_code_hash` (bcrypt), `is_admin`
-
-**`UserStore`** (`clear_budget/auth/user_store.py`):
-- `has_users()` - drives first-run wizard
-- `find_user(username)` → `User | None`
-- `verify_password(username, password)` → `User | None`
-- `verify_recovery_code(username, code)` → `bool`
-- `create_user(username, password, is_admin)` → `(User, recovery_code)` - hashes
-  password and recovery code with bcrypt. Only the first-ever user is created with
-  `is_admin=True`; all subsequent accounts (login screen "Create Account..." or
-  admin "Add User") are non-admin. Before committing, it moves any budget file or
-  budget list already lying under the new name (left by a restore, by hand or by
-  an older version) to `quarantine/` through `shared.budget_files`, so a new
-  account never opens someone else's figures; a file another live account owns
-  stays put. A move that fails rolls the account back
-- `change_password(username, new_password)`
-- `delete_user(user_id)`
-- `get_all_users()` → `list[User]`
-- `close()`
-
-**`User`** model (`clear_budget/auth/models.py`):
-- `id`, `username`, `is_admin`
-
-**`RememberedLogin`** (`clear_budget/auth/remembered_login.py`):
-- Backs the sign-in screen's two ticks, Remember my username and Remember my
-  password, PER ACCOUNT. The password lives in the operating system's
-  credential store (Windows Credential Manager, macOS Keychain, Linux Secret
-  Service) via the `keyring` package under the service name `ClearBudget`;
-  what is written to disk, as `remembered_login.json` in the app directory, is
-  only which accounts are remembered, which of them keep a password and which
-  signed in last
-- `remember_username(username)` - remember the name without touching its
-  password flag (what the account-creation screen writes)
-- `remember_password(username, password)` - keychain first, sidecar second,
-  so a failed keychain write never leaves the screen promising a password it
-  cannot produce
-- `recall_password(username)` → `str | None`; `usernames()` and
-  `last_username()` say what the sign-in screen offers and preselects
-- `forget_password(username)` drops the keychain entry and keeps the name;
-  `forget(username)` drops both, tolerating an unreachable keychain
-- Reads the earlier single-account file too, as one account that kept its
-  password, since that file is on every machine the app has already run on
-- Every keychain failure (no backend, locked, denied) degrades to "nothing
-  remembered": sign-in never crashes or blocks on the credential store
-- The keyring boundary is an injected `SecretBackend` Protocol; tests use a
-  hand-written in-memory fake and the module sits inside the coverage gate
-- Constructed in `main.py` with `Config.app_dir()` and handed to the sign-in
-  and account-creation dialogs through `ui/login_flow.run_login_flow`;
-  `LoginDialog._record_choices` applies both ticks on a successful sign-in
-
-**`full_backup`** (`clear_budget/auth/full_backup.py`):
-- Back Up Everything / Restore Everything behind File > Import / Export.
-  File > Save covers only the active budget; `users.db` sat outside every
-  backup path the app offered, so this module bundles the whole set into one
-  zip: `users.db`, every `budget_*.db` and the `budgets_*.json` registry
-  sidecars. Caches are excluded (regenerated) and so is the Remember-me
-  sidecar, whose password lives in the OS keychain and cannot travel in a file
-- `create_full_backup(app_dir, dest_path)` → the member names bundled. Each
-  database goes in as a snapshot (`shared.db_copy.snapshot_database_file`),
-  never as a copy of its bytes: the app holds the accounts store and the open
-  budget while the backup runs and a byte copy was measured taking a write in
-  progress into the zip as if committed. A database locked mid-write refuses
-  the backup after a bounded wait rather than hanging. The zip is built beside
-  the destination and renamed into place
-- `validate_full_backup(package_path)` → the member names, refusing a zip
-  with no `users.db`, a stray member, a path-traversal name or a name that
-  appears twice in any letter case (two entries for one file let the second
-  overwrite the first's saved original)
-- `restore_full_backup(package_path, app_dir)` → `RestoreResult(names,
-  quarantined, quarantine_dir)`. It stages first: members are extracted to
-  `_restore_staging` inside the data directory (a damaged archive is a
-  `FullBackupError`, never a `BadZipFile` or `zlib.error`); `users.db` must
-  pass `validate_accounts_db`; each budget database must pass `validate_db`;
-  each budget list must pass `budget_registry.index_text_error`. Only then
-  are live files replaced one by one, each moved aside first WITH its
-  `-journal`, `-wal` and `-shm` files to a path unique to its position; all
-  are put back in reverse order if anything fails. A crash journal left beside a
-  live budget used to be played back over the restored file. Last, every
-  budget and budget list that belongs to no restored account is moved to a
-  fresh folder under `quarantine/`, never deleted. The caller must have closed
-  every open connection (Windows refuses to replace an open database);
-  `main.py` tears the session down, says what was quarantined and where,
-  rebinds a fresh `UserStore` and returns to the sign-in screen in a
-  `finally`, so even an unexpected error ends there
-- Pure stdlib (`zipfile`, `sqlite3`, `shutil`) and inside the coverage gate;
-  the UI flow (`ui/widgets/_full_backup_flow.py`: dialogs, unencrypted
-  warning, double confirmation) sits outside it like the rest of the UI layer
-
-### Reporting (`clear_budget/application/reporting/`)
-
-Pure string building for the HTML exports: no Qt, no file access, no clock, so
-it is all under the coverage gate and testable without a QApplication.
-
-- `curve.py` - the monotone cubic (Fritsch-Carlson) curve maths. It lives here
-  rather than beside the widget because BOTH the on-screen chart and the exported
-  SVG need it and the UI layer is not something the application layer may import
-- `_chart_svg_text.py` - the escape and the one muted label style both the frame
-  and the legend write text through, so neither holds a second copy of it
-- `_chart_svg_legend.py` - the legend, laid out to FIT rather than stepped a
-  fixed distance per entry. A fixed stride ran the last entry off the right edge
-  of the canvas as soon as four cards were plotted with the total curve, so the
-  export lost that label exactly as the window did. There are no font metrics in
-  a string build, so a label's width is estimated from its character count at an
-  upper bound for the face (the same device the y-axis margin uses): each entry
-  takes the room its own words need, a row wraps when the next entry would cross
-  the right margin and a label too wide for a whole row is shortened. The band
-  grows a row at a time and the plot starts beneath it
-- `chart_svg.py` - the bar and line charts as inline SVG, following the same rules
-  as `_line_bar_chart.py` (curve in bar mode only, axis always includes zero, zero
-  line only when the range crosses it). The export redraws the series rather than
-  screenshotting the widget: vector output stays sharp, needs no image file beside
-  the HTML and can be tested as a string. Fixed DARK palette mirroring the app's
-  `DARK` / `SERIES_DARK` / `CURVE_DARK` tokens (mirrored, not imported, because the
-  application layer may not depend on the UI), including the single-series role
-  colours `SOLO_LINE` / `SOLO_BAR` / `SOLO_CURVE`, so an export and the screen
-  agree on when the palette gives way to them. Fixed rather than following the
-  active theme, so an export does not change appearance depending on where the
-  toggle happened to be. Each chart carries its own background rect so it reads
-  correctly wherever it is embedded and the print rules keep the dark identity
-  rather than dropping pale text onto a white page
-- `document.py` - the page shell. The stylesheet is inline and the charts are inline
-  SVG, so an exported file references nothing outside itself and survives being
-  emailed or moved (there is a test asserting no `src`, `href` or `@import`)
-- `month_report.py` - one month: both renderings plus the text saying what each is
-  for and the four figures worth pulling out (opening, closing, change, the low
-  and its day)
-- `projection_report.py` - a month range: a chart of two lines per month, the
-  month-end balance and the LOWEST point inside that month, plus a table and a
-  traffic light per month. The two lines are the point of it: a month that opens
-  and closes in credit can still bounce a payment mid-month and a report drawn
-  from closing balances alone would show that month as healthy. Given
-  `month_links` it becomes a package INDEX and each row leads to that month's
-  page; given none it renders standalone, linking nowhere, a mode only the
-  tests exercise now that the UI's range export always writes the package
-- `package_report.py` - a month range as a FOLDER: the projection as
-  `index.html`, then `<year>-<month>.html` per month, each carrying the same
-  day-by-day pair the single-month export does plus a link home. ISO-ish names
-  so a folder listing sorts into calendar order with nothing open. This is the
-  one place the self-contained rule widened: a page may link to a SIBLING by
-  bare filename; to nothing else. The FOLDER is what survives being moved;
-  a page taken out of it loses only the link home. Nothing is fetched: styles
-  and charts stay inline exactly as before. A month whose series cannot be
-  built gets its row on the index and no link, rather than a link to a page
-  that was never written
-
-`ProjectionMonth` (`application/dto/projection_month.py`) carries one month's
-figures and derives its own state: red below the agreed overdraft floor, caution
-for a dip below zero or a month that ends lower than it started, safe otherwise.
-`ProjectionSeriesMixin.get_projection_months` builds them by running the SAME
-day-by-day bank projection the month graph draws over each month in the range, so
-the report and the graph can never disagree about a month they both cover (there
-is a test asserting exactly that).
-
-The opening balance comes from `GraphSeriesMixin.get_bank_month_opening_pence`,
-which is the value the graph itself starts each month from. That method exists
-because the two were computed separately at first and DRIFTED: for the current
-month the graph anchors on the recorded bank balance wound back over what has
-already been applied, while `get_projected_starting_balance_pence` returns
-something else, so the exported table showed an opening that did not add up to
-its own closing balance and read as unrelated to the user's money. With one
-source, `opening + net == close` holds for every row and each month opens where
-the previous one closed, which is what makes the report checkable against a real
-bank statement. Both identities are tested.
-
-### Named budgets
-
-One account owns SEVERAL budgets, each a whole database of its own: separate
-bills, income, cards, overrides and settings. `budget_registry` is the record
-of that set (`clear_budget/shared/budget_registry.py`), a per-user JSON sidecar
-holding each budget's slug and display name plus which one is active.
-
-- The design constraint was that an install predating the feature must open the
-  same file it always did, with nothing moved and no migration step to get
-  wrong. So the FIRST budget keeps the reserved empty slug, whose filename is
-  the very `budget_<user>.db` that already exists; an absent or unreadable
-  sidecar SYNTHESISES the records rather than failing. The sidecar is written
-  the first time a second budget is created and not before, so the migration
-  is that there is no migration
-- Every failure mode of the sidecar collapses to the same answer: no file, bad
-  JSON, the wrong shape, a budget list holding nothing usable. The records are
-  rebuilt from disk: the first budget plus every `budget_<user>__<slug>.db`
-  that is this user's (bounded to the user's prefix and to slugs the app could
-  write; a file whose owner stamp names someone else is left out), each named
-  after its slug since the real name was in the sidecar. Measured before: a
-  list that did not parse left only "Main budget", with every named budget on
-  disk and unreachable. An active slug naming a budget that is gone falls back
-  to the first. The databases are the data and the sidecar is only the map to
-  them, so a lost map means "the budgets I can prove exist", never an error
-  the user cannot act on
-- A slug READ from the sidecar builds a file path, so one the app could not
-  have written (`../x`, a separator, a double underscore, upper case) is
-  dropped on read; `index_text_error` is the stricter check a restore applies
-  to a list it is about to put in place
-- `store_index` writes the whole list to a scratch file beside it, fsyncs and
-  renames it over the old one, so a crash part way leaves the previous list
-- A slug is a run-collapsed alphanumeric reduction of the name, so it can never
-  itself contain the `__` that separates it from the username in the filename;
-  colliding slugs are numbered apart. Renaming changes the name only, never the
-  slug, so a rename never moves a file
-- `infrastructure/sqlite/session_database.open_user_database` is the ONE place
-  that decides which file a session opens; it asks the registry. Switching budget is therefore a registry
-  write plus the existing `database_replaced` signal, which already tore down
-  and rebuilt a session on an import; no new session plumbing
-- `File > New Budget` creates. It used to be a double-confirmed WIPE, because a
-  user could own exactly one budget and the only way to hand them an empty one
-  was to empty the one they had. That is the whole reason the destructive
-  dialog existed and the whole reason it is gone
-- Delete is disabled on the ACTIVE budget, which is a hard constraint rather
-  than caution: this session holds that database open and Windows refuses to
-  unlink an open file. It also means the last remaining budget can never be
-  deleted, since it is always the active one
-- Deleting an ACCOUNT deletes every budget it owns plus the sidecar
-  (`delete_all_budgets`): every budget the list names AND every named budget
-  file of this user's on disk, found the same bounded way, so an unreadable
-  or incomplete list cannot leave one behind (measured: one did). Deleting
-  only the legacy path, which was all there was to delete before, would strand
-  the named ones in the data directory with no account able to reach them
-
-**`budget_files`** (`clear_budget/shared/budget_files.py`): the one place that
-reads an account back out of a data-directory file name.
-- `belongs_to(path, username)`: the name must be the user's first budget, one
-  of their named budgets (a slug of the shape `safe_slug` writes) or their
-  list; for a database, an owner stamp naming someone else overrides the name.
-  The name alone cannot always decide for an account created before such
-  names were refused: a safe username holding the `SLUG_SEPARATOR` (`__`)
-  makes `budget_alice__bob.db` either alice's budget "bob" or the first budget
-  of `alice  bob`. `UserStore.create_user` now refuses any new name whose safe
-  form holds it (`UsernameSeparatorError`; measured, such an account opened
-  the other's unstamped budget); existing accounts are untouched
-- `is_safe_slug`, `named_slug`, `estate_files` (every budget and list in the
-  directory), `with_sidecars` (a database plus its `-journal`, `-wal`, `-shm`)
-- `quarantine(paths, app_dir, reason)` moves files and their sidecars into a
-  fresh `quarantine/<UTC time>-<reason>-<random>/` folder and returns it with
-  the names moved; nothing is ever deleted. Used by a restore and by account
-  creation. The quarantine folder is not part of a full backup
-
-### Shared Layer
-
-**`Config`** (`clear_budget/shared/config.py`):
-- `Config.default()` → legacy single-user path (`budget.db`) - kept for reference only
-- `Config.for_user(username)` → `budget_<safe_username>.db`, the user's FIRST
-  budget; identical to `for_user_budget(username, "")`
-- `Config.for_user_budget(username, slug)` → `budget_<safe_username>__<slug>.db`,
-  one named budget. The empty slug is RESERVED for the first budget and yields
-  the unsuffixed legacy filename, which is why naming budgets moved no data
-- `Config.budgets_index_path(username)` → `budgets_<safe_username>.json`
-- `Config.users_db_path()` → `users.db`
-- `Config.app_dir()` → the app data directory: `%LOCALAPPDATA%\ClearBudget`
-  on Windows, `~/Library/Application Support/ClearBudget` on macOS,
-  `$XDG_DATA_HOME/clearbudget` (default `~/.local/share/clearbudget`) on
-  Linux. The legacy `~/.clearbudget` is PREFERRED for as long as it exists:
-  its disappearance is the startup migration's completion signal
-  (`shared/data_migration.py`), so a failed or interrupted move leaves the
-  app running on the data it always had and retries next launch. The
-  migration renames the whole directory when it can (atomic on one volume);
-  otherwise it copies to a staging directory, verifies byte for byte,
-  adopts the copy and only then retires the old directory, deleting the
-  backup once the move has verified. A target already holding a `users.db`
-  is a conflict (a downgraded launch recreated legacy data) and nothing is
-  merged; the app keeps running on the legacy directory
-- Every one of those derives from ONE function, `_resolve_app_dir()`, which
-  honours the `CLEARBUDGET_HOME` environment variable when it is set and
-  non-blank. The app never sets it: it exists so that anything running OUTSIDE
-  the app (the test suite, a probe, a script) writes to a scratch directory
-  instead of live user data. The directory holds both databases, the saved UI
-  settings (theme, remembered save-file location and any skipped update
-  version) and the generated
-  spin-arrow images and the Remember me sidecar
-  (`remembered_login.json`); a write into it is silent, so it surfaces later as a bug
-  report against the app: an offscreen probe applied the light theme in order
-  to measure it, `theme.apply_theme` persisted that choice as it is supposed
-  to and the app opened light from then on. Constrain the bad state rather than
-  remember to avoid it. The variable is read at call time and never cached; otherwise a
-  test could not redirect it. `tests/structural/test_data_dir_isolation.py`
-  holds the rules in place: the suite never resolves the real directory, no
-  other module in the package derives it and the installer never names it at
-  all, so installing or reinstalling cannot disturb a saved setting
-
-**`Currency`** (`clear_budget/shared/currency.py`):
-- `CURRENCIES: list[Currency]` - 25 currencies for English-speaking countries
-- `DEFAULT_CURRENCY` - GBP
-- `get_symbol()` → active currency symbol (used by `Amount.__str__`)
-- `get_currency()` → active `Currency` object
-- `set_currency(code)` → activates named currency (falls back to GBP for unknown codes)
-- Module-level state: set once per session after loading user's DB settings
-
-**`fmt(amount)`** (`clear_budget/application/formatting.py`, re-exported by
-`clear_budget/ui/utils/format_helpers.py` so no UI call site moved):
-- `fmt(pence: int)` and `fmt(pounds: float)` both render sign, then symbol, then
-  the amount grouped to two places: `£1,234.56`, `-£123.98`. The int/float
-  overload is a hazard stated in its docstring and pinned by a test
-- Used throughout the UI and the exported reports for every money figure not
-  going through `Amount.__str__`
-- `build_centered_nav_header(...)` - the shared navigation tray used by all
-  seven views, built as TWO bordered rows and hoisted above the scroll area by
-  `ScrollableView`: the month or year cluster centred in the upper row, every
-  icon button plus the seven view buttons in the lower one. Its lower-row order is
-  load, save, switch-budget, a separator, the bank, the Monthly Budget to
-  Recommendations view buttons (Reserves sitting between Credit Cards and
-  Graph), then a second separator setting Archive apart at the
-  right beside the theme toggle and the information button. The tray machinery itself
-  (this builder, the theme toggle and the glyph sizing) lives in
-  `ui/utils/nav_header.py`, with the month/year label machinery in
-  `ui/utils/nav_label.py`, the sun/moon toggle's two faces and button in
-  `ui/utils/nav_toggle.py` and the one glyph height they all read in
-  `ui/utils/nav_glyph_size.py`; every one of them is re-exported through
-  `format_helpers`, keeping each module clear of the LOC band with no call
-  site moved. `nav_glyph_size` exists because the size is ONE number read
-  from two modules that must never disagree, so it could not go on living
-  inside either of them once they were split. The
-  label carries its breathing room as a real `QLabel.setMargin` (never
-  stylesheet padding, which is painted but not reliably in the size hints)
-  and pins its minimum width to its text on every `setText` and recolour, so
-  a tray squeezed at the window's width floor sheds pixels from the stretch
-  space and the flanking buttons, never from the date (a 13in flatpak
-  install used to clip the year's last digit).
-  `apply_nav_label_color` / `_nav_label_style` recolour the
-  label; the colour is each month's OWN within-month solvency health (current
-  month from its live balance, a future month from its next-two-months block),
-  computed once by the Solvency panel and broadcast to every view via
-  `SolvencyPanel.month_label_color_changed` so no view can disagree. A month is
-  red only when its own balance breaches the overdraft floor (below zero with no
-  facility or beyond an agreed facility); dipping into an agreed facility but
-  staying within it is amber. A looming overdraft in a later month stays a
-  banner warning and never colours the earlier month's title
-
-- `BottomTray` (`clear_budget/ui/widgets/bottom_tray.py`) is the strip along the
-  FOOT of the window; it holds the donate button alone. There is ONE for the
-  window, added under the stacked views in `_main_window_views.init_ui`, rather
-  than a copy inside each view's own navigation tray: every control in that tray
-  acts on the budget, the account or the view being looked at, while this one
-  leaves the application entirely, so it belongs to none of them and has no
-  business being duplicated seven times and held in agreement by
-  `test_tray_switch_invariants`. Its glyph is TWO THIRDS of the tray's, through
-  `footer_glyph_height` in `nav_glyph_size`, taken from the tray's own measured
-  Previous button rather than written again as a pixel number: the tray is
-  deliberately the heaviest band on the window (`NAV_GLYPH_SCALE` is above 1.0
-  for that reason), so a footer sized to match would weigh the layout down at
-  both ends. Measured on a built window, 27px in the tray and 18px in the
-  footer. The ratio is pinned without a `QApplication` by
-  `tests/ui_logic/test_footer_glyph_height.py`. The strip takes the tray's
-  own border and radius from the same two theme values, so head and foot are
-  told apart by height alone. The button is built by `build_tray_image_button`
-  like every other picture button, so it inherits the three-state ring without a
-  rule of its own; the window appends it LAST to every view's ring stops in
-  `_main_window_nav._current_nav_stops`, once, instead of it being named in
-  seven separate `nav_targets`. Pressing it calls `MainWindow.open_donation`,
-  which hands `version.DONATE_URL` to the desktop through the `ui/links.py`
-  seam. ClearBudget opens no connection of its own for it, so the local-first
-  guarantee is untouched; a desktop that declines to open a browser says so in
-  the status bar, because silence would leave a button that appears to do
-  nothing. The address has one home, enforced by
-  `tests/structural/test_donation_address.py`, which also asserts it literally:
-  a typo there fails nothing at runtime and simply sends a supporter's money
-  somewhere else.
-
-**`table_sort`** (`clear_budget/ui/utils/table_sort.py`):
-- Click a column heading and the table is ordered by it; click the same heading
-  again and it reverses. `SortState` is a frozen value holding which column and
-  which way, `toggled()` is the whole click rule and `sorted_rows` applies it
-  through a per-view key map. Three views hold one of these each (Monthly
-  Budget one per table, Reserves, Archive) and differ only in the keys they
-  hand it
-- THE ROWS ARE ORDERED BEFORE THEY ARE WRITTEN, never by Qt's own table
-  sorting. Every one of those views maps a row NUMBER back to the record it
-  came from (the bill an edit belongs to, the commitment a Delete acts on, the
-  month a detail dialog opens), so a table Qt reordered underneath that mapping
-  would act on the wrong record
-- A column with no key leaves the rows untouched rather than falling back to
-  some other column, which would answer a click with the wrong table; the
-  `UNSORTED` state is a table still in the order its data arrived in and shows
-  no arrow at all. The pure half carries no Qt and is held by
-  `tests/ui_logic/test_table_sort.py`
-- THE ARROW IS PAINTED, not left to the platform (`ui/utils/sort_header.py`,
-  `SortHeaderView`). Qt's own sort indicator is a few pixels drawn along the
-  TOP EDGE of the section on Windows, nowhere near the word it qualifies, so a
-  table that had been reordering itself on a click read as one ignoring
-  clicks. This header switches that indicator off and draws a filled triangle
-  at the full text colour (the heading itself is muted) immediately to the
-  RIGHT OF THE HEADING TEXT, up while ascending and down while descending.
-  `sectionSizeFromContents` reserves twice the arrow's span on the sorted
-  section alone, because the heading is centred and half the reserved width
-  falls each side of it, so the arrow can never land on the words and no other
-  column pays for it. Installed by `install_sort_header` BEFORE the section
-  resize mode is set, since replacing a header replaces what was configured on
-  the one it displaces
-- IT IS SIZED FROM THE FONT, never in pixels of its own: its height is the
-  heading's `capHeight` and its base sits on the text's baseline, derived from
-  the style's own layout (the line box is centred in the section, so the
-  baseline is that box's top plus the ascent). So the arrow occupies exactly
-  the two lines the capitals beside it do, at any display scale. A pixel size
-  of its own would agree with the text at one scale and drift at every other.
-  This is one to measure on the REAL platform: under
-  `QT_QPA_PLATFORM=offscreen` Qt's substitute font database reports
-  ascent = capHeight = height and a zero descent, so the arrow measures right
-  there whatever the arithmetic says. Measured on Windows at three scales
-  (0.7, 1.0 and 1.35): the heading's ink and the arrow share their top and
-  bottom rows to within the pixel antialiasing spreads
-
-**`path_display`** (`clear_budget/ui/path_display.py`):
-- A path shown in a message box is wrapped HERE, before the text reaches the
-  label, because Qt breaks a long one wherever it finds a break opportunity and
-  a Windows path offers exactly one: the colon after the drive letter. The
-  result was a first line holding `C:` alone and a remainder running past the
-  edge of the dialog (measured: a 460px label asked to hold an 840px line).
-  `wrap_path(text, max_width, width_of)` is pure, so the rule is tested without
-  Qt: the break falls after a separator, the separator stays on the line it
-  belongs to and a leading `C:\` or UNC `\\` is folded into the first named
-  segment so a prefix is never stranded on a line of its own. A segment too wide
-  for a whole line, which is what a long backup filename is, is broken between
-  characters as a last resort, since it carries no separator and Qt finds no
-  break opportunity in one either
-- `wrap_for(widget, text)` measures with `QFontMetrics` after
-  `widget.ensurePolished()`; the polish is the whole point. The app
-  stylesheet sets `QWidget { font-size: 14pt }`, which reaches a freshly built
-  `QMessageBox` only at polish; measuring before it silently used the 9pt
-  default, so every line came out about half again wider when painted, overflowed
-  the label and was re-broken by Qt at the colon. That is the same trap
-  `comfortable_row_height` documents for table rows, met a second time in a
-  different module
-- One home for the wrap, so every dialog that prints a path behaves alike: the
-  save confirmation, the overwrite question, the other-account refusal, the full
-  backup report and the graph's HTML export. `PATH_LABEL_WIDTH` is the width
-  they wrap and size to, rather than a literal repeated at each call site
-
-**`glyph_metrics`** (`clear_budget/ui/utils/glyph_metrics.py`):
-- Painted-pixel measurement for both images and text. `opaque_bounding_rect`
-  crops the nav icon to its real content (the source PNG carries uneven
-  transparent margins that otherwise throw the tray spacing out) and
-  `glyph_font_px_for_height` sizes an emoji by rendering it and measuring what
-  it actually paints. See the Theme section for why a measurement replaced the
-  fixed fraction that preceded it.
-
-**`ui_paths.default_downloads_dir()`** (`clear_budget/ui/ui_paths.py`):
-- Cross-platform Downloads folder via `QStandardPaths.DownloadLocation`, falling
-  back to `Path.home()`. It is the default for the dialogs that write something
-  to take AWAY: the graph's HTML export, its folder-of-months export, Back Up
-  Everything and Restore Everything. Save As and Load Database deliberately do
-  NOT use it; they open on `default_data_dir()`, where the live databases are,
-  which `tests/structural/test_save_location_defaults.py` holds in place.
-
-**`db_validation`** (`clear_budget/shared/db_validation.py`):
-- `REQUIRED_SCHEMA` + `validate_db(path)` - confirms a loaded file is a genuine
-  ClearBudget database (all required tables and columns present, then
-  `PRAGMA quick_check` over every page) before any Load Database write touches
-  the active database; a restore applies it to every budget in the backup. The
-  schema checks read `sqlite_master` only, so a budget whose data pages were
-  damaged behind an intact schema used to pass and then fail to open.
-- `validate_accounts_db(path)` - the same two questions of the accounts store:
-  a `users` table with every column in `ACCOUNTS_REQUIRED_COLUMNS` (what
-  sign-in reads), then every page. A `users` table of any other shape used to
-  pass a restore and fail every sign-in afterwards.
-- `is_accounts_database(path)` - a separate question with a separate answer:
-  whether the chosen file is the ACCOUNTS store, which holds who may sign in,
-  is not a budget and sits in the same directory the Load dialog opens on. It
-  used to be answered by `validate_db` listing twelve missing tables, which is
-  true and tells the user nothing about what they picked. Answered from the
-  file's SHAPE (the `users` table present, every budget table absent), never
-  from its name, so a copy or a rename is refused identically. False for
-  anything that is not a readable SQLite file, because that is `validate_db`'s
-  question and it says it better
-
-**`diagnostics`** (`clear_budget/shared/diagnostics.py`):
-- `install(log_dir)` - called once by `ui/startup.py`; opens
-  `logs/clearbudget.log` in the data directory and installs one handler for
-  uncaught exceptions in BOTH places Python sends them: `sys.excepthook`
-  (where PySide6 routes an exception escaping a slot) and
-  `threading.excepthook` (where an exception escaping a worker thread goes,
-  never reaching `sys.excepthook`). Each is logged as `UNCAUGHT EXCEPTION`
-  with its traceback; a worker thread's is preceded by a line naming the
-  thread. A thread ending through `sys.exit` is ignored, as Python's own
-  thread hook ignores it. A log directory that cannot be made returns None
-  and the app runs on without a log (`tests/shared/test_diagnostics.py`)
-- `log(message, *args)` - one flushed line about what the session is doing
-
-**`resources`** (`clear_budget/shared/resources.py`):
-- Runtime asset discovery for packaged builds: locates the app icon, the Qt
-  window/taskbar icon, the splash image and the view-button artwork across
-  PyInstaller onefile (`sys._MEIPASS`), onedir (`_internal/`),
-  beside-the-executable, dev repo layout and the working directory, with `.ico`
-  preferred and `.png` fallbacks. Keeps every asset lookup robust however the
-  app was packaged.
-- Every sized-PNG lookup searches BOTH capitalisations. The repository ships
-  `ClearBudget_256.png` (what `generate_icons.py` writes and what git tracks)
-  while several build steps stage and several call sites ask for the
-  lower-cased form; Windows and a default macOS volume hide the difference, a
-  Linux or case-sensitive APFS volume does not. One tuple against a class of
-  bug that can only appear on someone else's machine.
-- `find_logo_png_path()` returns the largest bundled PNG, never the `.ico`,
-  for callers that PAINT the icon into a widget: the nav tray's graph button,
-  the About dialog and the sign-in dialog's logo, which had each grown their
-  own copy of the same loop. It exists so that no caller resolves an
-  asset by counting directory levels from its own module. One did so and was
-  right on exactly one platform: the sign-in dialog reached three parents up
-  for a 64px file that the Flatpak never stages and a PyInstaller bundle puts
-  elsewhere, so the logo was silently absent on Linux and macOS. The
-  `exists()` guard around it is what made the failure silent instead of
-  loud.
-
-### UI Layer
-
-**ViewModels**:
-- `MonthViewModel` - month state, signals: `month_changed`, `month_summary_updated`
-- `SolvencyViewModel` - signals: `solvency_updated`, `danger_warning_triggered`
-  - `set_month()` fetches new month summary before refreshing
-  - `update_month_summary()` called after balance edits via `month_summary_updated`
-
-**A view is refreshed by the data it shows, not by the view it sits on.**
-`month_summary_updated` fires on EVERY change to the month's bills and income; it
-drives both `SolvencyViewModel.update_month_summary` and
-`CreditCardView.on_month_summary_updated`. The card view needs it because its
-figures are owned by another view's data: a card's Payment Received, its closing
-balance and the six-month strip are all computed from the `credit_payment` bill
-that pays it; that bill is created and edited on Monthly Budget. Nothing on
-the Credit Cards view moves when that happens; switching views does not
-recompute anything (`views.currentChanged` only marks the current view), so
-without this connection the view showed figures calculated when the window was
-built: a card paid off monthly projected a balance climbing past its own limit,
-with Payment Received reading zero beside the bill paying it. Neither number was
-wrong when calculated; neither was calculated again.
-`CreditCardView.set_month` deliberately does NOT reload, because
-`MonthViewModel.set_month` emits `month_changed` and THEN refreshes the summary,
-so reloading there would be the first of two for one month change. The wiring
-is held by `tests/structural/test_cross_view_refresh.py`, a source scan rather
-than a widget test because the suite starts no `QApplication`.
-
-**Row heights are measured, never chosen.** A table row is
-`comfortable_row_height` (`ui/utils/text_metrics.py`): the polished widget's own
-`QFontMetrics.height()`, plus the vertical chrome the stylesheet actually draws,
-plus a comfort margin. The projection strip used to pin a literal 28 pixels. The
-base font is 14pt, a 26 pixel line box with a 5 pixel descent; a header
-section spends 4px padding plus a 1px border top and bottom, so 18 pixels were
-left for 26 pixels of text: every descender was cut at the baseline and the
-month column read "Auq 2026". The literal was not slightly small, it was
-unrelated to what it had to hold.
-- The chrome constants (`HEADER_SECTION_PADDING_PX`, `HEADER_SECTION_BORDER_PX`,
-  `TABLE_ITEM_VPADDING_PX`, `TEXT_BREATHING_PX`) live in `theme_qss` and are read
-  BOTH by the stylesheet f-string and by the height calculation, so the two
-  cannot drift apart
-- The row clears whichever of the header section or the cell spends more, since
-  one height serves both the cells and the vertical header label
-- `ensurePolished()` is not optional: a stylesheet `font-size` does not reach
-  `QWidget.font()` until the widget is polished, so measuring too early silently
-  returns the 9pt application default and reinstates the bug
-- Applied by `apply_comfortable_rows` at every table's construction, so the
-  height follows the font when the theme or `ui_scale` changes rather than being
-  correct only at one display size
-
-**Views**:
-- ONE COLUMN TAKES THE SLACK in every table sized to its contents: the name on
-  both Monthly Budget tables (`_month_view_builders`) and the month on Archive.
-  That column is `Stretch` while the rest are sized to what they hold, so the
-  table is exactly as wide as its viewport and the flexible column is elided
-  when the room runs short. Sized to contents throughout, a table can
-  out-measure the window and answer with a horizontal scrollbar: a real
-  budget's bills put the Paid column off the edge. Widening the window instead
-  was tried and was wrong in kind, since it made every user's window pay for a
-  table that was not using the space. Archive was measured clear of that
-  failure at every width the window can reach; it takes the same shape anyway,
-  which also closes the strip of dead space its last column used to leave.
-  Reserves and the card projection strip stretch every column already, so
-  neither can overflow either
-- `MonthView` - bill/income tables with inline editing, each orderable from
-  its own headings (`table_sort`; bills open on the due day, income on the
-  name, the payment-method column ordered by the label the row actually shows
-  rather than by the stored method id); balance display adapts
-  to current vs future month; composed of mixins (builders, table, edit, delete,
-  apply-prompt) to stay under the LOC limit
-- `SolvencyPanel` - two pages in a `QStackedWidget`: bank and projection. Each has a pilot button naming the ANSWER that page holds rather
-  than the method behind it, which is why the second button reads "Switch to
-  safe to spend" and not "Switch to projection": the bank page carries months
-  ahead of its OWN, built from what is entered, so a button offering
-  "projection" read as though those were the assumed months and made the
-  entered figures look provisional. It also hid the figure most often wanted
-  behind a word nobody goes looking for, which is why that button now leads
-  the row. The button for the page being read is HIDDEN rather than disabled, so from
-  anywhere each other page is one press away and the keyboard ring skips
-  the control that would do nothing. The bank page carries account position,
-  overall health and the two forward months, all of it built from money
-  actually entered. Its first section is headed "Account Position" and NOT
-  "Overdraft Status": a facility is optional and defaults to none, so with
-  none arranged that section is not reporting on one at all, it is saying
-  whether the balance stays above zero against a floor of zero. The old
-  heading named a facility the reader may never have set up and made a
-  healthy account read as though it were being measured against borrowing.
-  The wording is true either way, so the heading does not move under the
-  reader when a facility is added later. The banner BODY still names the
-  overdraft, as it should: in a critical state ", with no overdraft arranged"
-  is the fact that a payment bounces rather than drawing on something
-  arranged. The banner is sentence case throughout, state prefix included
-  ("Critical:", never "CRITICAL:"). The prefix still LEADS every line, since
-  the word is what carries the state for a reader who does not take it from
-  the fill, so it may be softened but never dropped. Capitals added nothing
-  the word and the colour were not already saying; a line opening in shouting
-  capitals reads as an alarm even in the Safe case, which is the one state
-  that should read calmly. The palette key underneath is untouched, so
-  the stylesheet and the traffic-light colours are unaffected.
-- The MID-MONTH line beneath the banner (`_solvency_panel_midmonth.py`) reads
-  its state the same way, against the agreed overdraft floor rather than
-  against zero: a dip that stays inside an arranged facility is a Caution,
-  since the facility exists to absorb it, while a dip beyond it (or any dip
-  when none is arranged) is Critical, since that is a payment bouncing. It
-  used to call every dip Critical, so a dip well inside an arranged overdraft
-  was reported in the words of a bounced payment. It carries its state as a
-  Qt property and lets the stylesheet supply the fill, exactly as the banner
-  does; without that the strip kept its fixed danger red and a line reading
-  "Caution" would have sat on a red field, moving the mismatch rather than
-  fixing it. The base rule keeps the strong danger fill as the fallback,
-  because the line only appears when there IS a dip, so the worse reading is
-  the safer default if a state ever fails to resolve. The income day is named
-  ONCE ("until the day-25 income lands"); it appeared twice in nine words
-  before ("before day-25 income - rescued day 25")
-  Guarded by `tests/structural/test_solvency_headings.py`, which scans for
-  the WORD in any `_heading()` literal rather than pinning the replacement
-  copy, so the principle survives a future rewording. The PROJECTION page carries the Safe to Spend
-  Today headline (rendered by
-  `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` from
-  `BudgetService.get_safe_to_spend`, which always repeats this month's
-  income forward. It wears `SafeToSpendHeadline`, a role of its OWN rather
-  than the banner's: it shares the banner's fill, padding and traffic-light
-  state property, so the two cannot drift apart; it keeps 22px where the
-  banner came down to 20px to fit its sentence. Sharing one role meant
-  shrinking a figure to solve a sentence's problem, which is two decisions
-  taken as one. Both WRAP, like every other line on the view; they were the
-  only two that did not, which is how a banner long enough to overrun the
-  window came to be clipped with nothing to say so.
-  The secondary line names how far the promise reaches and the day
-  that constrains it, "Holds every day through October 2026 above your £20.00
-  buffer; constrained by 14 Oct", with a second line naming any month beyond
-  that cannot be saved and stating that spending the headline deepens it; the
-  banner takes the at-risk tone rather than the safe one whenever that second
-  line is present, so a figure with a gap behind it never reads as an
-  all-clear. `_sts_detail_lines` returns the two sentences SEPARATELY and they
-  render into separate labels, because a QLabel carries one colour and the two
-  are not the same kind of statement: the reach sentence keeps the muted body
-  role while the shortfall takes `SolvencyShortfall`, the traffic light's own
-  red. A gap no restraint closes is the one line on the view reporting a fact
-  rather than a caution; in one shared muted line it read as more small
-  print under the sentence above it), the capacity schedule beneath
-  it ("If you wait:" and one line per change, from `get_spending_capacity`,
-  hidden entirely when the figure never moves so a flat month does not
-  restate the headline) and beneath both the assumption in words with the
-  months that follow from it. The BANK page's own contents are the overdraft
-alert, the mid-month alert and its two forward-projection blocks. A third
-page once carried per-card utilisation bars and the same two months per card.
-It was removed: the Credit Cards VIEW answers a card's position in full, so the
-page restated another view's job in a smaller space; keeping both meant two
-renderings of the same figures to hold in step. Every month any page shows
-  states its low
-  point on a line of its own, then closes on a figure of its own, whether or
-  not the month is in trouble: a figure printed only for a
-  month in difficulty makes the healthy months look as though they have none
-  and leaves nothing to compare a worsening month against.
-- A FORWARD MONTH IS TWO LINES AND THE FIRST ONE IS THE ANSWER
-  (`_solvency_panel_month_lines.py`): `_afloat_clause()` states what has to
-  arrive and the day it has to beat, then `_shape_line()` gives one line of
-  context (opens, lowest day, closes). It was SEVEN lines and five of them
-  said the month went overdrawn: the day it went under, that nothing rescued
-  it, that payments would be refused, that it closed overdrawn, then finally
-  the sum that would have prevented all four. That is a blanket warning with
-  the actionable figure buried at the bottom of it, in the same shouting red
-  as the warning, which is no use to a reader who already knows the month is
-  in trouble. The alarm is carried by the COLOUR now (the state key and the
-  clarion are unchanged); the words carry the number.
-- THE TWO FIGURES ARE NOT THE SAME QUESTION and each surface takes the
-  one it can answer. The month on screen closes on `_gap_clause()`, the
-  hold-flat gap from `MonthGap`: a month can close in credit while running at
-  a loss, which is precisely what a closing balance alone hides. Every
-  next-two-months block leads on `_afloat_clause()` instead, the money that
-  would keep that month above the overdraft floor, from `MonthAfloat` over the
-  low the walk already found. The forward blocks carried the gap once and it was
-  the wrong number in that position: it ignores the opening balance by design,
-  so it told a reader a month needed hundreds when a fraction of that would
-  have kept the account out of the red and said nothing whatever about the sum
-  that actually would. The gap still reaches those blocks, through
-  `monthly_shortfall_pence`, which chooses their traffic-light colour; it is
-  simply no longer what they SAY. That is also why the reserve still colours a
-  forward month amber while never moving its afloat figure: money set aside has
-  not left the account, so it cannot sink the month
-  (`tests/ui_logic/test_solvency_reserve_health.py` holds both halves)
-- The projection page (`_solvency_panel_assumed.SolvencyPanelAssumedMixin`)
-  runs the same month calculations on the repeat-forward assumption, painted
-  in muted variants of the same traffic-light hues so it reads as provisional,
-  with a gap specification from `get_assumed_expectations` naming what has to
-  arrive and when. This mixin owns only the LOWER half of the page: the
-  assumption in words, the gap specification and the two month blocks. The
-  headline above it belongs to
-  `_solvency_panel_safe_to_spend.SolvencyPanelSafeToSpendMixin` and is
-  rendered outside `assumed_block()`. With nothing to assume it is the
-  ASSUMPTION BLOCK alone that hides (its headings included), replaced by a
-  line saying so; the headline stays, because a page reachable by a button
-  must never be blank and the figure is defined whether or not there is
-  anything to fill forward
-- The spendable figure lives on the PROJECTION page and nowhere else. This is
-  the settled position, reached by trying the alternatives. It sat on
-  the bank page first, where a number printed beside entered balances reads as
-  a fact about the account rather than as a promise about months that have not
-  happened. Restating the bank page's figure on the projection page beside the
-  assumed one was tried too, so the "lower than the known figure" line had
-  both its terms; it was worse. The assumed figure is the SMALLER of the
-  two, so the larger number under the words "already entered" read as an
-  amount the user was free to spend instead. One figure, on the page whose
-  assumption qualifies it, in the bank page's order: the number and its
-  schedule, the assumption in words, what has to arrive for it to hold, then
-  the months after this one
-- The projection page's headline block is deliberately OUTSIDE
-  `assumed_block()`, so it shows whether or not this month has anything to
-  repeat forward. With nothing to assume the figure simply equals what was
-  entered; hiding it there would leave the application with no spendable
-  figure at all in the commonest case, which is every month filled in
-- The assumed forward projection reads
-  `BudgetService.get_assumed_month_summary`, which fills a later month's gaps
-  from this month's income on the same rule `_build_safe_to_spend_inputs`
-  applies per day. One statement of the assumption, two readings of it: a
-  spendable figure and a
-  month narrative on one page could otherwise disagree about the same month.
-  Each month then goes through the SAME `_build_month_cashflow_summary` the
-  bank page uses, so the two pages differ in their evidence and never in their
-  arithmetic. `_month_cashflow_state()` returns the state key behind that
-  builder's colour, so the muted rendering resolves the state rather than
-  reverse-engineering a hex; `_overdraft_facility_outcome` returns a state key
-  for the same reason (it previously returned dark-theme literals, which the
-  light theme would have painted wrong)
-- `CreditCardView` - card CRUD, month navigation, 6-month projection strip
-- `ReservesView` (`views/reserves_view.py` plus the
-  `ReservesContentMixin` in `_reserves_view_content.py`, split for the LOC
-  limit) - money committed or expected that no month's table shows. Safe to
-  Spend counts everything above the buffer as spendable and the projection
-  only knows about bills that were entered, so an annual premium four months
-  out is invisible until the month it lands in and the figure above it offers
-  money already spoken for. The page fixes that by ACCRUAL rather than by a
-  longer projection, which is what makes a distant bill honest inside the
-  horizon that already exists. It carries the emergency-buffer row (the same
-  stored setting the Recommendations page sets: one buffer, two places to set
-  it), a commitments table (name, amount, due, repeats, a month, held, still
-  to find, active), the everyday-spending section (phase one states that it is
-  unset rather than assuming zero) and a "Where that leaves each month" block
-  reading the SAME `walk_month` the Solvency bank page reads. It reports and
-  never encourages: no progress bar, no goal and no congratulation, because a
-  commitment is a bill that has not asked yet. All wording lives in the
-  Qt-free `ui/utils/reserves_text.py`, tested under `tests/ui_logic`
-- `ArchiveView` - historical month summaries by year; year navigation. The year
-  is in calendar order until a heading is clicked, which is the order it was
-  lived in; the reserve column joins the orderings only where it is drawn and
-  the status orders by the sign of the balance behind it. `months_by_row` is
-  rebuilt against the order actually drawn, so the detail dialog opens the month
-  whose row was clicked. A completed month reports the reserve it really carried, read at its own last
-  day; the column appears only for a budget that sets something aside, so an
-  archive that never had a commitment renders exactly as it always did
-
-**Update check ui** (`ui/update_check.py`):
-- `UpdateCheckController` - owns the triggers (a delayed launch check, a daily
-  re-check and Help > Check for Updates) and runs each check on a worker
-  thread; the result crosses back through a queued signal to this ui-thread
-  QObject, so the network call can never stall the ui. A newer release
-  prompts with Download (the platform asset, falling back to the release
-  page), Skip This Version (persisted in `ui_settings.json`) and Later.
-  Automatic checks are silent on failure and when up to date; the manual
-  check reports both. The controller is the window's child, so Log Out, a
-  reload or a restore destroys it with the window while a check may still be
-  out. That answer has nowhere to go and is dropped rather than raised on the
-  worker thread; anything else the emit raises still propagates
-  (`tests/ui_logic/test_update_check_after_close.py`)
-
-**Widgets**:
-- `LoginDialog` - username/password form, its logo resolved through
-  `resources.find_logo_png_path` rather than a path built from this module's
-  own location; TWO independent Remember me ticks under the password field,
-  username and password, the password one live only while the username one
-  is (see Sign-in and remembered accounts below for why). Each ticks itself
-  from what `RememberedLogin` recalls and both are applied by
-  `_record_choices` on a COMPLETED sign-in, never the moment a box is
-  clicked, so a tick cleared and restored while thinking about it costs
-  nothing. They are the only ADJACENT pair of checkboxes in the application,
-  which is why they alone carry vertical padding: the indicator is a fixed
-  15px in the global stylesheet while the layout's spacing and fonts scale
-  with the display, so the shorter the screen the tighter the pair reads
-  against boxes that never shrink (measured at a 0.65 factor: 6px between two
-  19px rows). Padding rather than a spacer between them, because it also
-  holds each label centred against its own box; the nav label's warning that
-  stylesheet padding is unreliable in size hints was checked here and does
-  not apply, the widget growing from 19px to 25px as asked. Grid layout with
-  "Forgot password?" (opens `ResetPasswordDialog`) and Sign In on one row,
-  "Create Account..." (opens `CreateUserDialog`, non-admin) on the row below
-- `ResetPasswordDialog` - username + recovery code + new password; distinct error for unknown username vs wrong code
-- `CreateUserDialog` - new user form (first-run wizard, login screen or admin
-  "Add User"); `is_first_user=True` is the only path that creates an admin account;
-  includes `RecoveryCodeDialog` on success
-- `RecoveryCodeDialog` - displays one-time recovery code; X button disabled; clipboard copy button; checkbox gate before OK activates
-- `UserManagementDialog` - admin-only; lists users, Add User, Delete Selected
-  (disabled when own row selected); deleting a user always deletes their budget
-  data file too (double confirmation)
-- `BankAccountSettingsDialog` - choose the display currency (a combobox of
-  25 currencies) and configure the overdraft facility (limit and APR) plus
-  the Safe to Spend Today buffer and the sustainable window (a spin box, 1 to
-  12 months, defaulting to 4); opened via Settings > Bank Account or the
-  tray's bank button. The currency lived in a Preferences dialog of its own
-  behind a tray cog; one setting did not justify a second settings surface,
-  so it was folded in here and the cog retired. The flow returns True when
-  the currency changed and `MainWindow` then emits `database_replaced`, so
-  every figure on every view restyles at once
-- `BillDialog` - add/edit bill; "This month only" on Add creates a one-off
-  scoped to exactly the viewed month (start == end), on Edit it stores a
-  per-month override; optional end-month control (greyed while one-off is
-  ticked, since the ending is implied). A red "Payment day cannot be moved"
-  checkbox (`DayFixedCheck`, the `danger_check_fill` token) records the
-  `day_fixed` flag Recommendations consults; `IncomeDialog` carries the same
-  control worded "Arrival day cannot be moved"
-- `CreditCardDialog` - add/edit credit card
-- `IncomeDialog` - add/edit income source. Which controls appear depends on
-  what is being edited, each labelled for the job it does there: adding shows
-  `one_off_check` alone; editing a one-off shows it too, untickable to promote
-  the entry to a recurring income; editing a recurring income shows
-  `ends_check` with `end_month_edit` (worded exactly as `BillDialog` words its
-  own) plus `scope_check` for how far this edit reaches. A note beneath states
-  what OK will do before it is pressed. One checkbox used to carry two
-  unrelated jobs, identity and edit scope, so it had to change meaning by
-  context and was greyed with no explanation in the one context it could not
-  express. There is deliberately NO control that turns a recurring income into
-  a one-off: that would delete the source and so erase months it really did
-  arrive in
-- `CommitmentDialog` - add or edit one commitment. Follows `BillDialog`'s
-  shape: the fields, then a note stating what OK will do before it is pressed.
-  A commitment is money held back rather than money moved, so the note says
-  exactly that and the dialog stores nothing else
-- `BalanceDialog` - edit current bank balance; opens with the figure focused
-  and selected for immediate overtype. It is handed the current balance as
-  signed pence, so an overdrawn account can open it
-- `ArchiveDetailDialog` - drill-down for a single archived month
-- `HowItWorksDialog` - three jobs in one page, across seven `<h3>` runs
-  (measured from the built page, not counted from this list). It NAMES the
-  furniture in the first four of them (the seven views, the Graph page's own
-  controls, the tray, then the strip along the foot), each entry led by the
-  real icon that control draws, which the view buttons need because their
-  text labels became pictures. Then it states the
-  three rules the numbers rest on and that no screen can say for itself: how
-  an undated bill accrues, how the balance maintains itself, what Safe to
-  Spend Today promises. An "Also worth knowing" run follows, carrying the
-  behaviours that are neither furniture nor arithmetic and that a user would
-  otherwise never find: the per-month machinery on a bill or income, the two
-  delete scopes, the immovable-day tick, ordering a table by clicking a
-  heading, that one sign-in can hold several separate
-  budgets, the whole-estate backup and restore behind Import / Export, what
-  the sign-in screen remembers, that the recovery code is the only way back
-  into a lost account, how Switch User differs from Log Out, then the daily
-  update check and the fact that it is the only time the application touches
-  the network. That run is where a capability with no icon of its own
-  goes; the guards below cover the pictures, so nothing else would have caught
-  its absence. The page closes on the keyboard, in words alone. About and View Licence are deliberately NOT named: this screen
-  is opened from the Help menu they sit in, so listing them is the
-  button-by-button inventory that was tried and rejected. Every icon is a BUNDLED IMAGE referenced by an absolute
-  `file:///` URL that Qt's rich text resolves when the page is drawn, through
-  the same `find_nav_icon_path` the tray uses (measured on the built page: 19
-  image references, every one resolving to a file on disk, no data URI). It
-  is never described in words, never
-  approximated with a similar-looking emoji and never a decorative glyph
-  corresponding to no control; an icon guide showing something other than the
-  icon is worse than none. `_INLINE_ICON_PX` is 30, half again the 20 it
-  first shipped at: the artwork is detailed and at 20px two icons a reader
-  was trying to tell apart closed up into the same smudge, which defeats the
-  screen's one job. Three structural guards keep it honest rather than a
-  habit: `test_help_names_the_tray.py` for the tray's buttons and the footer's,
-  with `_BUTTON_SOURCES` reading `bottom_tray.py` alongside `_tray_buttons.py`
-  so a picture sitting in no tray at all is caught the same way; then
-  `test_help_names_the_views.py` for the view strip, the second added after
-  Reserves shipped with a picture, a tooltip and no caption anywhere in the
-  application while the screen went on announcing six views. It also asserts
-  the heading counts what it lists. The third is
-  `test_help_example_is_arithmetic.py`, which pins the pro-rating example to
-  the function it teaches; the rest of the three-rules prose is still held by
-  nothing but a reading, which is how it drifted. They are centred on the line rather than
-  sitting on its baseline, since at this size a baseline-aligned picture hangs below the
-  words it leads. Length is the recurring failure here. A button-by-button
-  inventory was tried and read as a wall of text; the essay that replaced it
-  explained every rejected design alongside the shipped one. Anything a
-  control says for itself is left to the control
-- `AboutDialog` / `LicenceDialog` - app info and LGPL-3.0 text. The credits are
-  two lists, not one: what is BUNDLED with the application (whose licences
-  travel with the binary, which is what LGPL-3.0 compliance turns on) and what
-  is only used to build and test it. The bundled list was checked against what
-  the build actually ships, including the native libraries and the binding
-  runtime, rather than against `requirements.txt`, which names neither.
-  `pywin32` appears only on Windows, where it is genuinely shipped
-- `ScrollableView` - wraps any view in `QScrollArea` with scroll indicator
-  buttons; also hoists the view's `nav_header` (the shared, centred month/year
-  navigation tray) above the scroll area and zeroes the content's top margin so
-  the tray stays full-width and centred on every view. The indicators sit in a
-  COLUMN of their own beside the page, laid out rather than positioned. They
-  used to float on top of the content, placed by hand and a hand-placed
-  overlay lands on whatever happens to be beneath it: measuring from the top of
-  the whole view put the up indicator inside the hoisted tray over the theme
-  toggle and on a 900x580 window the down indicator sat on Monthly Budget's
-  Delete Income button, where a click scrolled instead of reaching the button.
-  A column cannot overlap anything. It is ALWAYS present, even while both
-  buttons are hidden: showing and hiding it would change the page width, which
-  can change whether the page overflows, which decides whether the buttons
-  show, a loop that flickers on content sitting near the boundary. This was the
-  only hand-placed child widget in the app; everything else is laid out and a
-  layout cannot overlap its own children (verified by an overlap sweep over all
-  four views at three window sizes and nine dialogs at two: zero)
-- `_bank_account_settings_flow.py` - dialog-orchestration helper extracted
-  from `MainWindow` to stay under the LOC limit; returns whether the display
-  currency changed
-- `_save_load_flow.py` - the Save / Save As / Load flows behind the File menu
-  and the tray buttons, plus the builders for the tray's icon buttons (load,
-  save, bank, info) and their separator. Save copies the database to the
-  remembered location (first save prompts, defaulting to the app's own data
-  directory via `ui_paths.default_data_dir`, then asks before overwriting).
-  Load REFUSES FIRST AND CONFIRMS LAST: the accounts store, then the schema,
-  then the owner challenge; only then the overwrite question. That order is
-  the point. The question says every bill, income source, card, override and
-  setting is about to be permanently replaced, so asking it about a file that
-  is then rejected is a threat made over nothing: choosing `users.db` used to
-  raise it, take a Yes, then afterwards report that the file was never a
-  budget. Held by `tests/structural/test_refusal_order.py`. The remembered
-  location persists in `ui_settings.json` through
-  `clear_budget/ui/save_location.py`, which shares the file with the theme
-  without disturbing it (`tests/ui_logic/test_save_location.py`)
-- SAVING OVER ANOTHER ACCOUNT'S BUDGET IS REFUSED, never challenged. The Load
-  side offers another account's file behind that account's password, because
-  loading it is recoverable; saving over one replaces their figures with yours
-  and leaves nothing to recover from, so `_belongs_to_another_account` says
-  whose file it is and stops. Both entry points ask, Save before its overwrite
-  question and Save As the moment the file dialog returns, so nothing is
-  written or remembered before anyone asks whose it is. Ownership comes from
-  `shared.db_ownership.owner_of`, the same stamp-then-filename answer the Load
-  challenge uses, which means the same reach: a budget carrying its stamp is
-  recognised wherever it is moved or renamed to, while one written before
-  stamping existed is recognised by its name alone until the account that owns
-  it next signs in (opening a budget stamps it). A file nobody owns, which is
-  what an ordinary backup destination is, passes straight through, including
-  the account's own earlier backups. Ordering held by
-  `tests/structural/test_refusal_order.py`
-- THE REMEMBERED SAVE FILE IS PER ACCOUNT, keyed by username under
-  `save_files`. It was one `save_file` value for the machine, so it held
-  whatever the LAST account to save had chosen and the next account to press
-  Save was offered that file: signed in as one user, the overwrite
-  confirmation named another user's budget; since a live budget sits at
-  `budget_<user>.db` in the same directory the settings pointed at, the file on
-  offer was in the ordinary case another account's working budget rather than
-  anyone's backup. The first save of an account now defaults to
-  `clearbudget_backup_<safe username>.db`, built with the same sanitiser the
-  live databases use. The pre-account key is IGNORED rather than migrated: it
-  records a path without recording whose it was, so adopting it would be a
-  guess landing on exactly the cross-account overwrite this shape exists to
-  stop. The cost is one prompt, once per account. The username is a required
-  argument of every save entry point rather than something they look up, so a
-  call site cannot forget to ask whose save this is
-- `_main_window_menus.py` (`MainWindowMenuMixin`) - status-bar and File/Users/Help
-  menu construction, extracted from `MainWindow` to stay under the LOC limit
-- `_month_view_builders.py` (`MonthViewBuilderMixin`) - builds the `MonthView`
-  sections (header, tables, buttons); the month nav tray carries only Previous/Next
-  now that archiving is automatic (no manual "Archive Month" button)
-- `_month_view_edit_mixin.py` (`MonthViewEditMixin`) - inline cell edits and
-  the active/skip/paid/received checkbox handlers
-- `_month_view_cell_edits.py` - what a typed bill or income cell turns the
-  entity into, Qt-free so it is tested without a QApplication. Both tables
-  read amounts through `pence_from_text` (so the income table accepts
-  `£1,500` as the bill table always did) and due days through
-  `domain/value_objects/due_day.due_day_from_text`; a refusal shows its
-  message and the cell is restored
-- `ui/utils/amount_fields.py` - every other typed money field (the bank
-  balance, bank-account settings, commitments, credit cards and the Reserves
-  and Recommendations buffers) is read the same way: `field_pence` passes the
-  text through `pence_from_text` (`signed=True` for the bank balance only) and
-  a refusal, prefixed with the field's label, is shown by
-  `AmountRefusalMixin._refuse_amount`, which focuses that field. The dialog
-  stays open and nothing is saved. The overdraft APR in Bank Account settings
-  is read as exact basis points, 0 to 1000% with at most two decimal places
-- `ui/widgets/_entry_dialog_rules.py` (`EntryDialogRulesMixin`) - the rules
-  the Bill and Income dialogs share: the amount read as exact pence (a
-  refusal keeps the dialog open with its message) and the start month of a
-  new entry, the month being viewed. The income dialog used to leave a new
-  income unbounded, so it appeared in every earlier month
-
-**`due_day`** (`clear_budget/domain/value_objects/due_day.py`): the one home
-for the due-day rule. `FIRST_DUE_DAY` is 1 and `LAST_DUE_DAY` is read from the
-calendar (31). `check_due_day` refuses anything else and the `Bill` and
-`IncomeSource` entities call it, so no path can store -3 or 45 again;
-`due_day_from_storage` repairs a row written before the rule the way the
-overnight update already treated it (above 31 falls on the month's last day,
-0 or below means no fixed day) without rewriting the row
-- `_month_view_delete_mixin.py` (`MonthViewDeleteMixin`) - the delete
-  confirmation flows. Bills and income share one stop-from-month vs
-  delete-entirely choice, so the two sides of the ledger behave alike. A
-  one-off income is exempt and simply confirms: it exists in one month, so
-  stopping it from that month and deleting it are the same act
-- `_month_view_income_convert.py` (`MonthViewIncomeConvertMixin`) - promoting a
-  one-off income entry to a recurring source. The two live in different
-  tables, so it is a delete plus an add rather than an update; it
-  confirms first. Only this direction exists; the reverse would rewrite
-  history
-- `_month_view_apply_prompt.py` (`MonthViewApplyPromptMixin`) - the "update
-  balance now?" offer for an item added dated today or edited to today's date
-  (dialog or inline); fires only on a genuine transition to today and skips
-  items already paid, received or skipped
-- `_month_view_balance_mixin.py` (`MonthViewBalanceMixin`) - the balance
-  label (stored balance for the month the user is in, projected month-end
-  for any other) and the overdraft warning strip under the nav row
-- `GraphView` (`views/graph_view.py`) / `_line_bar_chart.py` (`LineBarChart`) -
-  the Graph view: the viewed month plotted as a PAGE, stepped between months by
-  the tray's own arrows. It was a modal dialog opened from a tray icon, the
-  one control in the application that behaved that way; it even built its own
-  ← Previous / Next → pair stepping months "exactly as the tray's arrows
-  do", a working copy of the tray it had been launched from. As a page it
-  uses the real tray, so the duplicate pair and the Close button went with
-  the dialog. What is plotted is chosen ON the page rather than inherited
-  from wherever the user came from: a switch swaps the bank balance for one
-  series per card (its face a picture of what a press will plot, words in the
-  tooltip) and a heading above the chart names the current reading. A pilot
-  button toggles bar vs line rendering, drawn with QPainter (no chart
-  dependency). The axes chrome lives in
-  `_chart_axes.py` (`ChartAxesMixin`): the y-axis left margin is MEASURED
-  per paint from the widest tick label via QFontMetrics (with a floor), so a
-  large balance widens the margin rather than truncating; the SVG exporter
-  mirrors the same rule with a character-count estimate, since SVG has no
-  font metrics at build time
-  - The LEGEND is measured the same way and for the same reason. It stepped a
-    fixed width per entry, which four cards plus the total curve overran: the
-    last label was drawn past the right edge of the widget and read as a name
-    cut in half. Each entry now takes the width `QFontMetrics` gives its own
-    label, the row wraps when the next entry would cross the right margin and a
-    label too wide for a whole row is elided. `_legend_band_height` feeds
-    `_geometry`, so the plot starts below however many rows the legend took
-    rather than under them
-  - Curve maths is Qt-free and lives in `application/reporting/curve.py`, NOT
-    beside the widget: the day-end totals (one curve however many series are
-    plotted, so with a single series it IS that series), the inflection days
-    where direction changes and the Bezier segments. The chart imports it and
-    so does the SVG exporter, which is the reason it sits in the application
-    layer rather than the UI one. Tested without a QApplication in
-    `tests/application/reporting/test_curve.py`, under the coverage gate
-  - Where a reserve is being held, the floor is drawn across the month and the
-    part of each bar beneath it is dimmed, so a day in credit that is already
-    spoken for stops reading as free money. The values arrive as ONE per day
-    (`LineBarChart.set_reserve_floor_values`, fed by
-    `get_bank_graph_floor_values`) rather than as a scalar, because the floor
-    genuinely varies day by day; an empty list means no reserve and the chart
-    draws exactly what it always did
-  - Bar mode overlays that as a smooth curve FOLLOWING the data, in a `curve`
-    colour held outside the series palette so it never reads as one more
-    series. Monotone cubic interpolation (Fritsch-Carlson): it passes through
-    every day's real value and never overshoots a peak or a trough, because a
-    curve cutting across a tall day would draw a balance the account never had.
-    An averaged trend line was tried first and rejected for exactly that reason
-  - Line mode carries no curve. The line already joins every day's real value,
-    so a curve through the same points restates the line it sits on. One
-    `_curve_shown()` predicate gates the drawing, the legend entry and the
-    axis range together, so the axis is never padded for a curve that is not
-    there
-  - "Export HTML" writes the VIEWED month as a standalone page carrying BOTH
-    renderings at once, since a page has room for both where the chart has room
-    for one. It exports whatever is plotted, so it is offered for the bank and
-    the cards alike
-  - "Export a folder of months" opens `MonthRangeDialog` for a first and last
-    month, then writes the BANK balance across that range as a package
-    (`package_report`). It follows the SWITCH rather than the view: offered
-    while the bank series is on screen and withdrawn while the cards are,
-    because a bank-balance projection beside a graph of card balances would
-    claim to project what is shown and would not. A card-balance projection
-    would be a separate report with its own state rule (headroom against each
-    card's limit, not an overdraft floor). The standalone single-file range
-    export folded into this package: `projection_report` now renders in
-    production only as the package's index
-  - Both default to the user's Downloads folder (`ui_paths.default_downloads_dir`,
-    Qt's `DownloadLocation` so it is right on Windows, macOS and Linux, falling back
-    to home)
-  - `_chart_hover.py` (`ChartHoverMixin`) - hovering reads out the balance at
-    the point under the pointer (`Day 14: £1,204.55`, prefixed with the series
-    label when more than one is plotted). Line mode marks each inflection day
-    with a dot to aim at; bar mode treats the whole bar as the target. Hit
-    testing uses the chart's own `_geometry()`, so a readout can only land on a
-    point that was drawn
-- `RecommendationsView` (`views/recommendations_view.py`) - the
-  Recommendations view: what would make the months ahead survivable, rendered
-  as three plain sections (retime what can move, extra income needed, where
-  that leaves each month). The moves wording lives in the Qt-free
-  `ui/utils/recommendation_text.py`: the engine proposes per month while the
-  user acts per bill, so the same retiming needed in several months is said
-  once ("from October onward") and a closing note says a day changed for
-  good may change sooner than the first month that needs it, tested in
-  `tests/ui_logic/test_recommendation_text.py`. The page is anchored to TODAY rather than to the
-  month being viewed; the tray's arrows still step the shared month label
-  like every other view and the anchor line above the body says which months
-  the advice covers. It recomputes on every `month_summary_updated`, so an
-  edit made on Monthly Budget lands here the moment it is saved. At the top
-  sits the emergency-buffer row: a checkbox ("Keep an emergency buffer of")
-  and an amount field, persisted through
-  `BudgetService.set_recommendation_buffer` (settings keys
-  `recommendation_buffer_enabled` and `recommendation_buffer`), disabled and
-  zero until the user says otherwise. The SAME row appears on the Reserves
-  page reading the same setting: a buffer and a reserve are the same kind of
-  object, money held back, so there is one of it and it can be set from either
-  page. It is a different setting from `safe_to_spend_floor` (Settings > Bank
-  Account), which is what the graph and Safe to Spend measure against;
-  merging the two is an open product question rather than a tidy-up.
-  - There is deliberately NO Apply button and never will be. The page is a
-    reference set, never an actor: a batch of auto-applied edits would leave
-    the user digging out what changed and reconciling it with their actual
-    bank, which is more work than making each change knowingly. The user
-    makes the change in the real world first, then in the bill or income
-    dialog and the page recomputes. The app follows reality; it does not
-    lead it
-  - Every suggestion row carries a try-it-on CHECKBOX. A tick never
-    rewrites the page (a body reshuffling under a click is jarring): it
-    opens an inset tray panel under its own row (`QWidget#TrialPanel`,
-    inset tokens) stating that change's measured effect, so several
-    changes multi-select naturally as several open panels. The panels
-    compare PINNED runs (`TrialDay` through `retimed_months`, then
-    `immovable_months`, both pure transforms ahead of the engine): the
-    normal outlook assumes the engine's own plan, which would hide a tick
-    that does what the plan proposed anyway. Each panel shows its change's
-    marginal effect beside the other ticks; two mutually redundant ticks
-    fall back to the solo story plus "the others cover this". Nothing is
-    ever written; every panel says so. Tick state lives on the view, keyed
-    by item, surviving data-driven rebuilds; the widget rows are built by
-    `views/_recommendation_sections.py` (split for the LOC limit) and the
-    checkboxes join the keyboard ring through `nav_targets`
-  - Below the outlook sits the optional headroom section: the engine's
-    extras pass measures every further retiming that would lift a month's
-    low once the mandatory work is applied, the wording layer excludes
-    items the mandatory list already names, ranks the rest by total
-    measured lift and says only the top few
-    (`recommendation_text.HEADROOM_ITEM_CAP`), because on a healthy budget
-    nearly everything movable helps a little and a page listing all of it
-    is a page nobody reads. A healthy plan keeps the section: "Nothing
-    needed" plus the cheap insurance on offer
-  - The engine (`domain/services/recommendations.py`) is pure: PlannedMonth
-    tuples in, `Recommendations(moves, asks, outlook, extras)` out. It re-runs the
-    same day-by-day simulation the bank page uses for every candidate, so a
-    move is only ever proposed with its measured effect; a greedy best-move
-    loop applies the single most lifting retiming until none improves the
-    month's low. Bills move to just after the month's last income, incomes
-    to day 1; a timing move never changes what a month closes at, so timing
-    repairs the mid-month dip while the asks repair the structural deficit.
-    Asks are INCREMENTAL: each month's ask assumes the earlier ones arrived,
-    so they read as one plan. The target is the agreed overdraft floor plus
-    the buffer while it is enabled
-  - PAUSING A RESERVE is the third lever (`_recommendation_pauses.py`, split
-    out and re-exported) and it is different in kind: it does not find money,
-    it stops putting money by. That always looks like an improvement inside
-    the window on screen, because the relief lands there while the bill it was
-    for lands later, sometimes outside the window entirely. So a pause is
-    never emitted as a bare win: each one carries what it lifts AND what the
-    due month then arrives short by, both measured by re-walking the same
-    simulation with that commitment's hold-back removed
-  - The adapter (`application/services/_recommendation_operations.py`,
-    `RecommendationOperationsMixin` on `BudgetService`) builds the plans
-    from `get_month_summary` over the sustainable window, starting the month
-    AFTER the current one and opening from the current month's projected
-    end-of-month balance, mirroring the overdraft runway. Card bills are
-    excluded (retiming a card payment moves no bank money); an undated item
-    takes the projection's day conventions and is never movable; a dated
-    item is movable unless its `day_fixed` flag says the real world fixed it
-- `FirstStopDialog` (`first_stop_dialog.py`) - dialog base that opens with focus
-  already on its FIRST stop: the first control in its own tab order that is
-  enabled, visible and takes tab focus, found by walking Qt's focus chain so the
-  answer is whatever the first Tab press would have reached. Disabled and hidden
-  controls are passed over, the same rule the ring applies everywhere else; a
-  dialog with nothing focusable simply focuses nothing rather than failing.
-  Replaced the old `NeutralDialog`: the neutral start belongs to the MAIN WINDOW,
-  which you look at before you act in it, not to a dialog you opened deliberately
-  to do one thing. Making a dialog wait for a Tab press costs a keystroke and
-  tells the user nothing
-  - A READING PANE IS PASSED OVER TOO. The About credits and the licence text
-    are scroll areas that come first in their dialogs, so both opened focused
-    on the page rather than on Close, a place the reader can only read.
-    `is_reading_pane_class` names what is skipped: a `QAbstractScrollArea` that
-    is not a `QAbstractItemView`. Lists and tables stay eligible because a
-    table is something to act on; the Budgets dialog opens on its table and
-    skipping every scroll area moved it to a button. The pane keeps its own
-    focus policy, so the keyboard still reaches it. The predicate works on
-    classes, so `tests/ui_logic/test_first_stop_reading_pane.py` holds it
-    without a `QApplication`
-  - Five of the 18 dialog classes derive from it (About, Licence, Budgets,
-    Commitment and Month Range); the other 13 subclass `QDialog` directly and
-    take Qt's own default focus, which the reading-pane rule does not reach
-- `auto_scroller.py` (`AutoScroller`) - gentle auto-scroll shared by the About
-  credits, the licence notice behind View Licence and the How It Works text
-  (the setup program's own licence dialog uses it too): the surface holds still on open, reads
-  down slowly (one step every second tick), holds at the bottom, rewinds fast
-  and repeats. Any manual input (wheel, click, keys, the scrollbar or keyboard
-  focus entering the surface) only SUSPENDS it; after a moment of stillness it
-  resumes from wherever the reader left it. A modal above the surface freezes
-  the cycle in place. One set of pace constants for the whole app, on the
-  class, never per dialog
-
-**Keyboard navigation** (`keyboard_nav.py` + `_main_window_nav.py`):
-- Each view's `nav_targets()` is the DECLARED ring order for its view and it is
-  READING order, which with two stacked trays means the UPPER tray first and
-  the lower one after it, each left to right as drawn, then the page's own
-  controls. Two views override that with TASK-FLOW order by decision
-  (2026-08-24): Solvency places its visible pilot button just before the
-  Credit Cards button (page turn, then next view) and Credit Cards runs its card
-  panels (Active toggle, Edit, Delete per card) then Add Card between the
-  view-button run and the graph icon, because the cards are what the view is opened
-  for. Both overrides are deliberate and documented at the declaration.
-- A view may declare `nav_entry_stop()`: the control the FIRST Tab lands on
-  when the ring is entered from neutral (launch or a view switch). Solvency
-  names its visible pilot; Credit Cards names the first card's Active toggle
-  (Add Card when there are no cards); every other view keeps the default
-  menu-first entry. `MainWindow._current_nav_entry` hands the
-  navigator a callable and `KeyboardNavigator._entry` prefers the declared
-  stop on forward entry only; backward entry and every fallback keep the
-  ring's ends. The view switch still restores the NEUTRAL sink (nothing is
-  highlighted); the entry stop decides only where the first press lands. The
-  switch handler also clears the menu-bar highlight, because a title left
-  active outlives the focus move (the bar even reclaims focus for it) and the
-  ring would resume from the menu instead of entering at the declared stop.
-  Wiring held by `tests/structural/test_nav_entry_invariants.py`; behaviour
-  by an offscreen probe
-- Turning a Solvency page (`_show_page`) hands focus to the surviving pilot,
-  the one that reverts, so flicking between the two readings costs one key
-  per flick; at build time the panel is not yet visible and the neutral
-  start stands
-- The card Active toggle is a QCheckBox drawn as a pill-and-knob slider
-  (`switch_images.py`, the spin-arrow image pattern: generated per theme
-  colour into the app data directory, because a checkbox indicator has no
-  knob subcontrol for QSS to draw). Its ring stays the widget's own border
-  (hover/focus the ring colour, disabled red), because a widget-state-then-subcontrol
-  selector is parsed and silently ignored. The rule also sets
-  `background: transparent` and `spacing: 0px`, both load-bearing: the blanket
-  `QWidget` background paints every widget in the WINDOW colour, which is
-  darker than the card panel; a checkbox with no text still reserves the
-  gap its label would occupy, so the pill sat on a dark block roughly a third
-  as wide again as itself (measured: `#0a0a0d` running eight pixels past the
-  pill, against a `#242938` panel). Transparent lets the panel through and the
-  zero spacing takes the widget down to the pill, so the ring hugs the switch
-  instead of trailing off to the right of it. A ring that disagrees with the
-  drawing does not present as a wrong order, it presents as a SKIPPED control,
-  because the user views past where a button visibly is and lands somewhere
-  else. Two of the four declarations were already one pair out (the graph
-  button was offered before Previous while it is drawn after it) and the tray
-  rearrangement would have made all four wrong. Verified by mapping every
-  tray stop's centre to (row, x) and requiring ascending on all four views, plus
-  a check that no enabled, visible tray button is missing from its declaration
-  bar the current view's button, which is correctly not a stop. That measurement is a PROBE rather than a test, because the
-  suite starts no `QApplication` by design and ring order is geometry
-- One application-level `KeyboardNavigator` event filter drives an explicit
-  focus ring: menu-bar titles, then the active view's stops (each
-  view's `nav_targets()`), recomputed live so disabled or hidden stops are
-  skipped (a disabled Previous at the base month simply drops out)
-- A VIEW TAKES THE BUTTON RUN WHOLE. `view_btns[:-1]` is the run as drawn and
-  `view_btns[-1:]` is Archive in the right-hand group; no other slice is
-  allowed in a `nav_targets` body. Solvency needed its pilots INSIDE the run,
-  so it cut the run up and reassembled it (`[:2]`, `[2:3]`, `[-1:]`): five
-  view buttons, four positions covered, with no arithmetic anywhere saying the fifth
-  had gone. The Graph button was absent from that view's ring entirely, which
-  presents as the ring jumping a button plainly on screen. `stops_before`
-  inserts into the whole run instead, so everything handed in comes back out.
-  Held by `tests/structural/test_button_run_slices.py` and
-  `tests/ui_logic/test_ring_order.py`
-- Tab and Right step forward, Shift+Tab and Left step back, wrapping at both
-  ends; tables keep Up/Down for their rows, text inputs keep their arrows for
-  the caret
-- THE PAGE BODY IS THE LAST STOP THE VIEW ITSELF OFFERS, when it has something
-  to scroll. The window's footer comes after it: `_main_window_nav` appends the
-  scroll stop, then extends the run with `bottom_tray.ring_stops()`, so the
-  donate button is the last stop on every view. The footer belongs to the
-  window rather than to any view, which is why it is added once at the end
-  rather than seven times inside.
-  `ScrollableView.nav_scroll_stop()` returns its `QScrollArea` only
-  while the content overflows, so a page that fits is skipped (a stop must be
-  actionable: landing on a page that scrolls nowhere spends a keypress and does
-  nothing). Without it the ring ran out at the theme toggle and wrapped
-  straight back to the File menu, so a long page such as Solvency could only be
-  read with the mouse: there was nowhere to put the keyboard that the arrows
-  would scroll. Qt scrolls a focused `QAbstractScrollArea` on Up, Down, Page
-  and Home/End by itself, so only the focus policy and the ring membership had
-  to be added. That policy is `TabFocus`, never `StrongFocus`: `StrongFocus`
-  also grants CLICK focus, so clicking anywhere on a page background put the
-  ring round the whole panel even on a page that does not overflow and is
-  therefore not a stop at all (measured: `nav_scroll_stop()` returned None
-  while the panel wore the ring). Focus may only arrive here from the ring,
-  which already skips a page that fits. Left and Right deliberately still STEP THE RING here rather than
-  scrolling horizontally, unlike the general scrollable-region rule: nothing in
-  this app scrolls sideways and Left/Right stepping everywhere is what stops
-  focus being trapped. The stop paints the same ring on focus and none at
-  rest (measured: 0 pixels at rest, ~2980 focused, both themes), with no hover
-  rule, since the pointer sits over the page most of the time the app is open
-- EVERY VIEW BUTTON IS A STOP on the ring, which now costs nothing to say: the
-  view buttons are ordinary buttons in the navigation tray, so each is a stop like any
-  other. Walking the ring moves focus and switches nothing; Enter or Space
-  commits. The button for the view already showing is dropped from the declaration
-  (`ring_view_stops`) rather than disabled, since a disabled control paints the
-  permanent red ring and would read as broken rather than as current
-- This used to need a `QTabBar` subclass, `NavTabBar`, carrying a keyboard
-  cursor separate from the bar's selection, plus a pair of walking helpers in
-  `_tab_cursor` (one wrapping for Up and Down, one bounded for Tab so the ring
-  could not be trapped in the strip) and a cursor ring painted by hand on the
-  pill geometry the stylesheet drew. All of it existed to work around one Qt
-  behaviour: a `QTabBar` ties its focus to its CURRENT tab, so a focused bar
-  can only ring the tab the user is already on, which is a dead stop. A button
-  carries no such tie. When the view buttons moved into the tray the whole mechanism
-  became unreachable and was deleted rather than left as a hidden bar nobody
-  drives
-- Submenus keep Qt's native horizontal arrows: inside an open menu, Right on
-  a submenu item (File > Import / Export) enters it with its first item
-  active and Left inside a submenu exits back to the parent item; on plain
-  items the arrows still step the ring between menu titles
-- Every stop is actionable: a table is ONE stop, never one per
-  cell (`setTabKeyNavigation(False)` on all dialog tables, e.g. Manage
-  Users, Archive Details); Up/Down walk its rows (arming Delete Selected in
-  Manage Users) and Tab or Left/Right leave it in a single press
-- Enter equals Space on buttons and checkboxes (main window and dialogs);
-  inside modal dialogs the arrows walk the dialog's own tab order
-- RETURN IN A FIELD SUBMITS THROUGH THE DEFAULT BUTTON AND NOTHING ELSE. A
-  `QLineEdit` emits `returnPressed` and then IGNORES the key, on purpose, so it
-  carries on to the dialog's default button; connecting `returnPressed` to the
-  same slot that button calls therefore runs the submit twice on one press.
-  Four dialogs did (owner challenge, sign-in, create account, set balance) and
-  three of them hid it: a dialog that accepts on the first run is closed before
-  the key lands; an inline error label is simply written twice with the
-  same words. The owner challenge answers a wrong password with a MODAL, so
-  there the second run was plain: the warning came back the moment it was
-  dismissed, because the key had been waiting behind it. Every one of the four
-  now names its submit `setDefault(True)`, marks Cancel `setAutoDefault(False)`
-  so a reordered button row cannot put Return on it, then connects
-  `returnPressed` nowhere. Held by
-  `tests/structural/test_return_key_invariants.py`; the counts (2 before, 1
-  after, on all four) came from an offscreen probe
-- Neutral start, MAIN WINDOW ONLY: a 0x0 sink takes the initial focus so nothing
-  is highlighted on launch and no menu drops open. Dialogs do the opposite and
-  open on their first stop (`FirstStopDialog`); a window is looked at before it is
-  acted in, a dialog was opened to do one specific thing
-- A VIEW SWITCH returns to that same sink. Switching hides the control that was
-  clicked, so Qt hands its focus to whatever the newly shown page offers next
-  in its chain; that control then wore the ring beside the current view button's
-  accent border and the tray read as two view buttons being current at once. Qt has
-  already moved the focus by the time `currentChanged` arrives (measured, not
-  assumed), so the handler sets the sink last and nothing overwrites it. A new
-  page starts neutral for the same reason the window does. Guarded by
-  `tests/structural/test_tray_switch_invariants.py`, which asserts the signal
-  is connected AND that the handler it names touches the sink, because a
-  connection to a handler that had stopped focusing anything would otherwise
-  read as wired
-- A TABLE TAKES THE RING FROM THE KEYBOARD ONLY. Every table is
-  `TabFocus` through `ui/utils/table_focus.keyboard_only_focus`, never Qt's
-  default `StrongFocus`, which grants CLICK focus as well: clicking one wrapped
-  the whole pane in the ring; clicking the dead space below the last row
-  did it too, where a click selects nothing and does nothing. That is the page
-  body's rule (`ScrollableView._scroll`) applied to the panes inside it. What a
-  click DOES is unchanged, because selection is not focus: a row click still
-  selects and still arms Delete on both policies (measured); once the ring
-  arrives from Tab the table still keeps Up and Down for its rows. The helper
-  is the only place that names the policy and every table passes through it,
-  because doing nothing here is the wrong state and a table added later
-  inherits it silently.
-- A TABLE ALSO DRAWS NO RING, from the keyboard or otherwise. The policy above
-  settled where focus may come FROM; this settles what focus then paints. The
-  ring says the keyboard is here, on this one control, which reads correctly
-  round a button and wrongly round a region the eye looks INTO: the table was
-  already saying it better by highlighting the row the ring landed on
-  (measured: with no stylesheet rule at all, focusing a table still paints
-  1916 pixels, for a row-selecting table and a non-selecting one alike). So
-  the `QTableWidget` focus rule is gone and only the transparent base border
-  remains, which holds the geometry and suppresses the toolkit's own sunken
-  frame. Held by
-  `tests/structural/test_table_focus_invariants.py`, all three parts
-- A CLICK LEAVES NO RING. The ring means one thing, the keyboard is here, so
-  focus a mouse brought to a BUTTON is refused: `KeyboardNavigator` handles
-  `FocusIn` then clears the focus when the reason is `MouseFocusReason` and the
-  target is a `QAbstractButton`. It never consumes the event, so the click
-  still fires; only the focus it dragged along is dropped. Without it, pressing
-  Export HTML and cancelling the file dialog left the button outlined with the
-  keyboard nowhere near it and the next Tab carried on from a place the user
-  had not chosen. Buttons ONLY: a text field, a spin box, a combo box and a
-  table must take a click, because clicking into one is how you say where to
-  type. Inside a modal the toolkit keeps its own behaviour, as everywhere else
-  in this filter
-- Ring colours are three-state, enforced in the QSS: no ring at rest, the ring
-  colour while an enabled control is hovered or focused, a permanent red ring
-  while disabled (hover/focus rules are gated on `:enabled`). An ITEM VIEW is
-  outside that model entirely and takes no ring in any state, because its
-  current row is the indicator
-- `ring` is a BORDER colour and nothing else. Every solid fill it used to
-  double as has its own `checked_fill` token: the checked state of a checkbox,
-  the same on a table indicator, the on position of a switch track. One value could
-  not make both statements, because a border saying "focus is here" is a cue
-  while the same colour as a filled block saying "this is on" is glare. That
-  collision is what made a ticked box the loudest thing on the login screen
-- `_credit_card_view_loaders.py` - builds the per-card panel list (`_build_card_frame`)
-  for the Credit Cards view
-
-**Every built pixmap is cached** (`ui/utils/icon_buttons.py`, matching
-`view_buttons`):
-- The sources are full-size masters over a megapixel each, so decoding and
-  scaling one costs about a tenth of a second; EVERY VIEW BUILDS THE SAME
-  TRAY. Uncached, `image_icon_pixmap` was called 53 times for roughly a dozen
-  distinct pictures and the window took 8.04s to build, 6.83s of it here.
-  Keying built pixmaps on `(spec, height, bottom padding)` took the same build
-  to 2.72s. Measured on both sides, not estimated
-- The cache is a plain module dict rather than a `functools` cache built at
-  import time, because the values are Qt objects and need a live
-  `QApplication`. `view_buttons` was written first and caches the same way, which
-  is why the view strip never showed this cost
-- What is left is one decode per distinct picture. Going below it means
-  SMALLER SHIPPED ASSETS rather than more caching
-
-**View-button icons** (`ui/utils/view_buttons.py`):
-- The seven primary view buttons carry a picture and no text; the text moved to the
-  tooltip, so the row still names itself on hover and nothing was lost but
-  a run of labels wide enough to push the buttons across the window
-- All seven are bundled images (`monthlybudget.png`, `solvency.png`,
-  `creditcards.png`, `reserves.png`, the app icon for Graph,
-  `recommendations.png`, `archive.png`, resolved by
-  `shared.resources.find_nav_icon_path` through the same candidate roots as
-  every other asset). The archive was an emoji once and the graph an icon
-  button; both are pictures in `VIEW_SPECS` now, so adding a view is one line
-  there and nothing else. Sizing is one question, how tall the thing
-  actually PAINTS, answered by measuring opaque pixels (`glyph_metrics`)
-- An image is cropped to its opaque content, then fitted by its HEIGHT. The
-  scale that lifts it lives in `nav_glyph_size.NAV_GLYPH_SCALE` now, applied to
-  the measured box before anything reads it, so the tray's own icons take it
-  too; `VIEW_IMAGE_SCALE` is 1.0 because scaling again here would put the buttons
-  back above their neighbours. Fitting to a square box by the LONGER side
-  was tried first and is what a picture-and-glyph row must not do: the
-  calendar came out 42 tall and the cards 35 against the emoji's 46, so the
-  pictures read small; worse still, their BASES sat high. A row of icons that
-  do not share a bottom edge reads as badly set rather than as differently
-  sized. Fitting by height puts every icon on one baseline by construction;
-  the landscape card artwork running wider than its neighbours is the accepted
-  cost, since a shared bottom edge is what the eye checks along a row
-- EVERY icon in the tray paints at the same height; every button holding one
-  is the same size. The scale used to be the view buttons' alone, which left the
-  load, save, switch, bank and help icons painting 47
-  against the buttons' 63 in the same band, a third smaller. Moving the scale to
-  the base fixed all of them at once. `NAV_ICON_BTN_PADDING_PX` went to zero in
-  the same pass, since a tray button carrying that padding was 8px taller than
-  a view button holding an icon of exactly the same height
-- A view button whose icon cannot be built keeps its label as visible text. A missing
-  asset costs the tray its looks, never a route into the view
-- The view buttons are plain BUTTONS in the navigation tray (`build_view_buttons`), not a
-  `QTabBar`. The `QTabWidget` is kept for what it is good at, owning the pages
-  and switching between them; its bar is hidden. Every view builds its own
-  seven buttons because every view builds its own tray; `MainWindow` wires them
-  all to the one tab widget and marks the current view on every set at once, so
-  the mark is right whichever tray is on screen
-- That SIMPLIFIES the keyboard model rather than complicating it. `NavTabBar`
-  existed because Qt ties a tab bar's focus to its CURRENT tab, so a focused
-  bar could only ever ring the tab the user was already on, a dead stop; it
-  carried a separate cursor to work around that. A button has no such tie, so
-  walking the ring moves focus and changes nothing while Enter or Space
-  activates and switches, which is exactly what the cursor was built to fake.
-  The button for the current view is dropped from the ring declaration (`ring_view_stops`)
-  rather than disabled, because a disabled control paints the permanent red
-  ring and would read as broken rather than as current
-- The current view's button is marked with a panel FILL and nothing else, through a
-  dynamic property plus a repolish (`mark_current_view`), never an inline
-  stylesheet: an inline colour survives a theme switch and leaves the mark
-  painted in the outgoing theme. It was a full accent rectangle once; at 2px
-  the accent was indistinguishable from the ring, so on launch the current button
-  read as though it were hover-focused. It then carried a fill plus an accent
-  underline, which was one mark too many. Rectangles stay the ring's own
-  vocabulary (the ring colour on hover or focus, red when disabled) and the
-  current button's border is fully transparent, so the two can never be confused
-
-**Sign-in and remembered accounts**:
-- `auth/remembered_login.RememberedLogin` - remembers sign-in details PER ACCOUNT,
-  never one slot for the machine. The JSON sidecar holds only which accounts are
-  remembered and which asked for a password kept; the password itself lives in the
-  OS credential store through `keyring`, reached behind the `SecretBackend`
-  Protocol so the suite drives a hand-written fake. It also reads the earlier
-  single-account file, which is on every machine the app has already run on
-- `ui/widgets/login_dialog.LoginDialog` - offers a dropdown once more than one
-  account is remembered and a plain field otherwise, with two independent ticks
-  (username, password) applied on a completed sign-in
-- `ui/widgets/reset_password_dialog.ResetPasswordDialog` - split out of
-  login_dialog.py for the 400-line limit; imported where it is used so the two
-  modules need not import each other
-- `ui/widgets/_login_styles` - the field, dropdown and link styling the four
-  sign-in-shaped dialogs share, resolved when a dialog is BUILT so it follows
-  the theme in force. The username dropdown styles the COMBO rather than its
-  inner line edit: styling only the child left an unthemed control whose edit
-  fell back to a point-sized font too tall for the box, which clipped the name
-  it was showing
-
-**The sign-in screen stays up until there is a window to hand over to**
-(`ui/widgets/_handover_progress.py`, mixed into `LoginDialog` and
-`CreateUserDialog`):
-- Accepting a password used to close the dialog immediately, leaving nothing on
-  screen for the seconds the window took to build. So the dialog is handed back
-  from the login flow rather than closed: `run_login_flow` returns a frozen
-  `SignedIn(user, screen)` and the caller owns the screen until it has
-  something to replace it with
-- THE SCREEN IS SHOWN ONCE AND HIDDEN ONCE. `QDialog.exec` returns by way of
-  `done()`, which hides the dialog, so an accepted sign-in put the screen away
-  and `begin_handover` brought it straight back: a Hide, a Show and a repaint
-  between them, seen as a flash at the exact moment the user is watching.
-  Refusing the hide from Python does not work, because Qt calls it internally
-  in C++ and PySide does not route that back to an override (measured: an
-  `accept` override is entered, a `setVisible` override beside it never is). So
-  the accepted path never reaches `done()`: `exec_holding_open` runs the
-  dialog's own event loop, `finish_accepted` sets the result and quits that
-  loop while the dialog stays exactly where it is. Cancel, Escape and the
-  close button go on using `reject()`, hiding the ordinary way and quitting
-  through `finished`. A dialog opened anywhere else is unaffected, since
-  `finish_accepted` falls back to a plain `accept()` when no held-open loop is
-  running (Create Account from the sign-in screen is the case that proves it).
-  Held by `tests/structural/test_handover_invariants.py`
-- `begin_handover` swaps in a determinate progress bar, `report_progress` moves
-  it as each stage completes and `end_handover` closes the screen. The bar is
-  DETERMINATE by necessity, not by preference: the build runs on the GUI
-  thread, so an indeterminate bar would be frozen for exactly as long as it was
-  meant to reassure. Each report repaints the one widget that changed, which is
-  also what keeps the dialog drawing at all
-- The form is left looking exactly as it did and made INERT instead, by an
-  application-level filter that swallows mouse and key events aimed at the
-  screen and its children. Disabling the widgets was tried and is wrong here: a
-  disabled control in this application wears the permanent red ring, so the
-  whole screen turned red at the moment it was meant to say "working". Nothing
-  is removed either, since taking the form out would resize the dialog and move
-  it on screen at the one moment the user is watching it
-- That filter is also what makes the screen unrecoverable if it is ever left
-  up, which is why the composition root ends the handover in a `finally` and
-  `end_handover` returns early when there is nothing left to end. Both halves
-  are pinned by `tests/structural/test_handover_invariants.py`; the rendering
-  is verified by an offscreen probe
-- Ending the handover is not enough on its own when the build RAISES. The
-  exception used to reach the excepthook, which logs it and nothing more: no
-  window, the event loop still running and the process still holding the
-  single-instance lock, so every later launch handed off to that invisible
-  copy and exited at once. The session loop now catches it, records it through
-  the same excepthook, ends the handover, tells the user where the log is and
-  ends the event loop with a failure code. `_reload_database` builds a window
-  too and has a narrower handler: after a Load, a loaded database that raises
-  `sqlite3.DatabaseError` while opening is replaced by the budget it displaced
-  (kept aside by `db_copy.replace_keeping_original`), the user is told and that
-  budget is opened instead. Any other failure there is still unhandled
-
-**Building a window** (`ui/window_builder.py`):
-- `build_main_window(database, current_user, user_store, progress=None)` is the
-  wiring for ONE open budget: the repositories over that connection, the
-  services above them, the catch-up those services run for the days since the
-  last launch, the view models and `MainWindow` itself
-- Split out of `main.py` when that file reached the band the size cap treats as
-  one edit from failing. The composition root keeps what only it can hold: the
-  session, the windows, the database connection and the order in which one
-  replaces another
-- The stage count (`SERVICE_STAGES`, `VIEW_STAGES`, `BUILD_STAGES`) lives here
-  because this is the only place that knows both halves of the build, the
-  services counted here and the views counted by the window; the window is
-  handed the offset it starts at rather than counting for itself
-- `progress=None` builds silently, which is what a rebuild behind an
-  already-visible window wants (Load, Save As, a restore)
-
-**Who is signed in**:
-- The account name sits at the left of every view's month tray, built by
-  `ui/utils/nav_header._build_nav_user_pair` and filled by `MainWindow` through
-  `set_nav_user`. It is set on the HEADER, never the view: `ScrollableView`
-  lifts the header out of its view so it spans the full view width, which
-  leaves the label no longer a descendant of that view
-- An empty MIRROR of the label sits at the far right of the same row, kept the
-  same width, so the month cluster stays centred on the WINDOW rather than on
-  what the name leaves behind (which would drift per account)
-- `ui/utils/nav_label.NavUserLabel` caps its own width and elides a name that
-  does not fit, putting the whole of it on the tooltip. Its size hint is
-  measured from the FULL text: taken from the drawn text it collapses to an
-  ellipsis and never recovers. Its minimum hint matches, because a hint alone
-  gets shaved under width pressure
-- `tests/structural/test_nav_user_label.py` pins all of it, including that the
-  title bar no longer names the account
-
-**Main Application**:
-- `MainWindow` - all views in `ScrollableView`; signals: `switch_user_requested`,
-  `sign_out_requested`, `database_replaced`, `full_restore_requested`,
-  `database_load_requested`
-  - File menu: New Budget and Switch Budget, then Load / Save / Save As (Save
-    goes to the remembered save file, kept in `ui_settings.json`), then the
-    "Import / Export" submenu (Back Up Everything / Restore Everything,
-    both admin only), Exit; a full
-    restore travels the `full_restore_requested` signal to `main.py`, which
-    tears the session down before touching a file
-  - Settings menu (adjacent to File): Bank Account alone, which now carries
-    the display currency too (the Preferences dialog folded into it)
-  - Every combo box is a `ui/widgets/themed_combo_box.ThemedComboBox`, which
-    paints its own arrow; `ui/_theme_inputs` makes `QComboBox::drop-down`
-    transparent. The two halves only work together: Qt draws that subcontrol
-    as a square native button over the right end of the field, so it paints
-    across the corner the border-radius rounds; the one rule that stops it
-    also stops the platform drawing the chevron. A plain `QComboBox` would
-    still work and simply have no arrow, so
-    `tests/structural/test_combo_box_invariants.py` pins that none is built
-  - Users menu: Switch User and Log Out for every account; admins also get
-    Manage Users (list, Add User, Delete Selected). The two ways out are
-    separate signals on purpose and differ only in what a cancelled sign-in
-    does. `switch_user_requested` SUSPENDS: `main.py` hides the window, keeps
-    its database open and keeps tracking it, so a cancel shows it again.
-    `sign_out_requested` ENDS: `main.py` destroys the window and closes the
-    database, so a cancel finds no live session and quits. Pinned by
-    `tests/structural/test_session_exit_invariants.py`, because crossing the
-    two signals raises nothing and shows only as a cancelled switch quietly
-    closing the application
-  - Account and session handlers live in the `MainWindowAccountMixin`
-    (`ui/_main_window_account.py`), alongside the menu and navigation mixins
-  - The nav tray is TWO stacked trays, built together by
-    `nav_header.build_centered_nav_header`, because they answer different
-    questions. The UPPER tray carries only what is about the month being
-    viewed: the signed-in account at its left (with an empty mirror at the
-    right so the cluster stays centred on the window), then Previous, the
-    month and year, then Next. The LOWER tray carries everything that acts on
-    the application, built by `_tray_buttons.build_save_load_buttons` /
-    `build_budgets_button` / `build_bank_button` / `build_info_button` and
-    sized against the view buttons: folder (Load), diskette (Save), arrows
-    (Switch Budget), a themed separator, bank (Bank Account), then the
-    Monthly Budget, Solvency, Credit Cards, Reserves, Graph and
-    Recommendations view buttons.
-    A second separator sets Archive apart, pinned to the RIGHT of the
-    stretch beside the sun/moon toggle and the blue information button (How
-    It Works). The first separator divides the controls that DO something
-    from the rest of the row; Switch User is menu-only now (a one-click way
-    out of a session in the tray would end it on a misclick) and the cog
-    went with the folded Preferences dialog
-  - Every view builds its OWN tray, so a view that never calls a builder
-    loses that control silently: the tray still draws and the app still runs,
-    with the shortcut simply gone from that view. Solvency lost the graph
-    button exactly that way while the graph was still a dialog. The graph is
-    a VIEW now, so what guards it is the view-button wiring rather than a per-view
-    button: `tests/structural/test_tray_switch_invariants.py` asserts every
-    tray view builds the shared controls AND lists them as keyboard stops,
-    plus that the view buttons map onto the pages BY POSITION, each index
-    handed straight to `setCurrentIndex`, because a page inserted in the
-    wrong slot silently points every view button at the wrong page while the
-    tray looks unchanged
-  - `build_centered_nav_header` SKIPS a None entry rather than passing it to
-    `addWidget`. A builder that cannot resolve its artwork returns None, so
-    a missing asset costs the tray one control rather than the window;
-    without the skip that None took the application down at startup, which
-    is the failure the None was there to avoid
-  - Two trays rather than one row is what makes the centring free. In one row
-    the cluster could be centred only by reserving the icon run's width again
-    on the empty side. Two runs plus the cluster do not fit at the window's own
-    width floor, so what gave way was the cluster: "Previous" came out as
-    "Previo" and the year lost its last digits, which is the one thing the tray
-    must never shed (`nav_label` pins its own width for the same reason). Give
-    the cluster a row of its own and the arithmetic disappears rather than
-    being balanced
-  - Tray glyphs are drawn at `NAV_GLYPH_SCALE` times the Previous button's
-    measured height, 1.35 today, so they scale UP rather than sitting at the
-    height they measure. The scale was the view buttons' own once, which left
-    the tray's icons a third smaller than the buttons beside them in the same
-    band; it is the base now, so every icon in the tray is sized through it and
-    they come out equal. A 0.75 factor lived in `nav_glyph_height` briefly,
-    while the view buttons were still a strip of their own and the tray was the
-    heaviest band on the window. With the buttons now IN the tray, the tray is
-    the band, so the one number scales up instead. The footer's glyph is two
-    thirds of this, through `footer_glyph_height`
-  - Help menu: About, Check for Updates (runs the real update check via
-    `UpdateCheckController` and reports the outcome, Up to date and unreachable
-    included), How It Works, View Licence
-- `main.py` - composition root; manages full session lifecycle:
-  - `_session_loop()` → login → open DB → load currency → build window → show
-  - `_reload_database()` → triggered by `database_replaced` and by `_load_database()`; closes old DB, reopens, loads currency, rebuilds window. After a Load it puts the displaced budget back if the loaded one will not open, else lets it go
-  - `ui/window_builder.build_main_window()` calls
-    `update_card_balances_for_elapsed_dates()` so any fully-elapsed months are
-    folded into card balances at session start, then
-    `apply_elapsed_limit_changes()`, then `apply_elapsed_bank_transactions()`
-    so dated bank bills/income that fell due while the app was closed are
-    folded into the bank balance, then `auto_archive_elapsed_months()`; while
-    the app is open, a MainWindow timer re-runs the bank fold just after each
-    local midnight
-  - Cross-platform single-instance lock (`shared/single_instance.py`, taken in
-    `ui/startup.begin`): a named kernel mutex on Windows, an exclusive `fcntl`
-    advisory lock on a file in the app data directory on macOS and Linux.
-    A launch that finds the lock held writes an empty request file into the
-    data directory (`shared/raise_request.py`) and exits; the running copy's
-    `ui/raise_watcher.py` polls for it and brings the window forward, fetching
-    the window through a callable because a reload replaces it. A poll rather
-    than a change notification, because one empty file per launch costs
-    almost nothing and a poll behaves the same on a network share
-  - Launch monitor (`launch_screen.init`): resolved ONCE at startup as the screen
-    under the mouse pointer, falling back to the primary screen when the pointer is
-    on none. Everything the session opens (the login dialog, the main window) is
-    placed on that screen, so on a multi-monitor desktop the app appears where it
-    was started from instead of on whichever display Windows calls primary. The
-    shell passes no launch monitor, so the pointer is a proxy, not an exact answer;
-    it is resolved once rather than per window or a dialog would open on whichever
-    monitor the mouse was resting on. `installer/app.py` does the same before
-    showing the setup window
-  - Screen-aware UI scale (`ui_scale.init`): factor = the LAUNCH screen's available
-    height / 1260, capped at 1.5x on tall/4K displays and floored at 0.5x, so the UI
-    scales *down* on short displays such as a 13in MacBook and scales for the
-    monitor the app actually opens on
-  - Default window geometry: 33% of available width x 92% of available height,
-    centred, with absolute minimum floors (860 x 780 logical points, capped to the
-    available screen) so the multi-column Bills/Income tables stay readable on small
-    laptops. The arithmetic is `_window_geometry.default_window_rect`, kept Qt-free
-    and tested in `tests/ui_logic/test_window_geometry.py` because multi-monitor
-    placement cannot be exercised on a one-screen machine. It works in virtual-desktop
-    coordinates, so a monitor left of or above the primary one (negative x or y) needs
-    no special case
-  - Centring positions the window's FRAME, not its client rect and happens AFTER the
-    window is shown. `setGeometry()` places the client rect while `move()` places the
-    frame, so centring geometry alone leaves the window half a title bar high and half
-    a border left (measured: a 23px title bar with 4+4px borders puts it 19px out).
-    Worse, a layout can insist on a larger size than the window was given and a window
-    centred before that happens is off centre by however much it grew. `launch_screen.centre`
-    therefore places twice: once immediately, so the window is created on the right
-    monitor and never jumps across displays, then again on the next event-loop turn
-    with the real frame size, before the first paint. A window larger than its screen
-    is clamped to that screen's origin so its title bar stays reachable
-  - A dialog is given a SIZE, never a position: `setGeometry(100, 100, w, h)` pins a
-    dialog to whichever monitor covers virtual-desktop (100, 100) regardless of where
-    its parent window is. Sized alone, Qt centres it on its parent
-
-**Theme** (`theme.py` + `theme_tokens.py` + `theme_qss.py` + `_theme_controls.py`):
-- Applied at `QApplication` level - covers all windows and dialogs
-- Two themes, dark and light, built from ONE stylesheet template
-  (`theme_qss.build_qss(tokens)`) fed by semantic token dicts in
-  `theme_tokens.py`; the sun/moon toggle in every nav tray's icon run
-  switches them at runtime (`theme.toggle_theme`) and the choice persists in
-  `ui_settings.json` in the app data directory, applying from the login
-  screen onward
-- The toggle's emoji is sized to MATCH the nav icon, both from
-  `format_helpers.nav_glyph_height` (the Previous button's height). One source
-  because the two are built in different functions, which is how they drifted
-  apart in the first place. The font is applied as a WIDGET-level stylesheet,
-  not `setFont`: the app stylesheet sets `font-size` on `QWidget` and any
-  stylesheet rule beats `setFont`, so the size was silently ignored. A widget's
-  own sheet beats the application's and setting only `font-size` leaves the
-  object-name ring rules intact (verified: 0 ring pixels at rest, 385 ring-coloured
-  on focus, 380 red when disabled). The rule MUST carry a selector
-  (`QPushButton#ThemeToggleButton { ... }`): a bare `font-size` cascades to the
-  widget's whole subtree and its TOOLTIP counts, which is what briefly rendered
-  the hover text at the emoji's size
-- The toggle's two faces are bundled PICTURES (`lightmode.png`, `darkmode.png`),
-  which removed a class of problem rather than moving it. As emoji they did not
-  fill their em box and no two filled it alike, so the font size had to be
-  MEASURED per glyph: on Windows at a 42px font the sun painted 43px tall and
-  the moon 38px; a single fraction ran one of them proud of the icon
-  whatever it was set to. They also needed shrinking to 0.8 of the nav icon for
-  optical weight, since a solid saturated glyph reads heavier than a pictogram
-  at equal size. Both corrections described the emoji rather than the button,
-  so both left with them: `nav_toggle.TOGGLE_ICON_SCALE` is 1.0 and the toggle
-  is the same 63px tall as every other icon in the tray. The
-  target height rides on the button as a `navGlyphTargetPx` property so
-  `theme._refresh_toggle_buttons` fits the INCOMING picture to it after each
-  switch through `format_helpers.apply_toggle_icon`; the button's own size is
-  fixed at build time to the wider of the two faces, so swapping face cannot
-  make the row reflow under the pointer. Measure this on the real
-  platform: under `QT_QPA_PLATFORM=offscreen` Qt substitutes its own font
-  database, where both glyphs measure 38px and the discrepancy is invisible
-- HIGHLIGHT TEXT IS TEAL, NEVER GREEN, everywhere: the hovered view button, the
-  selected one, a menu-bar title and a menu item. Green is the RING, the border
-  saying where the pointer or the keyboard is; the words inside it take the
-  accent, the same colour that marks the selected button. Text in the ring's own
-  colour made a hovered button read as a second, slightly different selection, two
-  near-identical shades on one strip. `tests/ui_logic/test_highlight_text_colour.py`
-  holds every one of those surfaces to it. (The deleted `NavTabBar` era left
-  one measured Qt fact worth keeping: with a stylesheet active,
-  `setTabTextColor` is ignored entirely)
-- The sheet is split by surface across `_theme_pane.py` (down to the pane, the
-  card the view content sits on), `_theme_inputs.py` (the fields
-  the user types in), `_theme_menus.py`, `_theme_controls.py` and
-  `_theme_labels.py`, with the Solvency view's own roles a further split into
-  `_theme_labels_solvency.py`; each is a pure string builder taking the token
-  dict. That last split took `_theme_labels.py` back out of the size cap's
-  danger band and the three sizes the two halves share are PARAMETERS rather
-  than a second copy of the constants, on the same grounds as
-  `nav_glyph_size`: a number read from two modules that must never disagree
-  does not survive living in both. The
-  split is what keeps every module under the LOC limit and it is also what
-  makes the highlight rule testable: `build_qss` as a whole CANNOT run without
-  a QApplication, since it resolves the system font and generates the spin-box
-  arrow images, while the per-surface builders touch no Qt at all. The blocks
-  are interpolated in their original order, because QSS is order sensitive
-- `QToolTip` is styled app-wide (size, colour, background, border). Without a
-  rule, tooltips take the platform default and are the one surface that escapes
-  the theme entirely, as well as being open to inheriting whatever font-size a
-  widget's own stylesheet sets
-- Tooltips also APPEAR promptly app-wide: `ui/tooltip_style.py` wraps the
-  platform style in a `QProxyStyle` overriding `SH_ToolTip_WakeUpDelay`
-  (Qt's default is 700ms and any mouse movement restarts the timer, so the
-  icon buttons' hover text took a second or two to show). Installed at both
-  composition roots, `startup.begin` and the installer's `main`, before any
-  widget exists; every other style hint passes through untouched
-- Tooltips APPEAR OVER AN INACTIVE WINDOW too. Qt Widgets shows a tooltip only
-  over the active window unless that window carries `WA_AlwaysShowToolTips`,
-  so hovering ClearBudget while another program had the focus showed nothing.
-  The attribute belongs to each top-level window rather than to the
-  application, so the same `install` adds an application-wide event filter
-  (`_TooltipsOnInactiveWindows`, parented to the app for its lifetime) that
-  sets it on every window as it is SHOWN: the main window, every dialog and
-  message box, the setup program's window alike. Nothing opts in, so a window
-  added later cannot be missed. Measured on the real Windows platform with the
-  cursor over an inactive window: no tooltip without the attribute, the
-  tooltip shown with it, on the main window and on a dialog
-- Dark: background near-black `#0a0a0d`, panels/trays `#242938`, borders
-  `#3a4156`, table selection deep blue `#1e3a5f`; light: grey `#f3f4f6`
-  background, white panels, slate borders, blue selection
-- Buttons royal blue `#3b5bdb` (hover `#4a68d6`, pressed `#2f4bb8`) in both
-- Ring colours per theme follow the three-state model (the ring colour on hover or focus when
-  enabled, permanent red on disabled, none at rest); `outline: none` on the
-  base rule keeps the ring as the only focus indicator. A table is the one
-  exception and wears no ring at all, its current row saying the same thing
-- Object-name rules for the nav tray, nav graph button, theme toggle and the
-  status-bar date label live in `_theme_controls.widget_extras_qss`; the
-  semantic label roles (`_theme_labels.label_roles_qss`, named in
-  `label_roles.py`) carry every other text colour. A widget takes a role by
-  object name instead of an inline stylesheet, which is what lets a live
-  theme switch restyle it: `label_roles.set_role` repolishes when a severity
-  role changes at runtime (a balance turning from good to danger)
-- The hidden `QTabWidget` bar carries no rules at all: it is hidden and the view buttons are
-  `QPushButton#NavViewButton` in the tray, styled in `_theme_controls` with the
-  rest of the tray. `_theme_pane` is down to the pane, the card the view
-  CONTENT sits on. One Qt fact is worth keeping from what was deleted, because
-  it costs an afternoon to rediscover: in a subcontrol focus rule the
-  subcontrol must come FIRST (`QTabBar::tab:selected:focus` works, while the
-  widget-state-first `QTabBar:focus::tab:selected` is parsed and then silently
-  ignored, no warning and no effect)
-- Spin-box arrows are IMAGES, generated per colour (`spin_arrows.py`), not CSS
-  triangles. Qt's stylesheet engine does not implement the `width: 0` plus
-  transparent-side-borders idiom: it honours the zero size, draws nothing and
-  leaves the button box, which is why the year pickers showed two empty
-  rectangles (measured: the up button was 366 pixels of one flat colour).
-  `image: url(...)` is Qt's only stylesheet route to a glyph there. The images
-  are drawn into the app data directory's `arrows/` and cached under a filename made from
-  the colour and size, so each theme gets its own without any being shipped,
-  hand-maintained or added to the packaging scripts. A `QProxyStyle` drawing
-  `PE_IndicatorSpinUp` is NOT an alternative: once a global stylesheet is set,
-  `QStyleSheetStyle` renders the styled spin box itself and never delegates that
-  primitive (verified: zero calls reached the proxy)
-- Content whose colours are computed in code (card panels, projection cells,
-  solvency lines, table row colours) cannot follow the stylesheet, so those
-  views expose `restyle()` and `theme.apply_theme` calls it after a switch
-- The solvency banner carries its traffic-light state as a Qt property
-  (`state="red"` etc.) and the stylesheet supplies the fill per theme, so no
-  view holds a banner colour
-- Colour literals live ONLY in `shared/palette.py`, which holds every one of
-  them; `theme_tokens.py` carries no literal at all and names what each colour
-  is FOR, as chrome tokens plus two data palettes (chart series, solvency
-  states) per theme. This paragraph said the literals lived in `theme_tokens`
-  until the palette split moved them and nobody moved the sentence, which is
-  the contradiction the invariant at the top of this document already
-  answered. `tests/structural/test_colour_source.py` fails the build on a hex
-  literal anywhere else. Every dark value equals
-  the literal it replaced, so the dark theme is unchanged pixel for pixel
-  (verified by an offscreen diff); the light values are chosen to pass WCAG AA
-  on the light background
-- The month-graph chart follows the theme too: `_line_bar_chart` resolves its
-  chrome tokens, its series palette AND its curve colour per paint
-  (`theme_tokens.series_colours_for` / `curve_colour_for`), so pastels plot on
-  the dark canvas and saturated mid-tones on the light one, same hue order
-  either way
-- A chart plotting exactly ONE series takes ROLE colours instead of the series
-  palette: the line light blue (`chart_line_colour_for`), the bars a muted
-  lavender at or above zero (`chart_bar_colour_for`, `#b8a1d9` dark / `#6b4c9a`
-  light) and the curve over those bars light blue (`solo_curve_colour_for`).
-  Amber (`chart_bar_within_facility_colour_for`) is the WITHIN-FACILITY state
-  below, never the resting bar fill. The LINE carries no verdict, because
-  one stroke spans the whole month and a verdict colour there read as a positive
-  balance over days that were not. A BAR is one day, so a verdict is honest on
-  it: a bar fills with the resting colour only where that day's value is at or
-  above zero and keeps the danger red below it, which is why the two marks take
-  different colours from the same rule
-- The BAR colour and the SAFE state colour are separate tokens and no longer
-  agree. Both were once one green literal that the focus ring also used, so
-  nothing could move alone. Splitting the three settled each on its own terms:
-  the safe state is green again because a verdict wants the reading green
-  carries, while the bar stays lavender because at 52% lightness the green
-  glared once it filled a bar the height of the canvas. `CHART_BAR_DARK` and
-  `STATES_DARK[STATE_SAFE]` are therefore expected to differ; making them match
-  again would undo two separate decisions
-- The accent is IDENTITY (section titles, the
-  progress bar) so it keeps a hue of its own, violet in dark and purple in
-  light, distinct from both the ring and the safe state. `primary_text` is the one white
-  that did not collapse into `text`, because a button label on a saturated blue
-  measures 4.00:1 in the softer white against 4.95:1 in pure white
-- The multi-series palette's first slot is a near neutral, because the lavender
-  sits ten degrees from the violet already in the palette and two cards must
-  never wear one face; a near neutral is told apart by saturation, which none
-  of the other seven compete for
-- A bar carries THREE states, not two, read against the agreed overdraft floor
-  rather than against zero: the resting lavender at or above zero, amber below zero but no
-  further than the arranged facility, red past it. That is the banner's own
-  reading applied to one day, so the graph and the banner above it never
-  describe the same position in two different colours. The floor reaches the
-  chart through `LineBarChart.set_overdraft_limit_pence` and the exporter
-  through `chart_svg(floor_pence=...)`; both default to ZERO, meaning no
-  facility, which collapses to the old two-state red-below-zero behaviour. A
-  CARD graph never passes one, since an overdraft is a bank arrangement
-- The limit is NOT re-resolved in `paintEvent`, where the colours are. The
-  colours follow the theme so they must be re-read per paint; the limit is
-  data a caller set, so re-reading it there zeroed it on every repaint and
-  painted every below-zero bar red however large the facility was. Caught by
-  a probe that counts painted pixels rather than by reading the branch back.
-  Light blue and amber carry no such reading. The rule is keyed on series COUNT, not on which view opened the
-  chart, so the credit-card graph (one series per card) keeps the palette,
-  because telling the cards apart is the whole job of colour there; its curve
-  keeps the magenta that holds it outside the palette. Negative values are
-  unaffected either way: a below-zero bar stays `danger` red, since that is a
-  state colour rather than a series one
-- Amber/red semantic warning colours (card thresholds, overdraft warnings) are
-  theme-independent
+### Domain (`clear_budget/domain/`)
+
+Pure business logic: no I/O, no Qt, no clock (`today` is always a parameter).
+
+| Package | Owns |
+|---------|------|
+| `entities/` | Frozen dataclasses: `Bill`, `IncomeSource`, `CreditCard`, `Commitment`, `MonthBill`, `MonthIncome`. Bills, income and commitments end by naming a final month rather than being deleted, so history keeps them |
+| `value_objects/` | `Amount` (non-negative pence, capped at `MAX_AMOUNT_PENCE`), `YearMonth`, the due-day rule (`due_day`), `MonthGap` (hold-flat gap), `MonthAfloat` (what keeps a month above the overdraft floor), `Recurrence`, `CreditLimitChange`, `BillAmountChange`, `SolvencyResult`, card warnings |
+| `services/` | `bank_cashflow` (day-by-day month simulation), `solvency_calculator`, `card_monthly_calculator` and `_card_live_projection`, `credit_limit_schedule`, `bill_amount_schedule`, `_prorating`, `safe_to_spend` (Safe to Spend Today and the capacity schedule), `reserve_accrual` and `reserve_floor`, `recommendations` (with `_recommendation_plan`, `_recommendation_trials`, `_recommendation_pauses`) |
+| `interfaces/` | Repository Protocols the Infrastructure implements |
+
+Signed balances are plain `int` pence; `Amount` is used only where a value
+cannot be negative.
+
+### Application (`clear_budget/application/`)
+
+Orchestration plus the DTOs that cross into the UI.
+
+`BudgetService` (`services/budget_service.py`) is a frozen dataclass composed
+of focused mixins, one per concern, with helper modules beside them, so each
+file stays under the size cap:
+
+| Modules | Concern |
+|--------------|---------|
+| `_bill_operations`, `_income_operations` | CRUD, per-month skip/override/paid/received, history-safe `end_bill` / `end_income` |
+| `_overdraft_operations`, `_overdraft_projection` | Overdraft settings, `MonthGap`, the first future overdrawn month |
+| `_card_operations`, `_card_projection`, `_card_balance_updates`, `_card_limit_updates` | Credit cards, chained card openings, elapsed-date folds |
+| `_balance_application`, `_bank_transaction_fold` | Applying dated items to the stored bank balance (one transaction per fold) |
+| `_month_graph_series`, `_projection_series` | Month graph series and the multi-month projection behind exports |
+| `_month_summary_builder` | `MonthSummary` construction |
+| `_safe_to_spend_operations` | Safe to Spend adapter, including the repeat-forward income assumption |
+| `_recommendation_operations` | Recommendations adapter over the pure engine |
+| `_reserve_operations` | Commitments CRUD and every Reserves figure |
+
+Shared helpers: `_month_walk.walk_month` simulates one month and returns its
+low and the day of the low, the first day below zero with the balance that day
+ends on (`first_negative_balance`), the first day below a given floor and its
+close; `_balance_projection` states what the current month still has to come.
+`month_generator.py` builds months from templates.
+
+Other packages:
+
+| Package | Owns |
+|---------|------|
+| `dto/` | `MonthSummary`, `SolvencyReport`, `GraphSeries`, `ProjectionMonth`, update-check DTOs |
+| `ports/` | `ReleaseSource`, the one seam to published releases |
+| `reporting/` | Pure string builders for the HTML exports: `curve` (monotone cubic, shared with the on-screen chart), `chart_svg`, `document`, `month_report`, `projection_report`, `package_report` |
+| `formatting.py` | `fmt()` money rendering and `pence_from_text` |
+| `services/update_service.py`, `version_compare.py` | Compare the running build with the latest release and pick the platform asset |
+
+### Infrastructure (`clear_budget/infrastructure/`)
+
+| Module | Owns |
+|--------|------|
+| `sqlite/database.py` | Connection and schema management; `_schema.py` holds the baseline DDL and `_migrations.py` the numbered migrations, tracked in `schema_version` |
+| `sqlite/*_repository.py` | `SQLiteBillRepository`, `SQLiteIncomeSourceRepository` (one-off rows in `_income_month_extras`), `SQLitePaymentMethodRepository`, `SQLiteCommitmentRepository` |
+| `sqlite/session_database.py` | `open_user_database`, the one place that decides which file a session opens (via the budget registry), plus `load_currency` |
+| `update/github_release_source.py` | `GitHubReleaseSource`: one best-effort stdlib `urllib` GET of the latest published release; any failure yields `None` |
+
+Each budget database holds 20 application tables: payment methods, bill and
+income templates, archived months, credit cards, settings, the per-month
+override/skip/paid/received/extras tables, scheduled credit-limit and bill
+amount changes, the balance-applied log, commitments and `schema_version`.
+
+### Auth (`clear_budget/auth/`)
+
+| Module | Owns |
+|--------|------|
+| `user_store.py` | `UserStore` over `users.db`: bcrypt password and recovery-code hashes, the first account as the only admin, refusal of colliding names, quarantine of files already under a new name |
+| `models.py` | The immutable `User` |
+| `remembered_login.py` | Per-account Remember me: passwords in the OS credential store through `keyring` behind a `SecretBackend` Protocol; only which accounts are remembered goes to `remembered_login.json`. Any keychain failure degrades to "nothing remembered" |
+| `full_backup.py` | Back Up Everything / Restore Everything: one zip of `users.db`, every budget database and every budget list, each database snapshotted; restore stages and validates before replacing |
+
+### Shared (`clear_budget/shared/`)
+
+| Module | Owns |
+|--------|------|
+| `config.py` | Every data path, derived from one `_resolve_app_dir()` that honours `CLEARBUDGET_HOME` |
+| `data_migration.py` | One-time move from the legacy `~/.clearbudget` |
+| `budget_registry.py`, `budget_files.py` | Named budgets per account (a JSON sidecar of slugs and names); reading an account back out of a file name; quarantine |
+| `db_copy.py`, `db_validation.py`, `db_ownership.py` | Snapshot and replace; schema plus `quick_check` validation; the owner stamp |
+| `currency.py` | 25 currencies (default GBP) and the active symbol |
+| `palette.py` | Every colour literal in the tree |
+| `single_instance.py`, `raise_request.py`, `foreground.py` | One running copy per user; a second launch asks the first to come forward |
+| `diagnostics.py` | `logs/clearbudget.log` and the uncaught-exception hooks for the main and worker threads |
+| `resources.py` | Asset discovery across PyInstaller and source layouts |
+| `errors.py` | Shared error types |
+
+### UI (`clear_budget/ui/`)
+
+The only Qt client. It is outside the coverage gate; logic a widget hosts is
+extracted far enough from Qt to be tested under `tests/ui_logic`.
+
+**Structure.**
+
+| Area | Contents |
+|------|----------|
+| Window | `main_window.py` (`MainWindow`) composed of `_main_window_account`, `_main_window_menus`, `_main_window_nav` and `_main_window_views` mixins; it emits the session signals `switch_user_requested`, `sign_out_requested`, `database_replaced`, `full_restore_requested` and `database_load_requested` |
+| Wiring | `window_builder.py` (`build_main_window`), `startup.py`, `login_flow.py`, `launch_screen.py`, `ui_scale.py`, `_window_geometry.py`, `raise_watcher.py`, `update_check.py` |
+| View models | `MonthViewModel` and `SolvencyViewModel`. `month_summary_updated` fires on every bill or income change and refreshes Solvency and Credit Cards, since their figures depend on Monthly Budget data |
+| Views | Seven views, in `VIEW_SPECS` order: Monthly Budget (`month_view`), Solvency (`solvency_panel`), Credit Cards, Reserves, Graph, Recommendations, Archive. Each sits in a `ScrollableView` |
+| Widgets | Dialogs (sign-in, accounts, bill, income, card, commitment, balance, settings, budgets, How It Works, About, licence), `_line_bar_chart` with axes and hover mixins, `bottom_tray` (the donate footer), `auto_scroller`, `first_stop_dialog` |
+| Utils | Navigation tray (`nav_header`, `nav_label`, `nav_toggle`, `nav_glyph_size`, `view_buttons`, `icon_buttons`), tables (`table_sort`, `sort_header`, `table_focus`, `text_metrics`), `amount_fields`, Qt-free wording modules (`reserves_text`, `recommendation_text`) |
+
+**Mixin split pattern.** A large view or window is a thin class composed of
+private mixin modules named after it (`_month_view_builders`,
+`_month_view_edit_mixin`, `_month_view_delete_mixin`,
+`_solvency_panel_month_lines`, `_solvency_panel_narratives` and so on). This
+is how every file stays under the size cap; decisions that need no widget
+take their state as arguments so they can be tested without a
+`QApplication`.
+
+**Solvency panel.** Two pages in a `QStackedWidget`: the bank page (account
+position and the months ahead, from entered figures) and the projection page
+(Safe to Spend Today and the repeat-forward reading). Each forward month (like
+the displayed month's breakdown) leads with how far it goes overdrawn and when
+(`_solvency_panel_month_lines._overdrawn_line`, reading `walk_month`); a
+forward month then states what has to arrive to stay afloat and the day it
+must beat, then its shape line.
+
+**Navigation tray.** Every view builds its own two-row tray: the account name
+and month cluster above; load, save, switch budget, bank, the seven view
+buttons, the theme toggle and How It Works below. View buttons are plain
+buttons over a `QTabWidget` whose bar is hidden; the current view is marked by
+a dynamic property (`mark_current_view`). One `BottomTray` along the foot of
+the window carries the donate button.
+
+**Keyboard ring.** One application-level `KeyboardNavigator`
+(`keyboard_nav.py`) walks an explicit ring: menu titles, then the active
+view's `nav_targets()`, then the scrollable page body, then the footer.
+Disabled or hidden stops are skipped; the current view's button is left out
+(`ring_view_stops`). Tab and Right step forward, Shift+Tab and Left step back.
+The main window starts on a neutral sink; dialogs derived from
+`FirstStopDialog` open on their first stop. A mouse click never leaves a ring
+on a button; tables take focus from the keyboard only.
+
+**Theme and palette tokens.** Colour literals live only in
+`shared/palette.py`. `theme_tokens.py` names what each colour is for (chrome
+tokens plus chart-series and solvency-state palettes) for dark and light;
+`theme_qss.build_qss(tokens)` assembles one stylesheet from per-surface
+builders (`_theme_pane`, `_theme_inputs`, `_theme_menus`, `_theme_controls`,
+`_theme_labels`, `_theme_labels_solvency`). `theme.apply_theme` applies it at
+`QApplication` level and persists the choice. Text colour is carried by
+named roles (`label_roles.set_role`) and state by Qt properties, so a live
+theme switch restyles everything; content painted in code exposes
+`restyle()`. Focus rings are three-state (none at rest; ring colour on hover
+or focus; red while disabled). Spin-box arrows and the card toggle are
+generated images (`spin_arrows`, `switch_images`). The setup program asks
+`theme_tokens` for the same roles.
 
 ## Application Startup Flow
 
-```
-main()
-  └── startup.begin()                        # migrate data dir, QApplication,
-                                             # log, single-instance lock,
-                                             # launch monitor, UI scale
-  └── apply_theme(app, load_saved_theme())     # persisted theme applied globally
-  └── UserStore opened (users.db)
-  └── QTimer.singleShot(0, _session_loop)   # deferred; app.exec() must be live first
-  └── app.exec()
-  └── _session_loop()                        # fires on first event loop tick
-        └── run_login_flow()
-              └── first run? → CreateUserDialog(is_first_user=True) → RecoveryCodeDialog
-              └── else       → LoginDialog (prefilled from RememberedLogin
-                               for a remembered account)
-                    └── Create Account...     → CreateUserDialog(is_first_user=False)
-              └── cancelled  → a hidden window resumes (Switch User);
-                               with none, app.quit() → process exits
-        └── try:                                 # finally: screen.end_handover()
-              └── screen.begin_handover()        # sign-in screen stays up,
-                                                 # inert, now a progress bar
-              └── open_user_database(username)   # the registry's active budget
-              └── load_currency(database)        # set_currency() from settings
-              └── build_main_window(database, user, user_store,
-                                    progress=screen.report_progress)
-              └── _show_window(user, window)
-                    └── window.database_replaced     → _reload_database()
-                    └── window.switch_user_requested → _session_loop()
-                    └── window.sign_out_requested    → _sign_out()
-                    └── window.full_restore_requested  → _restore_everything()
-                    └── window.database_load_requested → _load_database()
-              └── screen.end_handover()          # only now: there is a window
-        └── except:                              # the build raised
-              └── sys.excepthook(...)            # logged as UNCAUGHT EXCEPTION
-              └── QMessageBox.critical(...)      # names the log file
-              └── app.exit(1)                    # releases the instance lock
-```
+1. `main()` calls `ui/startup.begin()`: migrate the legacy data directory,
+   create the `QApplication`, install the tooltip style, start the log, take
+   the single-instance lock (or ask the running copy to come forward and
+   exit), resolve the launch monitor and set the UI scale.
+2. Apply the saved theme; open `UserStore` over `users.db`.
+3. Schedule `_session_loop` with `QTimer.singleShot(0, ...)` and run
+   `app.exec()`.
+4. `_session_loop` runs `run_login_flow`: the first-run account wizard or the
+   sign-in screen. A cancel resumes a hidden window or quits.
+5. Inside `try`/`finally`, the sign-in screen becomes a progress bar
+   (`begin_handover`); `open_user_database` opens the registry's active
+   budget; `load_currency` activates its currency; `build_main_window` wires
+   the session and runs the catch-up folds (card balances, limit changes,
+   bank transactions, auto-archive); the window is shown and its session
+   signals connected; `end_handover` closes the screen.
+6. If the build raises, the exception is logged, the user is told where the
+   log is and the event loop exits with a failure code.
 
-The `finally` is the backstop, not the route: both paths above close the screen
-themselves, at the moment they have something to hand over to. It catches the
-third case, an exception, which would otherwise leave the screen up and inert
-with nothing behind it. The `except` beside it is what stops that same exception
-leaving a windowless process running.
+`database_replaced` (a new or switched budget, a currency change) reopens the
+database and rebuilds the window. `database_load_requested` does the same for
+a Load, putting the displaced budget back if the loaded one will not open. A
+full restore tears the session down and returns to sign-in.
 
 ## Dependency Injection
 
-No container - dependencies passed via constructor.
+No container: constructors take their collaborators.
+`ui/window_builder.build_main_window` is the wiring for one open budget:
 
 ```python
-database = Database(active_db_path(username))   # open_user_database
-database.connect()
-database.create_schema()
-
-bill_repo             = SQLiteBillRepository(database.conn)
-income_repo           = SQLiteIncomeSourceRepository(database.conn)
-payment_method_repo   = SQLitePaymentMethodRepository(database.conn)
-commitment_repo       = SQLiteCommitmentRepository(database.conn)
-month_generator       = MonthGenerator(bill_repo, income_repo)
-
-budget_service = BudgetService(
-    bill_repo=bill_repo,
-    income_repo=income_repo,
-    payment_method_repo=payment_method_repo,
-    commitment_repo=commitment_repo,
-    month_generator=month_generator,
-)
-
+bill_repo           = SQLiteBillRepository(database.conn)
+income_repo         = SQLiteIncomeSourceRepository(database.conn)
+payment_method_repo = SQLitePaymentMethodRepository(database.conn)
+commitment_repo     = SQLiteCommitmentRepository(database.conn)
+month_generator     = MonthGenerator(bill_repo, income_repo)
+budget_service      = BudgetService(bill_repo=..., income_repo=...,
+                                    payment_method_repo=..., commitment_repo=...,
+                                    month_generator=...)
 month_view_model    = MonthViewModel(budget_service=budget_service)
 solvency_view_model = SolvencyViewModel(budget_service=budget_service)
-
-update_service = UpdateService(
-    source=GitHubReleaseSource(),
-    current_version=__version__,
-    platform_key=platform_key_for(sys.platform),
-)
-
-window = MainWindow(
-    month_view_model=month_view_model,
-    solvency_view_model=solvency_view_model,
-    current_user=user,
-    user_store=user_store,
-    db_path=database.db_path,
-    update_service=update_service,
-)
+update_service      = UpdateService(source=GitHubReleaseSource(), ...)
+window              = MainWindow(...)
 ```
 
-## Database Locations
+`main.py` keeps what only it can hold: the session, the database connection,
+the windows and the order in which one replaces another.
 
-All files live in the app data directory: `%LOCALAPPDATA%\ClearBudget` on
-Windows, `~/Library/Application Support/ClearBudget` on macOS,
-`$XDG_DATA_HOME/clearbudget` (default `~/.local/share/clearbudget`) on
-Linux; a surviving legacy `~/.clearbudget` is still used until its
-startup migration completes.
+## Data Locations
+
+Everything lives in one data directory: `%LOCALAPPDATA%\ClearBudget` on
+Windows, `~/Library/Application Support/ClearBudget` on macOS and
+`$XDG_DATA_HOME/clearbudget` (default `~/.local/share/clearbudget`) on Linux.
+A surviving legacy `~/.clearbudget` is used until the startup migration
+completes. `CLEARBUDGET_HOME` overrides it for tests and probes; the app never
+sets it.
 
 | File | Purpose |
 |------|---------|
-| `users.db` | Central user accounts (all users) |
-| `budget_<username>.db` | The user's FIRST budget (the reserved empty slug), the filename that predates named budgets |
-| `budget_<username>__<slug>.db` | One database per additional named budget |
-| `budgets_<username>.json` | The registry sidecar: that user's budgets and which is active. A map to the databases, never the data itself |
-| `ui_settings.json` | Theme, remembered save-file location and any skipped update version. No budget data |
-| `remembered_login.json` | Which accounts are remembered, which keep a password and which signed in last (the password is in the OS credential store, never on disk) |
-| `quarantine/` | Budgets and budget lists that belonged to no account after a restore (or that lay under a name a new account took). Moved here, never deleted; not part of a full backup |
-| `arrows/`, `switches/` | Generated per-theme images (spin-box arrows, the card toggle slider); regenerated on demand |
-| `logs/` | Application log directory |
+| `users.db` | Accounts |
+| `budget_<user>.db` | The account's first budget |
+| `budget_<user>__<slug>.db` | Each further named budget |
+| `budgets_<user>.json` | The budget list and which budget is active |
+| `ui_settings.json` | Theme, remembered save files and any skipped update |
+| `remembered_login.json` | Which accounts are remembered (passwords are in the OS credential store) |
+| `quarantine/` | Files moved aside by a restore or by account creation |
+| `arrows/`, `switches/` | Generated theme images |
+| `logs/` | `clearbudget.log` |
 
-The first four are what `full_backup` bundles; the generated images and the
-Remember-me sidecar are deliberately excluded (regenerated; a keychain
-password cannot travel in a file).
-
-Username is sanitised to lowercase alphanumeric + `_-` before use in filename.
+`<user>` is the username with every character outside `[A-Za-z0-9_-]` replaced
+by an underscore, then lower-cased. A full backup carries `users.db`, the
+budget databases and the budget lists.
 
 ## Currency
 
-Currency is stored per-user in the `settings` table (`key='currency'`, `value='GBP'`).
-It is loaded from the DB immediately after opening the user session and activates the
-module-level symbol in `shared.currency`. `Amount.__str__` and `fmt()` both call
-`get_symbol()` at render time, so all displayed values reflect the active currency
-without any additional wiring. On currency change (Settings > Bank Account, where
-the picker lives beside the overdraft and Safe to Spend settings), the new
-code is saved to the DB, `set_currency()` is called and `database_replaced` is emitted
-to rebuild the window with updated labels.
+The currency code is stored per budget in the `settings` table.
+`load_currency` activates it in `shared.currency` when a session opens;
+`Amount.__str__` and `fmt()` read the active symbol at render time. Changing
+it (Settings > Bank Account) saves the code, activates it and emits
+`database_replaced` so every view rebuilds.
 
-## Cross-Platform Support and Packaging
+## Cross-Platform Packaging and the Setup Program
 
-ClearBudget is a single PySide6 codebase that ships as a native package on
-Windows, macOS and Linux. The application layers carry no OS-specific logic;
-platform differences are isolated to a few well-defined seams:
-
-- **Single-instance lock**: per-OS implementation in `shared/single_instance.py`
-  (named kernel mutex on Windows, `fcntl` advisory file lock on macOS and Linux).
-- **Data directory**: `Config.app_dir()` resolves to each platform's
-  conventional application-data location (see Database Locations); all
-  databases and the lock file live there. A legacy `~/.clearbudget` is
-  migrated at startup by `shared/data_migration.py`.
-- **File-dialog defaults**: `ui_paths` uses Qt `QStandardPaths`, so dialogs open
-  in the correct per-OS location.
-- **Runtime assets**: `shared/resources.py` discovers icons, the splash image
-  and the view-button artwork across frozen (PyInstaller) and source layouts. Every
-  caller that paints the app icon goes through `find_logo_png_path`; three
-  modules had each grown their own copy of the same "first PNG in the
-  candidate list" loop while a fourth (the sign-in dialog) had not, which is
-  how its logo went missing on two platforms.
-- **What the app bundle carries**: the 256 app PNG (staged under both the
-  lower-case name the runtime-icon and splash lookups read and the
-  capitalised name the Graph view reads), the six view-button images
-  (`monthlybudget.png`, `solvency.png`, `creditcards.png`, `reserves.png`,
-  `recommendations.png`, `archive.png`; the Graph button wears the app icon),
-  the tray and toggle artwork (bank, load, save, switch-budget,
-  information, export and the light/dark faces) and VERSION. No `.ico` and
-  no other icon size: it used to carry all seven sizes plus the 1024
-  master; every consumer takes the first PNG from one ordered list and
-  the 256 heads it, so the smaller five could never be selected by any code
-  path and the master appears in no lookup table at all; nothing in the
-  application asks for an ICO either (`find_app_icon_path` is called only
-  by the setup program). The SETUP program keeps its own full set, which its own UI
-  genuinely reads at several sizes. It also DEPLOYS that set (the seven sized
-  PNGs plus the `.ico`) beside the installed executable
-  (`ops/registration.py` over `APP_ICON_PNG_NAMES`), as a Qt runtime fallback
-  for the window and taskbar icon where the ICO plugin is unavailable. So an
-  installed directory holds all seven while the PyInstaller bundle inside it
-  carries one; the two counts differ on purpose and neither is a leftover.
-- **The embedded PE icon is a separate thing again**; the distinction is
-  what makes the counts above make sense: `--icon` writes the icon into the
-  executable's own resources, where Explorer and the taskbar read it, while
-  `--add-data` stages a file the running code opens. Both `buildexe.py` and
-  `buildinstaller.py` pass `--icon` at the root `ClearBudget.ico`; neither did
-  once, so both binaries carried PyInstaller's default, a diskette. It was
-  invisible from inside the app and invisible on the shortcuts too, since
-  those point at the deployed `.ico` rather than at the executable, which is
-  exactly why it survived so long.
-- **Display scaling**: `ui_scale` adapts the UI to the screen, scaling down on
-  small laptops and capping growth on 4K.
-- **Conditional dependencies**: Windows-only packages (`pywin32`) are guarded by
-  environment markers in the requirements files.
-
-Each platform produces one distributable artefact from this shared codebase:
+One codebase; platform differences sit behind a few seams: the
+single-instance lock (a named mutex on Windows, `fcntl.flock` elsewhere), the
+data directory in `Config`, `QStandardPaths` for file-dialog defaults and
+`shared/resources.py` for assets.
 
 | Platform | Built by | Produces |
 |----------|----------|----------|
-| Windows | `buildexe.py` (PyInstaller) then `buildinstaller.py` | `ClearBudgetSetup.exe`, a single-file per-user installer |
-| macOS | `builddmg.py` | `clearbudget.dmg` (signed and notarized; the build fails rather than produce an unnotarized release, with `ALLOW_UNNOTARIZED=1` as a local-testing escape hatch) |
-| Linux | `build_flatpak.sh` (+ `cleanup_flatpak.sh`) | `clearbudget.flatpak`, on the Freedesktop runtime |
+| Windows | `buildexe.py` (PyInstaller) then `buildinstaller.py` | `ClearBudgetSetup.exe`, a per-user installer |
+| macOS | `builddmg.py` | `clearbudget.dmg`, signed and notarized (`ALLOW_UNNOTARIZED=1` for local testing only) |
+| Linux | `build_flatpak.sh` | `clearbudget.flatpak` |
 
-The Windows installer is itself a small PySide6 application under `installer/`
-(with its own `cli`, `ops`, `state`, `ui` and payload-builder modules). It wraps
-the PyInstaller bundle into the per-user setup executable and is a build and
-distribution tool, kept separate from the runtime application described above.
+The setup program (`installer/`) mirrors the application's shape: `ops` holds
+the side effects (payload, staging, shortcuts, registration, install, repair,
+uninstall, process control), `state` the registry and state model, `shared`
+resource resolution and logging, `ui` the Qt client and `app.py` the
+composition root. Three seams keep the privileged work testable: an injectable
+`CommandRunner`, an injectable `ProcessController` and an `InstallerIdentity`
+value carrying the registry key and shortcut names. It never touches the
+user data directory. Build steps are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
-### The setup program
+## Quality Enforcement
 
-The `installer` package follows the same shape as the application, for the same
-reason. `ops` holds the side effects (payload extraction, staging, shortcuts,
-process control, registration and the install, repair and uninstall sequences),
-`state` holds the HKCU registration, version comparison and the state model the
-window reads, `shared` holds resource resolution and logging, while `ui` is the
-only Qt client. `app.py` is the composition root.
+Black and flake8 at 88 columns over the whole tree; ruff with the blind-handler
+and naive-datetime rules enabled; 100% line and branch coverage (the omissions
+are listed in `.coveragerc`). The structural tests in `tests/structural/`
+read source rather than run widgets:
 
-Three seams keep the privileged work testable, which is what allows everything
-outside `installer/ui` to sit inside the 100% gate:
+| Test | Holds |
+|------|-------|
+| `test_layering_rules.py`, `test_auth_structure.py`, `test_cross_package_imports.py` | Import direction; every cross-package name exists |
+| `test_loc_limits.py` | The 400-line cap and danger band |
+| `test_data_dir_isolation.py`, `test_restore_returns_to_sign_in.py`, `test_database_replacement_order.py` | Live data safety |
+| `test_no_network.py`, `test_donation_address.py` | Network surface; the one donation address |
+| `test_colour_source.py`, `test_combo_box_invariants.py`, `test_solvency_headings.py` | Theme and wording rules |
+| `test_return_key_invariants.py`, `test_table_focus_invariants.py`, `test_button_run_slices.py`, `test_nav_entry_invariants.py`, `test_tray_switch_invariants.py`, `test_view_page_lists_agree.py` | Keyboard ring and view wiring |
+| `test_refusal_order.py`, `test_save_location_defaults.py`, `test_handover_invariants.py`, `test_session_exit_invariants.py`, `test_first_run_close.py`, `test_cross_view_refresh.py`, `test_nav_user_label.py` | Flow ordering and session behaviour |
+| `test_help_names_the_tray.py`, `test_help_names_the_views.py`, `test_help_example_is_arithmetic.py` | How It Works stays true |
+| `test_delivery_assets.py`, `test_installer_layout_stability.py` | Packaging and the setup window |
 
-- every external command goes through an injectable `CommandRunner`
-  (`ops/commands.py`), so no test spawns a process it did not intend to;
-- every process query and every termination goes through an injectable
-  `ProcessController` (`ops/running_app.py`), so no test lists or ends a real
-  process; matching is on the resolved executable path rather than the
-  image name so an unrelated copy elsewhere is never touched;
-- the HKCU key and the shortcut names are fields on the `InstallerIdentity`
-  value rather than constants baked into each function, so a test writes to a
-  scratch key instead of the user's own registration; the per-user
-  directories come from environment variables the suite redirects into a
-  temporary tree.
+## Testing
 
-The payload anchor is resolved relative to the `installer` package
-(`shared/resource_path.bundled_data_root()`), which is the repository root from
-source and the unpacked bundle root when frozen. Every asset lookup uses that
-one anchor rather than counting directory levels from its own module, which is
-what previously resolved one level above the repository in `app.py` while the
-frozen build's `_MEIPASS` branch masked it.
-
-It also LOOKS like the application, which is not decoration: the setup program
-is the first thing a user sees and it should not read as a different product.
-`installer/ui/themes.py` substitutes `ui.theme_tokens.DARK` and `.LIGHT`
-straight into its stylesheet and asks them for ROLES, so the window is
-`window_bg`, an action button is `primary_bg` carrying `primary_text`,
-Uninstall is `danger_btn_bg` and the heading takes `info`, the colour the
-sign-in screen already paints "ClearBudget" with. It used to name its own
-colours: from the same palette module, chosen separately, which still made two
-palettes (a navy window against the app's near-black, a steel-blue button
-against the app's indigo, a grey-blue heading against the app's cyan). Its
-geometry stays its own, every size and radius unchanged, because a setup
-program is a short sequence of big decisions read at arm's length. Contrast was
-re-measured after the swap and is recorded in that module's docstring.
-
-Four behaviours are worth naming because they are what a user notices:
-
-- **A running application is offered a close, not a lecture.** Detecting it used
-  to produce "Please close ClearBudget and click Retry". The setup program now
-  offers to close it, states that the running session ends, force-terminates
-  every matching process and then polls until the file lock releases, with a
-  bounded deadline and a typed `AppStillRunningError` if the process will not
-  go. Forced rather than a close request, because a request can be declined and
-  a process that declines still holds the lock.
-- **A fresh install is guarded too.** `is_app_running` guards install, upgrade,
-  reinstall, repair and uninstall alike. Installing into a directory that
-  already holds a running executable would try to replace files Windows has
-  locked, which fails part way through.
-- **Every operation reports a percentage.** Repair walks a manifest whose length
-  is known, so it reports real per-entry progress; uninstall reports each phase.
-  Both used to emit bare strings, so the bar sat at zero and then jumped to
-  complete.
-- **Extraction cannot write outside its destination.** `ops/payload.py` resolves
-  every archive member and every repair-manifest path through one guard. The
-  payload is first-party, so this enforces a guarantee rather than fixing an
-  exploit; enforcing it is what keeps the guarantee true.
-
-Two things the setup program deliberately does not do. There is no
-"remove my user data" option (see below); there is no launch-on-sign-in
-entry: ClearBudget has no such feature, so an installer switch for it would be
-a product decision rather than a packaging one.
-
-**The installer never touches user data.** Install, repair, reinstall and
-uninstall all deal in program files, shortcuts and the registry entry only, so
-the data directory survives every one of them and a reinstall carries on from
-where the user left off, saved theme included. Uninstall offers no option to
-delete it: that directory holds every account and every user's budget, deleting
-it is irreversible and an installer is the wrong place to offer it. Anyone who
-wants it gone deletes the folder by hand, which the uninstall dialog says.
-`tests/structural/test_data_dir_isolation.py` fails if any installer module so
-much as names the directory. What was there before was inherited from the
-installer this one was rebranded from: it seeded a `playback_volume` file and
-deleted two platformdirs directories, none of which this app has ever used, so
-an option that read as "remove my data" removed nothing.
-
-## Testing Strategy
-
-### Domain Layer
-- Pure unit tests, no I/O
-- Parametrized edge cases
-- Hand-written fakes implementing Protocol interfaces
-
-### Application Layer
-- Service tests use hand-written fakes or a real SQLite database under
-  `tmp_path` (`test_budget_service_crud.py` among them), never a mock
-
-### Infrastructure Layer
-- Real SQLite via `tmp_path` fixture - no mocking
-- Schema created fresh per test
-
-### Auth Layer
-- Real SQLite via `tmp_path` fixture
-- bcrypt round-trip tested
-- `RememberedLogin` tested against a hand-written in-memory keychain fake,
-  including keychain-failure degradation and sidecar corruption
-
-### Shared Layer
-- `test_config.py` - path construction and safe username
-- `test_currency.py` - currency registry, `get_symbol`, `set_currency`, reset fixture
-
-### UI Layer
-- The suite starts no `QApplication` and has no widget tests: fragile
-  widget-level PySide6 tests (which needed a `QApplication` and were flaky)
-  have been removed. PySide6 is still imported; a few tests take Qt classes or
-  enums directly and others import UI modules that load it
-- Pure UI-layer logic is still covered without a `QApplication` under
-  `tests/ui_logic`:
-  the Solvency month-colour rule and its low-point
-  line (by instantiating the mixins directly), the spendable headline's reach
-  and shortfall sentences, the projection page's gap specification,
-  the income one-off and edit-scope rules, the bill amount-change entry,
-  inline edits, highlight colour, ring order, theme, theme-token keys and
-  save-location persistence, the default data directory, nav icon-button
-  sizing, the skipped-update record, the click-a-heading sort rule, which
-  scroll areas a dialog opens past and the window-geometry arithmetic. The
-  Reserves page adds four: the Solvency reading of a month that sets money
-  aside, its colour, the Monthly Budget reminder row and
-  `test_reserves_buffer_survives.py`, which pins a real bug: opening the page
-  ERASED its own stored emergency buffer, because `refresh()` ticked the
-  checkbox, which fired the same handler a user's tick fires, which read a
-  not-yet-populated amount field as zero and wrote it over the setting. What lands here is logic a widget happens to host, extracted far
-  enough from Qt to be asserted on: where a mixin's method reads a widget, the
-  state arrives as an argument instead so the decision can be made without a
-  `QApplication`
-- The UI layer is excluded from the coverage gate (see `.coveragerc`)
-- Anything that must be seen rather than asserted (a painted ring, a glyph
-  against an icon, a window's placement on a monitor) is measured with an
-  offscreen probe outside the suite. Measure emoji and font sizes on the REAL
-  platform though: under `QT_QPA_PLATFORM=offscreen` Qt substitutes its own
-  font database and the answer does not describe the shipped app
-
-### Setup Program
-- `tests/installer/` covers everything under `installer/` except `app.py` and
-  `installer/ui`, at 100% line and branch. It runs on Windows only, since the
-  registry and shortcut work it exercises is real
-- `conftest.py` carries four isolations, each guarding one way a test could
-  reach the real machine. THREE are autouse: the profile directories are
-  redirected through the environment variables the code reads; the
-  platformdirs lookups the legacy migration makes are redirected in their own
-  right, because platformdirs asks Windows for the known folder rather than
-  reading `%LOCALAPPDATA%`; and the payload anchor is redirected so a small
-  stand-in bundle replaces the real fifty-megabyte payload. The fourth,
-  `scratch_identity`, is requested by name: it yields an `InstallerIdentity`
-  whose HKCU key lives under a test-only root and is deleted in teardown;
-  a test reaches the registry only by taking it
-- `fakes.py` holds the hand-written doubles for the three seams. No mocking
-  library is used
-- What is exercised for real is exercised for real: shortcuts are written
-  through the same Shell Link COM interface the install uses (into the
-  redirected profile), the registry round-trips through `winreg` against the
-  scratch key; a full install deploys and registers a real bundle
-
-### Structural Tests
-- `test_layering_rules.py` - AST-based forbidden import enforcement
-- `test_loc_limits.py` - no file over 400 LOC and none in the 381 to 399
-  danger band, so a file is never shaved to just under the cap only to break
-  it again on the next edit
-- `test_auth_structure.py` - Auth layer structure validation
-- `test_button_run_slices.py` - a `nav_targets` body may slice `view_btns`
-  only as the whole run or as Archive, so a view cannot be left out of a
-  ring by arithmetic nobody can see
-- `test_table_focus_invariants.py` - every table built in the UI passes
-  through `keyboard_only_focus`, none setting its own focus policy, so a
-  click can never put the ring round a pane; and no stylesheet rule gives an
-  item view a border on hover or on focus, so nothing can put one there from
-  the other direction either. Two of its checks plant such a rule, so the
-  guard is known to bite rather than assumed to
-- `test_refusal_order.py` - in BOTH the Load and the Save flows every
-  refusal precedes the overwrite confirmation, so the threat is never made
-  over a write that cannot happen; Save refuses another account's budget
-  before it writes or remembers anything
-- `test_return_key_invariants.py` - no slot answers both `returnPressed` and
-  `clicked` in one module, so a Return press cannot submit twice
-- `test_handover_invariants.py` - the composition root begins a handover only
-  inside a `try` whose `finally` ends it; `end_handover` still returns
-  early when there is nothing left to end, so that backstop cannot raise from
-  a cleanup block
-- `test_data_dir_isolation.py` - the suite cannot resolve the real data
-  directory (legacy or platform), only `shared/config.py` derives it, the
-  installer never names it and `main()` migrates before the lock, never
-  under the override. A `conftest.py` autouse fixture points `CLEARBUDGET_HOME` at a
-  scratch directory for EVERY test and these assert that it is in force
-- `test_help_names_the_tray.py` - every tray button, glyph or picture, is
-  named on the How It Works screen, drawn as the very file the tray draws
-- `test_help_names_the_views.py` - the same for the view strip: every entry in
-  `VIEW_SPECS` has a row on the screen carrying its own icon and its own
-  tooltip name, no row survives a button that is gone and the heading counts
-  what it lists
-- `test_help_example_is_arithmetic.py` - the pro-rating example on the How It
-  Works page is what `prorate_remaining_pence` actually returns, to the penny,
-  with the figures read OUT of the sentence rather than restated in the test.
-  The tray and the view strip each had a guard while the three rules beneath
-  them had none, which is why that is the half of the page that went stale:
-  it stated 126 where the function returns 126.66. Verified by planting the
-  old figure back and watching it fail
-- `test_view_page_lists_agree.py` - the three lists of views in
-  `_main_window_views.py` (the `addTab` calls, the tray-shortcut loop, the
-  positional `_views` literal) agree with each other and with `VIEW_SPECS`,
-  in order. Both consumers of `_views` index by page position, so a view
-  missing from it has buttons wired to nothing and another view's keyboard
-  ring, which is exactly how Reserves shipped
-- `test_delivery_assets.py` - every runtime asset in the resolver's own
-  allowlist is on disk and staged by all three delivery paths, the flatpak's
-  two halves separately, so a picture cannot be lost silently in a packaged
-  build
-- `test_colour_source.py` - a hex literal lives only in `shared/palette.py`
-- `test_donation_address.py` - the donation address is written once in the
-  package (`version.DONATE_URL`), is asserted literally, is never plain HTTP
-  and is the same address the landing page links
-- `test_combo_box_invariants.py` - no plain `QComboBox` is built, so none can
-  lose its arrow to the transparent `drop-down` rule
-- `test_cross_view_refresh.py` - the Credit Cards view is wired to
-  `month_summary_updated`, since its figures are owned by another view's data
-- `test_cross_package_imports.py` - every name one package imports from
-  another is actually there
-- `test_nav_entry_invariants.py` - the ring's entry point is a view decision
-  and the wiring for it holds
-- `test_nav_user_label.py` - the signed-in account is shown, on every view
-- `test_solvency_headings.py` - a section heading does not name a facility the
-  reader may not have
-- `test_tray_switch_invariants.py` - switching views costs the tray no control
-  and leaves no stray ring; view buttons map onto pages by position
-- `test_session_exit_invariants.py` - switching user and signing out stay two
-  different things
-- `test_database_replacement_order.py` - a live database is closed BEFORE it
-  is replaced, only ever in `main.py`
-- `test_first_run_close.py` - the first-run wizard keeps its close button
-- `test_save_location_defaults.py` - Save and Load default to the app's data
-  directory, not Downloads
-- `test_installer_layout_stability.py` - the installer's controls do not move
-  while an operation runs
-
-## Code Quality Standards
-
-- **Black** 88-char line length
-- **Flake8** no violations, over the WHOLE tree. That was worth nothing until
-  recently: `.flake8` excluded `ui`, `services`, `models` and `installer`,
-  which flake8 matches as a directory NAME anywhere it appears, so 230 files
-  went unchecked, the entire UI layer, BOTH services packages and the whole
-  setup program among them, while the repo reported clean. Nothing is
-  excluded by layer now; only build output and the virtualenv are. Beyond the
-  three codes the test files relax, one per-file-ignore remains and is
-  justified in the config: pycodestyle reads
-  `how_it_works_dialog`'s page-building f-string as one logical line, so it
-  scores the row-factory calls inside its `{...}` expressions against the
-  wrong anchor; a `# noqa` cannot be placed there either, because a comment
-  inside the string would be rendered to the user
-- **Ruff** clean (`ruff check .`) under its default rules plus the three
-  blind-handler rules (`BLE001`, `S110`, `S112`) enabled repo-wide in
-  `pyproject.toml`, so a new blind exception handler fails the lint rather
-  than waiting to be noticed. The naive-datetime rules (`DTZ`) are on too:
-  the application runs on the user's local clock by design, so each read of
-  it carries a `# noqa: DTZ005` or `# noqa: DTZ011` with that reason; the
-  tests carry a per-file ignore for the same two rules. An unmarked naive
-  clock read fails the lint. Run alongside black and flake8 rather than
-  replacing either. A genuine false positive is suppressed with a targeted
-  `# noqa: <RULE>` and a reason, never by changing behaviour; where ruff and
-  black disagree on formatting, black wins
-- **100% line and branch coverage** (`pytest -v --cov`, gated at
-  `--cov-fail-under=100` with `branch = True`) over `clear_budget` and the
-  Qt-free half of the setup program. `main` is named as a source and then
-  omitted as `main.py`; the other omissions are `clear_budget/ui/*`,
-  `clear_budget/domain/interfaces/*`, `clear_budget/application/ports/*`,
-  `clear_budget/shared/resources.py`, the build scripts and the staged
-  `installer/payload/*` and `installer/resources/*` trees. The suite starts no `QApplication` and runs in one process. The gate
-  holds on WINDOWS only: `tests/installer` writes real registry keys and Shell
-  Link shortcuts, which `installer/state/registry.py` refuses anywhere else, so
-  on Linux or macOS that directory fails wholesale and the run misses the gate.
-  Everything outside it runs on every platform
-  (`pytest --ignore=tests/installer --no-cov`)
-- The setup program is inside the gate because it does the most privileged work
-  in the repository: registry writes, shortcut creation, per-user deployment,
-  process termination and directory removal. `installer/app.py` and
-  `installer/ui` are excluded on the same grounds as `clear_budget/ui` and
-  `installer/build_payload.py` is a build script
-- What the gate does NOT include, stated plainly so the number is not read as
-  more than it is: besides the `.coveragerc` omissions above, every line marked
-  `# pragma: no cover` is outside it. That is the whole of
-  `SQLitePaymentMethodRepository` and most of the thin pass-throughs in
-  `application/services`. Several are exercised by tests anyway (the credit-card
-  ones are, through `tests/application/test_budget_service_crud.py`, which reads
-  through the real repository rather than a fake precisely because the gate says
-  nothing about it). Retiring the pragmas is worthwhile and has not been done
-- **No mock libraries** - real implementations and hand-written fakes only
-- **No magic numbers** - all domain values derive from data, config or named constants
-
-## Design Principles
-
-**Dependency direction**: always inward. UI → Application → Domain ← Infrastructure.
-
-**No magic numbers**: no hardcoded financial amounts, thresholds, day numbers or limits in logic.
-
-**Immutable value objects**: `Amount`, `YearMonth`, `SolvencyResult`, `CardMonthlyState` - all frozen dataclasses.
-
-**Signed balance**: projected balances returned as `int` pence (not `Amount`) wherever negative values are valid.
-
-**Per-user isolation**: each user has a completely separate budget database. No cross-user data access is possible.
-
-**Session lifecycle signals**: `switch_user_requested`, `sign_out_requested`, `database_replaced`, `full_restore_requested` and `database_load_requested` on `MainWindow` drive all session transitions without tight coupling between UI and `main.py`.
+How the suite is run, what each part proves and its coverage floors are in
+[TESTING.md](TESTING.md).
 
 ---
 
-See also [README.md](README.md), [TESTING.md](TESTING.md) and
-[DEVELOPMENT.md](DEVELOPMENT.md).
+See also [README.md](README.md), [TESTING.md](TESTING.md),
+[DEVELOPMENT.md](DEVELOPMENT.md) and
+[DECISIONS-TRADEOFFS.md](DECISIONS-TRADEOFFS.md).

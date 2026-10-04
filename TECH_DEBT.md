@@ -1,38 +1,73 @@
 # ClearBudget: Technical Debt
 
-A standing reference to the project's outstanding technical debt. It records what is still open, weighs whether each item is worth doing and gives the rationale. Every item is a behaviour-preserving internal concern: nothing here proposes reverting a feature or changing any UI or UX behaviour. Scope is the whole repository (the `clear_budget` package, the bespoke installer, the delivery scripts for Windows, Linux and macOS, plus the GitHub Pages site under `docs/`) read against `ARCHITECTURE.md` and the tests under `tests/structural/`.
-
-One item is open. The two sections after it are standing decisions, not work: they record what is deliberately left alone and why, so that neither gets raised again as though it were debt.
-
----
+Open internal debt across the whole repository, read against
+`ARCHITECTURE.md` and `tests/structural/`. Every item is behaviour-preserving:
+none changes a feature or the UI. The two closing sections are standing
+decisions, not work.
 
 ## 1. The UI imports the domain directly
 
-The architecture has the UI reach the application layer through DTOs. In practice 24 UI modules import the domain directly in 43 statements: 34 take value objects (`Amount`, `YearMonth` and their kind), 5 take entities and 4 take domain services. Nothing breaks because of it and every layer rule that is written down holds; the cost is that a domain change can reach a widget without passing the application layer, which is the coupling the DTOs exist to prevent.
+The architecture has the UI reach the application layer through DTOs. In
+practice 24 UI modules import the domain in 43 statements: 34 take value
+objects (`Amount`, `YearMonth` and their kind), 5 take entities and 4 take
+domain services. Every written layer rule holds; the cost is that a domain
+change can reach a widget without passing the application layer.
 
-`tests/structural/test_layering_rules.py` deliberately allows it for now, so the rest of the layering could be enforced at once rather than waiting on this. Clearing it means moving the entity and service uses behind the application layer and deciding whether value objects such as `Amount` stay importable as the vocabulary both layers share; then the UI rule in that test gains `domain`. Blocked on an owner decision about the value objects.
+`tests/structural/test_layering_rules.py` allows it for now so the rest of the
+layering could be enforced at once. Clearing it means moving the entity and
+service uses behind the application layer and deciding whether value objects
+such as `Amount` stay as shared vocabulary; then the UI rule in that test gains
+`domain`. Blocked on an owner decision about the value objects.
 
 ---
 
 ## Looks like debt, not worth touching
 
-- The delivery scripts (`buildexe.py`, `buildinstaller.py`, `builddmg.py`, `dmg_icon.py`, `build_utils.py`, `build_flatpak.sh`, `cleanup_flatpak.sh`, `stamp_version.py`). Linear recipes, exempt from the module cap by design. Do not raise length against them.
-- Source and test files sitting between 351 and 380 lines. Under the cap, clear of the 381 to 399 danger band, nothing to do. Both halves of that rule are asserted in `tests/structural/test_loc_limits.py`, so this is held by the suite rather than by eye. Deliberately stated without a count: which files sit in that range changes with almost every commit, so a number here is a claim that goes stale on its own and says nothing the rule does not.
-- The two reads of `sqlite_master` in `shared/db_validation.py`. `validate_db` and `is_accounts_database` each open the file read-only and list its tables, which looks like one helper waiting to be extracted. It is not: `validate_db` keeps its connection afterwards for `PRAGMA table_info` and reports the SQLite exception text, while `is_accounts_database` answers a bare yes or no and closes. A shared helper would either reopen the file or hand back a connection plus an error, which costs more than the eight lines it saves.
-- The two root `.spec` files (`ClearBudget.spec`, `ClearBudgetSetup.spec`) are PyInstaller artefacts and are untracked.
-- The `_leading_underscore.py` module naming inside `ui/views` and `application/services`. Unconventional, clear in intent (private to the package) and consistent.
-- The tracked PNG and `.ico` files. The seven sized root PNGs and the root `.ico` are derived from `ClearBudget.png`, the 1024x1024 master, by `generate_icons.py`, which reproduces all eight byte for byte. **That reproduction is settled and is not to be re-verified.** Pillow is deliberately absent from `requirements-dev.txt`, so checking it again means installing a package to re-answer a question already answered; a documentation pass should read the claim as true and move on rather than reporting it as unverified. The PNGs and `favicon.ico` under `docs/` are the site's favicons and screenshots plus `donate.png`, the one derived copy `generate_icons.py` writes for the landing page's own donate button, all consumed by named paths in its HTML; the remaining root PNGs are the view-button, tray and footer artwork masters (the view-button pictures, the tray shortcut icons, the graph page's pilots, the theme toggle's two faces, the footer's donate button), cropped and downscaled at runtime by `ui/utils/view_buttons.py` and `ui/utils/icon_buttons.py`. Deliberately stated without a count: the set moves with the artwork and a number here goes stale on its own. Do not raise the masters' size as debt: shipping a pre-sized derivative would need a second generator and a second thing to keep in step, for a few megabytes inside a fifty-megabyte payload.
+- **The delivery scripts** (`buildexe.py`, `buildinstaller.py`, `builddmg.py`,
+  `dmg_icon.py`, `build_utils.py`, `build_flatpak.sh`, `cleanup_flatpak.sh`,
+  `stamp_version.py`): linear recipes, exempt from the module cap by design.
+- **Files between 351 and 380 lines**: under the cap and clear of the 381 to
+  399 danger band, both asserted by `test_loc_limits.py`. No count is kept; it
+  changes with almost every commit.
+- **The two `sqlite_master` reads in `shared/db_validation.py`**:
+  `validate_db` keeps its connection for `PRAGMA table_info` and reports the
+  SQLite error; `is_accounts_database` answers yes or no and closes. A shared
+  helper would cost more than the lines it saves.
+- **The root `.spec` files**: PyInstaller output, git-ignored.
+- **`_leading_underscore.py` modules** in `ui/views` and
+  `application/services`: package-private, clear and consistent.
+- **The tracked PNG and `.ico` files**: the sized PNGs and the `.ico` are
+  derived byte for byte from `ClearBudget.png` by `generate_icons.py`. That is
+  settled; do not re-verify it (it needs Pillow, which is deliberately absent).
+  `docs/` holds the site's favicons, screenshots and its derived
+  `donate.png`; the other root PNGs are artwork masters cropped and scaled at
+  runtime by `ui/utils/view_buttons.py` and `ui/utils/icon_buttons.py`. Do not
+  raise the masters' size: a pre-sized copy needs a second generator to keep
+  in step.
 
 ## Not debt (do not "fix" these)
 
-These look like candidates but are correct as they stand; changing them would regress or add cost for nothing.
-
-- **Ownership answered by stamp first, file name second** (`shared/db_ownership.py`), rather than by stamp alone. A budget written before stamping existed carries no stamp, so it is recognised by its name only: refused where it lives, not under a name it has been copied to. That is not a gap to close but a transitional state with an automatic end, since opening a budget stamps it, so the first sign-in by that account closes it. Both guards that consult ownership, the Load challenge and the Save refusal, are held to exactly the same reach on purpose; making one stricter than the other would be the real defect.
-- **`VERSION` at root with `stamp_version.py` writing the delimited tokens.** The single-source-of-truth pattern, correctly implemented, with the build scripts calling the stamper so it cannot be forgotten. This is the reference the rest of the portfolio should copy.
-- **`tests/structural/test_data_dir_isolation.py`.** A structural test asserting the application never writes outside its own data directory. Exactly the right kind of invariant for a local-first app that holds someone's finances and unusual enough to be worth naming.
-- **`tests/structural/test_auth_structure.py` and `test_layering_rules.py`.** Layer boundaries and the auth surface held by AST scan rather than by convention.
-- **The per-platform requirements split** (`requirements.txt`, `requirements-dev.txt` and the Flatpak and macOS variants driven by the build scripts). Native dependencies genuinely differ per platform.
-- **The three delivery paths being independent** (`buildexe.py` then `buildinstaller.py` on Windows, `build_flatpak.sh` on Linux, `builddmg.py` on macOS), with `cleanup_flatpak.sh` scoped only to Flatpak artefacts. That scoping is deliberate so one clean does not destroy another platform's build.
-- **The setup program's three injectable seams** (`CommandRunner`, `ProcessController` and `InstallerIdentity`). They read like ceremony around `subprocess` and `winreg` until you notice they are what lets the privileged half of the installer sit inside the coverage gate without a test ever spawning a process or writing to the user's own registry key.
-- **`.coveragerc` omitting `clear_budget/ui/*` wholesale.** Correct for painting, layout and Qt wiring; it matches the rest of the portfolio. This was once recorded as debt on the grounds that some of what sat in there was not presentation, which was true of the money, percentage and category formatting: turning pence into a figure a person reads is where a budgeting application gets a number wrong in a way the user believes. That formatting now lives in `clear_budget/application/formatting.py`, inside the gate and covered; the UI re-exports it so no call site moved. What remains under `ui/` is presentation, so the omission stands as a decision rather than an omission.
-- **The table focus rules living in a structural test rather than in review.** Two separate things can put a ring round a table and neither looks wrong on the page: Qt's default focus policy lets a click do it, while a stylesheet rule does it from the other direction. `test_table_focus_invariants.py` now holds both, the second by scanning the stylesheet sources; two of its checks plant a violation so the guard is known to bite.
+- **Ownership by stamp first, file name second** (`shared/db_ownership.py`).
+  An unstamped legacy budget is recognised by name; opening it stamps it, so
+  the state ends itself. The Load challenge and the Save refusal share exactly
+  this reach on purpose.
+- **`VERSION` with `stamp_version.py`**: the single-source pattern, with the
+  build scripts calling the stamper so it cannot be forgotten.
+- **`test_data_dir_isolation.py`**, **`test_auth_structure.py`** and
+  **`test_layering_rules.py`**: invariants held by the suite rather than
+  by convention.
+- **Two requirements files**: `requirements.txt` for runtime (what the
+  Flatpak build installs and the DMG build checks against) and `requirements-dev.txt` for tooling,
+  with platform-only packages behind environment markers.
+- **Three independent delivery paths**, with `cleanup_flatpak.sh` scoped to
+  Flatpak output so one clean cannot destroy another platform's build.
+- **The setup program's seams** (`CommandRunner`, `ProcessController`,
+  `InstallerIdentity`): they let the privileged installer sit inside the
+  coverage gate without a test spawning a process or writing the user's own
+  registry key.
+- **`.coveragerc` omitting `clear_budget/ui/*`**: what remains there is
+  presentation. Money, percentage and category formatting lives in
+  `clear_budget/application/formatting.py`, inside the gate.
+- **Table focus rules in a structural test**: `test_table_focus_invariants.py`
+  holds both the focus-policy route and the stylesheet route to a ring round a
+  table; planted violations prove it bites.

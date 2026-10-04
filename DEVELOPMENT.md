@@ -1,212 +1,139 @@
-# ClearBudget - Development and Build Guide
+# Development
 
-How to set up a development environment and produce a distributable package of
-ClearBudget on each supported platform.
+Setting up, running and building ClearBudget. Commands are PowerShell from the
+repository root unless a step must run on macOS or Linux.
 
-- For the feature list and day-to-day usage, see [README.md](README.md).
-- For the layer boundaries and design rules, see [ARCHITECTURE.md](ARCHITECTURE.md).
-- For running and writing the tests, see [TESTING.md](TESTING.md).
+## Tools
 
----
-
-## Prerequisites (all platforms)
-
-### 1. Install a suitable Python
-
-ClearBudget targets **Python 3.11 or newer**.
-
-- **Windows** - install from [python.org](https://www.python.org/downloads/) and
-  tick "Add python.exe to PATH" or run `winget install Python.Python.3.12`.
-- **macOS** - the system Python is not suitable for building; install with
-  Homebrew (`brew install python`) or from python.org.
-- **Linux** - usually preinstalled. On Ubuntu and Debian, make sure the venv and
-  pip modules are present: `sudo apt install python3 python3-venv python3-pip`.
-
-### 2. Create and activate a virtual environment
-
-Create it in the repository root and name it `venv`; the Linux Flatpak script
-expects that exact name.
-
-Windows (PowerShell):
+| Tool | For | Get it |
+|---|---|---|
+| Python 3.11 or newer | everything | python.org or `winget install Python.Python.3.12` |
+| `requirements.txt` | runtime: PySide6, bcrypt, keyring | `pip` (below) |
+| `requirements-dev.txt` | PyInstaller, pytest, pytest-cov, black, flake8, ruff; pywin32 on Windows | `pip` (below) |
+| Pillow | `generate_icons.py` only; deliberately not in requirements | `pip install pillow` |
+| Xcode command-line tools, Homebrew | macOS build | Apple; brew.sh. `builddmg.py` brew-installs `create-dmg` and `fileicon` if missing |
+| flatpak, flatpak-builder | Linux build | `build_flatpak.sh` installs them via apt, dnf or pacman |
 
 ```powershell
 python -m venv venv
-venv\Scripts\Activate.ps1
+venv\Scripts\python.exe -m pip install --upgrade pip
+venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
 ```
 
-macOS and Linux:
+Name the venv `venv`: `build_flatpak.sh` activates `./venv` by that name.
+
+## Run from source
+
+```powershell
+venv\Scripts\python.exe main.py
+```
+
+The log is `logs\clearbudget.log` inside the data directory:
+`%LOCALAPPDATA%\ClearBudget` on Windows, `~/Library/Application Support/ClearBudget`
+on macOS, `$XDG_DATA_HOME/clearbudget` (default `~/.local/share/clearbudget`)
+on Linux. A surviving legacy `~/.clearbudget` is used instead until it has been
+migrated. `CLEARBUDGET_HOME` overrides all of them; set it for any experiment so
+your own budgets stay untouched.
+
+Testing is in [TESTING.md](TESTING.md).
+
+## Build scripts
+
+### Windows: `buildexe.py` then `buildinstaller.py`
+
+`python buildexe.py`:
+
+1. Runs `stamp_version.py`.
+2. Deletes `ClearBudget.spec`, `dist-pyinstaller\` and `build\`.
+3. Runs PyInstaller (onedir, windowed), embedding `ClearBudget.ico` as the exe
+   icon and staging the package, the artwork PNGs and `VERSION`.
+4. Produces `dist-pyinstaller\ClearBudget\ClearBudget.exe`.
+
+`python buildinstaller.py` (refuses to run off Windows):
+
+1. Runs `stamp_version.py`.
+2. Runs `installer.build_payload`, which zips `dist-pyinstaller\ClearBudget\`
+   deterministically into `installer\payload\payload.zip` plus
+   `manifest.json` (path, size and SHA-256 per file).
+3. Runs PyInstaller (onefile, windowed) on `installer\app.py` with the payload,
+   `LICENSE`, the icons and the theme artwork, into `dist-installer.build\`.
+4. Moves the result to `dist-installer\ClearBudgetSetup.exe`, the per-user
+   installer that ships.
+
+### macOS: `python builddmg.py`
+
+1. Checks the platform and tools (brew-installs any missing), that every
+   `requirements.txt` package is in the venv and the notarization
+   credentials: keychain profile `ClearBudget` (`APPLE_KEYCHAIN_PROFILE`) or
+   `APPLE_ID` plus an app-specific `APPLE_APP_PASSWORD`.
+2. Cleans `build/`, `dist/` and earlier DMG output.
+3. Builds the signed `.app` with PyInstaller and an `.icns` from
+   `dmg_icon.py`; a missing asset fails the build.
+4. Strips stray `.o` files; signs with the hardened runtime; notarizes and
+   staples the `.app`.
+5. Builds the DMG with `create-dmg`; signs, notarizes, staples and verifies
+   it.
+6. Produces `clearbudget.dmg`.
+
+`ALLOW_UNNOTARIZED=1` builds a local test image that must never be released.
+
+### Linux: `./build_flatpak.sh`
+
+1. Activates `./venv`.
+2. Installs `flatpak` and `flatpak-builder` if missing.
+3. Adds Flathub and installs the Freedesktop runtime and SDK.
+4. Downloads the `requirements.txt` wheels on the host, so the sandbox build
+   is offline.
+5. Writes the launcher, desktop file, metainfo and manifest.
+6. Builds with `flatpak-builder` and installs it for the user.
+7. Produces `clearbudget.flatpak` (skip with `--no-bundle`).
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install the dependencies
-
-```
-python -m pip install --upgrade pip
-pip install -r requirements.txt -r requirements-dev.txt
-```
-
-`requirements.txt` holds the runtime dependencies (PySide6, bcrypt, keyring).
-`requirements-dev.txt` adds the build and quality tooling (PyInstaller, pytest,
-pytest-cov, coverage, black, flake8, ruff).
-
-The icon scripts (`generate_icons.py` and the macOS `dmg_icon.py`) need Pillow,
-which is not in `requirements-dev.txt` because the PNG sizes and the `.ico` at
-the repository root are committed and a normal build never regenerates them.
-Install it only if you are changing the artwork: `pip install pillow`.
-
-`ClearBudget.png`, 1024x1024 RGBA, is the master and every other icon asset is
-derived from it. `generate_icons.py` emits the seven PNG sizes and the
-multi-resolution `.ico`; it reproduces all eight tracked files byte for
-byte, so running it on a clean tree leaves `git status` empty. Change the
-artwork by replacing the master and re-running it.
-
-`donate.png` is a SECOND master, for the footer's donate button. It is
-handled separately because it is not an icon: it is a wide picture drawn at a
-button's height, so squaring it would spend half the height on empty canvas.
-The application derives nothing from it, since `image_icon_pixmap` crops and
-scales the full-size master at runtime exactly as it does for every other tray
-picture. The landing page cannot do that, so the one derived copy
-`generate_icons.py` writes is `docs/donate.png`, cropped to its artwork and
-scaled by height alone. It is idempotent there too.
-
-That root `.ico` is also what `buildexe.py` and `buildinstaller.py` embed as
-each executable's own icon, through PyInstaller's `--icon`. That is a
-different mechanism from the `--add-data` staging beside it: `--icon` writes
-into the executable's resources, where Explorer and the taskbar read it,
-while `--add-data` ships a file the running code opens. Omit it and
-PyInstaller embeds its own default, which is a picture of a diskette.
-
-**The sized PNGs are `ClearBudget_<size>.png`, capitalised.** That is what
-`generate_icons.py` writes, what git tracks and what `build_flatpak.sh` and
-`builddmg.py` reference. It matters because Windows sets `core.ignorecase`
-and macOS volumes are case-insensitive by default, so a file renamed to
-`clearbudget_256.png` on either looks identical to git and to `ls`, while a
-Linux checkout still gets the capitalised name. The working tree drifted into
-exactly that state once and cost an afternoon of chasing a Flatpak bug that
-did not exist. If `ls` here disagrees with `git ls-files`, believe
-`git ls-files`. The Windows build steps (`buildexe.py`, `buildinstaller.py`)
-and several runtime lookups still name the lower-cased form; that is safe
-because they only ever run where the filesystem does not care. `shared/resources.py`
-searches both capitalisations, so a case-sensitive filesystem cannot lose the
-icon either way.
-
-### Run, test and lint from source
-
-```
-python main.py     # launch the app
-pytest             # run the full suite (100% line and branch gate enforced)
-black .            # format (line length 88)
-flake8             # lint
-ruff check .       # lint (default rules, blind-handler rules, DTZ)
-```
-
-How to read a run, what the gate holds and leaves out, the setup program's
-tests and how a new test or guard is written are in [TESTING.md](TESTING.md).
-
----
-
-## Versioning
-
-The `VERSION` file at the repository root is the single source of truth. Bump the
-patch/minor/major there and nothing else needs editing:
-
-- the runtime reads it via `clear_budget/version.py`;
-- `pyproject.toml` reads it dynamically (`[tool.setuptools.dynamic]`), so packaging
-  metadata always matches;
-- static docs that cannot read it at runtime (the GitHub Pages site under `docs/`)
-  are stamped from it by `stamp_version.py`, which `buildexe.py` and
-  `buildinstaller.py` run automatically at the start of every build. Run
-  `python stamp_version.py` by hand after a bump if you want the docs updated
-  without a full build. It is idempotent and prints what it touched. It also
-  puts a content hash on every local stylesheet and script link in the site
-  (`styles.css?v=<hash>`) so a browser cannot pair a fresh page with a stale
-  cached stylesheet.
-
-`stamp_version.py` targets the `docs/` tree ONLY. The root markdown files
-(README, ARCHITECTURE, TECH_DEBT, this file) carry no version data at all,
-stamped or otherwise: they are read alongside the source, where `VERSION` is
-the answer, so a copy of it in prose is one more thing that can disagree.
-
-Never hardcode a version string anywhere except `VERSION`.
-
----
-
-## Build per platform
-
-Each build path is independent and writes its own artefact. Run from the
-repository root with the venv active.
-
-### Windows - Installer (`dist-installer\ClearBudgetSetup.exe`)
-
-Run the two build steps in order, then launch the resulting installer:
-
-```
-python buildexe.py          # bundle the app with PyInstaller
-python buildinstaller.py    # build the payload and the setup executable
-dist-installer\ClearBudgetSetup.exe   # run the installer to perform a real install
-```
-
-`buildexe.py` creates the standalone application bundle at
-`dist-pyinstaller\ClearBudget\ClearBudget.exe`. `buildinstaller.py` (Windows
-only) wraps it into the single-file, per-user installer
-**`dist-installer\ClearBudgetSetup.exe`**, which performs the actual install when
-run.
-
-### macOS - Disk image (`clearbudget.dmg`)
-
-Requires macOS with the Xcode command-line tools and Homebrew.
-
-```bash
-python builddmg.py
-```
-
-This produces **`clearbudget.dmg`** for installation on macOS. Signing and
-notarization are the default, not an option: credentials come from a
-`notarytool` keychain profile (`ClearBudget`, override with
-`APPLE_KEYCHAIN_PROFILE`) or from `APPLE_ID` with an app-specific
-`APPLE_APP_PASSWORD` for CI; the signing identity and `APPLE_TEAM_ID` have
-defaults that env vars can override. Credentials are checked before the build
-starts where possible (a malformed app-specific password fails in seconds
-rather than after a full PyInstaller run) and a failed notarization stops the
-build outright, because an unnotarized DMG is rejected by Gatekeeper on every
-machine but the one that signed it and that failure is invisible at build
-time. Set `ALLOW_UNNOTARIZED=1` to build a local-testing image that must not
-be released.
-
-### Linux - Flatpak (`clearbudget.flatpak`)
-
-Two helper scripts live in the repository root:
-
-```bash
-./cleanup_flatpak.sh   # optional: uninstall and purge any previous Flatpak build
-./build_flatpak.sh     # build, install locally and produce clearbudget.flatpak
-```
-
-`build_flatpak.sh` installs `flatpak` and `flatpak-builder` if they are missing
-(via apt, dnf or pacman), adds the Flathub remote, pulls the Freedesktop runtime,
-builds fully offline from pre-downloaded wheels and writes **`clearbudget.flatpak`**
-for external deployment. Pass `--no-bundle` to build and install locally without
-producing the distributable bundle.
-
-Install the bundle on another machine:
-
-```bash
-flatpak install --user clearbudget.flatpak
+./cleanup_flatpak.sh                        # optional: uninstall and purge Flatpak output only
+flatpak install --user clearbudget.flatpak  # on the target machine
 flatpak run com.oliverernster.clearbudget
 ```
 
----
+## Generated assets
 
-## Artefact summary
+| Output | Made by | From |
+|---|---|---|
+| `ClearBudget_<size>.png` (seven sizes), `ClearBudget.ico` | `generate_icons.py` | `ClearBudget.png`, 1024x1024 |
+| `docs/donate.png` | `generate_icons.py` | `donate.png` |
+| `.icns` and DMG icons | `dmg_icon.py`, during `builddmg.py` | `ClearBudget.png` |
+| version tokens and asset hashes in `docs/` | `stamp_version.py` | `VERSION` and the asset files |
 
-| Platform | Command(s) | Artefact for deployment |
-|----------|------------|-------------------------|
-| Windows | `python buildexe.py` then `python buildinstaller.py` | `dist-installer\ClearBudgetSetup.exe` |
-| macOS | `python builddmg.py` | `clearbudget.dmg` |
-| Linux | `./build_flatpak.sh` | `clearbudget.flatpak` |
+The derived icons are committed and never regenerated by a build. The sized
+PNGs are capitalised; Windows and macOS hide a case change but Linux does not,
+so if `ls` and `git ls-files` disagree, believe `git ls-files`.
+
+## Versioning
+
+`VERSION` at the root is the single source, read by `clear_budget/version.py`,
+`pyproject.toml` and the build scripts. `stamp_version.py` copies it into
+`docs/` only and hashes local stylesheet and script links; both Windows builds
+run it and `python stamp_version.py` restamps without building. Root markdown carries no version data.
+
+## Cutting a release
+
+1. Bump `VERSION`.
+2. Run the gate in [TESTING.md](TESTING.md) and read each exit code.
+3. Build on each platform; the Windows builds restamp `docs/`.
+4. Commit, including the stamped `docs/`.
+5. Tag the commit `v` plus the contents of `VERSION`.
+6. Publish a GitHub release with the three artefacts; the app's update check
+   reads the latest release.
+
+## Standing rules
+
+- Never write a version string anywhere but `VERSION`.
+- No source file over 400 lines; aim well under it (`test_loc_limits.py`).
+- Coverage stays at 100% line and branch for what is gated.
+- Read exit codes, never output text.
+- No magic numbers: derive from data, configuration or a named constant.
+- Colours live in one home (`test_colour_source.py`).
+- Respect the layer boundaries in [ARCHITECTURE.md](ARCHITECTURE.md).
+- Point every probe at `CLEARBUDGET_HOME`, never the real data directory.
 
 ---
 

@@ -1,216 +1,148 @@
 # Testing
 
-How ClearBudget is tested: running the checks, reading what they say, what the
-gate holds and what it leaves out, the rules a run by hand has to follow and
-how a new test or guard is written. The layer rules themselves are in
-[ARCHITECTURE.md](ARCHITECTURE.md); setting up the environment the tests run in
-is in [DEVELOPMENT.md](DEVELOPMENT.md).
+How ClearBudget is tested. Layer rules are in [ARCHITECTURE.md](ARCHITECTURE.md);
+environment setup is in [DEVELOPMENT.md](DEVELOPMENT.md).
 
-## Running the checks
+## Before the first run
 
-From the repository root, with the venv active:
+- **Use Windows for the full run.** `tests/installer/` drives the real registry
+  and the Shell Link COM interface. The code under test refuses any other
+  platform, so there that directory fails wholesale and coverage misses the
+  floor.
+- **Install both requirements files into `venv`** (see DEVELOPMENT.md);
+  `requirements-dev.txt` brings pytest, the linters and pywin32.
+- Nothing else: the suite opens no window and touches neither your data nor
+  an installed copy.
 
-```
-pytest
-black --check .
-flake8
-ruff check .
-```
+## The gate
 
-`pytest` alone is the gated run: the options in `pyproject.toml` add the
-coverage measurement and the floor, so nothing else needs passing to it. Add
-`-v` to see each test named as it runs.
+From the repository root:
 
-**black, flake8 and ruff are not part of the suite.** No test runs them, so a
-formatting or lint regression passes `pytest` untouched. Run all four and read
-the exit code of each.
-
-**A full run takes about a minute on Windows.** Measured on 2026-10-03: 1,969
-tests passed in 66 seconds, with no window opened.
-
-**Read the exit code, never the text.** The run prints the coverage table
-then one summary line. A search of the output for a result word is still not
-safe: coverage rows are named after modules, so `installer\ops\errors.py`
-matches a search for "error" on a clean run. `0` means the tests passed AND the
-floor was met; anything else means read the failures above the table. For a
-count of tests without running them, `pytest --co -q --no-cov` ends with one.
-
-**The full run is Windows only, which makes the gate Windows only too.**
-`tests/installer/` drives the real registry and the Shell Link COM interface,
-which the code under test refuses on any other platform, so on Linux or macOS
-that directory fails wholesale and coverage falls short of the floor.
-Everything else runs anywhere:
-
-```
-pytest --ignore=tests/installer --no-cov
+```powershell
+venv\Scripts\python.exe -m pytest
+venv\Scripts\python.exe -m black --check .
+venv\Scripts\python.exe -m flake8
+venv\Scripts\python.exe -m ruff check .
 ```
 
-## What the gate holds
+`pytest` alone is the gated run: `addopts` in `pyproject.toml` adds coverage of
+`clear_budget` and `installer` with `--cov-fail-under=100`; `.coveragerc`
+turns on branch coverage. No test runs black, flake8 or ruff; run all four.
 
-The floor is 100%, measured by BRANCH as well as by line (`branch = True` in
-`.coveragerc`, `--cov-fail-under=100` in `pyproject.toml`). It spans two
-sources: `clear_budget` and the Qt-free half of the setup program under
-`installer/`. `main.py`, the composition root, is not measured. The setup program is inside
-the floor because it does the most privileged work in the repository: registry
-writes, shortcut creation, per-user deployment, process termination and
-directory removal.
+## Reading a result
 
-Outside the floor, stated in full so the number is not read as more than it is:
+**Read the exit code, never the text.** `0` means every test passed and the
+floor was met; anything else means read the failures above the coverage table.
+Do not search the output for a result word: coverage rows are named after
+modules, so `installer\ops\errors.py` matches "error" on a clean run.
 
-| Omitted | Why |
-|---|---|
-| `main.py` | the composition root |
-| `clear_budget/ui/*`, `installer/app.py`, `installer/ui/*` | the Qt clients; their correctness lives in a real event loop rather than in branch coverage of pure logic |
-| `clear_budget/domain/interfaces/*`, `clear_budget/application/ports/*` | Protocol-only modules with nothing to execute |
-| `clear_budget/shared/resources.py` | the packaged-resource lookup |
-| the root build scripts, `installer/build_payload.py` | linear build recipes |
-| `installer/payload/*`, `installer/resources/*` | staged build output |
+```powershell
+venv\Scripts\python.exe -m pytest; $LASTEXITCODE
+```
 
-Then any line marked `# pragma: no cover`. Counted on 2026-10-02: 100 of
-them across 28 files, most on thin pass-throughs in the application service
-modules (18 in `_settings_operations.py`, 12 in `_income_operations.py`) and
-12 in the SQLite payment-method repository. Read 100% as "100% of what is
-gated", not as "every line is tested".
+To count tests without running them: `pytest --co -q --no-cov`.
 
-## Running it by hand
+## Coverage floors
 
-- **No window, ever.** The suite starts no `QApplication` and has no widget
-  tests; the widget-level PySide6 tests were removed as fragile. Logic that
-  lives in the UI layer but is pure Python is tested without one under
-  `tests/ui_logic`. PySide6 is still imported: a few tests take Qt classes or
-  enums directly; others import UI modules that load it.
-- **Your data is never touched.** `isolate_app_dir` in `tests/conftest.py` is
-  autouse and points `CLEARBUDGET_HOME` at a throwaway directory for every test,
-  named `.clearbudget` like the real one so tests asserting on the name still
-  hold. A test that needs the real path shape asks for `real_app_dir`, which
-  clears the variable for that test alone and writes nothing.
-  `tests/structural/test_data_dir_isolation.py` fails if the redirect ever stops
-  happening.
-- **No installation is touched either.** `tests/installer/conftest.py` closes
-  the four routes from the setup program's tests to the real machine; see
-  [Testing the setup program](#testing-the-setup-program).
-
-## Where the tests live
-
-`tests/` mirrors the package, one directory a concern:
-
-| Directory | What it tests | Against |
+| Scope | Floor | Why not 100 |
 |---|---|---|
-| `domain/` | entities, value objects and the domain services, pure | values built in the test |
-| `application/` | the services and the reports | hand-written fakes of the repositories (`tests/application/fakes.py`) |
-| `infrastructure/` | the SQLite repositories, the migrations, the release source | a real SQLite file in a temporary folder (the `db` fixture) |
-| `auth/` | the user store, remembered sign-in, full backup (hostile and damaged backups included, built by `tests/auth/backup_helpers.py`) | real SQLite files in a temporary folder |
-| `shared/` | configuration, the budget registry, database copy and validation, single instance | real files in a temporary folder |
-| `ui_logic/` | the pure logic inside the UI layer | plain values; no `QApplication` |
-| `installer/` | the Qt-free half of the setup program | the real registry under a scratch key and the real Shell Link interface, inside a redirected profile |
-| `structural/` | the rules no single test can see | the source tree itself |
+| `clear_budget`, Qt-free `installer/` | 100% line and branch | |
+| `clear_budget/ui/*`, `installer/app.py`, `installer/ui/*` | not measured | Qt clients; their correctness lives in a real event loop |
+| `main.py` | not measured | the composition root |
+| `domain/interfaces/*`, `application/ports/*` | not measured | Protocol-only; nothing to execute |
+| `clear_budget/shared/resources.py` | not measured | packaged-resource lookup |
+| `buildexe.py`, `buildinstaller.py`, `installer/build_payload.py` | not measured | linear build recipes |
+| `installer/payload/*`, `installer/resources/*` | not measured | staged build output |
 
-## Writing a test
+Lines marked `# pragma: no cover` are also excluded, mostly thin
+pass-throughs. Read 100% as "100% of what is gated".
 
-- **No mocking library.** A port is stood in for by a hand-written fake:
-  `tests/application/fakes.py` holds the repository fakes and
-  `tests/installer/fakes.py` the setup program's. Environment and attributes are
-  redirected with pytest's own `monkeypatch`.
-- **Patch in a scope, never undo.** To lift a patch part way through a test,
-  use `with monkeypatch.context() as patch:`. `monkeypatch.undo()` undoes
-  EVERY patch on that fixture, the autouse data-directory redirect included,
-  so any path resolved afterwards is the real data directory.
-- **A database.** Ask for the `db` fixture in `tests/infrastructure/conftest.py`
-  for a connected database with the production schema, closed again in
-  teardown.
-- **Appearance is not a test.** What matters there is what gets painted, so it
-  is checked with throwaway offscreen probes. Run those with
-  `QT_QPA_PLATFORM=offscreen`, EXCEPT when measuring text or emoji: offscreen
-  substitutes Qt's own font database, so a font size tuned there does not match
-  what ships. Measure those on the real platform.
-- **Always point a probe at a scratch data directory.** The real data directory
-  (`%LOCALAPPDATA%\ClearBudget` on Windows; see the README's Data Storage
-  section for the other platforms, plus a surviving legacy `~/.clearbudget`)
-  holds live user data: both databases, the saved UI settings (theme,
-  remembered save-file location and any skipped update version) and the
-  Remember me sidecar (`remembered_login.json`). Set `CLEARBUDGET_HOME` and
-  every path the app resolves moves with it:
+## What each suite proves
 
-  ```powershell
-  $env:CLEARBUDGET_HOME = "$env:TEMP\cb-probe"
-  ```
+| Directory | Proves | Against |
+|---|---|---|
+| `domain/` | entities, value objects, domain services | values built in the test |
+| `application/` | services and reports | hand-written fakes (`tests/application/fakes.py`) |
+| `infrastructure/` | SQLite repositories, migrations, release source | a real SQLite file (the `db` fixture) |
+| `auth/` | user store, remembered sign-in, full backup including hostile ones | real SQLite files |
+| `shared/` | configuration, budget registry, database copy and validation, single instance | real files in a temp folder |
+| `ui_logic/` | pure logic inside the UI layer | plain values; no `QApplication` |
+| `installer/` | the Qt-free setup program | real registry under a scratch key; real Shell Link; redirected profile |
+| `structural/` | rules no single test can see | the source tree |
 
-  This is not a style preference. A probe that calls `theme.apply_theme` to
-  measure something persists that theme, because persisting is what the
-  function is for; the app then opens in the theme the probe used.
-
-## Testing the setup program
-
-`tests/installer/` exercises everything under `installer/` except `app.py` and
-`installer/ui`, on Windows only (see above). Nothing in it touches a real
-installation and that is held in place by four fixtures in
-`tests/installer/conftest.py`, each closing one route to the real machine.
-Three are autouse and unconditional:
-
-- the per-user profile directories are redirected through the environment
-  variables the code reads;
-- the `platformdirs` lookups are redirected **in their own right**, because
-  `platformdirs` asks Windows for the known folder rather than reading
-  `%LOCALAPPDATA%`. Without this fixture the legacy-directory migration would
-  find and move your actual data;
-- the payload anchor is redirected so a small stand-in bundle replaces the
-  real fifty-megabyte payload.
-
-The fourth is requested by name rather than autouse: `scratch_identity` yields
-an `InstallerIdentity` whose HKCU key lives under a test-only root and is
-deleted in teardown. A test can only reach the registry by taking that
-identity, so asking for it is the same act as needing it.
-
-`tests/installer/fakes.py` holds the hand-written doubles for the three
-injectable seams (`CommandRunner`, `ProcessController` and the identity value).
-What can be exercised for real is: shortcuts are written through the same Shell
-Link COM interface the install uses; the registry round-trips through `winreg`
-against the scratch key; a full install deploys and registers a real bundle,
-all inside the redirected tree.
-
-## Guards
-
-A structural test checks the source tree rather than behaviour, so a rule holds
-for code nobody has written yet. The suite in `tests/structural/`:
+The structural guards, one rule each:
 
 | Guard | Holds |
 |---|---|
-| `test_layering_rules.py` | the layer boundaries and a domain free of I/O and frameworks |
-| `test_auth_structure.py` | the shape of the auth module |
-| `test_cross_package_imports.py` | every name one package imports from another is actually there |
-| `test_loc_limits.py` | the 400 line cap and the danger band below it |
-| `test_colour_source.py` | colour values have one home |
-| `test_donation_address.py` | the donation address has one home and is the one meant |
-| `test_no_network.py` | the update check is the only connection anything shipped opens itself |
+| `test_layering_rules.py` | layer boundaries; a domain free of I/O and frameworks |
+| `test_auth_structure.py` | the auth module's shape |
+| `test_cross_package_imports.py` | every cross-package import exists |
+| `test_loc_limits.py` | the 400-line cap and its danger band |
+| `test_colour_source.py` | colours have one home |
+| `test_donation_address.py` | the donation address has one home |
+| `test_no_network.py` | the update check is the only connection anything shipped opens |
 | `test_data_dir_isolation.py` | the suite never writes to the real data directory |
-| `test_save_location_defaults.py` | Save and Load default to the data directory, not Downloads |
-| `test_database_replacement_order.py` | a live database is closed before it is replaced, only in `main.py`; so is a failed Load before the kept budget goes back |
-| `test_restore_returns_to_sign_in.py` | after Restore Everything the sign-in screen appears whatever happened |
-| `test_refusal_order.py` | nothing threatens a budget until the chosen file is known to be writable |
-| `test_session_exit_invariants.py` | switching user and signing out stay two different things |
-| `test_handover_invariants.py` | the sign-in screen is never left stranded on screen |
+| `test_save_location_defaults.py` | Save and Load default to the data directory |
+| `test_database_replacement_order.py` | a live database is closed before it is replaced |
+| `test_restore_returns_to_sign_in.py` | Restore Everything always ends at sign-in |
+| `test_refusal_order.py` | nothing threatens a budget until the target is known writable |
+| `test_session_exit_invariants.py` | switching user and signing out stay distinct |
+| `test_handover_invariants.py` | the sign-in screen is never stranded |
 | `test_first_run_close.py` | the first-run wizard keeps its close button |
-| `test_delivery_assets.py` | every runtime asset reaches every platform the app ships on |
-| `test_installer_layout_stability.py` | the setup program's controls do not move while an operation runs |
-| `test_view_page_lists_agree.py` | the three lists of views agree, in order |
+| `test_delivery_assets.py` | every runtime asset reaches every platform |
+| `test_installer_layout_stability.py` | setup controls do not move during an operation |
+| `test_view_page_lists_agree.py` | the three view lists agree, in order |
 | `test_button_run_slices.py` | a view takes the button run whole, less Archive |
-| `test_cross_view_refresh.py` | a view is refreshed by the data it shows, not by the view it lives on |
-| `test_tray_switch_invariants.py` | switching views costs the tray no control and leaves no stray ring |
-| `test_nav_entry_invariants.py` | the ring's entry point is a view decision and its wiring holds |
-| `test_nav_user_label.py` | the signed-in account is shown on every view |
+| `test_cross_view_refresh.py` | a view refreshes on the data it shows |
+| `test_tray_switch_invariants.py` | switching views costs the tray nothing |
+| `test_nav_entry_invariants.py` | the focus ring's entry point and wiring |
+| `test_nav_user_label.py` | the signed-in account shows on every view |
 | `test_table_focus_invariants.py` | no table takes the ring from a click |
-| `test_return_key_invariants.py` | one Return press runs a dialog's submit once |
+| `test_return_key_invariants.py` | one Return runs a dialog's submit once |
 | `test_combo_box_invariants.py` | every combo box is a `ThemedComboBox` |
-| `test_solvency_headings.py` | a heading never names a facility the reader may not have |
-| `test_help_example_is_arithmetic.py` | the worked example on How It Works is what the code returns |
+| `test_solvency_headings.py` | no heading names a facility the reader may lack |
+| `test_help_example_is_arithmetic.py` | How It Works' example matches the code |
 | `test_help_names_the_tray.py` | every picture button is named on How It Works |
 | `test_help_names_the_views.py` | every view button is named on How It Works |
 
-**A guard is not trusted until it has been seen to fail.** A new guard is
-proved by planting the violation it exists to catch and reading the failure,
-then restoring the tree in a `finally` block so an interrupted proof cannot
-leave the plant behind. A test written for a defect is run before the fix,
-where it has to fail for the reason named, not merely fail.
+## What the tests never do
+
+- **Open a window.** No test creates a `QApplication`; widget tests were
+  removed as fragile. PySide6 is still imported for Qt classes and enums.
+  Appearance is checked by hand in a real build.
+- **Touch your data.** The autouse `isolate_app_dir` fixture in
+  `tests/conftest.py` points `CLEARBUDGET_HOME` at a temp directory for every
+  test. `real_app_dir` clears it for one test and writes nothing.
+- **Touch an installation.** `tests/installer/conftest.py` redirects the
+  profile directories, the `platformdirs` lookups (which ask Windows directly,
+  not `%LOCALAPPDATA%`) and the payload, all autouse. The registry is reachable
+  only through the `scratch_identity` fixture, a test-only HKCU key deleted in
+  teardown.
+- **Mock.** Ports are stood in for by hand-written fakes; environment and
+  attributes go through `monkeypatch`. Never call `monkeypatch.undo()`: it also
+  undoes the data-directory redirect. Use `with monkeypatch.context():`.
+
+A throwaway probe outside the suite must set the same redirect first, since
+calls such as `theme.apply_theme` persist what they set:
+
+```powershell
+$env:CLEARBUDGET_HOME = "$env:TEMP\cb-probe"
+```
+
+## Running part of the suite
+
+```powershell
+venv\Scripts\python.exe -m pytest tests\domain --no-cov
+venv\Scripts\python.exe -m pytest tests\structural\test_loc_limits.py --no-cov
+venv\Scripts\python.exe -m pytest --ignore=tests/installer --no-cov
+```
+
+A partial run needs `--no-cov`; without it the floor fails the run. The third
+command is the run for Linux and macOS.
+
+A new guard is trusted only once it has been seen to fail: plant the
+violation, read the failure, restore the tree in a `finally` block. A test for
+a defect must fail before the fix for the reason named.
 
 ---
 
