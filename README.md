@@ -184,8 +184,8 @@ Download the package for your platform from
 
 | Platform | Download | Install | Run |
 |----------|----------|---------|-----|
-| Windows | `ClearBudgetSetup.exe` | Run it; the install is per-user, so no administrator rights are needed. Run it again to upgrade, repair or uninstall | Start menu or desktop shortcut |
-| macOS | `clearbudget.dmg` | Drag ClearBudget into Applications | Launchpad or Applications |
+| Windows 10 or 11, 64-bit | `ClearBudgetSetup.exe` | Run it; the install is per-user, so no administrator rights are needed. Run it again to upgrade, repair or uninstall | Start menu or desktop shortcut |
+| macOS (Apple Silicon, M1 or later) | `clearbudget.dmg` | Drag ClearBudget into Applications | Launchpad or Applications |
 | Linux (Flatpak) | `clearbudget.flatpak` | `flatpak install --user clearbudget.flatpak` | `flatpak run com.oliverernster.clearbudget` |
 
 To run from source:
