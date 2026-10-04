@@ -69,7 +69,16 @@ class TestOverdrawnLine:
         )
         # Day 9 leaves -20,000; day 22 sinks to -50,000; day 25 recovers.
         assert _line(_OPENING_PENCE, summary) == (
-            f"Overdrawn from day 9; at worst {fmt(50_000)} overdrawn on day 22"
+            f"Overdrawn by {fmt(20_000)} on day 9, at worst {fmt(50_000)} on day 22"
+        )
+
+    def test_the_first_day_figure_is_where_that_day_ends(self) -> None:
+        """Two bills on the day it goes under: the night's balance counts."""
+        summary = _summary(
+            [_bill(pence=110_000, day=9), _bill(pence=15_000, day=9)], []
+        )
+        assert _line(_OPENING_PENCE, summary) == (
+            f"Overdrawn by {fmt(25_000)} on day 9"
         )
 
     def test_a_month_that_stays_in_credit_says_so(self) -> None:
@@ -79,14 +88,12 @@ class TestOverdrawnLine:
     def test_a_month_opening_overdrawn_is_overdrawn_from_the_start(self) -> None:
         summary = _summary([_bill(pence=10_000, day=12)], [])
         assert _line(-30_000, summary) == (
-            f"Overdrawn from the start; at worst {fmt(40_000)} overdrawn on day 12"
+            f"Overdrawn by {fmt(30_000)} at the start, at worst {fmt(40_000)} on day 12"
         )
 
     def test_the_worst_can_be_the_opening_itself(self) -> None:
         summary = _summary([], [_income(pence=50_000, day=3)])
-        assert _line(-30_000, summary) == (
-            f"Overdrawn from the start; at worst {fmt(30_000)} overdrawn at the start"
-        )
+        assert _line(-30_000, summary) == f"Overdrawn by {fmt(30_000)} at the start"
 
     def test_the_line_leads_every_forward_month_block(self) -> None:
         mix = SolvencyPanelNarrativeMixin()
@@ -94,6 +101,4 @@ class TestOverdrawnLine:
         text, _, _ = mix._build_month_cashflow_summary(
             _OPENING_PENCE, summary, 150_000, overdraft_limit_pence=0
         )
-        assert text.split("\n")[0] == (
-            f"Overdrawn from day 4; at worst {fmt(50_000)} overdrawn on day 4"
-        )
+        assert text.split("\n")[0] == f"Overdrawn by {fmt(50_000)} on day 4"

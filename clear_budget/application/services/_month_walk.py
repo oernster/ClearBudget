@@ -32,9 +32,9 @@ def walk_month(opening_pence: int, summary, floor_pence: int = 0) -> dict:
     """Simulate one month day by day and report what it did.
 
     Returns the low and the day it fell on, the first day the balance went
-    below zero, the first day it went below ``floor_pence`` (the deadline any
-    rescue has to beat), the income that rescued it if one did, then where the
-    month closed.
+    below zero with the balance that day ended on, the first day it went
+    below ``floor_pence`` (the deadline any rescue has to beat), the income
+    that rescued it if one did, then where the month closed.
 
     ``floor_pence`` is the balance the account may not go under: zero, the
     default, for a budget with no overdraft arranged, otherwise the negative
@@ -68,6 +68,7 @@ def walk_month(opening_pence: int, summary, floor_pence: int = 0) -> dict:
     min_balance = opening_pence
     min_day = LOW_AT_START
     first_negative_day = None
+    first_negative_balance = None
     # The deadline: the first moment the balance is below the floor, which is
     # when a payment is actually refused. A month that OPENS below it has
     # already breached before any event, reported as LOW_AT_START for the same
@@ -81,6 +82,10 @@ def walk_month(opening_pence: int, summary, floor_pence: int = 0) -> dict:
             min_day = day
         if balance < 0 and first_negative_day is None:
             first_negative_day = day
+        # Events are in day order, so the last write on that day is the
+        # balance it ENDS on, which is what the account shows that night.
+        if day == first_negative_day:
+            first_negative_balance = balance
         if balance < floor_pence and first_breach_day is None:
             first_breach_day = day
         if (
@@ -94,6 +99,7 @@ def walk_month(opening_pence: int, summary, floor_pence: int = 0) -> dict:
         "min_balance": min_balance,
         "min_day": min_day,
         "first_negative_day": first_negative_day,
+        "first_negative_balance": first_negative_balance,
         "first_breach_day": first_breach_day,
         "rescue_event": rescue_event,
         "closing": balance,

@@ -70,22 +70,30 @@ class SolvencyPanelMonthLinesMixin:
         shape line gives: a statement missing from one month reads as a
         statement nobody worked out.
 
+        THE AMOUNT LEADS. A day with no figure beside it ("overdrawn from day
+        21") leaves the reader asking by how much, which is the half they act
+        on; so the line opens on the sum, then the day. The worst point is
+        added only when it is deeper than the first day, since repeating the
+        same figure twice reads as two different facts.
+
         A month that opens negative is overdrawn before any event, which the
         walk's own first-negative day cannot express, so the opening is read
         here directly.
         """
         if opening_pence < 0:
-            start = "Overdrawn from the start"
+            first_pence, first_when = opening_pence, "at the start"
         elif walk["first_negative_day"] is not None:
-            start = f"Overdrawn from day {walk['first_negative_day']}"
+            first_pence = walk["first_negative_balance"]
+            first_when = f"on day {walk['first_negative_day']}"
         else:
             return "Never overdrawn"
-        worst = (
-            "at the start"
-            if walk["min_day"] == _LOW_AT_START
-            else f"on day {walk['min_day']}"
-        )
-        return f"{start}; at worst {fmt(abs(walk['min_balance']))} overdrawn {worst}"
+        line = f"Overdrawn by {fmt(abs(first_pence))} {first_when}"
+        if walk["min_balance"] < first_pence:
+            line += (
+                f", at worst {fmt(abs(walk['min_balance']))} "
+                f"on day {walk['min_day']}"
+            )
+        return line
 
     @staticmethod
     def _overdraft_facility_outcome(
