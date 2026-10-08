@@ -13,16 +13,23 @@ class FakeBillRepository:
     """Fake BillRepository for testing."""
 
     _bills: list[Bill] = field(default_factory=list)
+    _paid: set[tuple[int, YearMonth]] = field(default_factory=set)
 
     def list_active_for_month(
         self, *, year_month: YearMonth, include_inactive: bool = False
     ) -> list[Bill]:
-        """List bills active in a given month."""
+        """List bills active in a given month, each carrying its Paid tick."""
         return [
-            b
+            replace(
+                b, paid_for_month=b.paid_for_month or (b.id, year_month) in self._paid
+            )
             for b in self._bills
             if b.is_active_in_month(year_month) and (include_inactive or b.active)
         ]
+
+    def mark_paid_for_month(self, *, bill_id: int, year_month: YearMonth) -> None:
+        """Tick a bill paid for one month."""
+        self._paid.add((bill_id, year_month))
 
     def get_by_id(self, *, bill_id: int) -> Bill | None:
         """Get bill by ID."""
@@ -222,3 +229,11 @@ class FakePaymentMethodRepository:
         for i, c in enumerate(self._cards):
             if c.id == card_id:
                 self._cards[i] = replace(c, scheduled_limit_changes=tuple(changes))
+
+    def set_balance_included_bills(
+        self, *, card_id: int, bill_ids: tuple[int, ...]
+    ) -> None:
+        """Replace the bills a card's typed balance already contains."""
+        for i, c in enumerate(self._cards):
+            if c.id == card_id:
+                self._cards[i] = replace(c, balance_included_bill_ids=tuple(bill_ids))

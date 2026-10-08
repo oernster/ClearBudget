@@ -32,6 +32,10 @@ class CreditCard:
         scheduled_limit_changes: upcoming dated changes to the credit limit,
             sorted by effective date; the effective limit for any date is
             derived from these (see services.credit_limit_schedule)
+        balance_included_bill_ids: the bills already ticked paid when the
+            balance was typed, so already inside it whatever day they were
+            due. Paid alone cannot say this: a payment ticked afterwards (the
+            midnight fold ticks one on its own day) is not inside the figure
     """
 
     id: int
@@ -49,6 +53,7 @@ class CreditCard:
     balance_applied_month: int | None = None
     balance_applied_day: int | None = None
     scheduled_limit_changes: tuple[CreditLimitChange, ...] = ()
+    balance_included_bill_ids: tuple[int, ...] = ()
 
     @property
     def available(self) -> Amount:

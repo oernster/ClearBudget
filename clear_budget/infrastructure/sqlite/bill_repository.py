@@ -332,5 +332,8 @@ class SQLiteBillRepository(BillAmountChangesMixin):
         cursor.execute("DELETE FROM bill_month_overrides WHERE bill_id = ?", (bill_id,))
         cursor.execute("DELETE FROM bill_month_skips WHERE bill_id = ?", (bill_id,))
         cursor.execute("DELETE FROM bill_month_paid WHERE bill_id = ?", (bill_id,))
+        cursor.execute(
+            "DELETE FROM card_balance_included_bills WHERE bill_id = ?", (bill_id,)
+        )
         cursor.execute("DELETE FROM bills WHERE id = ?", (bill_id,))
         self.conn.commit()

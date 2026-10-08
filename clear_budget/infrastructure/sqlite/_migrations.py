@@ -233,6 +233,46 @@ def _m11_commitments(cursor: sqlite3.Cursor) -> None:
     )
 
 
+CREATE_CARD_BALANCE_INCLUDED_BILLS = (
+    "CREATE TABLE IF NOT EXISTS card_balance_included_bills ("
+    " card_id INTEGER NOT NULL,"
+    " bill_id INTEGER NOT NULL,"
+    " PRIMARY KEY (card_id, bill_id)"
+    ")"
+)
+
+
+def _m12_card_balance_included_bills(cursor: sqlite3.Cursor) -> None:
+    """Which ticked bills a typed card balance already contains.
+
+    Paid says a bill happened, never when: one ticked before the balance was
+    typed is inside it, while one ticked afterwards (the midnight fold ticks a
+    card payment on its own day) is not. A save now records the first kind.
+
+    An existing budget is seeded once from what it holds: for each card whose
+    balance was typed on a day, the bills ticked by hand in that month. The
+    fold logs every tick it makes in `balance_applied`, so a bill with no log
+    row was ticked by hand, which is the case of a payment made and then
+    reflected in the figure typed. Each typed balance replaces the seed.
+    """
+    cursor.execute(CREATE_CARD_BALANCE_INCLUDED_BILLS)
+    cursor.execute(
+        "INSERT OR IGNORE INTO card_balance_included_bills (card_id, bill_id)"
+        " SELECT c.id, b.id FROM credit_cards c"
+        " JOIN bill_month_paid p ON p.year = c.balance_applied_year"
+        "  AND p.month = c.balance_applied_month"
+        " JOIN bills b ON b.id = p.bill_id"
+        " LEFT JOIN bill_month_overrides o ON o.bill_id = b.id"
+        "  AND o.year = p.year AND o.month = p.month"
+        " WHERE c.balance_applied_day IS NOT NULL"
+        "  AND (COALESCE(o.payment_method_id, b.payment_method_id) = c.id"
+        "   OR (b.category = 'credit_payment' AND b.target_card_id = c.id))"
+        "  AND NOT EXISTS (SELECT 1 FROM balance_applied a"
+        "   WHERE a.item_type = 'bill' AND a.item_id = b.id"
+        "   AND a.year = p.year AND a.month = p.month)"
+    )
+
+
 _MIGRATIONS: tuple[Migration, ...] = (
     _m01_credit_card_detail_columns,
     _m02_bill_target_card,
@@ -245,6 +285,7 @@ _MIGRATIONS: tuple[Migration, ...] = (
     _m09_income_start_and_end_month,
     _m10_day_fixed_flags,
     _m11_commitments,
+    _m12_card_balance_included_bills,
 )
 
 # Derived from the list so the two cannot drift apart.

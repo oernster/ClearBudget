@@ -4,7 +4,10 @@ Holds the current shape of every table. Changing an existing database is the
 business of `_migrations.py`, applied at the end of `create_schema`.
 """
 
-from clear_budget.infrastructure.sqlite._migrations import apply_pending
+from clear_budget.infrastructure.sqlite._migrations import (
+    CREATE_CARD_BALANCE_INCLUDED_BILLS,
+    apply_pending,
+)
 
 
 def create_schema(conn) -> None:
@@ -282,6 +285,9 @@ def create_schema(conn) -> None:
             FOREIGN KEY (bill_id) REFERENCES bills(id)
         )
         """)
+
+    # Which ticked bills a typed card balance already contains (see m12).
+    cursor.execute(CREATE_CARD_BALANCE_INCLUDED_BILLS)
 
     # Evolve an existing database to the current shape. Each step runs once, in
     # order; any failure that is not "the column is already there" raises.

@@ -141,10 +141,11 @@ def _card_activity_bills() -> list:
 class TestSaveCardWithTodayBalance:
     def test_new_card_stores_entered_balance_verbatim(self) -> None:
         card = _card(id=0, current_balance_used=Amount(pence=0))
-        _svc, _bill_repo, pm_repo = _make_service(cards=[])
+        svc, _bill_repo, pm_repo = _make_service(cards=[])
 
         card_id = save_card_with_today_balance(
             pm_repo,
+            svc.get_month_summary,
             card=card,
             today_balance_pence=50000,
             today=date(2026, 6, 13),
@@ -160,10 +161,11 @@ class TestSaveCardWithTodayBalance:
     def test_edit_stores_entered_balance_verbatim_with_day_anchor(self) -> None:
         # The stored figure is exactly what the user typed - no hidden opening.
         card = _card(id=2)
-        _svc, _bill_repo, pm_repo = _make_service(cards=[card])
+        svc, _bill_repo, pm_repo = _make_service(cards=[card])
 
         card_id = save_card_with_today_balance(
             pm_repo,
+            svc.get_month_summary,
             card=card,
             today_balance_pence=159200,
             today=date(2026, 6, 13),
@@ -187,6 +189,7 @@ class TestSaveCardWithTodayBalance:
 
         save_card_with_today_balance(
             pm_repo,
+            svc.get_month_summary,
             card=card,
             today_balance_pence=159200,
             today=today,
@@ -213,3 +216,64 @@ class TestSaveCardWithTodayBalance:
         stored = pm_repo.get_credit_card_by_id(card_id=card_id)
         assert stored.current_balance_used.pence == 159200
         assert stored.balance_applied_day == 13
+
+
+def _payment(*, bill_id: int, pence: int, day: int) -> Bill:
+    return _bill(
+        id=bill_id,
+        payment_method_id=1,
+        category="credit_payment",
+        target_card_id=2,
+        amount=Amount(pence=pence),
+        day_of_month=day,
+    )
+
+
+class TestPaymentsTickedAroundASavedBalance:
+    """Which ticked payments a typed card balance already contains.
+
+    Paid says a payment happened, never when. One ticked before the balance
+    was typed is inside it; one ticked afterwards (the midnight fold ticks a
+    card payment on its own day) is not and must still bring the card down.
+    The save records which were ticked at that moment.
+    """
+
+    _JUNE = YearMonth(2026, 6)
+
+    def _saved(self, *, ticked_before: tuple[int, ...]):
+        card = _card(id=2, payment_due_day=22)
+        svc, bill_repo, pm_repo = _make_service(cards=[card])
+        bill_repo.add(bill=_payment(bill_id=67, pence=100000, day=14))
+        bill_repo.add(bill=_payment(bill_id=13, pence=25000, day=21))
+        for bill_id in ticked_before:
+            svc.mark_bill_paid_for_month(bill_id=bill_id, year_month=self._JUNE)
+        save_card_with_today_balance(
+            pm_repo,
+            svc.get_month_summary,
+            card=card,
+            today_balance_pence=356385,
+            today=date(2026, 6, 8),
+            is_new=False,
+        )
+        return svc, pm_repo
+
+    def _live(self, svc, pm_repo, *, day: int) -> int:
+        card = pm_repo.get_credit_card_by_id(card_id=2)
+        return get_live_card_balance(
+            pm_repo, svc.get_month_summary, card=card, today=date(2026, 6, day)
+        ).pence
+
+    def test_the_save_records_what_was_already_ticked(self) -> None:
+        _svc, pm_repo = self._saved(ticked_before=(67,))
+        stored = pm_repo.get_credit_card_by_id(card_id=2)
+        assert stored.balance_included_bill_ids == (67,)
+
+    def test_a_payment_ticked_before_the_save_is_not_taken_twice(self) -> None:
+        svc, pm_repo = self._saved(ticked_before=(67,))
+        assert self._live(svc, pm_repo, day=8) == 356385
+        assert self._live(svc, pm_repo, day=15) == 356385
+
+    def test_a_payment_ticked_after_the_save_still_comes_off(self) -> None:
+        svc, pm_repo = self._saved(ticked_before=(67,))
+        svc.mark_bill_paid_for_month(bill_id=13, year_month=self._JUNE)
+        assert self._live(svc, pm_repo, day=22) == 356385 - 25000

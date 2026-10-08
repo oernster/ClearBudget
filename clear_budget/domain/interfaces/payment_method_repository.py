@@ -30,3 +30,9 @@ class PaymentMethodRepository(Protocol):
     ) -> None:
         """Replace all scheduled limit changes for a card."""
         ...
+
+    def set_balance_included_bills(
+        self, *, card_id: int, bill_ids: tuple[int, ...]
+    ) -> None:
+        """Replace the bills a card's typed balance already contains."""
+        ...

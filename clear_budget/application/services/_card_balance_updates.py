@@ -5,6 +5,7 @@ from datetime import date
 
 from clear_budget.domain.services._card_live_projection import (
     anchored_month_opening_pence,
+    bills_inside_entered_balance,
     calculate_live_card_balance,
 )
 from clear_budget.domain.services.card_monthly_calculator import (
@@ -37,6 +38,7 @@ def get_live_card_balance(payment_method_repo, get_month_summary, *, card, today
 
 def save_card_with_today_balance(
     payment_method_repo,
+    get_month_summary,
     *,
     card,
     today_balance_pence: int,
@@ -51,7 +53,11 @@ def save_card_with_today_balance(
     layer derives the start-of-month opening it needs on the fly from this anchor
     (see `anchored_month_opening_pence`); nothing is transformed at rest. The
     same-month stamp also makes the elapsed-date fold skip this card, so a freshly
-    entered balance is never overwritten. Returns the persisted card id.
+    entered balance is never overwritten.
+
+    The card's bills already ticked paid this month are recorded as inside the
+    typed figure, so a payment ticked early is not taken a second time while
+    one ticked later still comes off. Returns the persisted card id.
     """
     stored = replace(
         card,
@@ -67,6 +73,11 @@ def save_card_with_today_balance(
         card_id = stored.id
     payment_method_repo.set_balance_applied(
         card_id=card_id, year=today.year, month=today.month, day=today.day
+    )
+    bills = list(get_month_summary(year_month=YearMonth(today.year, today.month)).bills)
+    payment_method_repo.set_balance_included_bills(
+        card_id=card_id,
+        bill_ids=bills_inside_entered_balance(card_id=card_id, bills=bills),
     )
     return card_id
 

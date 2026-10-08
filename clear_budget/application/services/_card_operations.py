@@ -75,6 +75,7 @@ class CardOperationsMixin:
 
         return _impl(
             self.payment_method_repo,
+            self.get_month_summary,
             card=card,
             today_balance_pence=today_balance.pence,
             today=today or _date.today(),  # noqa: DTZ011 (naive local dates)

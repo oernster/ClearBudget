@@ -9,27 +9,52 @@ from clear_budget.domain.services._prorating import prorate_elapsed_pence
 from clear_budget.domain.value_objects.amount import Amount
 
 
+def _touches_card(bill: Bill, card_id: int) -> bool:
+    """Whether the bill is a charge on the card or a payment towards it."""
+    return bill.payment_method_id == card_id or (
+        bill.category == "credit_payment" and bill.target_card_id == card_id
+    )
+
+
+def bills_inside_entered_balance(*, card_id: int, bills: list[Bill]) -> tuple[int, ...]:
+    """Ids of the card's bills already ticked paid, sorted.
+
+    Read at the moment a balance is typed: whatever is ticked then has
+    happened, so the typed figure already contains it.
+    """
+    return tuple(
+        sorted(b.id for b in bills if b.paid_for_month and _touches_card(b, card_id))
+    )
+
+
 def month_to_date_net_pence(
     *,
     card: CreditCard,
     bills: list[Bill],
     today: date,
+    posted_bill_ids: frozenset[int] | None = None,
 ) -> int:
     """Signed month-to-date movement on the card as of `today`, in pence.
 
     Returns the charges already posted minus the payments already made this
-    month. A bill marked paid has happened, so it counts fully whatever day it
-    was due; otherwise dated bills count fully once their day has passed
-    (`<= today.day`) and undated bills accrue evenly across the days of the
-    month that have elapsed. The result is negative when payments so far
-    exceed charges so far.
+    month. A bill counted as posted has happened, so it counts fully whatever
+    day it was due: by default that is any bill ticked paid, while
+    `posted_bill_ids` narrows it to the named bills. Otherwise dated bills
+    count fully once their day has passed (`<= today.day`) and undated bills
+    accrue evenly across the days of the month that have elapsed. The result
+    is negative when payments so far exceed charges so far.
     """
     days_in_month = calendar.monthrange(today.year, today.month)[1]
     accrued_charges_pence = 0
     accrued_payments_pence = 0
 
     for bill in bills:
-        if bill.paid_for_month:
+        posted = (
+            bill.paid_for_month
+            if posted_bill_ids is None
+            else bill.id in posted_bill_ids
+        )
+        if posted:
             amount_pence = bill.amount.pence
         elif bill.day_of_month is not None:
             if bill.day_of_month > today.day:
@@ -73,8 +98,11 @@ def anchored_month_opening_pence(
     `current_balance_used` holds the figure the user entered, which is their
     balance as of the day they set it (`balance_applied_day`). That figure
     already contains the charges and payments posted between the 1st and that
-    day, so when this month needs a start-of-month opening to project from, the
-    pre-anchor movement is backed out. For any other month or for a card with
+    day, plus any bill already ticked paid when it was typed (recorded on the
+    card as `balance_included_bill_ids`), so when this month needs a
+    start-of-month opening to project from, that movement is backed out. A
+    bill ticked paid only afterwards is not inside the figure and is not
+    backed out. For any other month or for a card with
     no manual anchor day (the balance was folded at a month rollover or is
     legacy data), the stored figure is already a start-of-month opening and is
     returned unchanged.
@@ -88,6 +116,9 @@ def anchored_month_opening_pence(
     if not is_anchor_month:
         return card.current_balance_used.pence
     pre_anchor_net = month_to_date_net_pence(
-        card=card, bills=bills, today=date(year, month, anchor_day)
+        card=card,
+        bills=bills,
+        today=date(year, month, anchor_day),
+        posted_bill_ids=frozenset(card.balance_included_bill_ids),
     )
     return card.current_balance_used.pence - pre_anchor_net

@@ -44,6 +44,7 @@ class SQLitePaymentMethodRepository:
                 balance_applied_month=row["balance_applied_month"],
                 balance_applied_day=row["balance_applied_day"],
                 scheduled_limit_changes=self._limit_changes_for(card_id=row["id"]),
+                balance_included_bill_ids=self._included_bills_for(card_id=row["id"]),
             )
             for row in cursor.fetchall()
         ]
@@ -82,7 +83,32 @@ class SQLitePaymentMethodRepository:
             balance_applied_month=row["balance_applied_month"],
             balance_applied_day=row["balance_applied_day"],
             scheduled_limit_changes=self._limit_changes_for(card_id=row["id"]),
+            balance_included_bill_ids=self._included_bills_for(card_id=row["id"]),
         )
+
+    def _included_bills_for(self, *, card_id: int) -> tuple[int, ...]:
+        """The bills the card's typed balance already contains, sorted."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT bill_id FROM card_balance_included_bills WHERE card_id = ?"
+            " ORDER BY bill_id",
+            (card_id,),
+        )
+        return tuple(row["bill_id"] for row in cursor.fetchall())
+
+    def set_balance_included_bills(
+        self, *, card_id: int, bill_ids: tuple[int, ...]
+    ) -> None:
+        """Replace the bills a card's typed balance already contains."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "DELETE FROM card_balance_included_bills WHERE card_id = ?", (card_id,)
+        )
+        cursor.executemany(
+            "INSERT INTO card_balance_included_bills (card_id, bill_id) VALUES (?, ?)",
+            [(card_id, bill_id) for bill_id in bill_ids],
+        )
+        self.conn.commit()
 
     def update_credit_card_balance(  # pragma: no cover
         self, *, card_id: int, balance_used: int
@@ -266,6 +292,9 @@ class SQLitePaymentMethodRepository:
     def hard_delete_credit_card(self, *, card_id: int) -> None:  # pragma: no cover
         """Permanently remove a credit card from both tables."""
         cursor = self.conn.cursor()
+        cursor.execute(
+            "DELETE FROM card_balance_included_bills WHERE card_id = ?", (card_id,)
+        )
         cursor.execute("DELETE FROM credit_cards WHERE id = ?", (card_id,))
         cursor.execute("DELETE FROM payment_methods WHERE id = ?", (card_id,))
         self.conn.commit()
