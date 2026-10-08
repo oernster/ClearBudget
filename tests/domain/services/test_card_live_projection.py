@@ -38,6 +38,7 @@ def _bill(
     category: str = "groceries",
     target_card_id: int | None = None,
     day: int | None = None,
+    paid: bool = False,
 ) -> Bill:
     return Bill(
         id=1,
@@ -51,6 +52,7 @@ def _bill(
         end_ym=None,
         active=True,
         target_card_id=target_card_id,
+        paid_for_month=paid,
     )
 
 
@@ -201,6 +203,25 @@ class TestMonthToDateNetPence:
         net = month_to_date_net_pence(card=card, bills=bills, today=date(2026, 6, 15))
         assert net == 1500
 
+    def test_paid_bill_counts_fully_before_its_day(self) -> None:
+        # Marked paid means it has happened, whatever day it was due.
+        card = _card()
+        bills = [_paid_payment(card, day=20)]
+        net = month_to_date_net_pence(card=card, bills=bills, today=date(2026, 6, 15))
+        assert net == -100000
+
+
+def _paid_payment(card, *, day: int) -> Bill:
+    """A 1000.00 payment to the card, marked paid, nominally due on `day`."""
+    return _bill(
+        pence=100000,
+        payment_method_id=1,
+        category="credit_payment",
+        target_card_id=card.id,
+        day=day,
+        paid=True,
+    )
+
 
 def _payment_heavy_bills(card) -> list:
     """61.98 of charges (day 8) and a 130.00 payment (day 11) on the card."""
@@ -255,3 +276,24 @@ class TestAnchoredMonthOpening:
             today=date(2026, 6, 13),
         )
         assert live.pence == 159200
+
+    def test_paid_payment_due_after_anchor_is_already_in_entered_balance(
+        self,
+    ) -> None:
+        # The reported case: 3563.85 typed on the 8th after a 1000.00 payment
+        # that is marked paid but nominally due on the 14th. The payment is in
+        # the typed figure, so the opening backs it out rather than the month
+        # subtracting it a second time.
+        card = _card(balance_pence=356385, anchor=(2026, 10, 8))
+        bills = [_paid_payment(card, day=14)]
+        opening = anchored_month_opening_pence(
+            card=card, bills=bills, year=2026, month=10
+        )
+        assert opening == 356385 + 100000
+        live = calculate_live_card_balance(
+            card=card,
+            opening_balance_pence=opening,
+            bills=bills,
+            today=date(2026, 10, 8),
+        )
+        assert live.pence == 356385

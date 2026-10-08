@@ -340,6 +340,29 @@ class TestCardGraphChaining:
         )
         assert openings == {card.id: 12345}
 
+    def test_a_skipped_card_payment_does_not_move_the_card(self, budget_service):
+        # The reported case: a regular card payment skipped for one month was
+        # still taken off the card, because the projection read the display
+        # list that keeps skipped bills.
+        card = _chained_card(budget_service, "Visa", 100000)
+        payment = budget_service.add_bill(
+            bill=_bill(
+                "Visa payment",
+                10000,
+                20,
+                category="credit_payment",
+                target_card_id=card.id,
+            )
+        )
+        budget_service.skip_bill_for_month(bill_id=payment.id, year_month=_JULY)
+        openings = card_openings_at(
+            budget_service.payment_method_repo,
+            budget_service.get_month_summary,
+            month=_AUGUST,
+            today_ym=_JULY,
+        )
+        assert openings == {card.id: 100000}
+
     def test_no_cards_yields_no_openings(self, budget_service):
         openings = card_openings_at(
             budget_service.payment_method_repo,

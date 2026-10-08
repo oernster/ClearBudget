@@ -26,7 +26,7 @@ def card_openings_at(
     there is nothing recorded to chain it from.
     """
     cards = payment_method_repo.get_all_credit_cards(include_inactive=False)
-    today_bills = list(get_month_summary(year_month=today_ym).all_bills)
+    today_bills = list(get_month_summary(year_month=today_ym).bills)
     balances = {
         card.id: anchored_month_opening_pence(
             card=card, bills=today_bills, year=today_ym.year, month=today_ym.month
@@ -35,7 +35,7 @@ def card_openings_at(
     }
     cursor = today_ym
     while cursor < month:
-        bills = list(get_month_summary(year_month=cursor).all_bills)
+        bills = list(get_month_summary(year_month=cursor).bills)
         for card in cards:
             state = calculate_card_monthly_state(
                 card=card, opening_balance_pence=balances[card.id], bills=bills
@@ -57,10 +57,10 @@ def get_card_monthly_states(
         month=year_month,
         today_ym=YearMonth(now.year, now.month),
     )
-    all_bills = list(get_month_summary(year_month=year_month).all_bills)
+    bills = list(get_month_summary(year_month=year_month).bills)
     return [
         calculate_card_monthly_state(
-            card=card, opening_balance_pence=balances[card.id], bills=all_bills
+            card=card, opening_balance_pence=balances[card.id], bills=bills
         )
         for card in cards
     ]
@@ -90,7 +90,7 @@ def get_card_projection_months(
     cursor = start_month
     for _ in range(n_months):
         s = get_month_summary(year_month=cursor)
-        bills = list(s.all_bills)
+        bills = list(s.bills)
         month_states = []
         for card in cards:
             state = calculate_card_monthly_state(

@@ -18,16 +18,20 @@ def month_to_date_net_pence(
     """Signed month-to-date movement on the card as of `today`, in pence.
 
     Returns the charges already posted minus the payments already made this
-    month. Dated bills count fully once their day has passed (`<= today.day`);
-    undated bills accrue evenly across the days of the month that have elapsed.
-    The result is negative when payments so far exceed charges so far.
+    month. A bill marked paid has happened, so it counts fully whatever day it
+    was due; otherwise dated bills count fully once their day has passed
+    (`<= today.day`) and undated bills accrue evenly across the days of the
+    month that have elapsed. The result is negative when payments so far
+    exceed charges so far.
     """
     days_in_month = calendar.monthrange(today.year, today.month)[1]
     accrued_charges_pence = 0
     accrued_payments_pence = 0
 
     for bill in bills:
-        if bill.day_of_month is not None:
+        if bill.paid_for_month:
+            amount_pence = bill.amount.pence
+        elif bill.day_of_month is not None:
             if bill.day_of_month > today.day:
                 continue
             amount_pence = bill.amount.pence

@@ -23,7 +23,7 @@ def get_live_card_balance(payment_method_repo, get_month_summary, *, card, today
     payments that post afterwards.
     """
     today_ym = YearMonth(today.year, today.month)
-    bills = list(get_month_summary(year_month=today_ym).all_bills)
+    bills = list(get_month_summary(year_month=today_ym).bills)
     opening_pence = anchored_month_opening_pence(
         card=card, bills=bills, year=today.year, month=today.month
     )
@@ -93,7 +93,7 @@ def update_card_balances_for_elapsed_dates(
             today.month,
         ):
             continue
-        bills = list(get_month_summary(year_month=today_ym).all_bills)
+        bills = list(get_month_summary(year_month=today_ym).bills)
         opening_pence = anchored_month_opening_pence(
             card=card, bills=bills, year=today.year, month=today.month
         )
