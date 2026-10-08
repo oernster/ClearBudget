@@ -16,7 +16,7 @@ except where the row says it is a house rule.
 |-----------|-------------|
 | Dependencies point inward: UI -> Application -> Domain <- Infrastructure. The Domain imports nothing but `shared` and no I/O, threading, network, logging or UI-framework module. Application never imports Infrastructure or the UI. Infrastructure never imports the UI (it may import the Application ports it implements). The UI never imports Infrastructure except `ui/window_builder.py`. The UI importing the Domain directly is recorded in [TECH_DEBT.md](TECH_DEBT.md) | [`tests/structural/test_layering_rules.py`](tests/structural/test_layering_rules.py) |
 | `auth` never imports the Domain, Application, Infrastructure or UI; it uses the standard library, `shared`, `bcrypt` and `keyring` | [`tests/structural/test_auth_structure.py`](tests/structural/test_auth_structure.py) |
-| No source file exceeds 400 lines; none sits in the 381 to 399 danger band. A file brought out of either is taken to 350 or below, which is a house rule the failure message states rather than an assertion | [`tests/structural/test_loc_limits.py`](tests/structural/test_loc_limits.py) |
+| No source file exceeds 400 lines or sits in the 381 to 399 danger band (taking a file out of either to 350 or below is a house rule, not asserted) | [`tests/structural/test_loc_limits.py`](tests/structural/test_loc_limits.py) |
 | Only `shared/config.py` derives the real data directory. The suite never resolves it and no installer module names it | [`tests/structural/test_data_dir_isolation.py`](tests/structural/test_data_dir_isolation.py) plus the autouse `CLEARBUDGET_HOME` fixture in `tests/conftest.py` |
 | The legacy data-directory migration cannot lose data: it is one rename on the same volume, otherwise a copy verified before the old tree is retired; the old tree stays in use until then. It runs at startup before the single-instance lock, never under the override | [`tests/shared/test_data_migration.py`](tests/shared/test_data_migration.py) and `test_data_dir_isolation.py::TestTheMigrationRunsFirstAtStartup` |
 | An open database is never copied as a file: it is snapshotted through SQLite's backup API and replaced only after its connection is closed, in `main.py` alone. A Load keeps the displaced budget until the loaded one opens | [`tests/shared/test_db_copy.py`](tests/shared/test_db_copy.py), [`test_db_copy_keep.py`](tests/shared/test_db_copy_keep.py), [`tests/structural/test_database_replacement_order.py`](tests/structural/test_database_replacement_order.py) |
@@ -34,7 +34,7 @@ except where the row says it is a house rule.
 | The Solvency page and the bank graph agree about every month ahead, because what the current month still has to come has one home (`pending_income` and `pending_bills` in `_balance_projection.py`) | [`tests/application/test_solvency_agrees_with_graph.py`](tests/application/test_solvency_agrees_with_graph.py) |
 | The Solvency bank page and the Reserves page read one simulation, `application/services/_month_walk.walk_month` | [`tests/application/test_month_walk.py`](tests/application/test_month_walk.py) |
 | Every colour value lives in `shared/palette.py`; a hex literal anywhere else fails the build | [`tests/structural/test_colour_source.py`](tests/structural/test_colour_source.py) |
-| No label rule in the stylesheet sets padding or margin; a label's inset is contents margins taken from its role | [`tests/ui_logic/test_label_insets.py`](tests/ui_logic/test_label_insets.py) |
+| No label stylesheet rule sets padding or margin; insets are contents margins set by role | [`tests/ui_logic/test_label_insets.py`](tests/ui_logic/test_label_insets.py) |
 | Highlight text takes the accent colour, never the focus-ring colour | [`tests/ui_logic/test_highlight_text_colour.py`](tests/ui_logic/test_highlight_text_colour.py) |
 | One Return press runs a dialog's submit once: no slot answers both `returnPressed` and `clicked` | [`tests/structural/test_return_key_invariants.py`](tests/structural/test_return_key_invariants.py) |
 | Every table takes focus from the keyboard only (`TabFocus`) and draws no focus ring in any state | [`tests/structural/test_table_focus_invariants.py`](tests/structural/test_table_focus_invariants.py) |
@@ -79,7 +79,7 @@ Pure business logic: no I/O, no Qt, no clock (`today` is always a parameter).
 | Package | Owns |
 |---------|------|
 | `entities/` | Frozen dataclasses: `Bill`, `IncomeSource`, `CreditCard`, `Commitment`, `MonthBill`, `MonthIncome`. Bills, income and commitments end by naming a final month rather than being deleted, so history keeps them |
-| `value_objects/` | `Amount` (non-negative pence; typed entry is capped at its `MAX_AMOUNT_PENCE` by `pence_from_text`), `YearMonth`, the due-day rule (`due_day`), `MonthGap` (hold-flat gap), `MonthAfloat` (what keeps a month above the overdraft floor), `Recurrence`, `CreditLimitChange`, `BillAmountChange`, `SolvencyResult`, card warnings |
+| `value_objects/` | `Amount` (non-negative pence; `pence_from_text` caps typed entry at `MAX_AMOUNT_PENCE`), `YearMonth`, the due-day rule (`due_day`), `MonthGap` (hold-flat gap), `MonthAfloat` (what keeps a month above the overdraft floor), `Recurrence`, `CreditLimitChange`, `BillAmountChange`, `SolvencyResult`, card warnings |
 | `services/` | `bank_cashflow` (day-by-day month simulation), `solvency_calculator`, `card_monthly_calculator` and `_card_live_projection`, `credit_limit_schedule`, `bill_amount_schedule`, `_prorating`, `safe_to_spend` (Safe to Spend Today and the capacity schedule), `reserve_accrual` and `reserve_floor`, `recommendations` (with `_recommendation_plan`, `_recommendation_trials`, `_recommendation_pauses`) |
 | `interfaces/` | Repository Protocols the Infrastructure implements |
 
@@ -171,7 +171,7 @@ extracted far enough from Qt to be tested under `tests/ui_logic`.
 |------|----------|
 | Window | `main_window.py` (`MainWindow`) composed of `_main_window_account`, `_main_window_menus`, `_main_window_nav` and `_main_window_views` mixins; it emits the session signals `switch_user_requested`, `sign_out_requested`, `database_replaced`, `full_restore_requested` and `database_load_requested` |
 | Wiring | `window_builder.py` (`build_main_window`), `startup.py`, `login_flow.py`, `launch_screen.py`, `ui_scale.py`, `_window_geometry.py`, `raise_watcher.py`, `update_check.py` |
-| View models | `MonthViewModel` and `SolvencyViewModel`. `month_summary_updated` fires on every bill or income change and refreshes Solvency, Credit Cards, Graph, Reserves and Recommendations, since their figures depend on Monthly Budget data |
+| View models | `MonthViewModel` and `SolvencyViewModel`. `month_summary_updated` fires on every bill or income change and refreshes Solvency, Credit Cards, Graph, Reserves and Recommendations |
 | Views | Seven views, in `VIEW_SPECS` order: Monthly Budget (`month_view`), Solvency (`solvency_panel`), Credit Cards, Reserves, Graph, Recommendations, Archive. Each sits in a `ScrollableView` |
 | Widgets | Dialogs (sign-in, accounts, bill, income, card, commitment, balance, settings, budgets, How It Works, About, licence), `_line_bar_chart` with axes and hover mixins, `bottom_tray` (the donate footer), `auto_scroller`, `first_stop_dialog` |
 | Utils | Navigation tray (`nav_header`, `nav_label`, `nav_toggle`, `nav_glyph_size`, `view_buttons`, `icon_buttons`), tables (`table_sort`, `sort_header`, `table_focus`, `text_metrics`), `amount_fields`, Qt-free wording modules (`reserves_text`, `recommendation_text`) |
@@ -186,11 +186,9 @@ take their state as arguments so they can be tested without a
 
 **Solvency panel.** Two pages in a `QStackedWidget`: the bank page (account
 position and the months ahead, from entered figures) and the projection page
-(Safe to Spend Today and the repeat-forward reading). Each forward month (like
-the displayed month's breakdown) leads with how far it goes overdrawn and when
-(`_solvency_panel_month_lines._overdrawn_line`, reading `walk_month`); a
-forward month then states what has to arrive to stay afloat and the day it
-must beat, then its shape line.
+(Safe to Spend Today and the repeat-forward reading). Every month shown leads
+with how far it goes overdrawn and when (`_overdrawn_line`, from
+`walk_month`). A forward month then states what must arrive and by when, then its shape.
 
 **Navigation tray.** Every view builds its own two-row tray: the account name
 and month cluster above; load, save, switch budget, bank, the seven view
@@ -217,12 +215,10 @@ builders (`_theme_pane`, `_theme_inputs`, `_theme_menus`, `_theme_controls`,
 `QApplication` level and persists the choice. Text colour is carried by
 named roles (`label_roles.set_role`) and state by Qt properties, so a live
 theme switch restyles everything; content painted in code exposes
-`restyle()`. A label's inset is not in the stylesheet: a word-wrapped label
-given stylesheet padding or margin keeps an empty second row at some widths.
-`label_insets.py` holds each role's inset; the application style
-(`app_style.py`, which also makes tooltips prompt) applies it as contents
-margins whenever a label is polished. Focus rings are three-state (none at rest; ring colour on hover
-or focus; red while disabled). Spin-box arrows and the card toggle are
+`restyle()`. Label insets live in `label_insets.py`, not the stylesheet
+(stylesheet padding gives a wrapped label an empty row at some widths);
+`app_style.py` applies them as contents margins on polish. Focus rings are
+three-state (none at rest; ring colour on hover or focus; red while disabled). Spin-box arrows and the card toggle are
 generated images (`spin_arrows`, `switch_images`). The setup program asks
 `theme_tokens` for the same roles.
 

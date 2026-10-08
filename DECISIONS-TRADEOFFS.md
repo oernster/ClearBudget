@@ -107,10 +107,10 @@ received early is not added twice. The cost is ticking what happens early.
 ### One anchored simulation
 
 The current month opens from the balance actually recorded; every later month
-opens where the previous one closed. Solvency and Reserves read one
-day-by-day walk of a month, with one rule for what is still to come, so they
-cannot disagree about the same month; in an export the current month's
-opening need not equal the previous close.
+opens where the previous one closed. Solvency and Reserves share one daily
+walk of a month and one rule for what is still to come, so they cannot
+disagree. The cost: in an export the current month's opening need not equal
+the previous close.
 
 ### Safe to Spend is bounded by the last month that stands alone
 
@@ -132,12 +132,10 @@ income is matched by name, so a renamed income counts as missing.
 ### Two figures for a month, never the same number
 
 What a month needs to hold flat is its whole bills and reserves against its
-whole income. What it needs to stay afloat is the money that keeps its lowest
-point at or above the floor, dated to the first day it goes under, since money
-arriving after a refusal did not prevent it. Card interest is kept out of the
-bank gap and reported per card, because it accrues on the cards rather than
-leaving the bank. Figures
-that differ by design need explaining.
+whole income. What it needs to stay afloat keeps its lowest point at or above
+the floor, dated to the first day it goes under: money after a refusal does
+not prevent it. Card interest stays out of the bank gap, reported per card,
+since it accrues on the cards. Figures that differ by design need explaining.
 
 ### The colour carries the alarm; the words carry the number
 
@@ -239,11 +237,10 @@ its files.
 
 ### Orphaned files are quarantined, never deleted
 
-After a restore, a budget belonging to no account in the backup is moved to a
-dated quarantine folder, as the restore's confirmation warns; creating an
-account does the same for files left under its name and records it in the
-log. No account inherits another's budget
-and nothing is lost; the folder grows until emptied by hand.
+After a restore, a budget belonging to no restored account moves to a dated
+quarantine folder, as the confirmation warns. Creating an account does the
+same for files left under its name and logs it. No account inherits another's
+budget and nothing is lost; the folder grows until emptied by hand.
 
 ### Data where each platform expects it
 
