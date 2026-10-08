@@ -15,11 +15,10 @@ import pytest
 
 from clear_budget.application.services._month_walk import walk_month
 from clear_budget.domain.value_objects.year_month import YearMonth
-from tests.application.test_month_graph_series import (  # noqa: F401 (fixture)
+from tests.application._graph_support import (
     _bill,
     _income,
     _seed_balance,
-    budget_service,
 )
 
 _MONTHS_AHEAD = 12

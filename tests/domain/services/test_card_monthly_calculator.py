@@ -47,6 +47,61 @@ def _bill(
     )
 
 
+class TestAMonthThatClearsTheCard:
+    """A balance paid off in full within the month is charged no interest.
+
+    The reported case: three cards cleared in October still showed a month's
+    interest on what they owed before the payment, then compounded it every
+    month after with nothing to pay it.
+    """
+
+    def _cleared(self, *, charges_pence: int = 0):
+        card = _card(apr=25.69, balance_pence=0)
+        bills = [
+            _bill(
+                name="Clear it",
+                pence=170640 + charges_pence,
+                category="credit_payment",
+                target_card_id=card.id,
+                day=14,
+            )
+        ]
+        if charges_pence:
+            bills.append(
+                _bill(name="Spend", pence=charges_pence, payment_method_id=card.id)
+            )
+        return calculate_card_monthly_state(
+            card=card, opening_balance_pence=170640, bills=bills
+        )
+
+    def test_no_interest_and_a_zero_close(self) -> None:
+        state = self._cleared()
+        assert state.monthly_interest.pence == 0
+        assert state.closing_balance.pence == 0
+
+    def test_charges_paid_off_in_the_same_month_still_clear_it(self) -> None:
+        state = self._cleared(charges_pence=1299)
+        assert state.monthly_interest.pence == 0
+        assert state.closing_balance.pence == 0
+
+    def test_a_balance_still_carried_is_charged_as_before(self) -> None:
+        # 12% APR is 1% a month on the opening, whatever was paid.
+        card = _card(apr=12.0, balance_pence=10000)
+        bills = [
+            _bill(
+                name="Part",
+                pence=4000,
+                category="credit_payment",
+                target_card_id=card.id,
+            )
+        ]
+        state = calculate_card_monthly_state(
+            card=card, opening_balance_pence=10000, bills=bills
+        )
+        assert state.monthly_interest.pence == 100
+        assert state.closing_balance.pence == 10000 - 4000 + 100
+
+
 class TestCalculateCardMonthlyState:
     def test_charges_on_card(self) -> None:
         card = _card(apr=0.0, balance_pence=5000)

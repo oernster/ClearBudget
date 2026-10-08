@@ -165,7 +165,15 @@ class GraphSeriesMixin:
                 )
             else:
                 opening = chained[card.id]
-            interest = monthly_interest_pence(card=card, opening_balance_pence=opening)
+            interest = monthly_interest_pence(
+                card=card,
+                opening_balance_pence=opening,
+                month_net_pence=month_to_date_net_pence(
+                    card=card,
+                    bills=bills,
+                    today=date(year_month.year, year_month.month, days),
+                ),
+            )
             values = tuple(
                 max(
                     0,

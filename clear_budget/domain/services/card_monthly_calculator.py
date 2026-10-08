@@ -10,13 +10,22 @@ _MIN_PAYMENT_FLOOR_PENCE = 2500  # £25 minimum floor
 _APR_TO_MONTHLY_DIVISOR = 1200  # 12 months x 100 (the APR is a percentage)
 
 
-def monthly_interest_pence(*, card: CreditCard, opening_balance_pence: int) -> int:
+def monthly_interest_pence(
+    *, card: CreditCard, opening_balance_pence: int, month_net_pence: int
+) -> int:
     """One month's interest on the opening balance, in pence.
+
+    `month_net_pence` is the month's charges less its payments. A month that
+    clears the card (the opening plus that movement comes to nothing) is
+    charged no interest, as a balance paid off in full is not; otherwise a
+    whole month is charged on the opening balance.
 
     The single statement of the interest rule, read by the monthly state
     below and by the month graph, so the two can never charge a different
     month's interest for the same card.
     """
+    if opening_balance_pence + month_net_pence <= 0:
+        return 0
     apr = card.interest_rate_apr or 0.0
     return int(opening_balance_pence * apr / _APR_TO_MONTHLY_DIVISOR)
 
@@ -55,7 +64,9 @@ def calculate_card_monthly_state(
         if b.category == "credit_payment" and b.target_card_id == card.id
     )
     interest_pence = monthly_interest_pence(
-        card=card, opening_balance_pence=opening_balance_pence
+        card=card,
+        opening_balance_pence=opening_balance_pence,
+        month_net_pence=charges_pence - payment_pence,
     )
 
     closing_pence = (

@@ -111,6 +111,15 @@ moves the card, including the payments the midnight update ticks on their
 own day. A payment that left before the balance was typed but was ticked only
 afterwards is taken twice until the balance is typed again.
 
+### Card interest: a whole month unless the month clears the card
+
+A card carrying a balance is charged a whole month's interest on what it owed
+when the month opened. A month that clears the card, its payments covering
+the opening and every charge, is charged none, as a balance paid in full is
+not. The rule is one line that every card figure shares. The cost is
+precision: a balance paid down part way through the month is charged as
+though it had stood all month, where a real card charges by the day.
+
 ### One anchored simulation
 
 The current month opens from the balance actually recorded; every later month
