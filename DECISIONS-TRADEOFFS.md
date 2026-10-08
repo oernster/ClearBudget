@@ -116,9 +116,11 @@ afterwards is taken twice until the balance is typed again.
 A card carrying a balance is charged a whole month's interest on what it owed
 when the month opened. A month that clears the card, its payments covering
 the opening and every charge, is charged none, as a balance paid in full is
-not. The rule is one line that every card figure shares. The cost is
-precision: a balance paid down part way through the month is charged as
-though it had stood all month, where a real card charges by the day.
+not. Interest lands once, at the month's end, as it does on a statement. The
+rule is one line that every card figure shares. The cost is precision: a
+balance paid down part way through the month is charged as though it had
+stood all month, so the projection can run slightly high for a card being
+paid down.
 
 ### One anchored simulation
 
