@@ -65,8 +65,13 @@ def solvency_label_roles_qss(
    it the loudest thing on its page. Sharing one role meant shrinking the
    headline to solve the banner's problem, which is two decisions taken as one.
 
-   Everything except the size is shared, so the two cannot drift apart on fill,
-   padding or the traffic-light states. The shared block deliberately sets NO
+   Everything except the size is shared, so the two cannot drift apart on fill
+   or the traffic-light states. NO padding here: on a word-wrapped QLabel, QSS
+   padding (or margin) is taken off the width twice when Qt sizes the wrap, so a
+   line that fits with up to 20px spare was given a second, empty row (measured:
+   the box grew from 40px to 63px across exactly that band). The inset is set as
+   contents margins in _solvency_panel_layout instead, which Qt counts once.
+   The shared block deliberately sets NO
    font-size, so the two size rules never compete and neither depends on the
    order they are interpolated in (verified by moving one above the other and
    re-measuring: both labels kept their size). Putting a size back into the
@@ -75,7 +80,6 @@ def solvency_label_roles_qss(
 QLabel#SolvencyBanner,
 QLabel#SafeToSpendHeadline {{
     font-weight: bold;
-    padding: 10px;
     border-radius: 5px;
     color: {t["primary_text"]};
 }}

@@ -35,6 +35,10 @@ from clear_budget.ui.utils.format_helpers import fmt
 _HEADING_ROLE = "SolvencySectionHeading"
 # Unscaled type size of a forward-projection line, matching the card block's.
 _PROJECTION_FONT_PX = 17
+# Inset between a filled line's edge and its text, on every side (unscaled,
+# matching the QSS padding it replaces).
+_FILL_INSET_PX = 10
+_SIDES = 4
 # The assumption, stated in the words the derivation is written in. It is
 # not a setting anyone turned on, so the page has to say what it did.
 _ASSUMPTION_TEXT = (
@@ -62,6 +66,19 @@ def _line(object_name: str, text: str = "") -> QLabel:
     label = QLabel(text)
     label.setWordWrap(True)
     label.setObjectName(object_name)
+    return label
+
+
+def _filled_line(object_name: str) -> QLabel:
+    """A wrapping line on a coloured fill: the banner and the headline.
+
+    The inset between fill edge and text is contents margins, never QSS
+    padding. Qt takes QSS padding off the width twice when it sizes a wrapped
+    label, so a sentence fitting with under twice the padding to spare was
+    given an empty second row and the fill grew for no visible reason.
+    """
+    label = _line(object_name)
+    label.setContentsMargins(*(_FILL_INSET_PX,) * _SIDES)
     return label
 
 
@@ -107,7 +124,8 @@ class SolvencyPanelLayoutMixin:
         # window it simply ran off the right edge with no ellipsis to say so.
         # No readable size fixes that (the worst variant would need 10px, below
         # the footnote role), so the line is allowed a second row instead.
-        self.position_banner = _line("SolvencyBanner", f"Safe: {fmt(0)} buffer")
+        self.position_banner = _filled_line("SolvencyBanner")
+        self.position_banner.setText(f"Safe: {fmt(0)} buffer")
         layout.addWidget(self.position_banner)
         self.midmonth_alert = _line("SolvencyMidmonthAlert")
         self.midmonth_alert.hide()
@@ -186,7 +204,7 @@ class SolvencyPanelLayoutMixin:
         # Its OWN role, so it keeps 22px while the banner above came down to
         # 20px to fit its sentence. It wraps for the same reason the banner
         # does: the "NOTHING SAFE TO SPEND" wording is a sentence too.
-        self.sts_banner = _line("SafeToSpendHeadline")
+        self.sts_banner = _filled_line("SafeToSpendHeadline")
         layout.addWidget(self.sts_banner)
         self.sts_detail = _line("SolvencyCommitted")
         layout.addWidget(self.sts_detail)
