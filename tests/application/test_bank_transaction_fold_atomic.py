@@ -152,10 +152,12 @@ class TestAnInterruptedFoldKeepsNothing:
         def stop(*_args, **_kwargs):
             raise _Interrupted
 
-        monkeypatch.setattr(_bank_transaction_fold, "set_bank_balance_pence", stop)
-        with pytest.raises(_Interrupted):
-            budget_service.apply_elapsed_bank_transactions(today=_TODAY)
-        monkeypatch.undo()
+        # Scoped rather than undone: monkeypatch.undo() would also lift the
+        # autouse data-directory redirect for the rest of the test.
+        with monkeypatch.context() as patch:
+            patch.setattr(_bank_transaction_fold, "set_bank_balance_pence", stop)
+            with pytest.raises(_Interrupted):
+                budget_service.apply_elapsed_bank_transactions(today=_TODAY)
 
         _assert_nothing_kept(budget_service)
         _assert_rerun_is_true(budget_service)
