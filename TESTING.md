@@ -90,6 +90,7 @@ The structural guards, one rule each:
 | `test_handover_invariants.py` | the sign-in screen is never stranded |
 | `test_first_run_close.py` | the first-run wizard keeps its close button |
 | `test_delivery_assets.py` | every runtime asset reaches every platform |
+| `test_icon_name_case.py` | every sized icon is named exactly as the repository spells it |
 | `test_installer_layout_stability.py` | setup controls do not move during an operation |
 | `test_view_page_lists_agree.py` | the three view lists agree, in order |
 | `test_button_run_slices.py` | a view takes the button run whole, less Archive |

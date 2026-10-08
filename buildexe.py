@@ -53,11 +53,12 @@ def build_exe() -> int:
         # (`resources._QT_ICON_NAMES`) with the 256 at the head of it, so with
         # the 256 present the 128, 64, 48, 32 and 16 could never be selected
         # by any code path: they were bytes that shipped and were never read.
-        # `main._find_runtime_icon` and `find_splash_image_path` name the 256
-        # and nothing else. Staged lower-cased because that is the name those
-        # two look for; the repository ships it capitalised and PyInstaller
-        # stages a file under whatever name it is given here.
-        "--add-data=clearbudget_256.png:.",
+        # `find_runtime_window_icon` and `find_splash_image_path` name the 256
+        # and nothing else. Staged under the repository's own spelling, the one
+        # name every build uses: PyInstaller stages a file under whatever name
+        # it is given, so a lower-cased name here would only work on a
+        # filesystem that ignores case. The Graph button wears this same file.
+        "--add-data=ClearBudget_256.png:.",
         # No ICO here on purpose. Nothing in the application ever asks for one:
         # `find_app_icon_path` and `find_qt_window_icon_path` are called only by
         # the SETUP program, which carries its own copy and deploys it beside
@@ -68,9 +69,7 @@ def build_exe() -> int:
         "--add-data=monthlybudget.png:.",
         "--add-data=solvency.png:.",
         "--add-data=creditcards.png:.",
-        # The Graph tab wears the app icon and its bank/cards switch wears
-        # the bank picture; both are read through the same lookup.
-        "--add-data=ClearBudget_256.png:.",
+        # The Graph page's bank/cards switch wears the bank picture.
         "--add-data=bank-icon.png:.",
         "--add-data=bank-icon2.png:.",
         "--add-data=creditcards2.png:.",

@@ -28,15 +28,16 @@ APP_ICO_NAME = "clearbudget.ico"
 APP_ICO_NAMES = (APP_ICO_NAME, "ClearBudget.ico")
 
 # PNG sizes deployed beside the executable as a Qt runtime fallback for the
-# window and taskbar icon when the ICO plugin is unavailable.
+# window and taskbar icon when the ICO plugin is unavailable. Spelt as the
+# repository spells them; buildinstaller.py stages exactly these names.
 APP_ICON_PNG_NAMES = (
-    "clearbudget_16.png",
-    "clearbudget_32.png",
-    "clearbudget_48.png",
-    "clearbudget_64.png",
-    "clearbudget_128.png",
-    "clearbudget_256.png",
-    "clearbudget_512.png",
+    "ClearBudget_16.png",
+    "ClearBudget_32.png",
+    "ClearBudget_48.png",
+    "ClearBudget_64.png",
+    "ClearBudget_128.png",
+    "ClearBudget_256.png",
+    "ClearBudget_512.png",
 )
 
 # --- payload layout ----------------------------------------------------------

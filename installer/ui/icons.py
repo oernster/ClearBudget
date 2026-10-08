@@ -30,10 +30,10 @@ def _find_brand_icon_path(*, project_root: Path) -> Path | None:
     """
 
     filenames = [
-        "clearbudget_256.png",
-        "clearbudget_128.png",
-        "clearbudget_64.png",
-        "clearbudget_48.png",
+        "ClearBudget_256.png",
+        "ClearBudget_128.png",
+        "ClearBudget_64.png",
+        "ClearBudget_48.png",
         "clearbudget.ico",
     ]
 

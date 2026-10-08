@@ -29,8 +29,9 @@ _ICO_NAMES = ("ClearBudget.ico", "clearbudget.ico")
 # and looked for the lower-cased form. On Windows and on a default macOS
 # volume the filesystem hides the difference. On Linux or on a case-sensitive
 # APFS volume, it does not. Searching both is one tuple against a class of bug
-# that only ever shows up on someone else's machine.
-_RUNTIME_ICON_NAME = "clearbudget_256.png"
+# that only ever shows up on someone else's machine. Every build now stages the
+# repository's spelling; the lower-cased one is still searched for installs
+# made before that.
 
 
 def _both_cases(stem: str) -> tuple[str, str]:
@@ -47,7 +48,7 @@ _QT_ICON_NAMES = ("clearbudget.ico", "ClearBudget.ico") + tuple(
     name for size in _PNG_SIZES for name in _both_cases(size)
 )
 
-_SPLASH_NAMES = _both_cases("256")
+_ICON_256_NAMES = _both_cases("256")
 
 # The view-button artwork, one file per view that carries a picture rather than a
 # glyph. Looked up by filename through the same roots as every other asset, so
@@ -212,7 +213,7 @@ def find_splash_image_path(*, project_root: Path | None = None) -> Path | None:
         _cwd(),
     ]
     candidates = [
-        root / name for root in roots if root is not None for name in _SPLASH_NAMES
+        root / name for root in roots if root is not None for name in _ICON_256_NAMES
     ]
     return _first_existing(candidates)
 
@@ -296,11 +297,12 @@ def find_runtime_window_icon() -> Path | None:
     repository's main.py (running from source). It lives here with every
     other asset lookup rather than in the composition root, so no module
     resolves an asset by counting directory levels from its own location.
+
+    Both spellings, like every lookup here: it used to ask for the lower-cased
+    name only, which a source checkout on a case-sensitive filesystem does not
+    have, so the window opened with no icon there.
     """
     import sys
 
-    beside_exe = Path(sys.executable).resolve().parent / _RUNTIME_ICON_NAME
-    if beside_exe.exists():
-        return beside_exe
-    beside_main = Path(__file__).resolve().parents[2] / _RUNTIME_ICON_NAME
-    return beside_main if beside_main.exists() else None
+    roots = (Path(sys.executable).resolve().parent, Path(__file__).resolve().parents[2])
+    return _first_existing(root / name for root in roots for name in _ICON_256_NAMES)

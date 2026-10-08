@@ -346,7 +346,7 @@ read source rather than run widgets:
 | `test_return_key_invariants.py`, `test_table_focus_invariants.py`, `test_button_run_slices.py`, `test_nav_entry_invariants.py`, `test_tray_switch_invariants.py`, `test_view_page_lists_agree.py` | Keyboard ring and view wiring |
 | `test_refusal_order.py`, `test_save_location_defaults.py`, `test_handover_invariants.py`, `test_session_exit_invariants.py`, `test_first_run_close.py`, `test_cross_view_refresh.py`, `test_nav_user_label.py` | Flow ordering and session behaviour |
 | `test_help_names_the_tray.py`, `test_help_names_the_views.py`, `test_help_example_is_arithmetic.py` | How It Works stays true |
-| `test_delivery_assets.py`, `test_installer_layout_stability.py` | Packaging and the setup window |
+| `test_delivery_assets.py`, `test_icon_name_case.py`, `test_installer_layout_stability.py` | Packaging and the setup window |
 
 ## Testing
 

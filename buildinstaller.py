@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import stamp_version
+from installer.constants import APP_ICON_PNG_NAMES
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 
@@ -103,13 +104,9 @@ def main() -> int:
         # it can deploy them next to ClearBudget.exe (for taskbar + shortcut icon
         # consistency).
         f"{icon};.",
-        f"{PROJECT_ROOT / 'clearbudget_16.png'};.",
-        f"{PROJECT_ROOT / 'clearbudget_32.png'};.",
-        f"{PROJECT_ROOT / 'clearbudget_48.png'};.",
-        f"{PROJECT_ROOT / 'clearbudget_64.png'};.",
-        f"{PROJECT_ROOT / 'clearbudget_128.png'};.",
-        f"{PROJECT_ROOT / 'clearbudget_256.png'};.",
-        f"{PROJECT_ROOT / 'clearbudget_512.png'};.",
+        # The sized PNGs, by the names the setup program deploys, so the
+        # staged list and the deployed list cannot drift apart.
+        *(f"{PROJECT_ROOT / name};." for name in APP_ICON_PNG_NAMES),
         # The theme toggle's two faces, the same artwork the application's
         # tray wears, so the setup program and the app never disagree about
         # which picture means which mode.
