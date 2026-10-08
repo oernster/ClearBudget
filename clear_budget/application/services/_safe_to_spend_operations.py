@@ -24,6 +24,7 @@ from clear_budget.application.services._overdraft_projection import (
 )
 from clear_budget.domain.services._prorating import days_in_month
 from clear_budget.domain.services.safe_to_spend import (
+    DEFAULT_WINDOW_MONTHS,
     CapacityStep,
     DayProjection,
     SustainableResult,
@@ -43,9 +44,6 @@ _FORECAST_WINDOW_MONTHS = _DEFAULT_HORIZON_MONTHS
 # rather than planning to land on exactly zero; an explicitly saved zero is
 # honoured as zero (the UI calls the floor a "buffer").
 _DEFAULT_BUFFER_PENCE = 2000
-
-# Months a spendable figure must keep standing when the user has not chosen.
-_DEFAULT_WINDOW_MONTHS = 4
 
 
 def _match_key(source) -> str:
@@ -105,7 +103,7 @@ class SafeToSpendOperationsMixin:
         )
 
         stored = get_sustainable_window_months(getattr(self.bill_repo, "conn", None))
-        return _DEFAULT_WINDOW_MONTHS if stored is None else stored
+        return DEFAULT_WINDOW_MONTHS if stored is None else stored
 
     def set_sustainable_window_months(self, *, months: int) -> None:  # pragma: no cover
         from clear_budget.application.services._settings_operations import (

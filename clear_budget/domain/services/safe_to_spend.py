@@ -45,7 +45,7 @@ class SustainableError(BudgetError):
 # How far ahead a sustainable figure must hold. Far enough that a month which
 # collapses cannot be waved through as somebody else's problem, near enough
 # that a forecast years out does not veto every penny today.
-_DEFAULT_WINDOW_MONTHS = 4
+DEFAULT_WINDOW_MONTHS = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -194,7 +194,7 @@ def sustainable_spend(
     projection: Sequence[DayProjection],
     today: date,
     floor: ReserveFloor,
-    window_months: int = _DEFAULT_WINDOW_MONTHS,
+    window_months: int = DEFAULT_WINDOW_MONTHS,
 ) -> SustainableResult:
     """The most that can be spent today leaving every surviving month standing.
 
@@ -273,7 +273,7 @@ def sustainable_capacity(
     projection: Sequence[DayProjection],
     today: date,
     floor: ReserveFloor,
-    window_months: int = _DEFAULT_WINDOW_MONTHS,
+    window_months: int = DEFAULT_WINDOW_MONTHS,
 ) -> tuple[CapacityStep, ...]:
     """`sustainable_spend` from each remaining day of today's month onward.
 
