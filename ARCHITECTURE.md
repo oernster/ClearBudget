@@ -29,7 +29,8 @@ except where the row says it is a house rule.
 | 100% line and branch coverage over `clear_budget` and the Qt-free half of `installer` | `--cov-fail-under=100`, `branch = True` in [`.coveragerc`](.coveragerc) and [`pyproject.toml`](pyproject.toml) |
 | Money is integer pence. Typed text is read by `application/formatting.pence_from_text` through `Decimal`; a fraction of a penny, a negative (outside signed fields), a non-number or anything over `MAX_AMOUNT_PENCE` is refused, never rounded | [`tests/application/test_pence_from_text.py`](tests/application/test_pence_from_text.py) |
 | An exported report adds up (`opening + net == close`), agrees with the on-screen month graph and anchors the current month on the recorded balance | [`tests/application/test_projection_series.py`](tests/application/test_projection_series.py) |
-| The card graph and the Credit Cards view open a future month from the same chained figure (`card_openings_at`) | [`tests/application/test_month_graph_series.py`](tests/application/test_month_graph_series.py) (`TestCardGraphChaining`) |
+| The card graph and the Credit Cards view open a future month from the same chained figure (`card_openings_at`), built from the counted bills, so a skipped or switched-off payment never moves a card | [`tests/application/test_month_graph_series.py`](tests/application/test_month_graph_series.py) (`TestCardGraphChaining`) |
+| A typed card balance contains exactly the card's bills ticked paid when it was saved (`balance_included_bill_ids`): those are not taken a second time, while a bill ticked afterwards (the midnight fold ticks a card payment on its own day) still comes off | [`tests/application/test_card_balance_updates.py`](tests/application/test_card_balance_updates.py) (`TestPaymentsTickedAroundASavedBalance`), [`tests/domain/services/test_card_live_projection.py`](tests/domain/services/test_card_live_projection.py), [`tests/infrastructure/test_card_balance_included_bills.py`](tests/infrastructure/test_card_balance_included_bills.py) |
 | A single exported HTML file references nothing outside itself; an exported package links only to bare sibling filenames; user text cannot inject markup | [`tests/application/reporting/test_reports.py`](tests/application/reporting/test_reports.py), [`test_package_report.py`](tests/application/reporting/test_package_report.py) |
 | The Solvency page and the bank graph agree about every month ahead, because what the current month still has to come has one home (`pending_income` and `pending_bills` in `_balance_projection.py`) | [`tests/application/test_solvency_agrees_with_graph.py`](tests/application/test_solvency_agrees_with_graph.py) |
 | The Solvency bank page and the Reserves page read one simulation, `application/services/_month_walk.walk_month` | [`tests/application/test_month_walk.py`](tests/application/test_month_walk.py) |
@@ -131,10 +132,11 @@ Other packages:
 | `sqlite/session_database.py` | `open_user_database`, the one place that decides which file a session opens (via the budget registry), plus `load_currency` |
 | `update/github_release_source.py` | `GitHubReleaseSource`: one best-effort stdlib `urllib` GET of the latest published release; any failure yields `None` |
 
-Each budget database holds 20 application tables: payment methods, bill and
+Each budget database holds 21 application tables: payment methods, bill and
 income templates, archived months, credit cards, settings, the per-month
 override/skip/paid/received/extras tables, scheduled credit-limit and bill
-amount changes, the balance-applied log, commitments and `schema_version`.
+amount changes, the balance-applied log, the bills each typed card balance
+already contains, commitments and `schema_version`.
 
 ### Auth (`clear_budget/auth/`)
 

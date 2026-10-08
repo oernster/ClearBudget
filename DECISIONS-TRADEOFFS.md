@@ -104,6 +104,13 @@ A Paid or Received tick marks an item as done even before its day, rather
 than waiting for the calendar. A bill paid early is not taken twice; income
 received early is not added twice. The cost is ticking what happens early.
 
+A tick says that something happened, never when. So a typed card balance
+records which of the card's payments and charges were already ticked as it
+was saved: those are inside the figure, while anything ticked later still
+moves the card, including the payments the midnight update ticks on their
+own day. A payment that left before the balance was typed but was ticked only
+afterwards is taken twice until the balance is typed again.
+
 ### One anchored simulation
 
 The current month opens from the balance actually recorded; every later month
