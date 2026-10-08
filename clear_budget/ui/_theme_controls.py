@@ -263,7 +263,6 @@ QLabel#StatusDateLabel {{
     font-size: {status_px}px;
     font-weight: bold;
     color: {t["info"]};
-    padding: 2px 8px;
     background: transparent;
 }}
 {label_roles_qss(t, s)}"""

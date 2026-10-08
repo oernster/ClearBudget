@@ -22,9 +22,6 @@ _VALUE_LABEL_FONT_PX = 20
 _SECTION_FONT_PX = 18
 _HEADING_FONT_PX = 17
 _BREAKDOWN_FONT_PX = 15
-# Page-body label padding. Public because the Recommendations rows align a
-# checkbox to their label's first text line and must know where it starts.
-BODY_PADDING_PX = 5
 # Dialog type scale: inline note, strong warning, login heading, code box.
 _NOTE_FONT_PX = 11
 _STRONG_WARN_FONT_PX = 14
@@ -43,6 +40,9 @@ def label_roles_qss(t: dict[str, str], s: dict[str, str]) -> str:
     inline stylesheet, which is what lets the whole window follow a live theme
     toggle: re-applying the stylesheet restyles every role at once, while an
     inline style set at build time would keep its original colour.
+
+    No rule here sets padding or margin: a label's inset is contents margins,
+    applied by role from ui.label_insets, which says why.
     """
     small = ui_scale.px(_SMALL_LABEL_FONT_PX)
     body = ui_scale.px(_BODY_LABEL_FONT_PX)
@@ -59,7 +59,6 @@ QLabel#LabelHint {{
     font-size: {small}px;
     font-style: italic;
     color: {t["accent"]};
-    padding: 0px 5px;
 }}
 
 QLabel#LabelMuted {{
@@ -73,12 +72,10 @@ QLabel#LabelMuted {{
    beside the Solvency banner. */
 QLabel#LabelBody {{
     font-size: {ui_scale.px(_SECTION_FONT_PX)}px;
-    padding: {ui_scale.px(BODY_PADDING_PX)}px;
 }}
 
 QLabel#LabelBodyDetail {{
     font-size: {ui_scale.px(_BREAKDOWN_FONT_PX)}px;
-    padding: {ui_scale.px(BODY_PADDING_PX)}px;
     color: {t["text_muted"]};
 }}
 
@@ -110,34 +107,29 @@ QLabel#LabelSectionTitle {{
 
 QLabel#LabelValue {{
     font-size: {value}px;
-    padding: 5px;
 }}
 
 QLabel#LabelGood {{
     font-size: {value}px;
     font-weight: bold;
     color: {s[STATE_SAFE]};
-    padding: 5px;
 }}
 
 QLabel#LabelWarn {{
     font-size: {value}px;
     font-weight: bold;
     color: {t["warn"]};
-    padding: 5px;
 }}
 
 QLabel#LabelDanger {{
     font-size: {value}px;
     font-weight: bold;
     color: {t["danger"]};
-    padding: 5px;
 }}
 
 QLabel#WarnNote, QLabel#DangerNote {{
     font-size: {small}px;
     font-weight: bold;
-    padding: 0px 5px;
 }}
 
 QLabel#WarnNote {{
@@ -157,7 +149,6 @@ QFrame#Separator {{
 QLabel#LabelNote {{
     font-size: {ui_scale.px(_NOTE_FONT_PX)}px;
     color: {t["link"]};
-    padding: 2px;
 }}
 
 QLabel#LabelStrongWarn {{
@@ -181,7 +172,6 @@ QLabel#LoginTitle {{
     font-size: {ui_scale.px(_LOGIN_TITLE_FONT_PX)}px;
     font-weight: bold;
     color: {t["info"]};
-    margin-bottom: 4px;
 }}
 
 QTextEdit#RecoveryCodeBox {{

@@ -66,12 +66,9 @@ def solvency_label_roles_qss(
    headline to solve the banner's problem, which is two decisions taken as one.
 
    Everything except the size is shared, so the two cannot drift apart on fill
-   or the traffic-light states. NO padding here: on a word-wrapped QLabel, QSS
-   padding (or margin) is taken off the width twice when Qt sizes the wrap, so a
-   line that fits with up to 20px spare was given a second, empty row (measured:
-   the box grew from 40px to 63px across exactly that band). The inset is set as
-   contents margins in _solvency_panel_layout instead, which Qt counts once.
-   The shared block deliberately sets NO
+   or the traffic-light states. No rule in this module sets padding or margin:
+   a label's inset is contents margins, applied by role from ui.label_insets,
+   which says why. The shared block deliberately sets NO
    font-size, so the two size rules never compete and neither depends on the
    order they are interpolated in (verified by moving one above the other and
    re-measuring: both labels kept their size). Putting a size back into the
@@ -121,7 +118,6 @@ QLabel#SafeToSpendHeadline[state="{STATE_SAFE}"] {{
 QLabel#SolvencyMidmonthAlert {{
     font-size: {section_px}px;
     font-weight: bold;
-    padding: 8px;
     border-radius: 5px;
     background-color: {t["danger_strong"]};
     color: {t["primary_text"]};
@@ -142,7 +138,6 @@ QLabel#SolvencySectionHeading {{
 
 QLabel#SolvencyCommitted {{
     font-size: {section_px}px;
-    padding: 5px;
     color: {t["text_muted"]};
 }}
 
@@ -156,32 +151,27 @@ QLabel#SolvencyCommitted {{
    of its own, unlike the months below it. */
 QLabel#SolvencyAssumedNote {{
     font-size: {section_px}px;
-    padding: 5px;
     font-style: italic;
     color: {t["text_muted"]};
 }}
 
 QLabel#SolvencyShortfall {{
     font-size: {section_px}px;
-    padding: 5px;
     color: {s[STATE_RED]};
 }}
 
 QLabel#SolvencyRemainingBank {{
     font-size: {section_px}px;
-    padding: 5px;
     color: {t["warn"]};
 }}
 
 QLabel#SolvencyRemainingCard {{
     font-size: {section_px}px;
-    padding: 5px;
     color: {t["warn_strong"]};
 }}
 
 QLabel#SolvencyBreakdown {{
     font-size: {breakdown_px}px;
-    padding: 5px;
     color: {t["text_muted"]};
 }}
 """

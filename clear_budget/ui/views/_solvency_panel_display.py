@@ -210,8 +210,7 @@ class SolvencyPanelDisplayMixin:
                 self.committed_label.setText(f"Committed this month: {fmt(committed)}")
                 self.remaining_bank_label.setStyleSheet(
                     ui_scale.style(
-                        "font-size: 18px; padding: 5px;"
-                        f" color: {theme.colours()['warn']};"
+                        f"font-size: 18px; color: {theme.colours()['warn']};"
                     )
                 )
                 self.remaining_bank_label.setText(
@@ -246,7 +245,7 @@ class SolvencyPanelDisplayMixin:
                     f" {fmt(balance)}</span>"
                 )
                 self.remaining_bank_label.setStyleSheet(
-                    ui_scale.style("font-size: 18px; padding: 5px;")
+                    ui_scale.style("font-size: 18px;")
                 )
                 self.remaining_card_label.setText(
                     f"All bills this month (cards): {fmt(all_card)}"

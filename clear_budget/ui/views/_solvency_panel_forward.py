@@ -86,7 +86,7 @@ class SolvencyPanelForwardMixin:
     ) -> None:
         """Write one projection block, in its month's traffic-light colour."""
         text = f"{heading}\n{body}" if body else heading
-        style = f"font-size: {_PROJECTION_FONT_PX}px; padding: 5px; color: {colour};"
+        style = f"font-size: {_PROJECTION_FONT_PX}px; color: {colour};"
         if clarion:
             style += " font-weight: bold; font-style: italic;"
         label.setText(text)

@@ -42,11 +42,11 @@ def main(argv: list[str] | None = None) -> int:
 
     app = QApplication([f"{APP_NAME} Setup"])
 
-    # Same prompt-tooltip style the app itself installs, so the installer's
+    # Same application style the app itself installs, so the installer's
     # hover text (the theme toggle) does not sit on Qt's 700ms default.
-    from clear_budget.ui import tooltip_style
+    from clear_budget.ui import app_style
 
-    tooltip_style.install(app)
+    app_style.install(app)
 
     app.setApplicationName(f"{APP_NAME} Setup")
     app.setApplicationVersion(__version__)

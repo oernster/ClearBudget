@@ -35,10 +35,6 @@ from clear_budget.ui.utils.format_helpers import fmt
 _HEADING_ROLE = "SolvencySectionHeading"
 # Unscaled type size of a forward-projection line, matching the card block's.
 _PROJECTION_FONT_PX = 17
-# Inset between a filled line's edge and its text, on every side (unscaled,
-# matching the QSS padding it replaces).
-_FILL_INSET_PX = 10
-_SIDES = 4
 # The assumption, stated in the words the derivation is written in. It is
 # not a setting anyone turned on, so the page has to say what it did.
 _ASSUMPTION_TEXT = (
@@ -69,26 +65,10 @@ def _line(object_name: str, text: str = "") -> QLabel:
     return label
 
 
-def _filled_line(object_name: str) -> QLabel:
-    """A wrapping line on a coloured fill: the banner and the headline.
-
-    The inset between fill edge and text is contents margins, never QSS
-    padding. Qt takes QSS padding off the width twice when it sizes a wrapped
-    label, so a sentence fitting with under twice the padding to spare was
-    given an empty second row and the fill grew for no visible reason.
-    """
-    label = _line(object_name)
-    label.setContentsMargins(*(_FILL_INSET_PX,) * _SIDES)
-    return label
-
-
 def _projection_label() -> QLabel:
-    """One month's forward-projection block."""
-    label = QLabel("")
-    label.setWordWrap(True)
-    label.setStyleSheet(
-        ui_scale.style(f"font-size: {_PROJECTION_FONT_PX}px; padding: 5px;")
-    )
+    """One month's forward-projection block; its role carries the inset."""
+    label = _line(label_roles.SOLVENCY_PROJECTION)
+    label.setStyleSheet(ui_scale.style(f"font-size: {_PROJECTION_FONT_PX}px;"))
     return label
 
 
@@ -124,37 +104,41 @@ class SolvencyPanelLayoutMixin:
         # window it simply ran off the right edge with no ellipsis to say so.
         # No readable size fixes that (the worst variant would need 10px, below
         # the footnote role), so the line is allowed a second row instead.
-        self.position_banner = _filled_line("SolvencyBanner")
-        self.position_banner.setText(f"Safe: {fmt(0)} buffer")
+        self.position_banner = _line(
+            label_roles.SOLVENCY_BANNER, f"Safe: {fmt(0)} buffer"
+        )
         layout.addWidget(self.position_banner)
-        self.midmonth_alert = _line("SolvencyMidmonthAlert")
+        self.midmonth_alert = _line(label_roles.SOLVENCY_MIDMONTH_ALERT)
         self.midmonth_alert.hide()
         layout.addWidget(self.midmonth_alert)
 
         layout.addWidget(_heading("Overall Health"))
         self.balance_label = _line(label_roles.VALUE, f"Bank Balance: {fmt(0)}")
         layout.addWidget(self.balance_label)
-        self.committed_label = _line("SolvencyCommitted", "Committed this month: -")
+        self.committed_label = _line(
+            label_roles.SOLVENCY_COMMITTED, "Committed this month: -"
+        )
         layout.addWidget(self.committed_label)
         # Hidden until a budget actually sets something aside. The Reserves
         # page is opt-in; a permanently empty row on a page this dense is a
         # line of noise for everyone who never opens it.
         self.set_aside_label = _line(
-            "SolvencyCommitted", reserves_text.solvency_set_aside_line(amount=fmt(0))
+            label_roles.SOLVENCY_COMMITTED,
+            reserves_text.solvency_set_aside_line(amount=fmt(0)),
         )
         self.set_aside_label.hide()
         layout.addWidget(self.set_aside_label)
         self.remaining_bank_label = _line(
-            "SolvencyRemainingBank", "Still due this month (bank): -"
+            label_roles.SOLVENCY_REMAINING_BANK, "Still due this month (bank): -"
         )
         layout.addWidget(self.remaining_bank_label)
         self.remaining_card_label = _line(
-            "SolvencyRemainingCard", "Still due this month (cards): -"
+            label_roles.SOLVENCY_REMAINING_CARD, "Still due this month (cards): -"
         )
         layout.addWidget(self.remaining_card_label)
-        self.month_breakdown_label = _line("SolvencyBreakdown")
+        self.month_breakdown_label = _line(label_roles.SOLVENCY_BREAKDOWN)
         layout.addWidget(self.month_breakdown_label)
-        self.gap_label = _line("SolvencyCommitted")
+        self.gap_label = _line(label_roles.SOLVENCY_COMMITTED)
         layout.addWidget(self.gap_label)
 
         layout.addWidget(_heading("Next Two Months As Entered"))
@@ -204,21 +188,21 @@ class SolvencyPanelLayoutMixin:
         # Its OWN role, so it keeps 22px while the banner above came down to
         # 20px to fit its sentence. It wraps for the same reason the banner
         # does: the "NOTHING SAFE TO SPEND" wording is a sentence too.
-        self.sts_banner = _filled_line("SafeToSpendHeadline")
+        self.sts_banner = _line(label_roles.SAFE_TO_SPEND_HEADLINE)
         layout.addWidget(self.sts_banner)
-        self.sts_detail = _line("SolvencyCommitted")
+        self.sts_detail = _line(label_roles.SOLVENCY_COMMITTED)
         layout.addWidget(self.sts_detail)
         # A shortfall spending cannot fix gets its own label rather than a
         # second sentence in the line above: it is the one statement here that
         # no restraint answers, so it takes the traffic light's red while the
         # reach sentence keeps the muted body colour. One label could not hold
         # both, since a QLabel carries one colour.
-        self.sts_shortfall = _line("SolvencyShortfall")
+        self.sts_shortfall = _line(label_roles.SOLVENCY_SHORTFALL)
         self.sts_shortfall.hide()
         layout.addWidget(self.sts_shortfall)
         # Hidden when the figure never moves, so a flat month says nothing
         # rather than restating the headline.
-        self.sts_capacity = _line("SolvencyBreakdown")
+        self.sts_capacity = _line(label_roles.SOLVENCY_BREAKDOWN)
         self.sts_capacity.hide()
         layout.addWidget(self.sts_capacity)
 
@@ -232,12 +216,14 @@ class SolvencyPanelLayoutMixin:
         # The rule is DERIVED, so it has to be stated: nothing was ticked to
         # produce this page and the user cannot infer the rule from the
         # figures it produced.
-        self.assumed_basis_label = _line("SolvencyCommitted", _ASSUMPTION_TEXT)
+        self.assumed_basis_label = _line(
+            label_roles.SOLVENCY_COMMITTED, _ASSUMPTION_TEXT
+        )
         layout.addWidget(self.assumed_basis_label)
         # Italic, because it is the one block on the page that is not yet
         # true: it names money that has to turn up. The colour stays neutral,
         # since a list of expectations has no traffic-light state of its own.
-        self.assumed_gaps_label = _line("SolvencyAssumedNote")
+        self.assumed_gaps_label = _line(label_roles.SOLVENCY_ASSUMED_NOTE)
         layout.addWidget(self.assumed_gaps_label)
 
         self.assumed_forward_heading = _heading("Next Two Months If This Repeats")
@@ -252,7 +238,7 @@ class SolvencyPanelLayoutMixin:
         layout.addWidget(self.m2_assumed_projection_label)
 
         self.assumed_empty_label = _line(
-            "SolvencyCommitted",
+            label_roles.SOLVENCY_COMMITTED,
             "Nothing to assume: every month ahead already carries the income"
             " this one does.",
         )

@@ -70,10 +70,11 @@ def begin() -> Startup | None:
 
     # Before any widget exists, so nothing is built against the bare style:
     # tooltips on the icon buttons appear promptly rather than after Qt's
-    # 700ms default (clear_budget/ui/tooltip_style.py has the numbers).
-    from clear_budget.ui import tooltip_style
+    # 700ms default and every label takes its role's inset
+    # (clear_budget/ui/app_style.py has the numbers and the reasons).
+    from clear_budget.ui import app_style
 
-    tooltip_style.install(app)
+    app_style.install(app)
 
     diagnostics.install(Config.app_dir() / diagnostics.LOG_DIR_NAME)
     diagnostics.log(

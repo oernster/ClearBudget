@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from clear_budget.ui import label_roles, ui_scale
-from clear_budget.ui._theme_labels import BODY_PADDING_PX
+from clear_budget.ui.label_insets import BODY_PADDING_PX
 from clear_budget.ui.utils.recommendation_text import (
     PAUSE_HEADING,
     PAUSE_INTRO,
