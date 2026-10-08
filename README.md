@@ -97,8 +97,8 @@ data kept locally.
 
 ### Credit cards
 
-- Limits, APR or minimum payment percentage, due day, expiry and an active
-  toggle per card
+- Limit, APR, a minimum payment as a fixed amount or a percentage, due day,
+  expiry and an active toggle per card
 - Per-card monthly cashflow (charges, payment, interest, minimum due) and a
   six-month balance projection coloured by headroom
 - Scheduled future credit-limit changes that apply themselves when due

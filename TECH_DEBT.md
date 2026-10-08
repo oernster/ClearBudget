@@ -29,10 +29,11 @@ such as `Amount` stay as shared vocabulary; then the UI rule in that test gains
 - **Files between 351 and 380 lines**: under the cap and clear of the 381 to
   399 danger band, both asserted by `test_loc_limits.py`. No count is kept; it
   changes with almost every commit.
-- **The two `sqlite_master` reads in `shared/db_validation.py`**:
+- **The three `sqlite_master` reads in `shared/db_validation.py`**:
   `validate_db` keeps its connection for `PRAGMA table_info` and reports the
-  SQLite error; `is_accounts_database` answers yes or no and closes. A shared
-  helper would cost more than the lines it saves.
+  SQLite error; `validate_accounts_db` looks up one named table;
+  `is_accounts_database` answers yes or no and closes. A shared helper would
+  cost more than the lines it saves.
 - **The root `.spec` files**: PyInstaller output, git-ignored.
 - **`_leading_underscore.py` modules** in `ui/views` and
   `application/services`: package-private, clear and consistent.
