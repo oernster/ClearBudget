@@ -41,7 +41,9 @@ from pathlib import Path
 
 # Qt modules the application never imports. A name here drops the Qt library,
 # the Python binding, its stub and (on macOS) the framework directory. Prefixes
-# catch the families (Qt Quick alone is a dozen libraries).
+# catch the families (Qt Quick alone is a dozen libraries). Qt Svg itself is
+# kept: the GNOME Wayland decoration plugin (`libadwaita.so`) links it, so
+# without it the window opens with no title bar. Only Svg Widgets goes.
 UNUSED_QT_MODULE_PREFIXES = (
     "Concurrent",
     "Designer",
@@ -55,7 +57,7 @@ UNUSED_QT_MODULE_PREFIXES = (
     "Quick",
     "ShaderTools",
     "Sql",
-    "Svg",
+    "SvgWidgets",
     "Test",
     "UiTools",
     "VirtualKeyboard",
@@ -76,7 +78,6 @@ UNUSED_PLUGIN_DIRS = frozenset(
         "iconengines",
         "multimedia",
         "networkinformation",
-        "platforminputcontexts",
         "position",
         "printsupport",
         "qmllint",
@@ -98,6 +99,12 @@ UNUSED_PLUGIN_DIRS = frozenset(
 UNUSED_IMAGE_FORMATS = frozenset(
     {"qgif", "qicns", "qjpeg", "qpdf", "qsvg", "qtga", "qtiff", "qwbmp", "qwebp"}
 )
+
+# Input method plugins. The virtual keyboard drags the whole Qt Quick and Qml
+# stack in behind it. The ibus and compose plugins stay: Ubuntu GNOME sets
+# QT_IM_MODULE=ibus and the Flatpak inherits it, so without them dead keys and
+# input methods stop working.
+UNUSED_INPUT_CONTEXTS = frozenset({"qtvirtualkeyboardplugin"})
 
 # Platform plugins no desktop session loads. qwindows, qcocoa, qxcb and the
 # Wayland plugins are not here.
@@ -208,6 +215,9 @@ def should_prune(path: str | Path) -> bool:
         if parent == "plugins" and name in UNUSED_PLUGIN_DIRS:
             return True
         if parent == "imageformats" and _plugin_stem(name) in UNUSED_IMAGE_FORMATS:
+            return True
+        is_input_context = parent == "platforminputcontexts"
+        if is_input_context and _plugin_stem(name) in UNUSED_INPUT_CONTEXTS:
             return True
         if parent == "platforms" and _plugin_stem(name) in UNUSED_PLATFORMS:
             return True

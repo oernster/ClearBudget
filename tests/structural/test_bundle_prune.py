@@ -97,7 +97,8 @@ class TestTheApplicationImportsOnlyWhatShips:
         "_internal/PySide6/QtQuick.pyd",
         "_internal/PySide6/QtNetwork.pyd",
         "_internal/PySide6/Qt6Pdf.dll",
-        "_internal/PySide6/Qt6Svg.dll",
+        "_internal/PySide6/Qt6SvgWidgets.dll",
+        "PySide6/Qt/lib/libQt6SvgWidgets.so.6",
         "_internal/PySide6/Qt6VirtualKeyboard.dll",
         "_internal/PySide6/opengl32sw.dll",
         "_internal/PySide6/translations/qt_gl.qm",
@@ -160,6 +161,13 @@ def test_what_is_never_loaded_is_pruned(path: str) -> None:
         "PySide6/Qt/plugins/platforms/libqwayland-generic.so",
         "PySide6/Qt/plugins/platformthemes/libqgtk3.so",
         "PySide6/Qt/plugins/wayland-shell-integration/libxdg-shell.so",
+        # The GNOME title bar plus the Qt Svg it links.
+        "PySide6/Qt/plugins/wayland-decoration-client/libadwaita.so",
+        "PySide6/Qt/plugins/wayland-decoration-client/libbradient.so",
+        "PySide6/Qt/lib/libQt6Svg.so.6",
+        # The input methods a Linux session asks for through QT_IM_MODULE.
+        "PySide6/Qt/plugins/platforminputcontexts/libibusplatforminputcontextplugin.so",
+        "PySide6/Qt/plugins/platforminputcontexts/libcomposeplatforminputcontextplugin.so",
         "PySide6/Qt/plugins/xcbglintegrations/libqxcb-glx-integration.so",
         "PySide6/__init__.py",
         "PySide6/QtWidgets.abi3.so",
