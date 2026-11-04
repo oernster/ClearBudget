@@ -223,18 +223,13 @@ class MonthView(
             current_month=self.view_model.current_month,
         )
         if dialog.exec() == BillDialog.Accepted and (bill := dialog.get_bill()):
-            persisted = self.view_model.add_bill(bill=bill)
-            self._save_amount_changes(persisted.id, dialog)
+            # The schedule travels with the bill so the view model writes both
+            # before its one refresh; written here afterwards, the table was
+            # drawn from a summary that did not yet hold the change.
+            persisted = self.view_model.add_bill(
+                bill=bill, amount_changes=dialog.get_amount_changes()
+            )
             self._offer_apply_new_bill(persisted)
-
-    def _save_amount_changes(self, bill_id: int, dialog: BillDialog) -> None:
-        """Persist the scheduled amount changes the dialog is holding.
-
-        Done after the bill is saved, because a new bill has no id until then.
-        """
-        self.view_model.budget_service.set_bill_amount_changes(
-            bill_id=bill_id, changes=dialog.get_amount_changes()
-        )
 
     def _get_bill_from_row(self, row: int):
         """The bill a table row stands for; None when the row is not one.
@@ -290,8 +285,9 @@ class MonthView(
             else:
                 if had_override:
                     self.view_model.delete_bill_month_override(bill_id=eb.id)
-                self.view_model.update_bill(bill=eb)
-                self._save_amount_changes(eb.id, dialog)
+                self.view_model.update_bill(
+                    bill=eb, amount_changes=dialog.get_amount_changes()
+                )
             self._offer_apply_edited_bill(bill, eb)
 
     def on_add_income(self) -> None:

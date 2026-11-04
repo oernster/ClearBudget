@@ -5,6 +5,7 @@ from PySide6.QtCore import QObject, Signal
 from clear_budget.application.dto.month_summary import MonthSummary
 from clear_budget.application.services.budget_service import BudgetService
 from clear_budget.domain.entities.bill import Bill
+from clear_budget.domain.value_objects.bill_amount_change import BillAmountChange
 from clear_budget.domain.value_objects.year_month import YearMonth
 
 
@@ -54,16 +55,49 @@ class MonthViewModel(QObject):
         self.month_summary = summary
         self.month_summary_updated.emit(summary)
 
-    def add_bill(self, *, bill: Bill) -> Bill:
-        """Create a new bill and refresh summary. Returns the persisted bill."""
+    def add_bill(
+        self,
+        *,
+        bill: Bill,
+        amount_changes: tuple[BillAmountChange, ...] | None = None,
+    ) -> Bill:
+        """Create a new bill and refresh summary. Returns the persisted bill.
+
+        `amount_changes` is the schedule the bill dialog holds. It is written
+        here, before the one refresh, because the schedule is part of what
+        this month shows: a change effective from the current month decides
+        the figure in the table. None means the caller holds no schedule
+        (an inline edit, say) and the stored one is left as it is.
+        """
         persisted = self.budget_service.add_bill(bill=bill)
+        self._store_amount_changes(persisted.id, amount_changes)
         self.refresh_month_summary()
         return persisted
 
-    def update_bill(self, *, bill: Bill) -> None:
-        """Update an existing bill and refresh summary."""
+    def update_bill(
+        self,
+        *,
+        bill: Bill,
+        amount_changes: tuple[BillAmountChange, ...] | None = None,
+    ) -> None:
+        """Update an existing bill and refresh summary.
+
+        The schedule goes in BEFORE the refresh. It used to be written by the
+        view after this returned, so the table was drawn from a summary that
+        predated it: a change effective from the current month was saved and
+        the old amount stayed on screen until something else refreshed.
+        """
         self.budget_service.update_bill(bill=bill)
+        self._store_amount_changes(bill.id, amount_changes)
         self.refresh_month_summary()
+
+    def _store_amount_changes(
+        self, bill_id: int, changes: tuple[BillAmountChange, ...] | None
+    ) -> None:
+        if changes is not None:
+            self.budget_service.set_bill_amount_changes(
+                bill_id=bill_id, changes=changes
+            )
 
     def update_bill_for_month(self, *, bill: Bill) -> None:
         """Store per-month override for a bill and refresh summary."""

@@ -12,6 +12,16 @@ Every test also runs against a THROWAWAY data directory. See `isolate_app_dir`.
 
 import pytest
 
+from clear_budget.application.services.budget_service import BudgetService
+from clear_budget.application.services.month_generator import MonthGenerator
+from clear_budget.infrastructure.sqlite.bill_repository import SQLiteBillRepository
+from clear_budget.infrastructure.sqlite.database import Database
+from clear_budget.infrastructure.sqlite.income_source_repository import (
+    SQLiteIncomeSourceRepository,
+)
+from clear_budget.infrastructure.sqlite.payment_method_repository import (
+    SQLitePaymentMethodRepository,
+)
 from clear_budget.shared.config import APP_DIR_ENV_VAR
 
 
@@ -42,3 +52,25 @@ def real_app_dir(monkeypatch):
     Nothing under it is written: these tests only look at where the path lands.
     """
     monkeypatch.delenv(APP_DIR_ENV_VAR, raising=False)
+
+
+@pytest.fixture()
+def budget_service(tmp_path):
+    """BudgetService wired to a temp SQLite database.
+
+    Shared here rather than kept under tests/application, because the
+    Qt-free view model tests under tests/ui_logic drive the same service.
+    """
+    db = Database(tmp_path / "test.db")
+    db.connect()
+    db.create_schema()
+    svc = BudgetService(
+        bill_repo=SQLiteBillRepository(db.conn),
+        income_repo=SQLiteIncomeSourceRepository(db.conn),
+        payment_method_repo=SQLitePaymentMethodRepository(db.conn),
+        month_generator=MonthGenerator(
+            SQLiteBillRepository(db.conn), SQLiteIncomeSourceRepository(db.conn)
+        ),
+    )
+    yield svc
+    db.close()
