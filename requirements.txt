@@ -1,3 +1,6 @@
-PySide6_Essentials>=6.8.0,<7.0
+# Below 6.11.3: from 6.11.3 Qt on Wayland warns "Trying to disable ... but 0x0
+# is focused" whenever a window's first focus is not a text field; 6.11.2 and
+# earlier do not.
+PySide6_Essentials>=6.8.0,<6.11.3
 bcrypt>=4.0.0
 keyring>=25.0
