@@ -103,7 +103,7 @@ flatpak install --user --noninteractive flathub \
 # ── Pre-download wheels (Python 3.13 / manylinux x86_64) ──────────────────────
 # Downloading on the host avoids slow sandboxed network calls and lets the
 # sandbox install with --no-index (fully offline build).  Dependencies are
-# resolved here so PySide6's Essentials/Addons sub-wheels come along too.
+# resolved here so shiboken6 and keyring's backends come along too.
 section "Pre-downloading wheels (Python ${WHEEL_PYTHON} / ${WHEEL_PLATFORMS[0]})"
 rm -rf .flatpak-wheels
 mkdir -p .flatpak-wheels
@@ -118,6 +118,13 @@ run_with_spinner "Downloading wheels for $(grep -cE '^[^#[:space:]]' requirement
         -q -d .flatpak-wheels -r requirements.txt
 
 echo "  $(ls .flatpak-wheels/ | wc -l) distributions ready"
+
+# ── Artwork at shipped size ───────────────────────────────────────────────────
+# The masters at the root are painted at 1254 px and drawn at 60 px at most.
+# Resampled here on the host, where the venv has PySide6, so the sandbox copies
+# 50 KB pictures rather than 1.5 MB ones.  See shrink_artwork.py.
+section "Shrinking artwork"
+python shrink_artwork.py build/artwork
 
 # ── Packaging helpers ─────────────────────────────────────────────────────────
 section "Writing packaging helpers"
@@ -135,7 +142,6 @@ export LD_LIBRARY_PATH="/app/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
 export PYTHONPATH="/app/share/clearbudget:/app/lib/python${PYTHON_MM}/site-packages\${PYTHONPATH:+:\$PYTHONPATH}"
 export QT_PLUGIN_PATH="/app/lib/python${PYTHON_MM}/site-packages/PySide6/Qt/plugins"
 export QT_QPA_PLATFORM_PLUGIN_PATH="/app/lib/python${PYTHON_MM}/site-packages/PySide6/Qt/plugins/platforms"
-export QML2_IMPORT_PATH="/app/lib/python${PYTHON_MM}/site-packages/PySide6/Qt/qml"
 if [ -n "\${WAYLAND_DISPLAY:-}" ] && [ -z "\${FORCE_X11:-}" ]; then
     export QT_QPA_PLATFORM=wayland
 elif [ -n "\${DISPLAY:-}" ]; then
@@ -222,12 +228,18 @@ modules:
       - python3 -m ensurepip --upgrade --default-pip
       - pip3 install --no-cache-dir --no-index --find-links wheels --prefix=/app
           -r requirements.txt
+      # The Essentials wheel still carries Qt Quick, Qml, Network, Svg, the
+      # developer tools, headers and translations, none of which the app
+      # loads.  The same rules prune the Windows and macOS bundles.
+      - python3 build_prune.py /app/lib/python${PYTHON_MM}/site-packages/PySide6
     sources:
       - type: dir
         path: .flatpak-wheels
         dest: wheels
       - type: file
         path: requirements.txt
+      - type: file
+        path: build_prune.py
 
   # ── ClearBudget application source ────────────────────────────────────────
   - name: clearbudget
@@ -275,41 +287,41 @@ modules:
       - type: file
         path: ClearBudget_512.png
       - type: file
-        path: monthlybudget.png
+        path: build/artwork/monthlybudget.png
       - type: file
-        path: solvency.png
+        path: build/artwork/solvency.png
       - type: file
-        path: creditcards.png
+        path: build/artwork/creditcards.png
       - type: file
-        path: bank-icon.png
+        path: build/artwork/bank-icon.png
       - type: file
-        path: bank-icon2.png
+        path: build/artwork/bank-icon2.png
       - type: file
-        path: creditcards2.png
+        path: build/artwork/creditcards2.png
       - type: file
-        path: exporttohtml.png
+        path: build/artwork/exporttohtml.png
       - type: file
-        path: switchbudget.png
+        path: build/artwork/switchbudget.png
       - type: file
-        path: opendb.png
+        path: build/artwork/opendb.png
       - type: file
-        path: savedb.png
+        path: build/artwork/savedb.png
       - type: file
-        path: information.png
+        path: build/artwork/information.png
       - type: file
-        path: archive.png
+        path: build/artwork/archive.png
       - type: file
-        path: recommendations.png
+        path: build/artwork/recommendations.png
       - type: file
-        path: reserves.png
+        path: build/artwork/reserves.png
       - type: file
-        path: exportpackage.png
+        path: build/artwork/exportpackage.png
       - type: file
-        path: lightmode.png
+        path: build/artwork/lightmode.png
       - type: file
-        path: darkmode.png
+        path: build/artwork/darkmode.png
       - type: file
-        path: donate.png
+        path: build/artwork/donate.png
       - type: dir
         path: clear_budget
         dest: clear_budget

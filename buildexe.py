@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import build_prune
+import shrink_artwork
 import stamp_version
 
 
@@ -38,6 +40,11 @@ def build_exe() -> int:
     if build_dir.exists():
         shutil.rmtree(build_dir)
 
+    # The pictures ship at the size they are drawn at, not at the size they
+    # were painted at; the masters at the root stay as they are.
+    artwork = build_dir / "artwork"
+    shrink_artwork.shrink(artwork)
+
     cmd = [
         pyinstaller_exe,
         "--name=ClearBudget",
@@ -58,7 +65,7 @@ def build_exe() -> int:
         # name every build uses: PyInstaller stages a file under whatever name
         # it is given, so a lower-cased name here would only work on a
         # filesystem that ignores case. The Graph button wears this same file.
-        "--add-data=ClearBudget_256.png:.",
+        f"--add-data={artwork / 'ClearBudget_256.png'}:.",
         # No ICO here on purpose. Nothing in the application ever asks for one:
         # `find_app_icon_path` and `find_qt_window_icon_path` are called only by
         # the SETUP program, which carries its own copy and deploys it beside
@@ -66,29 +73,37 @@ def build_exe() -> int:
         # shortcut and the Apps list point at. An ICO staged here would be read
         # by nobody.
         # The tab-strip artwork, read at runtime by ui/utils/tab_icons.
-        "--add-data=monthlybudget.png:.",
-        "--add-data=solvency.png:.",
-        "--add-data=creditcards.png:.",
+        f"--add-data={artwork / 'monthlybudget.png'}:.",
+        f"--add-data={artwork / 'solvency.png'}:.",
+        f"--add-data={artwork / 'creditcards.png'}:.",
         # The Graph page's bank/cards switch wears the bank picture.
-        "--add-data=bank-icon.png:.",
-        "--add-data=bank-icon2.png:.",
-        "--add-data=creditcards2.png:.",
-        "--add-data=exporttohtml.png:.",
-        "--add-data=switchbudget.png:.",
-        "--add-data=opendb.png:.",
-        "--add-data=savedb.png:.",
-        "--add-data=information.png:.",
-        "--add-data=archive.png:.",
-        "--add-data=recommendations.png:.",
-        "--add-data=reserves.png:.",
-        "--add-data=exportpackage.png:.",
-        "--add-data=lightmode.png:.",
-        "--add-data=darkmode.png:.",
-        "--add-data=donate.png:.",
+        f"--add-data={artwork / 'bank-icon.png'}:.",
+        f"--add-data={artwork / 'bank-icon2.png'}:.",
+        f"--add-data={artwork / 'creditcards2.png'}:.",
+        f"--add-data={artwork / 'exporttohtml.png'}:.",
+        f"--add-data={artwork / 'switchbudget.png'}:.",
+        f"--add-data={artwork / 'opendb.png'}:.",
+        f"--add-data={artwork / 'savedb.png'}:.",
+        f"--add-data={artwork / 'information.png'}:.",
+        f"--add-data={artwork / 'archive.png'}:.",
+        f"--add-data={artwork / 'recommendations.png'}:.",
+        f"--add-data={artwork / 'reserves.png'}:.",
+        f"--add-data={artwork / 'exportpackage.png'}:.",
+        f"--add-data={artwork / 'lightmode.png'}:.",
+        f"--add-data={artwork / 'darkmode.png'}:.",
+        f"--add-data={artwork / 'donate.png'}:.",
         "--add-data=VERSION:.",
         # keyring discovers its OS backends via entry points, which PyInstaller
-        # cannot see statically; collect them all so Remember me works frozen.
-        "--collect-submodules=keyring",
+        # cannot see statically; collect that package so Remember me works
+        # frozen. The backends package rather than all of keyring, because
+        # keyring.testing imports pytest and brought it, pluggy and pygments
+        # into the bundle.
+        "--collect-submodules=keyring.backends",
+        # What the Qt hooks would otherwise bring: QtNetwork, whose hook
+        # collects the TLS plugins and whatever OpenSSL it finds on the build
+        # machine. The Qt libraries and plugins the hooks add as binaries are
+        # pruned from the folder below.
+        *(f"--exclude-module={name}" for name in build_prune.EXCLUDED_MODULES),
         "--noconfirm",
         "--distpath=dist-pyinstaller",
         "main.py",
@@ -99,8 +114,11 @@ def build_exe() -> int:
         print("PyInstaller build failed")
         return 1
 
-    exe_path = dist_dir / "ClearBudget" / "ClearBudget.exe"
+    bundle_dir = dist_dir / "ClearBudget"
+    exe_path = bundle_dir / "ClearBudget.exe"
     if exe_path.exists():
+        print("Pruning what the application never loads...")
+        build_prune.prune_and_verify(bundle_dir)
         print(f"[OK] EXE created: {exe_path}")
         print(f"Size: {exe_path.stat().st_size / (1024*1024):.1f} MB")
         return 0

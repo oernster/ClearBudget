@@ -30,6 +30,8 @@ _BUILD_SCRIPTS = frozenset(
         "buildexe.py",
         "buildinstaller.py",
         "builddmg.py",
+        "build_prune.py",
+        "shrink_artwork.py",
         "dmg_icon.py",
         "build_utils.py",
         "build_payload.py",

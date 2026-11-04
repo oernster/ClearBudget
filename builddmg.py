@@ -35,6 +35,8 @@ from pathlib import Path
 
 from packaging.requirements import InvalidRequirement, Requirement
 
+import build_prune
+import shrink_artwork
 from build_utils import require, run, section
 from dmg_icon import png_to_icns, set_volume_icon
 
@@ -62,10 +64,8 @@ SOURCE_PNG = "ClearBudget.png"
 ICON_BG = (0x0A, 0x0A, 0x0D)
 
 # Per-resolution PNGs bundled so the runtime QIcon lookup resolves, plus the
-# Windows-style assets carried for parity with the EXE build. The three
-# tab-strip images are in this list rather than a second one because they are
-# staged the same way and read through the same resource lookup; splitting
-# them would be two lists to keep in step with one packaging step.
+# Windows-style assets carried for parity with the EXE build. Staged from the
+# repository root as they are.
 BUNDLED_ICONS = [
     "ClearBudget_16.png",
     "ClearBudget_32.png",
@@ -76,6 +76,14 @@ BUNDLED_ICONS = [
     "ClearBudget_512.png",
     "ClearBudget.png",
     "ClearBudget.ico",
+]
+
+# The view and tray pictures, read through the same resource lookup. Staged
+# from `shrink_artwork`'s output rather than the root, because the masters are
+# painted at 1254 px and drawn at 60 px at most; the shipped copies are 256 px.
+# A second list rather than one because the two are staged from different
+# places, which is the one thing that tells them apart.
+BUNDLED_ARTWORK = [
     "monthlybudget.png",
     "solvency.png",
     "creditcards.png",
@@ -342,13 +350,18 @@ def build_app_bundle(entitlements_path: Path, icns_path: Path | None = None) -> 
     # picture, discoverable only by running the packaged app and looking; the
     # build itself reported success. An asset named here and not on disk is a
     # mistake in one place or the other; either way it is not shippable.
-    missing = [name for name in BUNDLED_ICONS if not (root / name).exists()]
+    missing = [
+        name for name in BUNDLED_ICONS + BUNDLED_ARTWORK if not (root / name).exists()
+    ]
     if missing:
         raise SystemExit(
             "cannot build: these bundled assets are named but not on disk:\n  "
             + "\n  ".join(missing)
         )
     add_data.extend(f"{root / name}:." for name in BUNDLED_ICONS)
+    artwork_dir = root / "build" / "artwork"
+    shrink_artwork.shrink(artwork_dir)
+    add_data.extend(f"{artwork_dir / name}:." for name in BUNDLED_ARTWORK)
 
     cmd = [
         sys.executable,
@@ -370,8 +383,13 @@ def build_app_bundle(entitlements_path: Path, icns_path: Path | None = None) -> 
         # function-level deferred imports in the composition root.
         "--collect-submodules=clear_budget",
         # keyring discovers its OS backends via entry points, which PyInstaller
-        # cannot see statically; collect them all so Remember me works frozen.
-        "--collect-submodules=keyring",
+        # cannot see statically; collect that package so Remember me works
+        # frozen. The backends package rather than all of keyring, because
+        # keyring.testing imports pytest.
+        "--collect-submodules=keyring.backends",
+        # What the Qt hooks would otherwise bring; see build_prune for the
+        # list and the reasons.
+        *(f"--exclude-module={name}" for name in build_prune.EXCLUDED_MODULES),
     ]
 
     for spec in add_data:
@@ -386,6 +404,16 @@ def build_app_bundle(entitlements_path: Path, icns_path: Path | None = None) -> 
         sys.exit(f"ERROR: Expected app bundle not found: {app_path}")
     print(f"  Built: {app_path}")
     return app_path
+
+
+def prune_bundle(app_path: Path) -> None:
+    """Drop the Qt libraries, plugins and translations the app never loads.
+
+    Before signing, so the signature covers what ships. The rules are the
+    ones every platform's build applies; see build_prune.
+    """
+    section("Prune unused Qt")
+    build_prune.prune_and_verify(app_path)
 
 
 def strip_build_artifacts(app_path: Path) -> None:
@@ -565,6 +593,7 @@ def main() -> int:
 
         try:
             app_path = build_app_bundle(entitlements_path, icns_path)
+            prune_bundle(app_path)
             strip_build_artifacts(app_path)
             sign_bundle(app_path, entitlements_path)
             notarize_bundle(app_path)
