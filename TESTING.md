@@ -51,7 +51,7 @@ To count tests without running them: `pytest --co -q --no-cov`.
 | `main.py` | not measured | the composition root |
 | `domain/interfaces/*`, `application/ports/*` | not measured | Protocol-only; nothing to execute |
 | `clear_budget/shared/resources.py` | not measured | packaged-resource lookup |
-| `buildexe.py`, `buildinstaller.py`, `installer/build_payload.py` | not measured | linear build recipes |
+| `buildexe.py`, `buildinstaller.py`, `build_prune.py`, `shrink_artwork.py`, `installer/build_payload.py` | not measured | linear build recipes; `build_prune`'s rules are pinned by `tests/structural/test_bundle_prune.py` |
 | `installer/payload/*`, `installer/resources/*` | not measured | staged build output |
 
 Lines marked `# pragma: no cover` are also excluded, mostly thin
@@ -90,11 +90,13 @@ The structural guards, one rule each:
 | `test_handover_invariants.py` | the sign-in screen is never stranded |
 | `test_first_run_close.py` | the first-run wizard keeps its close button |
 | `test_delivery_assets.py` | every runtime asset reaches every platform |
+| `test_bundle_prune.py` | the packaging prune drops nothing the app imports and keeps each platform's window |
 | `test_icon_name_case.py` | every sized icon is named exactly as the repository spells it |
 | `test_installer_layout_stability.py` | setup controls do not move during an operation |
 | `test_view_page_lists_agree.py` | the three view lists agree, in order |
 | `test_button_run_slices.py` | a view takes the button run whole, less Archive |
 | `test_cross_view_refresh.py` | a view refreshes on the data it shows |
+| `test_amount_schedule_write_owner.py` | only the view model writes a bill's amount schedule, ahead of its refresh |
 | `test_tray_switch_invariants.py` | switching views costs the tray nothing |
 | `test_nav_entry_invariants.py` | the focus ring's entry point and wiring |
 | `test_nav_user_label.py` | the signed-in account shows on every view |

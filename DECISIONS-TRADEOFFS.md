@@ -363,6 +363,16 @@ build is labelled unreleasable. The Flatpak is granted the network, the home
 folder and the keychain, broader than an offline budget strictly needs but
 needed for each feature to work.
 
+### Ship only the Qt the application loads
+
+The application uses Qt's core, painting and widget modules and nothing more,
+so the packages carry those alone: the smaller of Qt's two wheels, with the
+rest of Qt pruned from each build by one shared set of rules. Pictures ship at
+the size they are drawn at while their full-size masters stay in the
+repository. The Windows setup program is less than half the size it was. The cost is that a
+new kind of Qt feature has to be taken off the prune list before it can be
+used; a test fails the build until it is.
+
 ### One version, unversioned release files
 
 One version file is the only place the version is written; the application

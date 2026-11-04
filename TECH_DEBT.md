@@ -24,8 +24,9 @@ such as `Amount` stay as shared vocabulary; then the UI rule in that test gains
 ## Looks like debt, not worth touching
 
 - **The delivery scripts** (`buildexe.py`, `buildinstaller.py`, `builddmg.py`,
-  `dmg_icon.py`, `build_utils.py`, `build_flatpak.sh`, `cleanup_flatpak.sh`,
-  `stamp_version.py`): linear recipes, exempt from the module cap by design.
+  `build_prune.py`, `shrink_artwork.py`, `dmg_icon.py`, `build_utils.py`,
+  `build_flatpak.sh`, `cleanup_flatpak.sh`, `stamp_version.py`): linear
+  recipes, exempt from the module cap by design.
 - **Files between 351 and 380 lines**: under the cap and clear of the 381 to
   399 danger band, both asserted by `test_loc_limits.py`. No count is kept; it
   changes with almost every commit.
@@ -41,10 +42,11 @@ such as `Amount` stay as shared vocabulary; then the UI rule in that test gains
   derived byte for byte from `ClearBudget.png` by `generate_icons.py`. That is
   settled; do not re-verify it (it needs Pillow, which is deliberately absent).
   `docs/` holds the site's favicons, screenshots and its derived
-  `donate.png`; the other root PNGs are artwork masters cropped and scaled at
-  runtime by `ui/utils/view_buttons.py` and `ui/utils/icon_buttons.py`. Do not
-  raise the masters' size: a pre-sized copy needs a second generator to keep
-  in step.
+  `donate.png`; the other root PNGs are artwork masters, cropped and scaled at
+  runtime by `ui/utils/view_buttons.py` and `ui/utils/icon_buttons.py`. They
+  are never shipped as they are: every build stages the 256 px copies
+  `shrink_artwork.py` writes into `build/artwork`, so nothing derived is
+  tracked and there is nothing to keep in step.
 
 ## Not debt (do not "fix" these)
 

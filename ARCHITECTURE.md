@@ -41,7 +41,9 @@ except where the row says it is a house rule.
 | Every table takes focus from the keyboard only (`TabFocus`) and draws no focus ring in any state | [`tests/structural/test_table_focus_invariants.py`](tests/structural/test_table_focus_invariants.py) |
 | A sign-in handover that begins always ends: the composition root ends it in a `finally` and `end_handover` is idempotent | [`tests/structural/test_handover_invariants.py`](tests/structural/test_handover_invariants.py) |
 | Every picture button and view button is named on the How It Works screen; its worked pro-rating example is what `prorate_remaining_pence` returns | [`test_help_names_the_tray.py`](tests/structural/test_help_names_the_tray.py), [`test_help_names_the_views.py`](tests/structural/test_help_names_the_views.py), [`test_help_example_is_arithmetic.py`](tests/structural/test_help_example_is_arithmetic.py) |
+| A bill's scheduled amount changes are written by the view model before its one refresh, never by a view, so a change effective from the month on screen shows as soon as the dialog closes | [`tests/structural/test_amount_schedule_write_owner.py`](tests/structural/test_amount_schedule_write_owner.py), [`tests/ui_logic/test_bill_amount_change_refresh.py`](tests/ui_logic/test_bill_amount_change_refresh.py) |
 | The update check is the only connection the application opens: only its GitHub adapter may import `urllib.request` | [`tests/structural/test_no_network.py`](tests/structural/test_no_network.py) |
+| No Qt module the application imports is on the packaging prune list; the prune keeps every platform's window, style and display plugins | [`tests/structural/test_bundle_prune.py`](tests/structural/test_bundle_prune.py) |
 | Installer payload extraction and repair cannot write outside their destination | [`tests/installer/test_payload.py`](tests/installer/test_payload.py) |
 | No mock libraries: real implementations and hand-written fakes only | House rule; the doubles are `tests/application/fakes.py` and `tests/installer/fakes.py` |
 
@@ -173,7 +175,7 @@ extracted far enough from Qt to be tested under `tests/ui_logic`.
 |------|----------|
 | Window | `main_window.py` (`MainWindow`) composed of `_main_window_account`, `_main_window_menus`, `_main_window_nav` and `_main_window_views` mixins; it emits the session signals `switch_user_requested`, `sign_out_requested`, `database_replaced`, `full_restore_requested` and `database_load_requested` |
 | Wiring | `window_builder.py` (`build_main_window`), `startup.py`, `login_flow.py`, `launch_screen.py`, `ui_scale.py`, `_window_geometry.py`, `raise_watcher.py`, `update_check.py` |
-| View models | `MonthViewModel` and `SolvencyViewModel`. `month_summary_updated` fires on every bill or income change and refreshes Solvency, Credit Cards, Graph, Reserves and Recommendations |
+| View models | `MonthViewModel` and `SolvencyViewModel`. Every write goes through `MonthViewModel`, which refreshes the summary once after it; `month_summary_updated` then refreshes Solvency, Credit Cards, Graph, Reserves and Recommendations |
 | Views | Seven views, in `VIEW_SPECS` order: Monthly Budget (`month_view`), Solvency (`solvency_panel`), Credit Cards, Reserves, Graph, Recommendations, Archive. Each sits in a `ScrollableView` |
 | Widgets | Dialogs (sign-in, accounts, bill, income, card, commitment, balance, settings, budgets, How It Works, About, licence), `_line_bar_chart` with axes and hover mixins, `bottom_tray` (the donate footer), `auto_scroller`, `first_stop_dialog` |
 | Utils | Navigation tray (`nav_header`, `nav_label`, `nav_toggle`, `nav_glyph_size`, `view_buttons`, `icon_buttons`), tables (`table_sort`, `sort_header`, `table_focus`, `text_metrics`), `amount_fields`, Qt-free wording modules (`reserves_text`, `recommendation_text`) |
@@ -318,6 +320,12 @@ data directory in `Config`, `QStandardPaths` for file-dialog defaults and
 | macOS | `builddmg.py` | `clearbudget.dmg`, signed and notarized (`ALLOW_UNNOTARIZED=1` for local testing only) |
 | Linux | `build_flatpak.sh` | `clearbudget.flatpak` |
 
+Every package carries Qt Core, Gui and Widgets with the platform's window,
+style and display plugins; nothing else of Qt. The dependency is the PySide6
+Essentials wheel rather than the full PySide6. `build_prune.py` holds one rule
+set for what each build then removes; `shrink_artwork.py` writes the pictures
+at the size the app draws them. The masters at the root are never shipped.
+
 The setup program (`installer/`) mirrors the application's shape: `ops` holds
 the side effects (payload, staging, shortcuts, registration, install, repair,
 uninstall, process control), `state` the registry and state model, `shared`
@@ -342,9 +350,9 @@ read source rather than run widgets:
 | `test_no_network.py`, `test_donation_address.py` | Network surface; the one donation address |
 | `test_colour_source.py`, `test_combo_box_invariants.py`, `test_solvency_headings.py` | Theme and wording rules |
 | `test_return_key_invariants.py`, `test_table_focus_invariants.py`, `test_button_run_slices.py`, `test_nav_entry_invariants.py`, `test_tray_switch_invariants.py`, `test_view_page_lists_agree.py` | Keyboard ring and view wiring |
-| `test_refusal_order.py`, `test_save_location_defaults.py`, `test_handover_invariants.py`, `test_session_exit_invariants.py`, `test_first_run_close.py`, `test_cross_view_refresh.py`, `test_nav_user_label.py` | Flow ordering and session behaviour |
+| `test_refusal_order.py`, `test_save_location_defaults.py`, `test_handover_invariants.py`, `test_session_exit_invariants.py`, `test_first_run_close.py`, `test_cross_view_refresh.py`, `test_amount_schedule_write_owner.py`, `test_nav_user_label.py` | Flow ordering and session behaviour |
 | `test_help_names_the_tray.py`, `test_help_names_the_views.py`, `test_help_example_is_arithmetic.py` | How It Works stays true |
-| `test_delivery_assets.py`, `test_icon_name_case.py`, `test_installer_layout_stability.py` | Packaging and the setup window |
+| `test_delivery_assets.py`, `test_bundle_prune.py`, `test_icon_name_case.py`, `test_installer_layout_stability.py` | Packaging and the setup window |
 
 ## Testing
 

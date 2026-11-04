@@ -8,7 +8,7 @@ repository root unless a step must run on macOS or Linux.
 | Tool | For | Get it |
 |---|---|---|
 | Python 3.11 or newer | everything | python.org or `winget install Python.Python.3.12` |
-| `requirements.txt` | runtime: PySide6, bcrypt, keyring | `pip` (below) |
+| `requirements.txt` | runtime: PySide6 Essentials, bcrypt, keyring | `pip` (below) |
 | `requirements-dev.txt` | PyInstaller, pytest, pytest-cov, black, flake8, ruff; pywin32 on Windows | `pip` (below) |
 | Pillow | `generate_icons.py` only; deliberately not in requirements | `pip install pillow` |
 | Xcode command-line tools, Homebrew | macOS build | Apple; brew.sh. `builddmg.py` brew-installs `create-dmg` and `fileicon` if missing |
@@ -45,9 +45,16 @@ Testing is in [TESTING.md](TESTING.md).
 
 1. Runs `stamp_version.py`.
 2. Deletes `ClearBudget.spec`, `dist-pyinstaller\` and `build\`.
-3. Runs PyInstaller (onedir, windowed), embedding `ClearBudget.ico` as the exe
-   icon and staging the package, the artwork PNGs and `VERSION`.
-4. Produces `dist-pyinstaller\ClearBudget\ClearBudget.exe`.
+3. Runs `shrink_artwork.py`, which writes the view and tray pictures into
+   `build\artwork\` at the size the app draws them (256 px on the longest
+   edge); the 1254 px masters at the root are left alone.
+4. Runs PyInstaller (onedir, windowed), embedding `ClearBudget.ico` as the exe
+   icon and staging the package, the shrunk artwork and `VERSION`, with the
+   `--exclude-module` list from `build_prune.py`.
+5. Runs `build_prune.py` over the folder: drops the Qt libraries, plugins,
+   translations and tools the app never loads, then reads the import table
+   of every binary left and fails if one needs something that went.
+6. Produces `dist-pyinstaller\ClearBudget\ClearBudget.exe`.
 
 `python buildinstaller.py` (refuses to run off Windows):
 
@@ -55,10 +62,18 @@ Testing is in [TESTING.md](TESTING.md).
 2. Runs `installer.build_payload`, which zips `dist-pyinstaller\ClearBudget\`
    deterministically into `installer\payload\payload.zip` plus
    `manifest.json` (path, size and SHA-256 per file).
-3. Runs PyInstaller (onefile, windowed) on `installer\app.py` with the payload,
-   `LICENSE`, the icons and the theme artwork, into `dist-installer.build\`.
-4. Moves the result to `dist-installer\ClearBudgetSetup.exe`, the per-user
+3. Writes a PyInstaller spec into `build\installer\` that filters the
+   collected binaries and data through `build_prune.should_prune`, since a
+   single-file build has no folder to prune afterwards.
+4. Runs PyInstaller (onefile, windowed) on that spec with the payload,
+   `LICENSE`, the icons and the shrunk theme artwork, into
+   `dist-installer.build\`.
+5. Moves the result to `dist-installer\ClearBudgetSetup.exe`, the per-user
    installer that ships.
+
+Both builds, the DMG and the Flatpak apply the same `build_prune.py` rules;
+`tests/structural/test_bundle_prune.py` holds that nothing the app imports is
+on them.
 
 ### macOS: `python builddmg.py`
 
@@ -68,9 +83,10 @@ Testing is in [TESTING.md](TESTING.md).
    `APPLE_ID` plus an app-specific `APPLE_APP_PASSWORD`.
 2. Cleans `build/`, `dist/` and earlier DMG output.
 3. Builds the signed `.app` with PyInstaller and an `.icns` from
-   `dmg_icon.py`; a missing asset fails the build.
-4. Strips stray `.o` files; signs with the hardened runtime; notarizes and
-   staples the `.app`.
+   `dmg_icon.py`, staging the artwork from `shrink_artwork.py`; a missing
+   asset fails the build.
+4. Prunes the bundle with `build_prune.py`; strips stray `.o` files; signs
+   with the hardened runtime; notarizes and staples the `.app`.
 5. Builds the DMG with `create-dmg`; signs, notarizes, staples and verifies
    it.
 6. Produces `clearbudget.dmg`.
@@ -84,9 +100,12 @@ Testing is in [TESTING.md](TESTING.md).
 3. Adds Flathub and installs the Freedesktop runtime and SDK.
 4. Downloads the `requirements.txt` wheels on the host, so the sandbox build
    is offline.
-5. Writes the launcher, desktop file, metainfo and manifest.
-6. Builds with `flatpak-builder` and installs it for the user.
-7. Produces `clearbudget.flatpak` (skip with `--no-bundle`).
+5. Runs `shrink_artwork.py` on the host (the venv has PySide6).
+6. Writes the launcher, desktop file, metainfo and manifest. The manifest
+   installs the wheels into `/app`, then runs `build_prune.py` over the
+   installed `PySide6` package.
+7. Builds with `flatpak-builder` and installs it for the user.
+8. Produces `clearbudget.flatpak` (skip with `--no-bundle`).
 
 ```bash
 ./cleanup_flatpak.sh                        # optional: uninstall and purge Flatpak output only
