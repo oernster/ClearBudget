@@ -175,3 +175,30 @@ def test_what_is_never_loaded_is_pruned(path: str) -> None:
 )
 def test_what_the_window_needs_is_kept(path: str) -> None:
     assert not build_prune.should_prune(path), f"{path} must be kept"
+
+
+def test_a_link_into_a_pruned_framework_goes_with_it(tmp_path: Path) -> None:
+    """The .app layout PyInstaller writes: a framework plus bare-named links.
+
+    A link left dangling makes `codesign --verify --strict` reject the bundle.
+    """
+    contents = tmp_path / "Contents"
+    lib = contents / "Frameworks" / "PySide6" / "Qt" / "lib"
+    for module in ("QtQuick", "QtCore"):
+        binary = lib / f"{module}.framework" / "Versions" / "A" / module
+        binary.parent.mkdir(parents=True)
+        binary.write_bytes(b"")
+        for folder in ("Frameworks", "Resources"):
+            (contents / folder).mkdir(exist_ok=True)
+            (contents / folder / module).symlink_to(binary)
+    # Not made by the prune, so not the prune's to remove.
+    (contents / "Resources" / "unrelated").symlink_to(tmp_path / "missing")
+
+    removed, _ = build_prune.prune_tree(tmp_path)
+
+    assert "Contents/Frameworks/QtQuick" in removed
+    assert "Contents/Resources/QtQuick" in removed
+    for folder in ("Frameworks", "Resources"):
+        assert not (contents / folder / "QtQuick").is_symlink()
+        assert (contents / folder / "QtCore").exists()
+    assert (contents / "Resources" / "unrelated").is_symlink()
