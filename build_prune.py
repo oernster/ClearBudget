@@ -41,7 +41,9 @@ from pathlib import Path
 
 # Qt modules the application never imports. A name here drops the Qt library,
 # the Python binding, its stub and (on macOS) the framework directory. Prefixes
-# catch the families (Qt Quick alone is a dozen libraries).
+# catch the families (Qt Quick alone is a dozen libraries). Qt Svg itself is
+# kept: the GNOME Wayland decoration plugin (`libadwaita.so`) links it, so
+# without it the window opens with no title bar. Only Svg Widgets goes.
 UNUSED_QT_MODULE_PREFIXES = (
     "Concurrent",
     "Designer",
@@ -55,7 +57,7 @@ UNUSED_QT_MODULE_PREFIXES = (
     "Quick",
     "ShaderTools",
     "Sql",
-    "Svg",
+    "SvgWidgets",
     "Test",
     "UiTools",
     "VirtualKeyboard",
@@ -76,7 +78,6 @@ UNUSED_PLUGIN_DIRS = frozenset(
         "iconengines",
         "multimedia",
         "networkinformation",
-        "platforminputcontexts",
         "position",
         "printsupport",
         "qmllint",
@@ -98,6 +99,12 @@ UNUSED_PLUGIN_DIRS = frozenset(
 UNUSED_IMAGE_FORMATS = frozenset(
     {"qgif", "qicns", "qjpeg", "qpdf", "qsvg", "qtga", "qtiff", "qwbmp", "qwebp"}
 )
+
+# Input method plugins. The virtual keyboard drags the whole Qt Quick and Qml
+# stack in behind it. The ibus and compose plugins stay: Ubuntu GNOME sets
+# QT_IM_MODULE=ibus and the Flatpak inherits it, so without them dead keys and
+# input methods stop working.
+UNUSED_INPUT_CONTEXTS = frozenset({"qtvirtualkeyboardplugin"})
 
 # Platform plugins no desktop session loads. qwindows, qcocoa, qxcb and the
 # Wayland plugins are not here.
@@ -209,6 +216,9 @@ def should_prune(path: str | Path) -> bool:
             return True
         if parent == "imageformats" and _plugin_stem(name) in UNUSED_IMAGE_FORMATS:
             return True
+        is_input_context = parent == "platforminputcontexts"
+        if is_input_context and _plugin_stem(name) in UNUSED_INPUT_CONTEXTS:
+            return True
         if parent == "platforms" and _plugin_stem(name) in UNUSED_PLATFORMS:
             return True
         if parent in _PYSIDE_DIRS and name in UNUSED_DIRS:
@@ -232,9 +242,11 @@ def prune_tree(root: Path) -> tuple[list[str], int]:
     """Delete everything under `root` that `should_prune` names.
 
     Returns the relative paths removed and the bytes they held. Directories go
-    whole, so a pruned framework or plugin directory is one entry.
+    whole, so a pruned framework or plugin directory is one entry. A symlink
+    left pointing into something pruned goes too; see `_unlink_orphaned_links`.
     """
     removed: list[str] = []
+    gone: list[Path] = []
     freed = 0
     # Judged with the root's own name in front, so the rules see it: the
     # Flatpak hands over the PySide6 directory itself, where `include` or
@@ -247,11 +259,38 @@ def prune_tree(root: Path) -> tuple[list[str], int]:
         if not should_prune(rel):
             continue
         freed += _size_of(path)
+        # The entry itself, not what a symlink points at.
+        gone.append(path.parent.resolve() / path.name)
         if path.is_symlink() or path.is_file():
             path.unlink()
         else:
             shutil.rmtree(path)
         removed.append(path.relative_to(root).as_posix())
+    orphans, orphan_bytes = _unlink_orphaned_links(root, gone)
+    return removed + orphans, freed + orphan_bytes
+
+
+def _unlink_orphaned_links(root: Path, gone: list[Path]) -> tuple[list[str], int]:
+    """Delete the symlinks under `root` that now point into a pruned entry.
+
+    PyInstaller's .app carries a bare-named link per framework in both
+    `Contents/Frameworks` and `Contents/Resources` (`QtQuick -> PySide6/Qt/
+    lib/QtQuick.framework/Versions/A/QtQuick`). The name has no suffix, so no
+    rule matches it; once the framework is pruned the link dangles and
+    `codesign --verify --strict` rejects the whole bundle with "No such file
+    or directory". Judged by where the link points rather than by its name,
+    so a link the prune did not orphan is left alone.
+    """
+    removed: list[str] = []
+    freed = 0
+    for link in sorted(root.rglob("*")):
+        if not link.is_symlink() or link.exists():
+            continue
+        target = link.resolve()
+        if any(target.is_relative_to(entry) for entry in gone):
+            freed += link.lstat().st_size
+            link.unlink()
+            removed.append(link.relative_to(root).as_posix())
     return removed, freed
 
 

@@ -16,7 +16,7 @@ requires-python = ">=3.11"
 # The Essentials wheel, not the PySide6 meta-package: the application imports
 # QtCore, QtGui and QtWidgets only; the meta-package would pull in the
 # 436 MB Addons wheel (Qt WebEngine, 3D, Charts, Multimedia) for nothing.
-dependencies = ["PySide6_Essentials>=6.8.0"]
+dependencies = ["PySide6_Essentials>=6.8.0,<6.11.3"]
 
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
