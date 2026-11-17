@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>What's new in ClearBudget: release history</title>
+    <meta name="description" content="ClearBudget's release history, newest first: what each version changed, from the first release to the latest.">
+    <meta name="author" content="Oliver Ernster">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://clearbudget.co.uk/whats-new.html">
+
+    <meta name="theme-color" content="#0a0a0d">
+    <meta name="color-scheme" content="dark">
+
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+
+    <meta property="og:title" content="What's new in ClearBudget: release history">
+    <meta property="og:description" content="Every ClearBudget release, newest first: Safe to Spend Today, Reserves, Recommendations, several budgets per sign-in, safer backups and smaller downloads.">
+    <meta property="og:image" content="https://clearbudget.co.uk/clearbudget-512.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="ClearBudget app icon">
+    <meta property="og:url" content="https://clearbudget.co.uk/whats-new.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ClearBudget">
+    <meta property="og:locale" content="en_GB">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="What's new in ClearBudget: release history">
+    <meta name="twitter:description" content="Every ClearBudget release, newest first: Safe to Spend Today, Reserves, Recommendations, several budgets per sign-in, safer backups and smaller downloads.">
+    <meta name="twitter:image" content="https://clearbudget.co.uk/clearbudget-512.png">
+
+    <link rel="stylesheet" href="styles.css?v=8bfbaf4bb6">
+<script>window.goatcounter = {path: function (p) { return location.host + p }}</script>
+<script data-goatcounter="https://oernster.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head>
+
+<body>
+
+<nav class="site">
+    <a class="brand" href="./">
+        <img src="favicon-64.png" alt="ClearBudget icon">
+        ClearBudget
+    </a>
+    <div class="links">
+        <a href="why.html">Why</a>
+        <a href="features.html">Features</a>
+        <a href="screenshots.html">Screenshots</a>
+        <a href="whats-new.html">What's New</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/oernster/ClearBudget">GitHub</a>
+    </div>
+</nav>
+
+<div class="container">
+
+    <main>
+
+        <!-- What's New: one entry per published release, newest first -->
+        <section class="section" id="whats-new" aria-labelledby="whats-new-h" style="margin-top:0;">
+            <div class="eyebrow">Changelog</div>
+            <h1 id="whats-new-h">What's new</h1>
+            <p class="section-sub">ClearBudget began as a Windows budget planner with private sign-ins and 25 currencies. Releases since have turned it into a forward-looking solvency tool on Windows, macOS and Linux: a balance that keeps itself up to date, a light theme and full keyboard control, then Safe to Spend Today, a Graph page, several budgets per sign-in, Recommendations and Reserves. The most recent releases close gaps between what the app said and what it did: a restore that refuses a damaged backup before touching anything, amounts saved exactly as typed, card payments counted once and downloads less than half their former size.</p>
+
+            <div class="changelog">
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v<!--VERSION-->5.7.5<!--/VERSION--></div>
+                    <h3>A bill's new amount shows at once; much smaller downloads</h3>
+                    <ul>
+                        <li>Changing a bill's amount from the month on screen was saved, yet the table kept the old figure until you moved to another month and back. The new amount now appears as the dialog closes; Solvency, the card panels, the graph, Reserves and Recommendations update with it</li>
+                        <li>Each package now carries only the parts of the Qt toolkit the app actually loads, with its pictures no larger than they are ever drawn. On Windows the setup program falls from 136 MB to 61 MB and the installed app from 158 MB to 73 MB</li>
+                        <li>What the app does is unchanged</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.7.4</div>
+                    <h3>Credit card projections put right</h3>
+                    <ul>
+                        <li>A skipped or switched-off card payment now leaves the card alone. It used to come off the card anyway, so later balances, the six-month projection and the Credit Cards panel all read too low</li>
+                        <li>A month that clears a card charges no interest, so a card paid off in full projects at zero instead of a small balance that grew with nothing to pay it</li>
+                        <li>A payment ticked as paid before you typed the card's new balance is no longer taken off that balance a second time. Existing budgets are put right on upgrade</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.7.3</div>
+                    <h3>No more empty rows under wrapped text</h3>
+                    <ul>
+                        <li>At some window widths the amber Account Position banner on the Solvency page carried a blank line of colour under its text, so its height jumped between months. It and every other wrapping line now take exactly the height their text needs</li>
+                        <li>A source checkout on Linux finds its window icon whatever the capitalisation of the file</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.7.2</div>
+                    <h3>Solvency says when you go overdrawn and by how much</h3>
+                    <ul>
+                        <li>Every month on the Solvency page opens with one line: how much the account is overdrawn by on the day it first goes under, then its deepest point when that is worse. A month that stays in credit says Never overdrawn</li>
+                        <li>The line leads the month you are viewing and each of the two months ahead; for the months ahead the deepest point is checked against the graph so the two agree</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.7.1</div>
+                    <h3>Account names that could share a budget file are refused</h3>
+                    <ul>
+                        <li>A new account named with repeated spaces, underscores or punctuation marks could land on the same budget file as another account's named budget. Such names are now refused with a message saying why; existing accounts are unchanged</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.7.0</div>
+                    <h3>Backups, restores and typed amounts you can trust</h3>
+                    <ul>
+                        <li>Restore Everything refuses a damaged or doctored backup before it touches anything: a budget named twice, an accounts database of the wrong shape, damaged data behind an intact structure, an unreadable budget list or a zip with damaged contents</li>
+                        <li>A leftover SQLite crash file is moved aside with its budget during a restore, so it can no longer be played back over the restored copy</li>
+                        <li>Budgets of accounts the backup does not hold go to a quarantine folder inside the data folder instead of passing to a new account of the same name. They are never deleted</li>
+                        <li>Back Up Everything copies each database through SQLite itself, so only saved changes go into the backup</li>
+                        <li>Loading a budget that will not open puts your own budget back. A budget list that cannot be read no longer hides your other budgets</li>
+                        <li>The overnight balance update is all or nothing, so an interruption can no longer mark bills paid without taking them from the balance</li>
+                        <li>Due days accept 1 to 31 only. Amounts are saved exactly to the penny as typed; more than two decimal places, anything that is not a number or an amount out of range is refused with a message naming the box</li>
+                        <li>Set Bank Balance accepts an overdrawn figure, the overdraft APR is checked and a new income starts in the month you are viewing rather than appearing in earlier months</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.6.0</div>
+                    <h3>A quieter update check; the forecast gets its own page</h3>
+                    <ul>
+                        <li>An update check still waiting for GitHub when the main window closed (on logging out, switching budget, changing currency, loading or restoring) died with an error nothing caught. Its answer is now simply dropped</li>
+                        <li>Errors in background work now reach the log in the data folder, named with the task they came from</li>
+                        <li>The README gives the real data folder for the Linux Flatpak</li>
+                        <li>On this site the forecast has a page of its own; every page links its stylesheet by a fingerprint of its content, so a page never pairs with stale styling</li>
+                        <li>New DECISIONS-TRADEOFFS.md and TESTING.md documents; the development guide is now DEVELOPMENT.md</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.5.6</div>
+                    <h3>A new donation page</h3>
+                    <ul>
+                        <li>The Donate button opens a new PayPal page that suggests £5 and lets you give any amount you choose. Nothing else changed</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.5.5</div>
+                    <h3>Tooltips while another program has the focus</h3>
+                    <ul>
+                        <li>Hovering over ClearBudget while another program had the focus showed no tooltip, so buttons that name themselves only that way could not be identified without clicking in first</li>
+                        <li>Tooltips now appear whichever program has the focus, in every window, dialog and message box plus the setup program</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.5.4</div>
+                    <h3>Income received early is counted once</h3>
+                    <ul>
+                        <li>Marking an income Received before its due day put it into the balance; the months ahead then added it again, so they opened too high and looked healthier than the account</li>
+                        <li>Income marked Received now counts as inside the balance whatever its due day, just as a Paid bill counts as out of it. The graph and the Solvency page agree about every month ahead. If you had ticked income as received early, expect those months to read lower: the new figure is the true one</li>
+                        <li>The home page of this site now says what ClearBudget does not do, in six short cards</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.5.3</div>
+                    <h3>An overdrawn account opens again</h3>
+                    <ul>
+                        <li>When a dated bill took the balance below zero, ClearBudget stopped opening and left an invisible copy running that blocked every later launch. The balance is now read as a signed figure everywhere it is used, so an overdrawn balance shows as it stands</li>
+                        <li>If the main window ever fails to build, the app says so, names the log file and closes instead of leaving a hidden copy behind</li>
+                        <li>Your data was never at risk: the overdrawn figure was stored correctly throughout</li>
+                        <li>About and the licence dialog open on their first button, like every other dialog</li>
+                        <li>ClearBudget stays free under LGPL-3.0; the README and this site now note that a commercial licence for my own code is also available separately</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.5.2</div>
+                    <h3>Saved paths you can read</h3>
+                    <ul>
+                        <li>A save confirmation broke the path after the drive letter and ran the rest off the dialog's edge. Paths now break at their own separators, one folder to a line, in every dialog that names a file</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.5.1</div>
+                    <h3>A sort arrow you can see; tables that always fit</h3>
+                    <ul>
+                        <li>The column a table is ordered by now carries a filled triangle beside its heading, pointing the way the order runs</li>
+                        <li>The name column takes whatever room is left, so a table is never wider than the window; a name too long for its column ends in an ellipsis instead of pushing the Paid column out of sight. The archive table works the same way</li>
+                        <li>How It Works now mentions ordering a table by its headings</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.4.0</div>
+                    <h3>Forecast months name the money and the deadline</h3>
+                    <ul>
+                        <li>Each forecast month on the Solvency page now leads with the answer, such as "Needs £268.13 by day 21 to stay afloat". A month that never nears the red states the margin it keeps at its lowest instead. A second line gives where it opens, its lowest day and where it closes</li>
+                        <li>The amount comes from the month's lowest point; the deadline comes from its first breach, because money that arrives after a payment was refused did not keep the month afloat</li>
+                        <li>Where an overdraft is arranged, the figure is what keeps the month inside the facility</li>
+                        <li>The old seven-line warning block is gone: the colour carries the alarm while the words carry the number</li>
+                        <li>The donate button on this site draws its mark large enough to read</li>
+                        <li>How It Works was corrected against the app and now names what has no icon of its own: several budgets per sign-in, the full backup, the recovery code and the daily update check</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.3.0</div>
+                    <h3>A donate button at the foot of the window</h3>
+                    <ul>
+                        <li>A lighter strip along the foot of the window holds a donate button that opens a PayPal page in your own browser. ClearBudget sends nothing; no feature is held back behind a donation</li>
+                        <li>It is the last stop on the keyboard ring from every view; How It Works names it</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.2.3</div>
+                    <h3>Tables no longer outline themselves</h3>
+                    <ul>
+                        <li>Moving the keyboard onto a table drew a ring round the whole table. Tables now draw no ring at all, since the highlighted row already shows where the keyboard is; a structural test keeps it that way</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.2.2</div>
+                    <h3>Room between the Remember me ticks</h3>
+                    <ul>
+                        <li>On a short display the two Remember me ticks on the sign-in screen sat almost touching. Each now has its own breathing room</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.2.1</div>
+                    <h3>Tooltips appear promptly</h3>
+                    <ul>
+                        <li>Hover text across the app and the setup program now appears almost immediately rather than after Qt's default delay</li>
+                        <li>The copyright line in Help &gt; View Licence states the right years</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.2.0</div>
+                    <h3>Reserves: money already spoken for</h3>
+                    <ul>
+                        <li>A new Reserves view, seventh in the tray: name an annual premium, an MOT or Christmas with its amount and due day; the money is then held back a little each month before it lands. Nothing is moved; only what the app calls spendable changes</li>
+                        <li>The accrual runs over the months remaining, with the gentler natural rate shown beside it</li>
+                        <li>Safe to Spend Today stops offering money that is spoken for. A budget with no commitments is unchanged to the penny</li>
+                        <li>Solvency counts what each month sets aside; the graph draws the reserve as a floor and dims the part of each bar beneath it</li>
+                        <li>Recommendations gains a third lever, pausing a reserve, always priced with what the month the bill falls due in then arrives short by</li>
+                        <li>The Monthly Budget lists a commitment due this month as a reminder; the Archive reports the reserve a completed month really carried</li>
+                        <li>The Account Position banner wraps onto a second line instead of running off the window</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.1.1</div>
+                    <h3>Views, not tabs</h3>
+                    <ul>
+                        <li>The app has never had tabs: its views are buttons in the navigation tray. How It Works, the documentation and this site now say so. Nothing behaves differently</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.1.0</div>
+                    <h3>Recommendations, plus days that cannot move</h3>
+                    <ul>
+                        <li>A Recommendations view proposes measured changes for a difficult budget: retime bills until after the month's last income and incomes to the start of the month, then name the extra income each month still needs and by which day</li>
+                        <li>Every figure is a re-run of the same day-by-day simulation the bank page uses. Tick a suggestion to preview its effect; nothing is ever applied for you</li>
+                        <li>An optional emergency buffer raises the target above bare survival</li>
+                        <li>Bill and income dialogs gain a "cannot be moved" tick for dates fixed in the real world, which Recommendations never proposes moving</li>
+                        <li>A slimmer tray: Switch User lives in the Users menu, the display currency moves into the Bank Account dialog and the Preferences dialog is gone</li>
+                        <li>New light-mode artwork</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v5.0.0</div>
+                    <h3>Several budgets, one backup and a Graph page</h3>
+                    <ul>
+                        <li>Keep more than one budget per sign-in, each its own database: create one from File &gt; New Budget, then switch, rename and delete from the tray. Your existing budget keeps its file</li>
+                        <li>File &gt; Import / Export backs up every account and every budget to one zip; a restore is validated in a staging area first, so a broken backup changes nothing</li>
+                        <li>Accounts can no longer collide on one file: saving over another account's budget is refused and loading one needs that account's password. Remember me now remembers accounts one by one</li>
+                        <li>The month graph becomes a page of its own, each day's bar read against your arranged overdraft, with HTML exports of one month or a range of months whose index table adds up. The read-only viewer package is retired</li>
+                        <li>One two-row navigation tray on every page, real pictures for every icon and one home for every colour</li>
+                        <li>Solvency speaks in sentence case and names the first month you would actually go overdrawn; the sign-in screen hands over to the window without a flash</li>
+                        <li>The data folder moved to each platform's convention with a verified one-time migration; the window builds in roughly a third of the time</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v4.6.0</div>
+                    <h3>Safe to Spend Today moves to the Projection page</h3>
+                    <ul>
+                        <li>The bank page now carries only money you have actually entered. The Safe to Spend headline, its reach, its shortfall line and its wait schedule move to the page that states their assumption</li>
+                        <li>The Projection page answers in the bank page's order: what today allows if this month repeats, what is assumed, what has to arrive, then the two months after walked again on that assumption</li>
+                        <li>A later month that is short whatever you do now has a red line of its own</li>
+                        <li>An income you have ended lowers Safe to Spend again instead of being filled forward</li>
+                        <li>The colours for an overdrawn month follow the active theme, so they read correctly in light mode</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v4.5.0</div>
+                    <h3>Safe to Spend answers what you can spend</h3>
+                    <ul>
+                        <li>The headline is the most you can spend today while every month that stands on its own keeps standing, with how far that reaches. One bad month further out no longer reads as nothing safe to spend; it gets a line naming the shortfall</li>
+                        <li>A schedule under the headline gives the figure from each later day of the month, naming the day that holds it down</li>
+                        <li>Every month on the Solvency page states its low point and the day it falls on, plus what it needs to hold flat or has to spare; card interest is reported on its own line</li>
+                        <li>Solvency splits into a bank page, a cards page and a projection page</li>
+                        <li>The projection page assumes this month's income recurs in later months with no entry of that name, says so in words and names what has to arrive</li>
+                        <li>Income gains start and end months as bills have. Deleting income offers to stop it from this month or delete it entirely; a one-off can be promoted to a regular income</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v4.4.0</div>
+                    <h3>Safe to Spend Today arrives</h3>
+                    <ul>
+                        <li>The Solvency page leads with one actionable number: the most you could spend today without any projected day falling below your safety floor, naming the day that constrains it</li>
+                        <li>A buffer the figure never plans to touch is set in Settings &gt; Bank Account</li>
+                        <li>macOS releases are always signed and notarised from here on. The disk images of the earlier releases that had not been notarised were withdrawn</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v4.3.1</div>
+                    <h3>Remember me on the sign-in screen</h3>
+                    <ul>
+                        <li>Tick Remember me and the next launch opens with your username and password filled in. The password lives in the operating system's credential store, never in a file</li>
+                        <li>Unticking forgets the stored credentials at once; if the credential store is unavailable, signing in still works</li>
+                        <li>The month title in the tray can no longer lose its last character on a small screen</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v4.3.0</div>
+                    <h3>The app tells you when a newer release exists</h3>
+                    <ul>
+                        <li>Shortly after launch and once a day, ClearBudget asks GitHub's public releases API whether a newer version is published. The request carries nothing about you; a failed check is silent</li>
+                        <li>A newer release offers the download for your platform, Skip This Version or Later</li>
+                        <li>Help &gt; Check for Updates runs the same check on demand and reports every outcome</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v4.2.0</div>
+                    <h3>A graph that tells the truth; Load, Save and Save As</h3>
+                    <ul>
+                        <li>A bill paid early is no longer charged twice on the graph: the Paid and Received ticks decide what has already happened. Days below zero paint red</li>
+                        <li>The month graph steps between months without closing; its axis labels never clip</li>
+                        <li>The File menu says Load, Save and Save As; Save remembers where your file lives</li>
+                        <li>The navigation tray carries the common actions as icon buttons, each a stop on the keyboard ring</li>
+                        <li>About and How It Works share one gentle auto-scroll; How It Works was checked against the app throughout</li>
+                        <li>A Settings menu sits beside File; Switch User moves to the Users menu</li>
+                        <li>The Windows download explains the SmartScreen warning</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v4.1.0</div>
+                    <h3>Bills that change over time</h3>
+                    <ul>
+                        <li>A bill can change amount from a month onward, as a rent increase does; earlier months keep the amount they really had</li>
+                        <li>Amounts typed with a currency symbol, grouping commas or spaces are read correctly. A new bill starts in the month you create it instead of appearing throughout your history</li>
+                        <li>The Solvency breakdown states the lowest point the month reaches and its day</li>
+                        <li>Money reads the same way everywhere, with a grouping comma and a leading minus sign</li>
+                        <li>The setup program offers to close a running ClearBudget, shows progress for repair and uninstall, can launch the app when it finishes and closes itself afterwards</li>
+                        <li>Database changes happen once, in order, failing loudly; the setup program's own code joins the 100% coverage gate</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v4.0.0</div>
+                    <h3>A balance that keeps itself, light mode and full keyboard control</h3>
+                    <ul>
+                        <li>Dated bills and income are applied to the bank balance at local midnight on their day (caught up at the next launch if the app was closed), so the figure on screen is the figure in your account</li>
+                        <li>Deleting an applied item hands its amount back; setting the balance yourself draws a fresh line</li>
+                        <li>"This month only" works when adding a bill. The One Time category is retired and its bills become Discretionary on upgrade, which is not undone if you go back to 3.x</li>
+                        <li>A light theme, switched from the tray and remembered between sessions</li>
+                        <li>Month graphs from the tray in bar and line views, plus HTML exports of a month and of a projection range whose every row adds up</li>
+                        <li>Full keyboard navigation through every screen and dialog</li>
+                        <li>The app and the setup program open on the monitor you started them from</li>
+                        <li>Uninstalling keeps your budgets, accounts and settings</li>
+                        <li>Help &gt; About credits every open source project the app relies on</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v3.0.4</div>
+                    <h3>Red means beyond your overdraft facility</h3>
+                    <ul>
+                        <li>Solvency colours each month against your agreed overdraft facility: dipping into it is amber; only going beyond it is red. With no facility set, below zero is red as before</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v3.0.3</div>
+                    <h3>Each month's own health; months archive themselves</h3>
+                    <ul>
+                        <li>A month's title bar takes that month's own solvency colour, so an overdraft in a later month no longer paints an earlier one red</li>
+                        <li>Every month is captured into the Archive as it ends, filling any gap since you last opened the app. The Archive Month button is gone</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v3.0.2</div>
+                    <h3>Check for Updates</h3>
+                    <ul>
+                        <li>The Help menu gains Check for Updates</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v3.0.1</div>
+                    <h3>The month title shows its true colour</h3>
+                    <ul>
+                        <li>The month title bar uses the same calculation as the Solvency projection, so a month that goes overdrawn mid-month is red even when it closes in credit. Every tab shows the same colour for a month</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v3.0.0</div>
+                    <h3>Scheduled credit-limit changes</h3>
+                    <ul>
+                        <li>Record a future change to a card's credit limit with the date it applies; every projection uses the limit as it will stand</li>
+                        <li>Solvency warnings show how fast your savings are falling each month and the first month you would go overdrawn, weighed against your overdraft facility</li>
+                        <li>The balance you enter for a card is exactly what the app shows</li>
+                        <li>Bills can be given a final month. Deleting a bill offers to stop it from the month you are viewing or to remove it from every month</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v2.5.0</div>
+                    <h3>Windows, macOS and Linux</h3>
+                    <ul>
+                        <li>ClearBudget arrives on macOS as a disk image and on Linux as a Flatpak, alongside the Windows installer, with every feature on each</li>
+                        <li>Better use of compact high-resolution screens such as 13-inch laptops</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v2.4.0</div>
+                    <h3>One navigation header on every tab</h3>
+                    <ul>
+                        <li>Every tab builds its month navigation the same way, centred across the full width in a bordered tray</li>
+                        <li>The month label on every tab takes the Solvency health colour</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v2.3.1</div>
+                    <h3>A cleaner uninstall</h3>
+                    <ul>
+                        <li>Uninstalling removes the application folder and any taskbar pin; leftover installs under the previous name are removed when installing, upgrading or repairing</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v2.3.0</div>
+                    <h3>No black corners on the Credit Cards tab</h3>
+                    <ul>
+                        <li>Labels on the card panels no longer show small black notches at their corners on Windows 11</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v2.2.1</div>
+                    <h3>The right income opens for editing</h3>
+                    <ul>
+                        <li>Editing an income source could open the wrong one; it now opens the income you clicked</li>
+                        <li>Set Bank Balance opens centred over the window; the uninstall dialog's wording is corrected</li>
+                        <li>The display name becomes Clear Budget throughout the interface</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v2.0.1</div>
+                    <h3>More credits</h3>
+                    <ul>
+                        <li>More open source projects are credited in Help &gt; About</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v2.0.0</div>
+                    <h3>Overdraft facilities, viewer accounts and a How It Works guide</h3>
+                    <ul>
+                        <li>Record an overdraft facility with its limit and APR; the Monthly Budget warns when the balance dips below zero mid-month, in amber within the facility or red beyond it</li>
+                        <li>Bills gain a Paid tick; income gains the per-month overrides, skips and one-off entries bills already had</li>
+                        <li>Credit cards show as readable per-card panels instead of a 15-column table</li>
+                        <li>Anyone can create an account from the sign-in screen; deleting an account always deletes its data</li>
+                        <li>Read-only viewer accounts, fed by a package an admin exports</li>
+                        <li>A How It Works guide in the Help menu, a darker theme with a teal accent and an Import / Export submenu in the File menu</li>
+                        <li>The Freedom to spend figure is removed as misleading</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v1.1.2</div>
+                    <h3>Freedom to spend</h3>
+                    <ul>
+                        <li>The Solvency panel shows a Freedom to spend figure: next month's lowest point less a buffer you choose</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v1.1.1</div>
+                    <h3>Closing the sign-in window exits</h3>
+                    <ul>
+                        <li>Closing the login window no longer leaves ClearBudget running invisibly, which used to block the next launch</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v1.1.0</div>
+                    <h3>Accounts, currencies and a fresh start</h3>
+                    <ul>
+                        <li>Multiple user accounts with bcrypt-hashed passwords, a separate budget database for each, a recovery code and Switch User</li>
+                        <li>25 display currencies</li>
+                        <li>File &gt; New Budget for a fresh start; Export and Import Database move to the File menu</li>
+                        <li>Tables fit their columns to their contents; deleting a bill or income asks first</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v1.0.3</div>
+                    <h3>Income updates the bank balance</h3>
+                    <ul>
+                        <li>An income whose due date had passed now updates the bank balance</li>
+                    </ul>
+                </article>
+
+                <article class="cl-entry">
+                    <div class="ver-tag">v1.0.2</div>
+                    <h3>The first release</h3>
+                    <ul>
+                        <li>The first published release of ClearBudget</li>
+                    </ul>
+                </article>
+
+            </div>
+
+            <div class="actions">
+                <a class="secondary" href="https://github.com/oernster/ClearBudget/releases">View all releases on GitHub</a>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        Created by Oliver Ernster &nbsp;·&nbsp; Python and PySide6 &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget/blob/main/LICENSE">LGPL-3.0</a> &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget">Source on GitHub</a> &nbsp;·&nbsp;
+        <a href="https://github.com/oernster/ClearBudget/releases">Releases</a> &nbsp;·&nbsp;
+        <a href="https://ernster.dev">More of my work</a>
+    </footer>
+
+</div>
+
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@graph": [
+        {
+            "@type": "WebPage",
+            "@id": "https://clearbudget.co.uk/whats-new.html#webpage",
+            "url": "https://clearbudget.co.uk/whats-new.html",
+            "name": "What's new in ClearBudget: release history",
+            "description": "ClearBudget's release history, newest first: what each version changed, from the first release to the latest.",
+            "inLanguage": "en-GB",
+            "isPartOf": { "@id": "https://clearbudget.co.uk/#website" },
+            "about": { "@id": "https://clearbudget.co.uk/#app" },
+            "breadcrumb": { "@id": "https://clearbudget.co.uk/whats-new.html#breadcrumb" }
+        },
+        {
+            "@type": "BreadcrumbList",
+            "@id": "https://clearbudget.co.uk/whats-new.html#breadcrumb",
+            "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "ClearBudget", "item": "https://clearbudget.co.uk/" },
+                { "@type": "ListItem", "position": 2, "name": "What's new", "item": "https://clearbudget.co.uk/whats-new.html" }
+            ]
+        }
+    ]
+}
+</script>
+
+</body>
+</html>

@@ -483,6 +483,20 @@ nav.site .links a {
 
 nav.site .links a:hover { color: var(--text); }
 
+/* Below the site's widest breakpoint the brand and six links no longer fit on
+   one row, so the bar grows and the links wrap rather than pushing the page
+   sideways. */
+@media (max-width: 821px) {
+    nav.site {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 58px;
+        padding: 10px 24px;
+        gap: 8px 16px;
+    }
+    nav.site .links { flex-wrap: wrap; gap: 8px 18px; }
+}
+
 /* The button that leads from a Features gateway card to its own page sits at
    the card's foot, so gateways line up whatever the length above them. */
 .gateways .card { display: flex; flex-direction: column; }
@@ -499,3 +513,49 @@ nav.site .links a:hover { color: var(--text); }
 .crumb a { color: var(--accent); text-decoration: none; }
 .crumb a:hover { text-decoration: underline; }
 .crumb + .section { margin-top: 18px; }
+
+/* What's New: one card per release, newest first. The version pill wears the
+   download page's version badge; the list reads left-aligned like .prose. */
+.changelog {
+    max-width: 820px;
+    margin: 28px auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left;
+}
+
+.cl-entry {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.ver-tag {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 12px;
+}
+
+.cl-entry h3 {
+    margin: 10px 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.cl-entry ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--muted);
+    font-size: 16px;
+    overflow-wrap: break-word;
+}
+
+.cl-entry li + li { margin-top: 6px; }
+
+.changelog + .actions { margin-top: 28px; }
